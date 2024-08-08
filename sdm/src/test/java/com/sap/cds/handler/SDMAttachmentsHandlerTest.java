@@ -2,18 +2,18 @@ package com.sap.cds.handler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 
-public class SDMAttachmentsServiceHandlerTest {
-  private SDMAttachmentsServiceHandler handler;
+public class SDMAttachmentsHandlerTest {
+
+  private SDMAttachmentsHandler handler;
 
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    handler = new SDMAttachmentsServiceHandler();
+    handler = new SDMAttachmentsHandler();
   }
 
   @Test

@@ -30,7 +30,7 @@
     <properties>
         <packageName>sdm</packageName>
         <cds.install-cdsdk.version>7.6.0</cds.install-cdsdk.version>
-        <generation-package>com.sap.cds.sdm.generated</generation-package>
+        <generation-package>sdm.generated</generation-package>
         <test-generation-folder>src/test/gen</test-generation-folder>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -38,7 +38,6 @@
         <lombok.version>1.18.30</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <commons-codec.version>1.13</commons-codec.version>
-        <ehcache-version>3.1.3</ehcache-version>
     </properties>
 
     <dependencies>
@@ -69,6 +68,12 @@
             <artifactId>cds-services-impl</artifactId>
             <scope>test</scope>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.github.spotbugs</groupId>-->
+<!--            <artifactId>spotbugs-annotations</artifactId>-->
+<!--            <version>4.8.5</version>-->
+<!--            <scope>test</scope>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -88,16 +93,10 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>4.9.0</version>
-        </dependency>
-        <dependency>
           <groupId>com.sap.cds</groupId>
            <artifactId>cds-feature-attachments</artifactId>
           <version>${attachments_version}</version>
         </dependency>
-        <dependency> <groupId>com.sap.cds</groupId> <artifactId>cds-starter-cloudfoundry</artifactId> </dependency>
         <!-- https://mvnrepository.com/artifact/com.sap.cloud.environment.servicebinding/java-sap-vcap-services -->
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding</groupId>
@@ -108,11 +107,6 @@
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <version>${commons-codec.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ehcache</groupId>
-            <artifactId>ehcache</artifactId>
-            <version>${ehcache-version}</version>
         </dependency>
     </dependencies>
 

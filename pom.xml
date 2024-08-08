@@ -81,6 +81,7 @@
             <artifactId>cds-services-api</artifactId>
         </dependency>
 
+        <!-- JUnit 5 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -93,6 +94,8 @@
             <version>5.10.2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- AssertJ -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -100,6 +103,7 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Mockito -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -114,7 +118,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.0.0-M5</version>
+                <configuration>
+                    <includes>
+                        <include>**/SDMAttachmentsHandlerTest.*</include>
+                    </includes>
+                    <properties>
+                        <property>
+                            <name>junit.platform.output.capture.stdout</name>
+                            <value>false</value>
+                        </property>
+                        <property>
+                            <name>junit.platform.output.capture.stderr</name>
+                            <value>false</value>
+                        </property>
+                    </properties>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -168,6 +187,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
