@@ -35,7 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 ```
 using {my.bookshop.Books } from '../db/books';
-using {sap.attachments.Attachments, sap.attachments.StatusCode} from`com.sap.cds/sdm`;
+using {sap.attachments.Attachments} from`com.sap.cds/sdm`;
  
 extend entity Books with {
     attachments : Composition of many Attachments;
