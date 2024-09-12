@@ -15,7 +15,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 ### Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
-- [Use @cap-js/sdm plugin](#use-cap-jssdm-plugin)
+- [Use @cap-java/sdm plugin](#use-cap-javasdm-plugin)
 - [Deploying and testing the application](#deploying-and-testing-the-application)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
@@ -29,7 +29,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 * [MTAR builder](https://www.npmjs.com/package/mbt) (`npm install -g mbt`)
 * [Cloud Foundry CLI](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html), Install cf-cli and run command `cf install-plugin multiapps`.
 
-## Use @cap-js/sdm plugin
+## Use @cap-java/sdm plugin
 
 **To use sdm plugin in the bookshop demoapp, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and paste the below content in it:
 
