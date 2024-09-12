@@ -91,13 +91,9 @@ extend entity Books with {
    cf deploy mta_archives/*.mtar
    ```
 
-6. Launch the application
-   ```sh
-   * Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
-   ```  
+6. Launch the application. Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
 
-7. The `Attachments` type has generated an out-of-the-box Attachments table (see highlighted box) at the bottom of the Object page:
-   <img width="1300" alt="Attachments Table" style="border-radius:0.5rem;" src="etc/facet.png">
+7. The `Attachments` type has generated an out-of-the-box Attachments table.
 
 
 ## Known Restrictions
