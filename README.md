@@ -42,12 +42,6 @@ extend entity Books with {
 }
 ```
 
-Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the following. Currently only non versioned repositories are supported. 
-
-```
-REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
-```
-
 ## Deploying and testing the application
 
 1. Log in to Cloud Foundry space:
@@ -60,9 +54,9 @@ REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
 
    ```
    modules:
-      - name: books-srv
-      type: nodejs
-      path: gen/srv
+      - name: bookshop-srv
+      type: java
+      path: srv
       requires:
          - name: sdm-di-instance
   
@@ -73,28 +67,37 @@ REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
          service: sdm
          service-plan: standard
    ```
+3. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the repository id as given below. Currently only non versioned repositories are supported. 
 
-3. Build the project by running following command from root folder of bookshop demoapp
+    ```
+    modules:
+      - name: bookshop-srv
+      type: java
+      path: srv
+      properties:
+            REPOSITORY_ID: <REPO ID>
+      requires:
+         - name: sdm-di-instance
+    ```
+
+4. Build the project by running following command from root folder of bookshop demoapp
    ```sh
    mbt build
    ```
    Above step will generate .mtar file inside mta_archives folder.
 
-4. Deploy the application
+5. Deploy the application
    ```sh
    cf deploy mta_archives/*.mtar
    ```
 
-5. Launch the application
+6. Launch the application
    ```sh
    * Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
    ```  
 
-6. The `Attachments` type has generated an out-of-the-box Attachments table (see highlighted box) at the bottom of the Object page:
+7. The `Attachments` type has generated an out-of-the-box Attachments table (see highlighted box) at the bottom of the Object page:
    <img width="1300" alt="Attachments Table" style="border-radius:0.5rem;" src="etc/facet.png">
-
-7. **Upload a file** by going into Edit mode and either using the **Upload** button on the Attachments table or by drag/drop. Then click the **Save** button to have that file stored in SAP Document Management Integration Option. We demonstrate this by uploading the PDF file from [_xmpl/db/content/Solar Panel Report.pdf_](./xmpl/db/content/Solar%20Panel%20Report.pdf):
-   <img width="1300" alt="Upload an attachment" style="border-radius:0.5rem;" src="etc/upload.gif">
 
 
 ## Known Restrictions
