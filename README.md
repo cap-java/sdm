@@ -34,10 +34,12 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 **To use sdm plugin in the bookshop demoapp, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and paste the below content in it:
 
 ```
-using { sap.capire.incidents as my } from './schema';
-using { Attachments } from '@cap-js/sdm';
-
-extend my.Incidents with { attachments: Composition of many Attachments }
+using {my.bookshop.Books } from '../db/books';
+using {sap.attachments.Attachments, sap.attachments.StatusCode} from`com.sap.cds/sdm`;
+ 
+extend entity Books with {
+    attachments : Composition of many Attachments;
+}
 ```
 
 Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the following. Currently only non versioned repositories are supported. 
@@ -54,11 +56,11 @@ REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
    cf login -a <CF-API> -o <ORG-NAME> -s <SPACE-NAME>
    ```
 
-2. Bind CAP application to SAP Document Management Integration Option. Check the following reference from `mta.yaml` of Incidents Management app
+2. Bind CAP application to SAP Document Management Integration Option. Check the following reference from `mta.yaml` of the bookshop demoapp
 
    ```
    modules:
-      - name: incidents-srv
+      - name: books-srv
       type: nodejs
       path: gen/srv
       requires:
@@ -72,7 +74,7 @@ REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
          service-plan: standard
    ```
 
-3. Build the project by running following command from root folder of incidents-app.
+3. Build the project by running following command from root folder of bookshop demoapp
    ```sh
    mbt build
    ```
@@ -85,8 +87,7 @@ REPOSITORY_ID: 43e88401-59f7-4d87-8cf2-ccfccc1f0251
 
 5. Launch the application
    ```sh
-   * Navigate to Html5Applications menu in BTP subaccount and open the application (nsincidents v1.0.0) in a browser.
-   * Click on incident with title Solar panel broken.
+   * Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
    ```  
 
 6. The `Attachments` type has generated an out-of-the-box Attachments table (see highlighted box) at the bottom of the Object page:
