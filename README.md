@@ -6,13 +6,13 @@ The project is currently in the development stage, where our team is actively wo
 The **@cap-java/sdm** package is [cds-plugin](https://cap.cloud.sap/docs/java/cds-plugins#cds-plugin-packages) that provides an easy CAP-level integration with [SAP Document Management Service](https://discovery-center.cloud.sap/serviceCatalog/document-management-service-integration-option). This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.  
 This plugin can be consumed by the CAP application deployed on BTP to store their documents in the form of attachments in Document Management Repository.
 
-# Key features
+## Key features
 
 - Create attachment : Provides the capability to upload new attachments.
 - Virus scanning : Provides the capability to support virus scan for virus scan enabled repositories.
 - Draft functionality : Provides the capability of working with draft attachments.
 
-### Table of Contents
+## Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
 - [Deploying and testing the application](#deploying-and-testing-the-application)
@@ -37,7 +37,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
    cf login -a <CF-API> -o <ORG-NAME> -s <SPACE-NAME>
    ```
 
-2. Bind your CAP application to SAP Document Management Integration Option. Check the following reference from `mta.yaml` of your CAP application. See the following example from a sample Bookshop app.
+2. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Bind your CAP application to this SDM instance. Add the details of this instance to the resources section in the `mta.yaml` of your CAP application. See the following example from a sample Bookshop app.
 
    ```
    modules:
@@ -54,7 +54,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
          service: sdm
          service-plan: standard
    ```
-3. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the repository id. See the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
+3. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. See the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
 
     ```
     modules:
@@ -107,13 +107,13 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
    cf deploy mta_archives/*.mtar
    ```
 
-9. Launch the application. Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
+9. Go to your BTP subaccount and launch your application.
 
-10. The `Attachments` type has generated an out-of-the-box Attachments table.
+10. The `Attachments` type will have generated an out-of-the-box Attachments table.
 
 ## Use @cap-java/sdm plugin
 
-**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and _db/attachment-extension.cds_ paste the below content in both the files. See the following example from a sample Bookshop app:
+**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and _db/attachment-extension.cds_, and extend your entity with attachments. See the following example from a sample Bookshop app:
 
 ```
 using {my.bookshop.Books } from '../db/books';
