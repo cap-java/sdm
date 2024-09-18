@@ -67,7 +67,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
          - name: sdm-di-instance
     ```
 
-4. Add the following pom dependency in both the _db_ and _srv_ folders
+4. Add the following pom dependency in the _srv_ folder
    
    ```sh
    <dependency>
