@@ -86,20 +86,20 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
       "https://sapui5nightly.int.sap.eu2.hana.ondemand.com/resources/sap-ui-core.js"
    ```
 
-4. Build the project by running following command from root folder of your CAP application
+6. Build the project by running following command from root folder of your CAP application
    ```sh
    mbt build
    ```
    Above step will generate .mtar file inside mta_archives folder.
 
-5. Deploy the application
+7. Deploy the application
    ```sh
    cf deploy mta_archives/*.mtar
    ```
 
-6. Launch the application. Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
+8. Launch the application. Navigate to applications in the specific BTP subaccount space and open the bookshop-app application. Click on the application url provided.
 
-7. The `Attachments` type has generated an out-of-the-box Attachments table.
+9. The `Attachments` type has generated an out-of-the-box Attachments table.
 
 ## Use @cap-java/sdm plugin
 
