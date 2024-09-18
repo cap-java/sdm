@@ -113,7 +113,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 ## Use @cap-java/sdm plugin
 
-**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and _db/attachment-extension.cds_, and extend your entity with attachments. See the following example from a sample Bookshop app:
+**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. See the following example from a sample Bookshop app:
 
 ```
 using {my.bookshop.Books } from '../db/books';
