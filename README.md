@@ -37,7 +37,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
    cf login -a <CF-API> -o <ORG-NAME> -s <SPACE-NAME>
    ```
 
-2. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Bind your CAP application to this SDM instance. Add the details of this instance to the resources section in the `mta.yaml` of your CAP application. See the following example from a sample Bookshop app.
+2. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Bind your CAP application to this SDM instance. Add the details of this instance to the resources section in the `mta.yaml` of your CAP application. Refer the following example from a sample Bookshop app.
 
    ```
    modules:
@@ -54,7 +54,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
          service: sdm
          service-plan: standard
    ```
-3. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. See the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
+3. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. Refer the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
 
     ```
     modules:
@@ -109,11 +109,11 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 9. Go to your BTP subaccount and launch your application.
 
-10. The `Attachments` type will have generated an out-of-the-box Attachments table.
+10. The `Attachments` type will generate an out-of-the-box Attachments table.
 
 ## Use @cap-java/sdm plugin
 
-**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. See the following example from a sample Bookshop app:
+**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. Refer the following example from a sample Bookshop app:
 
 ```
 using {my.bookshop.Books } from '../db/books';
