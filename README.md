@@ -15,8 +15,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 ### Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
-- [Use @cap-java/sdm plugin](#use-cap-javasdm-plugin)
 - [Deploying and testing the application](#deploying-and-testing-the-application)
+- [Use @cap-java/sdm plugin](#use-cap-javasdm-plugin)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -29,19 +29,6 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 * [MTAR builder](https://www.npmjs.com/package/mbt) (`npm install -g mbt`)
 * [Cloud Foundry CLI](https://docs.cloudfoundry.org/cf-cli/install-go-cli.html), Install cf-cli and run command `cf install-plugin multiapps`.
 
-## Use @cap-java/sdm plugin
-
-**To use sdm plugin in the bookshop demoapp, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and paste the below content in it:
-
-```
-using {my.bookshop.Books } from '../db/books';
-using {sap.attachments.Attachments} from`com.sap.cds/sdm`;
- 
-extend entity Books with {
-    attachments : Composition of many Attachments;
-}
-```
-
 ## Deploying and testing the application
 
 1. Log in to Cloud Foundry space:
@@ -50,7 +37,7 @@ extend entity Books with {
    cf login -a <CF-API> -o <ORG-NAME> -s <SPACE-NAME>
    ```
 
-2. Bind CAP application to SAP Document Management Integration Option. Check the following reference from `mta.yaml` of the bookshop demoapp
+2. Bind your CAP application to SAP Document Management Integration Option. Check the following reference from `mta.yaml` of your CAP application. See the following example from a sample Bookshop app.
 
    ```
    modules:
@@ -67,7 +54,7 @@ extend entity Books with {
          service: sdm
          service-plan: standard
    ```
-3. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the repository id as given below. Currently only non versioned repositories are supported. 
+3. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Using credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of SERVER MODULE add the repository id. See the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
 
     ```
     modules:
@@ -80,7 +67,26 @@ extend entity Books with {
          - name: sdm-di-instance
     ```
 
-4. Build the project by running following command from root folder of bookshop demoapp
+4. Add the following pom dependency in both the _db_ and _srv_ folders
+   
+   ```sh
+   <dependency>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>sdm</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+   </dependency>
+   ```
+
+5. In the _app/index.html_ file you will find this line 
+   ```sh
+      <script id="sap-ui-bootstrap" src="https://sapui5.hana.ondemand.com/resources/sap-ui-core.js"
+   ```
+   Replace the src url with this instead
+   ```sh
+      "https://sapui5nightly.int.sap.eu2.hana.ondemand.com/resources/sap-ui-core.js"
+   ```
+
+4. Build the project by running following command from root folder of your CAP application
    ```sh
    mbt build
    ```
@@ -95,6 +101,18 @@ extend entity Books with {
 
 7. The `Attachments` type has generated an out-of-the-box Attachments table.
 
+## Use @cap-java/sdm plugin
+
+**To use sdm plugin in your CAP application, create an element with an `Attachments` type.** Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and _db/attachment-extension.cds_ paste the below content in both the files. See the following example from a sample Bookshop app:
+
+```
+using {my.bookshop.Books } from '../db/books';
+using {sap.attachments.Attachments} from`com.sap.cds/sdm`;
+ 
+extend entity Books with {
+    attachments : Composition of many Attachments;
+}
+```
 
 ## Known Restrictions
 
