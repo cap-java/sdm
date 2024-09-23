@@ -30,7 +30,7 @@
     <properties>
         <packageName>sdm</packageName>
         <cds.install-cdsdk.version>7.6.0</cds.install-cdsdk.version>
-        <generation-package>sdm.generated</generation-package>
+        <generation-package>com.sap.cds.sdm.generated</generation-package>
         <test-generation-folder>src/test/gen</test-generation-folder>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -182,11 +182,9 @@
                         <id>cds.build</id>
                         <goals>
                             <goal>cds</goal>
-                        </goals>
-          
-                    </execution>
-
-                    
+                        </goals>          
+                    </execution> 
+                                       
                 </executions>
             </plugin>
 
@@ -261,7 +259,7 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.9</minimum>
+                                            <minimum>0.90</minimum>
                                         </limit>
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>CLASS</counter>

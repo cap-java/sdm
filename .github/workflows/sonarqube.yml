@@ -1,0 +1,85 @@
+name: SonarQube Analysis
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+  
+permissions:
+  pull-requests: read # Allows SonarQube to decorate PRs with analysis results
+
+jobs:
+  sonar-scan:
+    runs-on: cap-java
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure shallow clones are disabled for better analysis relevancy
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install dependencies
+        run: |
+          mvn clean install -DskipTests
+
+      - name: Install SonarQube Scanner
+        run: |
+          if [ ! -L /usr/local/bin/sonar-scanner ]; then
+            curl -sSLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+            unzip sonar-scanner-cli.zip
+            sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
+            sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
+          fi
+
+      - name: Run SonarQube analysis
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            sonar-scanner \
+              -Dsonar.projectKey=cap-java-sdm \
+              -Dsonar.sources=sdm/src/main/java \
+              -Dsonar.java.binaries=sdm/target/classes \
+              -Dsonar.java.libraries=sdm/target/sdm.jar \
+              -Dsonar.junit.reportPaths=sdm/target/surefire-reports \
+              -Dsonar.coverage.jacoco.xmlReportPaths=sdm/target/site/jacoco/jacoco.xml \
+              -Dsonar.inclusions=**/*.java \
+              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb \
+              -Dsonar.java.file.suffixes=.java \
+              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+              -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+              -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+              -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+              -Dsonar.pullrequest.base=${{ github.base_ref }}
+          else
+            sonar-scanner \
+              -Dsonar.projectKey=cap-java-sdm \
+              -Dsonar.sources=sdm/src/main/java \
+              -Dsonar.java.binaries=sdm/target/classes \
+              -Dsonar.java.libraries=sdm/target/sdm.jar \
+              -Dsonar.junit.reportPaths=sdm/target/surefire-reports \
+              -Dsonar.coverage.jacoco.xmlReportPaths=sdm/target/site/jacoco/jacoco.xml \
+              -Dsonar.inclusions=**/*.java \
+              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb \
+              -Dsonar.java.file.suffixes=.java \
+              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+              -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          fi
+
+      - name: Quality Gate Check
+        id: sonarqube-quality-gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

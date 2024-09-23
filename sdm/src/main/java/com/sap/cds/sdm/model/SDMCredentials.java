@@ -1,6 +1,5 @@
 package com.sap.cds.sdm.model;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,12 +13,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SDMCredentials {
 
-    private String url;
+  private String url;
 
-    private String baseTokenUrl;
+  private String baseTokenUrl;
 
-    private String clientId;
+  private String clientId;
 
-    private String clientSecret;
+  private String clientSecret;
 }
-
