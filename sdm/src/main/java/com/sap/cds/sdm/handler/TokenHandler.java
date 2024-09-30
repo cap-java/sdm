@@ -11,6 +11,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.CacheKey;
+import com.sap.cds.sdm.caching.TokenCacheKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cloud.environment.servicebinding.api.DefaultServiceBindingAccessor;
@@ -21,6 +22,7 @@ import com.sap.cloud.security.xsuaa.http.MediaType;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -111,17 +113,77 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  public static String getDIToken(String token, SDMCredentials sdmCredentials)
-      throws OAuth2ServiceException {
+  public static String getUserTokenFromAuthorities(
+      String email, String subdomain, SDMCredentials sdmCredentials) throws IOException {
+    // Fetch the token from Cache if present use it else generate and store
+    String cachedToken = null;
+    String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
+    String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
+    // Define the authorities (JSON) and URL encode it
+    String authoritiesJson =
+        "{\"az_attr\":{\"X-EcmUserEnc\":" + email + ",\"X-EcmAddPrincipals\":" + email + "}}";
+    String encodedAuthorities =
+        URLEncoder.encode(authoritiesJson, StandardCharsets.UTF_8.toString());
+
+    // Create body parameters including the grant type and authorities
+    String bodyParams = "grant_type=client_credentials&authorities=" + encodedAuthorities;
+    byte[] postData = bodyParams.getBytes(StandardCharsets.UTF_8);
+
+    // Create the URL for the token endpoint
+    String authUrl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+    URL url = new URL(authUrl);
+
+    // Open the connection and set the properties
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Authorization", authHeaderValue);
+    conn.setRequestMethod("POST");
+    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+    conn.setRequestProperty("charset", "utf-8");
+    conn.setRequestProperty("Content-Length", String.valueOf(postData.length));
+    conn.setUseCaches(false);
+    conn.setDoInput(true);
+    conn.setDoOutput(true);
+
+    // Write the POST data to the output stream
+    try (DataOutputStream os = new DataOutputStream(conn.getOutputStream())) {
+      os.write(postData);
+    }
+    String resp;
+    try (DataInputStream is = new DataInputStream(conn.getInputStream());
+        BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+      resp = br.lines().collect(Collectors.joining("\n"));
+    }
+    conn.disconnect();
+    cachedToken = mapper.readValue(resp, JsonNode.class).get("access_token").asText();
+    TokenCacheKey cacheKey = new TokenCacheKey();
+    cacheKey.setKey(email + "_" + subdomain);
+    CacheConfig.getUserAuthoritiesTokenCache().put(cacheKey, cachedToken);
+    return cachedToken;
+  }
+
+  public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
     JsonObject payloadObj = getTokenFields(token);
     String email = payloadObj.get("email").getAsString();
+    JsonObject ext_attr = payloadObj.get("ext_attr").getAsJsonObject();
+    String subdomain = ext_attr.get("zdn").getAsString();
     String token_expiry = payloadObj.get("exp").getAsString();
     CacheKey cacheKey = new CacheKey();
-    cacheKey.setEmail(email);
+    cacheKey.setKey(email + "_" + subdomain);
     cacheKey.setExpiration(token_expiry);
     String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
     if (cachedToken == null) {
       cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);
+    }
+    return cachedToken;
+  }
+
+  public static String getDITokenUsingAuthorities(
+      SDMCredentials sdmCredentials, String email, String subdomain) throws IOException {
+    TokenCacheKey cacheKey = new TokenCacheKey();
+    cacheKey.setKey(email + "_" + subdomain);
+    String cachedToken = CacheConfig.getUserAuthoritiesTokenCache().get(cacheKey);
+    if (cachedToken == null) {
+      cachedToken = getUserTokenFromAuthorities(email, subdomain, sdmCredentials);
     }
     return cachedToken;
   }
@@ -156,7 +218,9 @@ public class TokenHandler {
       cachedToken = String.valueOf(accessTokenMap.get("access_token"));
       String expiryTime = payloadObj.get("exp").getAsString();
       CacheKey cacheKey = new CacheKey();
-      cacheKey.setEmail(payloadObj.get("email").getAsString());
+      JsonObject ext_attr = payloadObj.get("ext_attr").getAsJsonObject();
+      String subdomain = ext_attr.get("zdn").getAsString();
+      cacheKey.setKey(payloadObj.get("email").getAsString() + "_" + subdomain);
       cacheKey.setExpiration(expiryTime);
       CacheConfig.getUserTokenCache().put(cacheKey, cachedToken);
     } catch (UnsupportedEncodingException e) {
