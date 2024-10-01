@@ -1,29 +1,11 @@
 namespace sap.attachments;
 
 using {
-    cuid,
+    sap.attachments.Attachments,sap.attachments.StatusCode
     managed
-} from '@sap/cds/common';
+} from 'com.sap.cds/cds-feature-attachments';
 
-type StatusCode : String enum {
-    Unscanned;
-    Scanning;
-    Clean;
-    Infected;
-    Failed;
-}
-
-aspect MediaData           @(_is_media_data) {
-    content   : LargeBinary @title: 'Attachment'; // stored only for db-based services
-    mimeType  : String;
-    fileName  : String @title: 'Filename';
-    contentId : String     @readonly; // id of attachment in external storage, if database storage is used, same as id
-    status    : StatusCode @readonly;
-    scannedAt : Timestamp  @readonly;
-}
-
-aspect Attachments : cuid, managed, MediaData {
-    note : String;
+extend aspect Attachments with{
     folderId : String;
     repositoryId : String;
     url : String;
