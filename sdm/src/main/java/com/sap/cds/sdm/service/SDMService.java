@@ -30,7 +30,6 @@ public interface SDMService {
 
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
-  //    public void readDocument();
   public int deleteDocument(String cmisaction, String objectId, String userEmail, String subdomain)
       throws IOException;
 }
