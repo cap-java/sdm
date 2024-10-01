@@ -77,7 +77,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         Result result123 =
             DBQuery.getAttachmentsForUP__ID(
                 attachmentDraftEntity.get(), persistenceService, up__ID);
-        System.out.println("Result after delete : " + result123);
         context
             .getMessages()
             .warn("This attachment already exists. Please remove it and try again");

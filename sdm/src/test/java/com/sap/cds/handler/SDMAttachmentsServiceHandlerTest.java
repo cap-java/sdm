@@ -47,8 +47,8 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @InjectMocks private SDMAttachmentsServiceHandler handler;
 
-  String objectId ="objectId";
-  String folderId="folderId";
+  String objectId = "objectId";
+  String folderId = "folderId";
   String userEmail = "email";
   String subdomain = "subdomain";
 
