@@ -61,7 +61,6 @@ public class Registration implements CdsRuntimeConfiguration {
                 OutboxService.class,
                 OutboxService.PERSISTENT_UNORDERED_NAME); // need to check if required
     var outboxedAttachmentService = outbox.outboxed(attachmentService);
-    System.out.println("Registration");
     SDMService sdmService = new SDMServiceImpl();
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
     //		var attachmentsReader = buildAttachmentsReader(persistenceService);
