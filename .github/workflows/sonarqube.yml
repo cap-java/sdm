@@ -54,7 +54,7 @@ jobs:
               -Dsonar.junit.reportPaths=sdm/target/surefire-reports \
               -Dsonar.coverage.jacoco.xmlReportPaths=sdm/target/site/jacoco/jacoco.xml \
               -Dsonar.inclusions=**/*.java \
-              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java,sdm/src/main/java/com/sap/cds/sdm/model/SDMCredentials.java,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java
+              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java,sdm/src/main/java/com/sap/cds/sdm/model/SDMCredentials.java,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java \
               -Dsonar.java.file.suffixes=.java \
               -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
               -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
@@ -70,7 +70,7 @@ jobs:
               -Dsonar.junit.reportPaths=sdm/target/surefire-reports \
               -Dsonar.coverage.jacoco.xmlReportPaths=sdm/target/site/jacoco/jacoco.xml \
               -Dsonar.inclusions=**/*.java \
-              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java,sdm/src/main/java/com/sap/cds/sdm/model/SDMCredentials.java,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java
+              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java,sdm/src/main/java/com/sap/cds/sdm/model/SDMCredentials.java,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java \
               -Dsonar.java.file.suffixes=.java \
               -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
               -Dsonar.login=${{ secrets.SONAR_TOKEN }}
