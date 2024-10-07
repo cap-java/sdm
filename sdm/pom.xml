@@ -93,6 +93,13 @@
             <version>4.9.0</version>
         </dependency>
         <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.11.0</version> <!-- Use the latest version if possible -->
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
           <groupId>com.sap.cds</groupId>
            <artifactId>cds-feature-attachments</artifactId>
           <version>${attachments_version}</version>
@@ -190,6 +197,27 @@
                     <excludes>
                         <exclude>
                             ${excluded.generation.package}**/*
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/caching/**
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/constants/**
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/model/**
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/persistence/**
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/SDMAttachmentsService.class
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/handler/**
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/util/**
                         </exclude>
                     </excludes>
                 </configuration>

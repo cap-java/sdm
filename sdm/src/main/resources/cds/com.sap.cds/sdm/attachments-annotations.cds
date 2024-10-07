@@ -16,7 +16,6 @@ annotate Attachments with @UI: {
         TypeNamePlural: '{i18n>attachments}',
     },
     LineItem  : [
-        {Value: fileName},
         {Value: content},
         {Value: createdAt},
         {Value: createdBy},
