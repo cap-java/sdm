@@ -14,9 +14,9 @@ type StatusCode : String enum {
 }
 
 aspect MediaData           @(_is_media_data) {
-    content   : LargeBinary; // stored only for db-based services
+    content   : LargeBinary @title: 'Attachment'; // stored only for db-based services
     mimeType  : String;
-    fileName  : String;
+    fileName  : String @title: 'Filename';
     contentId : String     @readonly; // id of attachment in external storage, if database storage is used, same as id
     status    : StatusCode @readonly;
     scannedAt : Timestamp  @readonly;
@@ -24,5 +24,7 @@ aspect MediaData           @(_is_media_data) {
 
 aspect Attachments : cuid, managed, MediaData {
     note : String;
-
+    folderId : String;
+    repositoryId : String;
+    url : String;
 }

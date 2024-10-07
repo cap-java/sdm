@@ -10,14 +10,21 @@ import com.sap.cds.feature.attachments.handler.applicationservice.processor.modi
 import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.UpdateAttachmentEvent;
 import com.sap.cds.feature.attachments.handler.applicationservice.processor.transaction.CreationChangeSetListener;
 import com.sap.cds.feature.attachments.handler.applicationservice.processor.transaction.ListenerProvider;
+import com.sap.cds.feature.attachments.handler.common.AttachmentsReader;
+import com.sap.cds.feature.attachments.handler.common.DefaultAssociationCascader;
+import com.sap.cds.feature.attachments.handler.common.DefaultAttachmentsReader;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.utilities.LoggingMarker;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateEventHandler;
+import com.sap.cds.sdm.handler.applicationservice.SDMUpdateEventHandler;
 import com.sap.cds.sdm.service.SDMAttachmentsService;
+import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.outbox.OutboxService;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import org.slf4j.Logger;
@@ -42,6 +49,11 @@ public class Registration implements CdsRuntimeConfiguration {
   public void eventHandlers(CdsRuntimeConfigurer configurer) {
     logger.info(marker, "Registering event handler for attachment service");
     CacheConfig.initializeCache();
+    var persistenceService =
+        configurer
+            .getCdsRuntime()
+            .getServiceCatalog()
+            .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
     var attachmentService =
         configurer
             .getCdsRuntime()
@@ -57,14 +69,15 @@ public class Registration implements CdsRuntimeConfiguration {
     var outboxedAttachmentService = outbox.outboxed(attachmentService);
 
     configurer.eventHandler(new SDMAttachmentsServiceHandler());
-
+    var attachmentsReader = buildAttachmentsReader(persistenceService);
     var deleteContentEvent = new MarkAsDeletedAttachmentEvent(outboxedAttachmentService);
     var eventFactory =
         buildAttachmentEventFactory(
             attachmentService, deleteContentEvent, outboxedAttachmentService);
     ThreadLocalDataStorage storage = new ThreadLocalDataStorage();
-
-    configurer.eventHandler(buildCreateHandler(eventFactory, storage));
+    configurer.eventHandler(buildCreateHandler(eventFactory, storage, persistenceService));
+    configurer.eventHandler(
+        buildUpdateHandler(eventFactory, attachmentsReader, storage, persistenceService));
   }
 
   private AttachmentService buildAttachmentService() {
@@ -95,7 +108,25 @@ public class Registration implements CdsRuntimeConfiguration {
   }
 
   protected EventHandler buildCreateHandler(
-      ModifyAttachmentEventFactory factory, ThreadLocalDataStorage storage) {
-    return new SDMCreateEventHandler(factory, storage);
+      ModifyAttachmentEventFactory factory,
+      ThreadLocalDataStorage storage,
+      PersistenceService persistenceService) {
+    SDMService sdmService = new SDMServiceImpl();
+    return new SDMCreateEventHandler(factory, storage, persistenceService, sdmService);
+  }
+
+  protected EventHandler buildUpdateHandler(
+      ModifyAttachmentEventFactory factory,
+      AttachmentsReader attachmentsReader,
+      ThreadLocalDataStorage storage,
+      PersistenceService persistenceService) {
+    SDMService sdmService = new SDMServiceImpl();
+    return new SDMUpdateEventHandler(
+        factory, attachmentsReader, storage, persistenceService, sdmService);
+  }
+
+  protected AttachmentsReader buildAttachmentsReader(PersistenceService persistenceService) {
+    var cascader = new DefaultAssociationCascader();
+    return new DefaultAttachmentsReader(cascader, persistenceService);
   }
 }
