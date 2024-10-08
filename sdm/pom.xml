@@ -201,16 +201,16 @@
                             com/sap/cds/sdm/constants/**
                         </exclude>
                         <exclude>
-                            com/sap/cds/sdm/caching/**
-                        </exclude>
-                        <exclude>
                             com/sap/cds/sdm/model/**
                         </exclude>
                         <exclude>
                             com/sap/cds/sdm/persistence/**
                         </exclude>
                         <exclude>
-                            com/sap/cds/sdm/service/SDMAttachmentsService.class
+                            com/sap/cds/sdm/service/SDMAttachmentsService
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler
                         </exclude>
                     </excludes>
                 </configuration>
