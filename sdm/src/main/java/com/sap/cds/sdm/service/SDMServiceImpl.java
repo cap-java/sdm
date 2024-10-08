@@ -27,7 +27,6 @@ public class SDMServiceImpl implements SDMService {
 
     OkHttpClient client = new OkHttpClient();
     accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
-    System.out.println("Token : " + accessToken);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -50,50 +49,9 @@ public class SDMServiceImpl implements SDMService {
               .addFormDataPart("filename", cmisDocument.getFileName(), fileBody)
               .build();
 
-      Request request =
-          new Request.Builder()
-              .url(sdmUrl)
-              .addHeader("Authorization", "Bearer " + accessToken)
-              .post(requestBody)
-              .build();
+      handleDocumentCreationRequest(
+          cmisDocument, client, requestBody, sdmUrl, accessToken, finalResponse);
 
-      try (Response response = client.newCall(request).execute()) {
-        String status = "success";
-        String name = cmisDocument.getFileName();
-        String id = cmisDocument.getAttachmentId();
-        String objectId = "";
-
-        if (!response.isSuccessful()) {
-          String responseBody = response.body().string();
-          JSONObject jsonResponse = new JSONObject(responseBody);
-          String message = jsonResponse.getString("message");
-
-          if (response.code() == 409) {
-            status = "duplicate";
-          } else if ("Malware Service Exception: Virus found in the file!".equals(message)) {
-            status = "virus";
-          } else {
-            status = "fail";
-          }
-        } else {
-          String responseBody = response.body().string();
-          JSONObject jsonResponse = new JSONObject(responseBody);
-          JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-          status = "success";
-          objectId = succinctProperties.getString("cmis:objectId");
-        }
-
-        // Construct the final response
-        finalResponse.put("name", name);
-        finalResponse.put("id", id);
-        finalResponse.put("status", status);
-        if (objectId != "") {
-          finalResponse.put("url", objectId);
-        }
-
-      } catch (IOException e) {
-        throw new IOException("Could not upload");
-      }
     } catch (IOException e) {
       throw new IOException("Could not upload");
     }
@@ -101,15 +59,59 @@ public class SDMServiceImpl implements SDMService {
     return result;
   }
 
-  //    @Override
-  //    public void readDocument() {
-  //
-  //    }
-  //
-  //    @Override
-  //    public void deleteDocument() {
-  //
-  //    }
+  private void handleDocumentCreationRequest(
+      CmisDocument cmisDocument,
+      OkHttpClient client,
+      RequestBody requestBody,
+      String sdmUrl,
+      String accessToken,
+      Map<String, String> finalResponse)
+      throws IOException {
+    Request request =
+        new Request.Builder()
+            .url(sdmUrl)
+            .addHeader("Authorization", "Bearer " + accessToken)
+            .post(requestBody)
+            .build();
+
+    try (Response response = client.newCall(request).execute()) {
+      String status = "success";
+      String name = cmisDocument.getFileName();
+      String id = cmisDocument.getAttachmentId();
+      String objectId = "";
+
+      if (!response.isSuccessful()) {
+        String responseBody = response.body().string();
+        JSONObject jsonResponse = new JSONObject(responseBody);
+        String message = jsonResponse.getString("message");
+
+        if (response.code() == 409) {
+          status = "duplicate";
+        } else if ("Malware Service Exception: Virus found in the file!".equals(message)) {
+          status = "virus";
+        } else {
+          status = "fail";
+        }
+      } else {
+        String responseBody = response.body().string();
+        JSONObject jsonResponse = new JSONObject(responseBody);
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        status = "success";
+        objectId = succinctProperties.getString("cmis:objectId");
+      }
+
+      // Construct the final response
+      finalResponse.put("name", name);
+      finalResponse.put("id", id);
+      finalResponse.put("status", status);
+      if (!objectId.isEmpty()) {
+        finalResponse.put("url", objectId);
+      }
+
+    } catch (IOException e) {
+      throw new IOException("Could not upload");
+    }
+  }
 
   @Override
   public String getFolderId(
@@ -161,12 +163,11 @@ public class SDMServiceImpl implements SDMService {
             .build();
 
     try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-      else {
+      if (!response.isSuccessful()) {
+        return null;
+      } else {
         return response.body().string();
       }
-    } catch (IOException e) {
-      return null;
     }
   }
 
@@ -216,7 +217,7 @@ public class SDMServiceImpl implements SDMService {
       isVersioned = "Versioned".equals(type);
     }
 
-    if (isVersioned) {
+    if (Boolean.TRUE.equals(isVersioned)) {
       CacheConfig.getVersionedRepoCache().put(repositoryId, "Versioned");
       return "Versioned";
     } else {
@@ -262,7 +263,6 @@ public class SDMServiceImpl implements SDMService {
       type = "Non Versioned";
     }
 
-    // saveRepoToCache(repositoryId, repoInfo);
     return "Versioned".equals(type);
   }
 }

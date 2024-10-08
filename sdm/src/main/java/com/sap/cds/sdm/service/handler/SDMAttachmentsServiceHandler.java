@@ -30,12 +30,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
-  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
 
@@ -68,7 +65,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String fileid = (String) attachmentIds.get("ID");
 
       Boolean duplicate = duplicateCheck(filename, fileid, result);
-      if (duplicate) {
+      if (Boolean.TRUE.equals(duplicate)) {
         deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
         context
             .getMessages()
