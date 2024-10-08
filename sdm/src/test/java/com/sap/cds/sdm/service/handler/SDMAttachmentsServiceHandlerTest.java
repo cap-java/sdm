@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.service.handler;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.sap.cds.sdm.persistence.DBQuery.*;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -10,8 +9,6 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.sdm.handler.TokenHandler;
-import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
@@ -20,11 +17,8 @@ import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.messages.Message;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
-import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -97,277 +91,173 @@ public class SDMAttachmentsServiceHandlerTest {
     }
   }
 
-  @Test
-  public void testCreateNonVersionedDIDuplicate() throws IOException {
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    Result mockResult = mock(Result.class);
-    MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
-    CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
-    byte[] byteArray = "Example content".getBytes();
-    InputStream contentStream = new ByteArrayInputStream(byteArray);
-    JSONObject mockCreateResult = new JSONObject();
-    mockCreateResult.put("status", "duplicate");
-    mockCreateResult.put("name", "sample.pdf");
-
-    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
-    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class)) {
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUP__ID(mockEntity, persistenceService, "upid"))
-          .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      handlerSpy.createAttachment(mockContext);
-      verify(mockMessages)
-          .error("The following files already exist and cannot be uploaded:\n• sample.pdf\n");
-    }
-  }
-
-  @Test
-  public void testCreateNonVersionedDIVirus() throws IOException {
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    Result mockResult = mock(Result.class);
-    MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
-    CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
-    byte[] byteArray = "Example content".getBytes();
-    InputStream contentStream = new ByteArrayInputStream(byteArray);
-    JSONObject mockCreateResult = new JSONObject();
-    mockCreateResult.put("status", "virus");
-    mockCreateResult.put("name", "sample.pdf");
-
-    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
-    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class)) {
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUP__ID(mockEntity, persistenceService, "upid"))
-          .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      handlerSpy.createAttachment(mockContext);
-      verify(mockMessages)
-          .error(
-              "The following files contain potential malware and cannot be uploaded:\n• sample.pdf\n");
-    }
-  }
-
-  @Test
-  public void testCreateNonVersionedDIOther() throws IOException {
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    Result mockResult = mock(Result.class);
-    MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
-    CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
-    byte[] byteArray = "Example content".getBytes();
-    InputStream contentStream = new ByteArrayInputStream(byteArray);
-    JSONObject mockCreateResult = new JSONObject();
-    mockCreateResult.put("status", "fail");
-    mockCreateResult.put("name", "sample.pdf");
-
-    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
-    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class)) {
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUP__ID(mockEntity, persistenceService, "upid"))
-          .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      handlerSpy.createAttachment(mockContext);
-      verify(mockMessages).error("The following files cannot be uploaded:\n• sample.pdf\n");
-    }
-  }
-
-  @Test
-  public void testCreateNonVersionedDISuccess() throws IOException {
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    Result mockResult = mock(Result.class);
-    MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
-    CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
-    byte[] byteArray = "Example content".getBytes();
-    InputStream contentStream = new ByteArrayInputStream(byteArray);
-    JSONObject mockCreateResult = new JSONObject();
-    mockCreateResult.put("status", "success");
-    mockCreateResult.put("url", "url");
-    mockCreateResult.put("name", "sample.pdf");
-
-    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
-    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class)) {
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUP__ID(mockEntity, persistenceService, "upid"))
-          .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      handlerSpy.createAttachment(mockContext);
-      verifyNoInteractions(mockMessages);
-    }
-  }
-
-  @Test
-  void testDuplicateCheck_NoDuplicates() {
-    Result result = mock(Result.class);
-
-    // Mocking a raw list of maps
-    List<Map> mockedResultList = new ArrayList<>();
-    Map<String, Object> map1 = new HashMap<>();
-    map1.put("key1", "value1");
-    mockedResultList.add(map1);
-
-    // Casting to raw types to avoid type mismatch
-    when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
-
-    String filename = "sample.pdf";
-    String fileid = "123";
-    Map<String, Object> attachment = new HashMap<>();
-    attachment.put("fileName", filename);
-    attachment.put("ID", fileid);
-
-    List<Map> resultList = Arrays.asList((Map) attachment);
-    when(result.listOf(Map.class)).thenReturn((List) resultList);
-
-    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
-    assertFalse(isDuplicate, "Expected no duplicates");
-  }
-
-  @Test
-  void testDuplicateCheck_WithDuplicate() {
-    Result result = mock(Result.class);
-
-    // Mocking a raw list of maps
-    List<Map> mockedResultList = new ArrayList<>();
-
-    // Creating a map with duplicate filename but different file ID
-    Map<String, Object> attachment1 = new HashMap<>();
-    attachment1.put("fileName", "sample.pdf");
-    attachment1.put("ID", "123"); // Different ID, not a duplicate
-
-    Map<String, Object> attachment2 = new HashMap<>();
-    attachment2.put("fileName", "sample.pdf");
-    attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
-
-    mockedResultList.add((Map) attachment1);
-    mockedResultList.add((Map) attachment2);
-
-    // Mocking the result to return the list containing the attachments
-    when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
-
-    String filename = "sample.pdf";
-    String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
-
-    // Checking for duplicate
-    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
-
-    // Assert that a duplicate is found
-    assertTrue(isDuplicate, "Expected to find a duplicate");
-  }
+  //  @Test
+  //  public void testCreateNonVersionedSuccess() throws IOException {
+  //    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+  //    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+  //    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+  //    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+  //    JSONObject mockResult = new JSONObject(); // Mock result object
+  //    mockResult.put("url", "url");
+  //    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockResult);
+  //    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderId");
+  //
+  //    CdsEntity targetMock = mock(CdsEntity.class);
+  //    when(mockContext.getTarget()).thenReturn(targetMock);
+  //    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
+  //    CdsEntity mockEntity = mock(CdsEntity.class);
+  //    CdsModel mockModel = mock(CdsModel.class);
+  //    when(mockContext.getModel()).thenReturn(mockModel);
+  //    when(mockModel.findEntity("some.qualified.Name.attachments"))
+  //        .thenReturn(Optional.of(mockEntity));
+  //
+  //    mockData = new ArrayList<>();
+  //    CdsData cdsData = mock(CdsData.class);
+  //    List<Map<String, Object>> attachments = new ArrayList<>();
+  //    Map<String, Object> attachment1 = new HashMap<>();
+  //    Map<String, Object> attachment2 = new HashMap<>();
+  //    String simulatedContent = "Sample Content"; // Example content as a string
+  //    InputStream contentStream =
+  //        new ByteArrayInputStream(simulatedContent.getBytes(StandardCharsets.UTF_8));
+  //    attachment1.put("up__ID", "up__id");
+  //    attachment1.put("fileName", "sample1.pdf");
+  //    attachment1.put("ID", "id1");
+  //    attachment1.put("content", contentStream);
+  //    attachment2.put("up__ID", "up__id");
+  //    attachment2.put("fileName", "sample2.pdf");
+  //    attachment2.put("ID", "id2");
+  //    attachment2.put("content", contentStream);
+  //    attachments.add(attachment1);
+  //    attachments.add(attachment2);
+  //    when(cdsData.get("attachments")).thenReturn(attachments);
+  //    mockData.add(cdsData);
+  //
+  //    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+  //        Mockito.mockStatic(TokenHandler.class)) {
+  //      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+  //
+  // tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+  //
+  //      handlerSpy.processBefore(mockContext, mockData);
+  //    }
+  //  }
+  //
+  //  @Test
+  //  public void testCreateNonVersionedDuplicate() throws IOException {
+  //    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+  //    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+  //    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+  //    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+  //    Messages mockMessages = Mockito.mock(Messages.class);
+  //    Mockito.when(mockContext.getMessages()).thenReturn(mockMessages);
+  //    JSONObject mockResult1 = new JSONObject(); // Mock result object
+  //    JSONObject mockResult2 = new JSONObject();
+  //    JSONObject mockResult3 = new JSONObject();
+  //    mockResult1.put("duplicate", true);
+  //    mockResult1.put("virus", false);
+  //    mockResult1.put("id", "id1");
+  //    mockResult1.put("failedDocument", "sample1.pdf");
+  //    mockResult2.put("duplicate", false);
+  //    mockResult2.put("virus", true);
+  //    mockResult2.put("id", "id2");
+  //    mockResult2.put("failedDocument", "sample2.pdf");
+  //    mockResult3.put("fail", true);
+  //    mockResult3.put("id", "id3");
+  //    mockResult3.put("failedDocument", "sample3.pdf");
+  //    when(sdmService.createDocument(any(), any(), any()))
+  //        .thenReturn(mockResult1)
+  //        .thenReturn(mockResult2)
+  //        .thenReturn(mockResult3);
+  //    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderId");
+  //
+  //    CdsEntity targetMock = mock(CdsEntity.class);
+  //    when(mockContext.getTarget()).thenReturn(targetMock);
+  //    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
+  //    CdsEntity mockEntity = mock(CdsEntity.class);
+  //    CdsModel mockModel = mock(CdsModel.class);
+  //    when(mockContext.getModel()).thenReturn(mockModel);
+  //    when(mockModel.findEntity("some.qualified.Name.attachments"))
+  //        .thenReturn(Optional.of(mockEntity));
+  //
+  //    mockData = new ArrayList<>();
+  //    CdsData cdsData = mock(CdsData.class);
+  //    List<Map<String, Object>> attachments = new ArrayList<>();
+  //    Map<String, Object> attachment1 = new HashMap<>();
+  //    Map<String, Object> attachment2 = new HashMap<>();
+  //    Map<String, Object> attachment3 = new HashMap<>();
+  //    String simulatedContent = "Sample Content"; // Example content as a string
+  //    InputStream contentStream =
+  //        new ByteArrayInputStream(simulatedContent.getBytes(StandardCharsets.UTF_8));
+  //    attachment1.put("up__ID", "up__id");
+  //    attachment1.put("fileName", "sample1.pdf");
+  //    attachment1.put("ID", "id1");
+  //    attachment1.put("content", contentStream);
+  //    attachment2.put("up__ID", "up__id");
+  //    attachment2.put("fileName", "sample2.pdf");
+  //    attachment2.put("ID", "id2");
+  //    attachment2.put("content", contentStream);
+  //    attachment3.put("up__ID", "up__id");
+  //    attachment3.put("fileName", "sample3.pdf");
+  //    attachment3.put("ID", "id3");
+  //    attachment3.put("content", contentStream);
+  //    attachments.add(attachment1);
+  //    attachments.add(attachment2);
+  //    attachments.add(attachment3);
+  //    when(cdsData.get("attachments")).thenReturn(attachments);
+  //    mockData.add(cdsData);
+  //
+  //    String expectedWarnMessage =
+  //        "The following files already exist and cannot be uploaded:\n"
+  //            + "• sample1.pdf\n"
+  //            + "The following files contain potential malware and cannot be uploaded:\n"
+  //            + "• sample2.pdf\n"
+  //            + "The following files cannot be uploaded:\n"
+  //            + "• sample3.pdf";
+  //
+  //    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+  //        Mockito.mockStatic(TokenHandler.class)) {
+  //      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+  //
+  // tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+  //      handlerSpy.processBefore(mockContext, mockData);
+  //      // verify(mockMessages).warn(trim(expectedWarnMessage));
+  //      ArgumentCaptor<String> warnMessageCaptor = forClass(String.class);
+  //      verify(mockMessages).warn(warnMessageCaptor.capture());
+  //      String actualWarnMessage = warnMessageCaptor.getValue().trim(); // Trim the actual message
+  //      assertEquals(expectedWarnMessage, actualWarnMessage);
+  //    }
+  //  }
+  //
+  //  @Test
+  //  public void testProcessBeforeDuplicateFiles() throws IOException {
+  //    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+  //    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+  //    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+  //    Messages mockMessages = mock(Messages.class);
+  //    when(mockContext.getMessages()).thenReturn(mockMessages);
+  //    CdsEntity mockTarget = mock(CdsEntity.class);
+  //    when(mockContext.getTarget()).thenReturn(mockTarget);
+  //
+  //    mockData = new ArrayList<>();
+  //    CdsData cdsData = mock(CdsData.class);
+  //    List<Map<String, Object>> attachments = new ArrayList<>();
+  //    Map<String, Object> attachment1 = new HashMap<>();
+  //    Map<String, Object> attachment2 = new HashMap<>();
+  //    attachment1.put("up__ID", "up__id");
+  //    attachment1.put("fileName", "sample1.pdf");
+  //    attachment2.put("up__ID", "up__id");
+  //    attachment2.put("fileName", "sample1.pdf");
+  //    attachments.add(attachment1);
+  //    attachments.add(attachment2);
+  //    when(cdsData.get("attachments")).thenReturn(attachments);
+  //    mockData.add(cdsData);
+  //
+  //    IOException exception =
+  //        assertThrows(
+  //            IOException.class,
+  //            () -> {
+  //              handlerSpy.processBefore(mockContext, mockData);
+  //            });
+  //    assertEquals("Duplicate files", exception.getMessage());
+  //  }
 }

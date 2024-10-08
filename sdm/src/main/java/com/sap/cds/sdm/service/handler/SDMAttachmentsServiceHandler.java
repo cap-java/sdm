@@ -6,6 +6,9 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -58,6 +61,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           model.findEntity(context.getAttachmentEntity() + "_drafts");
       Result result =
           DBQuery.getAttachmentsForUP__ID(attachmentDraftEntity.get(), persistenceService, up__ID);
+      System.out.println("Result before : " + result);
 
       MediaData data = context.getData();
 
@@ -70,6 +74,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         Result result123 =
             DBQuery.getAttachmentsForUP__ID(
                 attachmentDraftEntity.get(), persistenceService, up__ID);
+        System.out.println("Result after delete : " + result123);
         context
             .getMessages()
             .warn("This attachment already exists. Please remove it and try again");
@@ -89,28 +94,21 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         JSONObject createResult = sdmService.createDocument(cmisDocument, jwtToken, sdmCredentials);
 
         StringBuilder error = new StringBuilder();
-        Boolean errorFlag = false;
         if (createResult.get("status") == "duplicate") {
           deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
           error.append("The following files already exist and cannot be uploaded:\n");
           error.append("• ").append(createResult.get("name")).append("\n");
-          errorFlag = true;
         } else if (createResult.get("status") == "virus") {
           deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
           error.append("The following files contain potential malware and cannot be uploaded:\n");
           error.append("• ").append(createResult.get("name")).append("\n");
-          errorFlag = true;
         } else if (createResult.get("status") == "fail") {
           deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
           error.append("The following files cannot be uploaded:\n");
           error.append("• ").append(createResult.get("name")).append("\n");
-          errorFlag = true;
         } else {
           cmisDocument.setObjectId(createResult.get("url").toString());
           addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
-        }
-        if (errorFlag == true) {
-          context.getMessages().error(error.toString());
         }
       }
     }
@@ -122,14 +120,14 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     //        context.setCompleted();
   }
 
-  //  @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
-  //  public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context) {}
-  //
-  //  @On(event = AttachmentService.EVENT_RESTORE_ATTACHMENT)
-  //  public void restoreAttachment(AttachmentRestoreEventContext context) {}
-  //
-  //  @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
-  //  public void readAttachment(AttachmentReadEventContext context) {}
+  @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
+  public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context) {}
+
+  @On(event = AttachmentService.EVENT_RESTORE_ATTACHMENT)
+  public void restoreAttachment(AttachmentRestoreEventContext context) {}
+
+  @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
+  public void readAttachment(AttachmentReadEventContext context) {}
 
   public boolean duplicateCheck(String filename, String fileid, Result result) {
 

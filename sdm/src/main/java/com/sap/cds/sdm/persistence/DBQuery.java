@@ -65,6 +65,7 @@ public class DBQuery {
         break; // Exit the loop after finding the first non-null folderId
       }
     }
+    System.out.println("Res : " + res);
     return res;
   }
 }

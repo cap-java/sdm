@@ -136,6 +136,7 @@ public class SDMServiceImpl implements SDMService {
         folderId = succinctProperties.getString("cmis:objectId");
       }
     }
+    System.out.println("Folder val : " + folderId);
     return folderId;
   }
 
