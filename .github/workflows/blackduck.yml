@@ -1,0 +1,56 @@
+name: Blackduck analysis
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+  
+permissions:
+  pull-requests: read # allows SonarQube to decorate PRs with analysis results
+
+jobs:
+  build:
+    runs-on: cap-java
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+          
+      - name: Install dependencies
+        run: |
+          mvn clean install -DskipTests
+        
+      - name: Download Synopsys Detect Script
+        run: curl --silent -O https://detect.synopsys.com/detect9.sh
+
+      - name: Run & analyze BlackDuck Scan
+        run: |
+          bash ./detect9.sh -d \
+          --logging.level.com.synopsys.integration=DEBUG  \
+          --blackduck.url="https://sap.blackducksoftware.com" \
+          --blackduck.api.token=""${{ secrets.BLACKDUCK_TOKEN }}""   \
+          --detect.blackduck.signature.scanner.arguments="--min-scan-interval=0" \
+          --detect.maven.build.command="install -DskipTests" \
+          --detect.latest.release.version="9.6.0" \
+          --detect.project.version.distribution="SaaS" \
+          --detect.blackduck.signature.scanner.memory=4096  \
+          --detect.timeout=6000 \
+          --blackduck.trust.cert=true \
+          --detect.project.user.groups="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0"  \
+          --detect.project.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0" \
+          --detect.project.version.name="1.0" \
+          --detect.code.location.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0/1.0" \
+          --detect.source.path="/sapmnt/home/I355238/actions-runner_cap-java/_work/sdm/sdm/sdm"

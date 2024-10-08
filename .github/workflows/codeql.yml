@@ -1,0 +1,44 @@
+######
+name: "Code Scanning - Action"
+
+on:
+  push:
+    branches: [ "develop", "qual" ]
+  pull_request:
+    branches: [ "develop", "qual" ]
+
+  workflow_dispatch:
+env:         
+  NODE_OPTIONS: --use-openssl-ca
+
+jobs:
+  CodeQL-Build:
+    # CodeQL runs on ubuntu-latest, windows-latest, and macos-latest
+    runs-on: cap-java
+
+    permissions:
+      # required for all workflows
+      security-events: write
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        env:
+          CODEQL_EXTRACTOR_JAVA_RUN_ANNOTATION_PROCESSORS: 'true' # required to de-lombok natively
+        # You can use languages from this list: go, javascript, csharp, python, cpp, java
+        with:
+           queries: security-extended
+           languages: java
+
+      - run: |
+           mvn -v
+           mvn package -DskipTests -Dmaven.javadoc.skip=true
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+######
