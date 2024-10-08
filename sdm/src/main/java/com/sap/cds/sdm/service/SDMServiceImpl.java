@@ -160,9 +160,8 @@ public class SDMServiceImpl implements SDMService {
             .build();
 
     try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        return null;
-      } else {
+      if (!response.isSuccessful()) throw new IOException("Could not upload");
+      else {
         return response.body().string();
       }
     }

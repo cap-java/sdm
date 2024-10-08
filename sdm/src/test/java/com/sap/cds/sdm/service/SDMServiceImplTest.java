@@ -1,8 +1,6 @@
 package com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
@@ -337,9 +335,13 @@ public class SDMServiceImplTest {
       Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
 
-      String folderId =
-          sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
-      assertNull(folderId, "Expected folderId to be null");
+      IOException exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
+              });
+      assertEquals("Could not upload", exception.getMessage());
 
     } finally {
       mockWebServer.shutdown();
