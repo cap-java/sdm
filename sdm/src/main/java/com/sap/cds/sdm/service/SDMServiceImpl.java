@@ -55,8 +55,7 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new IOException("Could not upload");
     }
-    JSONObject result = new JSONObject(finalResponse);
-    return result;
+    return new JSONObject(finalResponse);
   }
 
   private void handleDocumentCreationRequest(

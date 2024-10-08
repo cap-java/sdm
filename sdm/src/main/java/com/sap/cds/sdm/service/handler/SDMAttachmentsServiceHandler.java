@@ -52,55 +52,64 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     } else {
       Map<String, Object> attachmentIds = context.getAttachmentIds();
       String upID = (String) attachmentIds.get("up__ID");
-
       CdsModel model = context.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(context.getAttachmentEntity() + "_drafts");
       Result result =
           DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
+      if (!result.list().isEmpty()) {
+        MediaData data = context.getData();
 
-      MediaData data = context.getData();
+        String filename = (String) data.get("fileName");
+        ;
+        String fileid = (String) attachmentIds.get("ID");
 
-      String filename = (String) data.get("fileName");
-      String fileid = (String) attachmentIds.get("ID");
-
-      Boolean duplicate = duplicateCheck(filename, fileid, result);
-      if (Boolean.TRUE.equals(duplicate)) {
-        deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
-        context
-            .getMessages()
-            .warn("This attachment already exists. Please remove it and try again");
-      } else {
-        AuthenticationInfo authInfo = context.getAuthenticationInfo();
-        JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-        String jwtToken = jwtTokenInfo.getToken();
-        String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
-        cmisDocument.setFileName(filename);
-        cmisDocument.setAttachmentId(fileid);
-        InputStream contentStream = (InputStream) data.get("content");
-        cmisDocument.setContent(contentStream);
-        cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
-        cmisDocument.setRepositoryId(repositoryId);
-        cmisDocument.setFolderId(folderId);
-        SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-        JSONObject createResult = sdmService.createDocument(cmisDocument, jwtToken, sdmCredentials);
-
-        StringBuilder error = new StringBuilder();
-        if (createResult.get("status") == "duplicate") {
+        Boolean duplicate = duplicateCheck(filename, fileid, result);
+        if (Boolean.TRUE.equals(duplicate)) {
           deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
-          error.append("The following files already exist and cannot be uploaded:\n");
-          error.append("• ").append(createResult.get("name")).append("\n");
-        } else if (createResult.get("status") == "virus") {
-          deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
-          error.append("The following files contain potential malware and cannot be uploaded:\n");
-          error.append("• ").append(createResult.get("name")).append("\n");
-        } else if (createResult.get("status") == "fail") {
-          deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
-          error.append("The following files cannot be uploaded:\n");
-          error.append("• ").append(createResult.get("name")).append("\n");
+          context
+              .getMessages()
+              .warn("This attachment already exists. Please remove it and try again");
         } else {
-          cmisDocument.setObjectId(createResult.get("url").toString());
-          addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
+          AuthenticationInfo authInfo = context.getAuthenticationInfo();
+          JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+          String jwtToken = jwtTokenInfo.getToken();
+          String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
+          cmisDocument.setFileName(filename);
+          cmisDocument.setAttachmentId(fileid);
+          InputStream contentStream = (InputStream) data.get("content");
+          cmisDocument.setContent(contentStream);
+          cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
+          cmisDocument.setRepositoryId(repositoryId);
+          cmisDocument.setFolderId(folderId);
+          SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+          JSONObject createResult =
+              sdmService.createDocument(cmisDocument, jwtToken, sdmCredentials);
+
+          Boolean errorFlag = false;
+          StringBuilder error = new StringBuilder();
+          if (createResult.get("status") == "duplicate") {
+            deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
+            error.append("The following files already exist and cannot be uploaded:\n");
+            error.append("• ").append(createResult.get("name")).append("\n");
+            errorFlag = true;
+          } else if (createResult.get("status") == "virus") {
+            deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
+            error.append("The following files contain potential malware and cannot be uploaded:\n");
+            error.append("• ").append(createResult.get("name")).append("\n");
+            errorFlag = true;
+          } else if (createResult.get("status") == "fail") {
+            deleteAttachmentFromDraft(attachmentDraftEntity.get(), persistenceService, fileid);
+            error.append("The following files cannot be uploaded:\n");
+            error.append("• ").append(createResult.get("name")).append("\n");
+            errorFlag = true;
+          } else {
+            cmisDocument.setObjectId(createResult.get("url").toString());
+            addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
+          }
+          if (Boolean.TRUE.equals(errorFlag)) {
+            context.getMessages().error(error.toString());
+          }
         }
       }
     }

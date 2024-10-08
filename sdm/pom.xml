@@ -207,10 +207,10 @@
                             com/sap/cds/sdm/persistence/**
                         </exclude>
                         <exclude>
-                            com/sap/cds/sdm/service/SDMAttachmentsService
+                            com/sap/cds/sdm/service/SDMAttachmentsService.class
                         </exclude>
                         <exclude>
-                            com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler
+                            com/sap/cds/sdm/caching/**
                         </exclude>
                     </excludes>
                 </configuration>
