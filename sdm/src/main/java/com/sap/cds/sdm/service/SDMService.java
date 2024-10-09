@@ -1,14 +1,32 @@
 package com.sap.cds.sdm.service;
 
+import com.sap.cds.Result;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import org.json.JSONObject;
 
 public interface SDMService {
-  public String createDocument(CmisDocument cmisDocument, String jwtToken) throws IOException;
+  public JSONObject createDocument(
+      CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials) throws IOException;
 
-  public void readDocument();
+  public String createFolder(
+      String parentId, String jwtToken, String repositoryId, SDMCredentials sdmCredentials)
+      throws IOException;
 
-  public void deleteDocument();
+  public String getFolderId(
+      String jwtToken, Result result, PersistenceService persistenceService, String upID)
+      throws IOException;
 
-  public String createFolder();
+  public String getFolderIdByPath(
+      String parentId, String jwtToken, String repositoryId, SDMCredentials sdmCredentials)
+      throws IOException;
+
+  public String checkRepositoryType(String repositoryId) throws IOException;
+
+  public JSONObject getRepositoryInfo(String token, SDMCredentials sdmCredentials)
+      throws IOException;
+
+  public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 }
