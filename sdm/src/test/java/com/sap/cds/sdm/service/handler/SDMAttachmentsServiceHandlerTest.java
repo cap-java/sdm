@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
@@ -34,7 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 
-public class SDMAttachmentsServiceHandlerTest {
+public class SDMAttachmentsServiceHandlerTest { 
   @Mock private AttachmentCreateEventContext mockContext;
   @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
@@ -53,9 +54,16 @@ public class SDMAttachmentsServiceHandlerTest {
   String folderId = "folderId";
   String userEmail = "email";
   String subdomain = "subdomain";
+  JsonObject mockPayload = new JsonObject();
 
   @BeforeEach
   public void setUp() {
+    mockPayload.addProperty("email", "john.doe@example.com");
+    mockPayload.addProperty("exp", "1234567890");
+    mockPayload.addProperty("zid", "tenant-id-value");
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.addProperty("zdn", "tenant");
+    mockPayload.add("ext_attr", jsonObject);
     MockitoAnnotations.openMocks(this);
     persistenceService = mock(PersistenceService.class);
     sdmService = mock(SDMServiceImpl.class);
@@ -193,6 +201,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages)
           .error("The following files already exist and cannot be uploaded:\n• sample.pdf\n");
@@ -265,6 +274,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages)
           .error(
@@ -324,6 +334,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages).error("The following files cannot be uploaded:\n• sample.pdf\n");
     }
