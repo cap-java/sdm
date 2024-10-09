@@ -70,11 +70,15 @@ public class SDMAttachmentsServiceHandlerTest {
   public void testCreateVersioned() throws IOException {
     Message mockMessage = mock(Message.class);
     Messages mockMessages = mock(Messages.class);
+    MediaData mockMediaData = mock(MediaData.class);
+    CdsModel mockModel = mock(CdsModel.class);
 
     when(sdmService.checkRepositoryType(anyString())).thenReturn("Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockMessages.error("Upload not supported for versioned repositories"))
         .thenReturn(mockMessage);
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getModel()).thenReturn(mockModel);
 
     handlerSpy.createAttachment(mockContext);
     verify(mockMessages).error("Upload not supported for versioned repositories");

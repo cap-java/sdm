@@ -115,6 +115,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration> 
+                    <environmentVariables>
+                        <REPOSITORY_ID>repoid</REPOSITORY_ID>
+                    </environmentVariables>
+                </configuration> 
             </plugin>
 
             <plugin>
