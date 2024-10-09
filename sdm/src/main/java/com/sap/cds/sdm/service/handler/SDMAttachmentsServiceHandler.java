@@ -61,7 +61,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         MediaData data = context.getData();
 
         String filename = (String) data.get("fileName");
-        ;
         String fileid = (String) attachmentIds.get("ID");
 
         Boolean duplicate = duplicateCheck(filename, fileid, result);

@@ -590,6 +590,9 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
           .thenReturn("mockAccessToken");
+      MockResponse mockResponse1 =
+          new MockResponse().setResponseCode(200).setBody("folderByPath123");
+      mockWebServer.enqueue(mockResponse1);
       String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
       assertEquals("folderByPath123", folderId, "Expected folderId from getFolderIdByPath");
     }
@@ -641,6 +644,11 @@ public class SDMServiceImplTest {
       JSONObject succinctProperties = new JSONObject();
       succinctProperties.put("cmis:objectId", "newFolderId123");
       jsonObject.put("succinctProperties", succinctProperties);
+
+      // Enqueue the mock response on the MockWebServer
+      MockResponse mockResponse1 =
+          new MockResponse().setResponseCode(200).setBody("newFolderId123");
+      mockWebServer.enqueue(mockResponse1);
 
       doReturn(jsonObject.toString())
           .when(sdmServiceImpl)
