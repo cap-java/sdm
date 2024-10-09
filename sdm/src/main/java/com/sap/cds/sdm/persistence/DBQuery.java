@@ -15,12 +15,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class DBQuery {
-  public static Result getAttachmentsForUP__ID(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String up__ID) {
+  private DBQuery() {
+    // Doesn't do anything
+  }
+
+  public static Result getAttachmentsForUPID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
-            .where(doc -> doc.get("up__ID").eq(up__ID));
+            .where(doc -> doc.get("up__ID").eq(upID));
     return persistenceService.run(q);
   }
 
@@ -50,12 +54,12 @@ public class DBQuery {
   }
 
   public static String getFolderIdForActiveEntity(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String up__ID) {
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
     String res = null;
     CqnSelect query =
         Select.from(attachmentEntity)
             .columns("folderId")
-            .where(doc -> doc.get("up__ID").eq(up__ID).and(doc.get("IsActiveEntity").eq(true)));
+            .where(doc -> doc.get("up__ID").eq(upID).and(doc.get("IsActiveEntity").eq(true)));
     Result result = persistenceService.run(query);
 
     for (Map<String, Object> row : result.listOf(Map.class)) {
@@ -65,7 +69,6 @@ public class DBQuery {
         break; // Exit the loop after finding the first non-null folderId
       }
     }
-    System.out.println("Res : " + res);
     return res;
   }
 

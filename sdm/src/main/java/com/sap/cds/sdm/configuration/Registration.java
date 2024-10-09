@@ -61,7 +61,6 @@ public class Registration implements CdsRuntimeConfiguration {
                 OutboxService.class,
                 OutboxService.PERSISTENT_UNORDERED_NAME); // need to check if required
     var outboxedAttachmentService = outbox.outboxed(attachmentService);
-    System.out.println("Registration");
     SDMService sdmService = new SDMServiceImpl();
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
   }
@@ -92,19 +91,6 @@ public class Registration implements CdsRuntimeConfiguration {
         new CreationChangeSetListener(contentId, cdsRuntime, outboxedAttachmentService);
   }
 
-  //	protected EventHandler buildCreateHandler(ModifyAttachmentEventFactory factory,
-  // ThreadLocalDataStorage storage,PersistenceService persistenceService) {
-  //		SDMService sdmService = new SDMServiceImpl();
-  //		return new SDMCreateEventHandler(factory, storage, persistenceService, sdmService);
-  //	}
-  //
-  //	protected EventHandler buildUpdateHandler(ModifyAttachmentEventFactory factory,
-  // AttachmentsReader attachmentsReader,
-  //											  ThreadLocalDataStorage storage,PersistenceService persistenceService) {
-  //		SDMService sdmService = new SDMServiceImpl();
-  //		return new SDMUpdateEventHandler(factory,attachmentsReader, storage, persistenceService,
-  // sdmService);
-  //	}
   protected AttachmentsReader buildAttachmentsReader(PersistenceService persistenceService) {
     var cascader = new DefaultAssociationCascader();
     return new DefaultAttachmentsReader(cascader, persistenceService);

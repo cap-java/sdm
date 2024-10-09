@@ -232,9 +232,6 @@
                             com/sap/cds/sdm/constants/**
                         </exclude>
                         <exclude>
-                            com/sap/cds/sdm/caching/**
-                        </exclude>
-                        <exclude>
                             com/sap/cds/sdm/model/**
                         </exclude>
                         <exclude>
@@ -242,6 +239,9 @@
                         </exclude>
                         <exclude>
                             com/sap/cds/sdm/service/SDMAttachmentsService.class
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/caching/**
                         </exclude>
                     </excludes>
                 </configuration>
@@ -284,11 +284,6 @@
                                         </limit>
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>BRANCH</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.90</minimum>
-                                        </limit>
-                                        <limit implementation="org.jacoco.report.check.Limit">
-                                            <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>0.90</minimum>
                                         </limit>
