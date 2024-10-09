@@ -35,7 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 
-public class SDMAttachmentsServiceHandlerTest { 
+public class SDMAttachmentsServiceHandlerTest {
   @Mock private AttachmentCreateEventContext mockContext;
   @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
