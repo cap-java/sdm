@@ -17,6 +17,7 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -50,6 +51,7 @@ public class SDMAttachmentsServiceHandlerTest {
   private SDMAttachmentsServiceHandler handlerSpy;
   private PersistenceService persistenceService;
   @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
+  @Mock private AttachmentRestoreEventContext restoreEventContext;
   private SDMService sdmService;
   @Mock private CdsModel cdsModel;
 
@@ -160,6 +162,27 @@ public class SDMAttachmentsServiceHandlerTest {
 
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
+    }
+  }
+
+  @Test
+  public void testDocumentDeletionForObjectPresent() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
     }
   }
 
@@ -530,5 +553,10 @@ public class SDMAttachmentsServiceHandlerTest {
 
       assertEquals("Failed to read document from SDM service", exception.getMessage());
     }
+  }
+
+  @Test
+  public void testRestoreAttachment() {
+    handlerSpy.restoreAttachment(restoreEventContext);
   }
 }

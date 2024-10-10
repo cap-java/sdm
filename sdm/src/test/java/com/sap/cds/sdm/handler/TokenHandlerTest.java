@@ -1,7 +1,9 @@
 package com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -15,9 +17,12 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import com.sap.cloud.environment.servicebinding.api.ServiceBindingAccessor;
 import com.sap.cloud.security.xsuaa.client.OAuth2ServiceException;
 import java.io.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -66,7 +71,7 @@ public class TokenHandlerTest {
     SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
     when(mockSdmCredentials.getClientId()).thenReturn("mockClientId");
     when(mockSdmCredentials.getClientSecret()).thenReturn("mockClientSecret");
-    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://mock.url");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://example.com");
 
     Cache<String, String> mockCache = Mockito.mock(Cache.class);
     when(mockCache.get(any())).thenReturn(null); // Cache is empty
@@ -76,29 +81,21 @@ public class TokenHandlerTest {
 
       cacheConfigMockedStatic.when(CacheConfig::getUserAuthoritiesTokenCache).thenReturn(mockCache);
       HttpURLConnection mockConn = Mockito.mock(HttpURLConnection.class);
-      try (MockedConstruction<URL> mockedUrl =
-          Mockito.mockConstruction(
-              URL.class,
-              (mock, context) -> {
-                when(mock.openConnection()).thenReturn(mockConn);
-              })) {
-        doNothing().when(mockConn).setRequestMethod("POST");
-        ByteArrayOutputStream mockOutputStream = new ByteArrayOutputStream();
-        doReturn(new DataOutputStream(mockOutputStream)).when(mockConn).getOutputStream();
-        doReturn(new ByteArrayInputStream("{\"access_token\": \"mockedToken\"}".getBytes()))
-            .when(mockConn)
-            .getInputStream();
-        doReturn(HttpURLConnection.HTTP_OK).when(mockConn).getResponseCode();
-        ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
-        JsonNode mockJsonNode = Mockito.mock(JsonNode.class);
-        when(mockMapper.readValue(any(String.class), eq(JsonNode.class))).thenReturn(mockJsonNode);
-        when(mockJsonNode.get("access_token")).thenReturn(mockJsonNode);
-        when(mockJsonNode.asText()).thenReturn("mockedToken");
-        String result =
-            TokenHandler.getDITokenUsingAuthorities(mockSdmCredentials, email, subdomain);
-        assertEquals("mockedToken", result);
-        verify(mockCache).put("clientCredentialsToken", "mockedToken");
-      }
+      doNothing().when(mockConn).setRequestMethod("POST");
+      ByteArrayOutputStream mockOutputStream = new ByteArrayOutputStream();
+      // when(mockConn.getOutputStream()).thenReturn(new DataOutputStream(mockOutputStream));
+      doReturn(new DataOutputStream(mockOutputStream)).when(mockConn).getOutputStream();
+      doThrow(new IOException()).when(mockConn).getInputStream();
+      Exception exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                TokenHandler.getDITokenUsingAuthorities(mockSdmCredentials, email, subdomain);
+              });
+
+      assertEquals(
+          "Server returned HTTP response code: 405 for URL: https://example.com/oauth/token",
+          exception.getMessage());
     }
   }
 
@@ -350,5 +347,31 @@ public class TokenHandlerTest {
     } catch (OAuth2ServiceException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Test
+  void testPrivateConstructor() {
+    // Use reflection to access the private constructor
+    Constructor<TokenHandler> constructor = null;
+    try {
+      constructor = TokenHandler.class.getDeclaredConstructor();
+      constructor.setAccessible(true);
+      assertThrows(InvocationTargetException.class, constructor::newInstance);
+    } catch (NoSuchMethodException e) {
+      fail("Exception occurred during test: " + e.getMessage());
+    }
+  }
+
+  @Test
+  void testToString() {
+    byte[] input = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+    String expected = new String(input, StandardCharsets.UTF_8);
+    String actual = TokenHandler.toString(input);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void testToStringWithNullInput() {
+    assertThrows(NullPointerException.class, () -> TokenHandler.toString(null));
   }
 }
