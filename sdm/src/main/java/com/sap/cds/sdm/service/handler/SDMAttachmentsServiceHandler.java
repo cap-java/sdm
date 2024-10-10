@@ -119,19 +119,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             context.getMessages().error(error.toString());
           }
         }
-
       }
     }
     context.setContentId(
-            cmisDocument.getObjectId()
-                    + ":"
-                    + cmisDocument.getFolderId()
-                    + ":"
-                    + context.getUserInfo().getName()
-                    + ":"
-                    + context.getAttachmentEntity()
-                    + ":"
-                    + subdomain);
+        cmisDocument.getObjectId()
+            + ":"
+            + cmisDocument.getFolderId()
+            + ":"
+            + context.getUserInfo().getName()
+            + ":"
+            + context.getAttachmentEntity()
+            + ":"
+            + subdomain);
     context.setCompleted();
     context.getData().setStatus("Clean");
     context.getData().setContent(null);
