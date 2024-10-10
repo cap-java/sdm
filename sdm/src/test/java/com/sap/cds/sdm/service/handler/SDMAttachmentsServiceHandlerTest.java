@@ -21,6 +21,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
@@ -146,10 +147,16 @@ public class SDMAttachmentsServiceHandlerTest {
 
       when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
       when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId1");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
       mockedDBQuery
-          .when(() -> DBQuery.isFolderEmpty(cdsEntity, persistenceService, folderId))
-          .thenReturn(false);
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
 
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
@@ -221,9 +228,10 @@ public class SDMAttachmentsServiceHandlerTest {
 
       when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
       when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
       mockedDBQuery
-          .when(() -> DBQuery.isFolderEmpty(cdsEntity, persistenceService, folderId))
-          .thenReturn(true);
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
     }

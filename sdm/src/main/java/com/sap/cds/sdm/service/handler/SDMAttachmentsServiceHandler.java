@@ -132,7 +132,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             + context.getAttachmentEntity()
             + ":"
             + subdomain);
-    context.setCompleted();
     context.getData().setStatus("Clean");
     context.getData().setContent(null);
     context.setCompleted();
@@ -150,13 +149,15 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String subdomain = contextValues[4];
       // check if only attachment exists against the folderId
       Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity);
-      boolean isFolderEmpty =
-          DBQuery.isFolderEmpty(attachmentEntity.get(), persistenceService, folderId);
-      if (isFolderEmpty) {
+      List<CmisDocument> cmisDocuments =
+          DBQuery.getAttachmentsForFolder(attachmentEntity.get(), persistenceService, folderId);
+      if (cmisDocuments.size() == 0) {
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
       } else {
-        sdmService.deleteDocument("delete", objectId, userEmail, subdomain);
+        if (!isObjectIdPresent(cmisDocuments, objectId)) {
+          sdmService.deleteDocument("delete", objectId, userEmail, subdomain);
+        }
       }
     }
     context.setCompleted();
@@ -203,5 +204,14 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
 
     return duplicate != null;
+  }
+
+  private boolean isObjectIdPresent(List<CmisDocument> documents, String objectId) {
+    for (CmisDocument doc : documents) {
+      if (objectId.equals(doc.getObjectId())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

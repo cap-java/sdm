@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.persistence;
 
 import com.sap.cds.Result;
+import com.sap.cds.Row;
 import com.sap.cds.ql.Delete;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -11,7 +12,9 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DBQuery {
@@ -72,13 +75,23 @@ public class DBQuery {
     return res;
   }
 
-  public static boolean isFolderEmpty(
+  public static List<CmisDocument> getAttachmentsForFolder(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
+    List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "url")
             .where(doc -> doc.get("folderId").eq(folderId));
     Result result = persistenceService.run(q);
-    return result.list().size() == 0;
+    for (Row row : result.list()) {
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setRepositoryId(row.get("repositoryId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setAttachmentId(row.get("ID").toString());
+      cmisDocument.setObjectId(row.get("url").toString());
+      cmisDocuments.add(cmisDocument);
+    }
+    return cmisDocuments;
   }
 }
