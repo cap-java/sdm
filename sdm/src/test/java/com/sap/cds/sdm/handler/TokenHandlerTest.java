@@ -60,6 +60,7 @@ public class TokenHandlerTest {
       throw new RuntimeException(e);
     }
   }
+
   @Test
   public void testGetDITokenFromAuthoritiesNoCache() throws IOException {
     SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
@@ -71,22 +72,22 @@ public class TokenHandlerTest {
     when(mockCache.get(any())).thenReturn(null); // Cache is empty
 
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-                 Mockito.mockStatic(CacheConfig.class)) {
+        Mockito.mockStatic(CacheConfig.class)) {
 
       cacheConfigMockedStatic.when(CacheConfig::getUserAuthoritiesTokenCache).thenReturn(mockCache);
       HttpURLConnection mockConn = Mockito.mock(HttpURLConnection.class);
       try (MockedConstruction<URL> mockedUrl =
-                   Mockito.mockConstruction(
-                           URL.class,
-                           (mock, context) -> {
-                             when(mock.openConnection()).thenReturn(mockConn);
-                           })) {
+          Mockito.mockConstruction(
+              URL.class,
+              (mock, context) -> {
+                when(mock.openConnection()).thenReturn(mockConn);
+              })) {
         doNothing().when(mockConn).setRequestMethod("POST");
         ByteArrayOutputStream mockOutputStream = new ByteArrayOutputStream();
         doReturn(new DataOutputStream(mockOutputStream)).when(mockConn).getOutputStream();
         doReturn(new ByteArrayInputStream("{\"access_token\": \"mockedToken\"}".getBytes()))
-                .when(mockConn)
-                .getInputStream();
+            .when(mockConn)
+            .getInputStream();
         doReturn(HttpURLConnection.HTTP_OK).when(mockConn).getResponseCode();
         ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
         JsonNode mockJsonNode = Mockito.mock(JsonNode.class);
@@ -94,12 +95,13 @@ public class TokenHandlerTest {
         when(mockJsonNode.get("access_token")).thenReturn(mockJsonNode);
         when(mockJsonNode.asText()).thenReturn("mockedToken");
         String result =
-                TokenHandler.getDITokenUsingAuthorities(mockSdmCredentials, email, subdomain);
+            TokenHandler.getDITokenUsingAuthorities(mockSdmCredentials, email, subdomain);
         assertEquals("mockedToken", result);
         verify(mockCache).put("clientCredentialsToken", "mockedToken");
       }
     }
   }
+
   @Test
   public void testGetDITokenNoCache() throws IOException {
     JsonObject mockPayload = new JsonObject();
@@ -349,6 +351,4 @@ public class TokenHandlerTest {
       throw new RuntimeException(e);
     }
   }
-
-
 }
