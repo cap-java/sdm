@@ -164,7 +164,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   }
 
   @On(event = AttachmentService.EVENT_RESTORE_ATTACHMENT)
-  public void restoreAttachment(AttachmentRestoreEventContext context) {}
+  public void restoreAttachment(AttachmentRestoreEventContext context) {
+    context.setCompleted();
+  }
 
   @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
@@ -184,6 +186,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     } catch (Exception e) {
       throw new IOException("Failed to read document from SDM service", e);
     }
+    context.setCompleted();
   }
 
   public boolean duplicateCheck(String filename, String fileid, Result result) {
