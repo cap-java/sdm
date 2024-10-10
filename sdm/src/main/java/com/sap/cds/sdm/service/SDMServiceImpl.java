@@ -71,7 +71,7 @@ public class SDMServiceImpl implements SDMService {
     Request request =
         new Request.Builder()
             .url(sdmUrl)
-            .addHeader("Authorization", "Bearer " + accessToken)
+            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
             .post(requestBody)
             .build();
 
@@ -198,7 +198,7 @@ public class SDMServiceImpl implements SDMService {
     Request request =
         new Request.Builder()
             .url(sdmUrl)
-            .addHeader("Authorization", "Bearer " + accessToken)
+            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
             .get()
             .build();
 
@@ -232,7 +232,7 @@ public class SDMServiceImpl implements SDMService {
     Request request =
         new Request.Builder()
             .url(sdmUrl)
-            .addHeader("Authorization", "Bearer " + accessToken)
+            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
             .post(requestBody)
             .build();
 
@@ -276,7 +276,7 @@ public class SDMServiceImpl implements SDMService {
     Request request =
         new Request.Builder()
             .url(getRepoInfoUrl)
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + token)
             .get()
             .build();
 
@@ -304,5 +304,36 @@ public class SDMServiceImpl implements SDMService {
     }
 
     return "Versioned".equals(type);
+  }
+
+  @Override
+  public int deleteDocument(String cmisaction, String objectId, String userEmail, String subdomain)
+      throws IOException {
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    OkHttpClient client = new OkHttpClient();
+    String accessToken =
+        TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
+
+    RequestBody requestBody =
+        new MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("cmisaction", cmisaction)
+            .addFormDataPart("objectId", objectId)
+            .build();
+
+    Request request =
+        new Request.Builder()
+            .url(sdmUrl)
+            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
+            .post(requestBody)
+            .build();
+
+    try (Response response = client.newCall(request).execute()) {
+      return response.code();
+    } catch (IOException e) {
+      throw new IOException("Could not delete the document");
+    }
   }
 }

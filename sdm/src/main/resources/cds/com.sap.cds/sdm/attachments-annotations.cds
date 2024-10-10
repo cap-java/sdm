@@ -26,7 +26,6 @@ TypeNamePlural: '{i18n>attachments}',
 },
 LineItem : [
 {Value: content},
-{Value: status},
 {Value: createdAt},
 {Value: createdBy},
 {Value: note}
