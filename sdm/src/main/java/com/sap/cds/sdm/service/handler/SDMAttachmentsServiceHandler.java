@@ -119,19 +119,23 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             context.getMessages().error(error.toString());
           }
         }
-        context.setContentId(
-            cmisDocument.getObjectId()
-                + ":"
-                + cmisDocument.getFolderId()
-                + ":"
-                + context.getUserInfo().getName()
-                + ":"
-                + context.getAttachmentEntity()
-                + ":"
-                + subdomain);
-        context.setCompleted();
+
       }
     }
+    context.setContentId(
+            cmisDocument.getObjectId()
+                    + ":"
+                    + cmisDocument.getFolderId()
+                    + ":"
+                    + context.getUserInfo().getName()
+                    + ":"
+                    + context.getAttachmentEntity()
+                    + ":"
+                    + subdomain);
+    context.setCompleted();
+    context.getData().setStatus("Clean");
+    context.getData().setContent(null);
+    context.setCompleted();
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
@@ -160,6 +164,26 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_RESTORE_ATTACHMENT)
   public void restoreAttachment(AttachmentRestoreEventContext context) {}
+
+  @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
+  public void readAttachment(AttachmentReadEventContext context) throws IOException {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    String repocheck = sdmService.checkRepositoryType(repositoryId);
+    if ("Versioned".equals(repocheck)) {
+      context.getMessages().error("Upload not supported for versioned repositories");
+    }
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    String[] contentIdParts = context.getContentId().split(":");
+    String objectId = contentIdParts[0];
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    try {
+      sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+    } catch (Exception e) {
+      throw new IOException("Failed to read document from SDM service", e);
+    }
+  }
 
   public boolean duplicateCheck(String filename, String fileid, Result result) {
 

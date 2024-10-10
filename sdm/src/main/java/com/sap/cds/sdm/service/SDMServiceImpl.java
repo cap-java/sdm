@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -8,6 +9,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,6 +111,45 @@ public class SDMServiceImpl implements SDMService {
 
     } catch (IOException e) {
       throw new IOException("Could not upload");
+    }
+  }
+
+  @Override
+  public void readDocument(
+      String objectId,
+      String jwtToken,
+      SDMCredentials sdmCredentials,
+      AttachmentReadEventContext context)
+      throws IOException {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    OkHttpClient client = new OkHttpClient();
+    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    String sdmUrl =
+        sdmCredentials.getUrl()
+            + "browser/"
+            + repositoryId
+            + "/root?objectID="
+            + objectId
+            + "&cmisselector=content";
+    Request request =
+        new Request.Builder()
+            .url(sdmUrl)
+            .addHeader("Authorization", "Bearer " + accessToken)
+            .get()
+            .build();
+
+    Response response = client.newCall(request).execute();
+    if (!response.isSuccessful()) {
+      response.close();
+      throw new IOException("Unexpected code " + response);
+    }
+
+    InputStream documentStream = response.body().byteStream();
+    try {
+      context.getData().setContent(documentStream);
+    } catch (Exception e) {
+      response.close();
+      throw new IOException("Failed to set document stream in context", e);
     }
   }
 

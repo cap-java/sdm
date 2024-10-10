@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -780,6 +782,116 @@ public class SDMServiceImplTest {
 
       // Assert the folder ID is the newly created one
       assertEquals("newFolderId123", folderId, "Expected newly created folderId");
+    }
+  }
+
+  @Test
+  public void testReadDocument_Success() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedContent = "This is a document content.";
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setBody(expectedContent)
+              .addHeader("Content-Type", "application/octet-stream"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      MediaData mockData = mock(MediaData.class);
+      when(mockContext.getData()).thenReturn(mockData);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+
+      verify(mockData).setContent(any(InputStream.class));
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadDocument_UnsuccessfulResponse() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
+              .setBody(
+                  "{\"error\":\"Server Error\"}") // Update the error message to match the actual
+              // response
+              .addHeader("Content-Type", "application/json"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      IOException exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+              });
+
+      // Check if the exception message contains the expected first part
+      String expectedMessagePart1 =
+          "Unexpected code Response{protocol=http/1.1, code=500, message=Server Error, url="
+              + mockUrl;
+      assertTrue(exception.getMessage().contains(expectedMessagePart1));
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadDocument_ExceptionWhileSettingContent() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedContent = "This is a document content.";
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setBody(expectedContent)
+              .addHeader("Content-Type", "application/octet-stream"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      MediaData mockData = mock(MediaData.class);
+      when(mockContext.getData()).thenReturn(mockData);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      doThrow(new RuntimeException("Failed to set document stream in context"))
+          .when(mockData)
+          .setContent(any(InputStream.class));
+
+      IOException exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+              });
+      assertEquals("Failed to set document stream in context", exception.getMessage());
+    } finally {
+      mockWebServer.shutdown();
     }
   }
 }

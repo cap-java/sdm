@@ -1,9 +1,12 @@
 package com.sap.cds.sdm.service.handler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
@@ -13,8 +16,10 @@ import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
@@ -37,6 +42,7 @@ import org.mockito.*;
 
 public class SDMAttachmentsServiceHandlerTest {
   @Mock private AttachmentCreateEventContext mockContext;
+  @Mock private AttachmentReadEventContext mockReadContext;
   @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
   @Mock private JwtTokenAuthenticationInfo mockJwtTokenInfo;
@@ -55,6 +61,7 @@ public class SDMAttachmentsServiceHandlerTest {
   String userEmail = "email";
   String subdomain = "subdomain";
   JsonObject mockPayload = new JsonObject();
+  @Mock private SDMCredentials sdmCredentials;
 
   @BeforeEach
   public void setUp() {
@@ -450,5 +457,70 @@ public class SDMAttachmentsServiceHandlerTest {
 
     // Assert that a duplicate is found
     assertTrue(isDuplicate, "Expected to find a duplicate");
+  }
+
+  @Test
+  public void testReadAttachment_NotVersionedRepository() throws IOException {
+    when(mockReadContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+    when(mockReadContext.getContentId()).thenReturn("objectId:part2");
+    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
+      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("NotVersioned");
+      when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+      handlerSpy.readAttachment(mockReadContext);
+
+      // Verify that readDocument method was called
+      verify(sdmService)
+          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+    }
+  }
+
+  @Test
+  public void testReadAttachment_VersionedRepository() throws IOException {
+    when(mockReadContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+    when(mockReadContext.getContentId()).thenReturn("objectId:part2");
+    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
+      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("Versioned");
+      when(mockReadContext.getMessages())
+          .thenReturn(mock(com.sap.cds.services.messages.Messages.class));
+
+      handlerSpy.readAttachment(mockReadContext);
+
+      // Verify error message was set in the context
+      verify(mockReadContext.getMessages())
+          .error("Upload not supported for versioned repositories");
+
+      // Verify that readDocument method was not called
+      verify(sdmService, never())
+          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+    }
+  }
+
+  @Test
+  public void testReadAttachment_FailureInReadDocument() throws IOException {
+    when(mockReadContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+    when(mockReadContext.getContentId()).thenReturn("objectId:part2");
+    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
+      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("NotVersioned");
+      when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+      doThrow(new RuntimeException("Read error"))
+          .when(sdmService)
+          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+
+      Exception exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                handlerSpy.readAttachment(mockReadContext);
+              });
+
+      assertEquals("Failed to read document from SDM service", exception.getMessage());
+    }
   }
 }
