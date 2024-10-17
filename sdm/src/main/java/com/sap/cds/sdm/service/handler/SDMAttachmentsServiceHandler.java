@@ -48,9 +48,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     var contentId = (String) context.getAttachmentIds().get(Attachments.ID);
     String subdomain = "";
-    context.setIsInternalStored(true);
-    context.setContentId(contentId);
-    context.setCompleted();
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String repocheck = sdmService.checkRepositoryType(repositoryId);
     CmisDocument cmisDocument = new CmisDocument();
@@ -127,8 +124,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + context.getUserInfo().getName()
-            + ":"
             + context.getAttachmentEntity()
             + ":"
             + subdomain);
@@ -144,9 +139,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
-      String userEmail = contextValues[2];
-      String entity = contextValues[3];
-      String subdomain = contextValues[4];
+      String userEmail = context.getDeletionUserInfo().getName();
+      String entity = contextValues[2];
+      String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
       Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity);
       List<CmisDocument> cmisDocuments =

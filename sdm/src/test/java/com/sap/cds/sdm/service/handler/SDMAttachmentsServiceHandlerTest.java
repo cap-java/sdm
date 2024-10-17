@@ -18,6 +18,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -65,6 +66,7 @@ public class SDMAttachmentsServiceHandlerTest {
   String subdomain = "subdomain";
   JsonObject mockPayload = new JsonObject();
   @Mock private SDMCredentials sdmCredentials;
+  @Mock private DeletionUserInfo deletionUserInfo;
 
   @BeforeEach
   public void setUp() {
@@ -78,7 +80,9 @@ public class SDMAttachmentsServiceHandlerTest {
     persistenceService = mock(PersistenceService.class);
     sdmService = mock(SDMServiceImpl.class);
     when(attachmentMarkAsDeletedEventContext.getContentId())
-        .thenReturn("objectId:folderId:email:entity:subdomain");
+        .thenReturn("objectId:folderId:entity:subdomain");
+    when(attachmentMarkAsDeletedEventContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn(userEmail);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn(userEmail);
     handlerSpy = spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService));

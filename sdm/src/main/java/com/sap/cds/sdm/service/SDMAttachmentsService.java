@@ -4,11 +4,14 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
 import com.sap.cds.feature.attachments.service.model.service.CreateAttachmentInput;
+import com.sap.cds.feature.attachments.service.model.service.MarkAsDeletedInput;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.services.ServiceDelegator;
+import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -57,11 +60,12 @@ public class SDMAttachmentsService extends ServiceDelegator
   }
 
   @Override
-  public void markAttachmentAsDeleted(String contentId) {
-    logger.info("Marking attachment as deleted for document id: {}", contentId);
+  public void markAttachmentAsDeleted(MarkAsDeletedInput input) {
+    logger.info("Marking attachment as deleted for document id in SDM{}", input.contentId());
 
     var deleteContext = AttachmentMarkAsDeletedEventContext.create();
-    deleteContext.setContentId(contentId);
+    deleteContext.setContentId(input.contentId());
+    deleteContext.setDeletionUserInfo(fillDeletionUserInfo(input.userInfo()));
 
     emit(deleteContext);
   }
@@ -73,5 +77,11 @@ public class SDMAttachmentsService extends ServiceDelegator
     restoreContext.setRestoreTimestamp(restoreTimestamp);
 
     emit(restoreContext);
+  }
+
+  private DeletionUserInfo fillDeletionUserInfo(UserInfo userInfo) {
+    var deletionUserInfo = DeletionUserInfo.create();
+    deletionUserInfo.setName(userInfo.getName());
+    return deletionUserInfo;
   }
 }

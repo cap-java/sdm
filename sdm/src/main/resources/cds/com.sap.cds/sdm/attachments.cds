@@ -1,30 +1,31 @@
 namespace sap.attachments;
 
-using {
-    cuid,
-    managed
-} from '@sap/cds/common';
-
-type StatusCode : String enum {
-    Unscanned;
-    Scanning;
-    Clean;
-    Infected;
-    Failed;
+using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
+extend aspect Attachments with {
+    folderId : String ;
+    repositoryId : String ;
+    url : String ;
 }
-
-aspect MediaData           @(_is_media_data) {
-    content   : LargeBinary @title: 'Attachment'; // stored only for db-based services
-    mimeType  : String;
-    fileName  : String @title: 'Filename';
-    contentId : String     @readonly; // id of attachment in external storage, if database storage is used, same as id
-    status    : StatusCode @readonly;
-    scannedAt : Timestamp  @readonly;
+annotate Attachments with @UI: {
+    HeaderInfo: {
+        $Type         : 'UI.HeaderInfoType',
+        TypeName      : '{i18n>attachment}',
+        TypeNamePlural: '{i18n>attachments}',
+    },
+    LineItem  : [
+        {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+         {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+          {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+          {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+          {Value: note, @HTML5.CssDefaults: {width: '20%'}}
+    ]
+} {
+    note       @(title: '{i18n>attachment_note}');
+   modifiedAt @(odata.etag: null);
+   content
+       @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
 }
-
-aspect Attachments : cuid, managed, MediaData {
-    note : String;
-    folderId : String;
-    repositoryId : String;
-    url : String;
-}
+annotate Attachments with @Common: {SideEffects #ContentChanged: {
+    SourceProperties: [content],
+    TargetProperties: ['status']
+}}{};

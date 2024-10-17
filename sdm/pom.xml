@@ -34,7 +34,7 @@
         <test-generation-folder>src/test/gen</test-generation-folder>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <attachments_version>1.0.3</attachments_version>
+        <attachments_version>1.0.0-SNAPSHOT</attachments_version>
         <lombok.version>1.18.30</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <commons-codec.version>1.13</commons-codec.version>
@@ -314,5 +314,17 @@
     </build>
 
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>artifactory</id>
+            <name>Artifactory_DMZ-snapshots</name>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <name>MavenCentral</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
 </project>
