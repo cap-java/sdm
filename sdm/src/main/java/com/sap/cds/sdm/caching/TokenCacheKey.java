@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CacheKey {
+public class TokenCacheKey {
   private String key;
-  private String expiration;
 }
