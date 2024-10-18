@@ -46,7 +46,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
-    var contentId = (String) context.getAttachmentIds().get(Attachments.ID);
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String repocheck = sdmService.checkRepositoryType(repositoryId);
@@ -78,8 +77,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
           String jwtToken = jwtTokenInfo.getToken();
           JsonObject tokenDetails = TokenHandler.getTokenFields(jwtToken);
-          JsonObject ext_attr = tokenDetails.get("ext_attr").getAsJsonObject();
-          subdomain = ext_attr.get("zdn").getAsString();
+          JsonObject tenantDetails = tokenDetails.get("ext_attr").getAsJsonObject();
+          subdomain = tenantDetails.get("zdn").getAsString();
           String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
           cmisDocument.setFileName(filename);
           cmisDocument.setAttachmentId(fileid);

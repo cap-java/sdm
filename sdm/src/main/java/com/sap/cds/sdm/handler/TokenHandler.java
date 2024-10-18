@@ -164,8 +164,8 @@ public class TokenHandler {
   public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
     JsonObject payloadObj = getTokenFields(token);
     String email = payloadObj.get("email").getAsString();
-    JsonObject ext_attr = payloadObj.get("ext_attr").getAsJsonObject();
-    String subdomain = ext_attr.get("zdn").getAsString();
+    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+    String subdomain = tenantDetails.get("zdn").getAsString();
     String token_expiry = payloadObj.get("exp").getAsString();
     CacheKey cacheKey = new CacheKey();
     cacheKey.setKey(email + "_" + subdomain);
@@ -218,8 +218,8 @@ public class TokenHandler {
       cachedToken = String.valueOf(accessTokenMap.get("access_token"));
       String expiryTime = payloadObj.get("exp").getAsString();
       CacheKey cacheKey = new CacheKey();
-      JsonObject ext_attr = payloadObj.get("ext_attr").getAsJsonObject();
-      String subdomain = ext_attr.get("zdn").getAsString();
+      JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+      String subdomain = tenantDetails.get("zdn").getAsString();
       cacheKey.setKey(payloadObj.get("email").getAsString() + "_" + subdomain);
       cacheKey.setExpiration(expiryTime);
       CacheConfig.getUserTokenCache().put(cacheKey, cachedToken);
