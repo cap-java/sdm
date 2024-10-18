@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="35d979d2-1046-43dd-8d50-9b76bc5f6297" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="2nYevdlBJbZuxmpSr0mGXyFDQl7" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="JUnit.SDMAttachmentsServiceHandlerTest">
+    <configuration name="SDMAttachmentsServiceHandlerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandlerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMAttachmentsServiceHandlerTest.testDocumentDeletion" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandlerTest" />
+      <option name="METHOD_NAME" value="testDocumentDeletion" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.SDMAttachmentsServiceHandlerTest" />
+        <item itemvalue="JUnit.SDMAttachmentsServiceHandlerTest.testDocumentDeletion" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="35d979d2-1046-43dd-8d50-9b76bc5f6297" name="Changes" comment="" />
+      <created>1729154669641</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1729154669641</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/test/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandlerTest.java</url>
+          <line>174</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java</url>
+          <line>140</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

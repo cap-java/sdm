@@ -320,11 +320,6 @@
             <name>Artifactory_DMZ-snapshots</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
         </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <name>MavenCentral</name>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
     </distributionManagement>
 
 </project>
