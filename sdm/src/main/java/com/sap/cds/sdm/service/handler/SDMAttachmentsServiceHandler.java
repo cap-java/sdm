@@ -145,7 +145,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity);
       List<CmisDocument> cmisDocuments =
           DBQuery.getAttachmentsForFolder(attachmentEntity.get(), persistenceService, folderId);
-      if (cmisDocuments.size() == 0) {
+      if (cmisDocuments.isEmpty()) {
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
       } else {
