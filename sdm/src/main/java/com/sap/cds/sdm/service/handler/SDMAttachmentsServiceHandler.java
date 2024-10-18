@@ -4,7 +4,6 @@ import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.google.gson.JsonObject;
 import com.sap.cds.Result;
-import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.Attachments;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
