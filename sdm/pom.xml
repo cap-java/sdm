@@ -34,7 +34,7 @@
         <test-generation-folder>src/test/gen</test-generation-folder>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <attachments_version>1.0.2</attachments_version>
+        <attachments_version>1.0.4-SNAPSHOT</attachments_version>
         <lombok.version>1.18.30</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <commons-codec.version>1.13</commons-codec.version>
@@ -120,6 +120,13 @@
             <artifactId>ehcache</artifactId>
             <version>${ehcache-version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.12.0</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -306,17 +313,13 @@
         </plugins>
     </build>
 
+
     <distributionManagement>
         <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
         </snapshotRepository>
-        <repository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
-        </repository>
     </distributionManagement>
 
 </project>

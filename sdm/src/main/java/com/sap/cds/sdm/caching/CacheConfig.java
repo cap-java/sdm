@@ -14,6 +14,7 @@ public class CacheConfig {
   private static CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build();
   private static Cache<CacheKey, String> userTokenCache;
   private static Cache<String, String> clientCredentialsTokenCache;
+  private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<String, String> versionedRepoCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
@@ -53,10 +54,23 @@ public class CacheConfig {
                 .withExpiry(
                     Expirations.timeToLiveExpiration(
                         new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+
+    userAuthoritiesTokenCache =
+        cacheManager.createCache(
+            "userAuthoritiesToken",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    TokenCacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(
+                    Expirations.timeToLiveExpiration(
+                        new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {
     return userTokenCache;
+  }
+
+  public static Cache<TokenCacheKey, String> getUserAuthoritiesTokenCache() {
+    return userAuthoritiesTokenCache;
   }
 
   public static Cache<String, String> getClientCredentialsTokenCache() {

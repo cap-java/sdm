@@ -539,6 +539,34 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testDeleteFolder() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedResponse = "200";
+      mockWebServer.enqueue(
+          new MockResponse().setResponseCode(200).addHeader("Content-Type", "application/json"));
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      Mockito.when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+      Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
+          .thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      int actualResponse =
+          sdmServiceImpl.deleteDocument("deleteTree", "objectId", "email", "subdomain");
+
+      assertEquals(200, actualResponse);
+
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
   void testGetFolderId_FolderIdPresentInResult() throws IOException {
     PersistenceService persistenceService = mock(PersistenceService.class);
     Result result = mock(Result.class);
@@ -560,6 +588,99 @@ public class SDMServiceImplTest {
           .thenReturn("mockAccessToken");
       String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
       assertEquals("folder123", folderId, "Expected folderId from result list");
+    }
+  }
+
+  @Test
+  public void testDeleteDocument() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedResponse = "200";
+      mockWebServer.enqueue(
+          new MockResponse().setResponseCode(200).addHeader("Content-Type", "application/json"));
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      Mockito.when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+      Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
+          .thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      int actualResponse =
+          sdmServiceImpl.deleteDocument("delete", "objectId", "email", "subdomain");
+
+      assertEquals(200, actualResponse);
+
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testDeleteDocumentObjectNotFound() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String mockResponseBody = "{\"message\": \"Object Not Found\"}";
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setBody(mockResponseBody)
+              .setResponseCode(404) // Assuming 400 Bad Request or a similar client error code
+              .addHeader("Content-Type", "application/json"));
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      Mockito.when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+      Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
+          .thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      int actualResponse = sdmServiceImpl.deleteDocument("delete", "ewdwe", "email", "subdomain");
+
+      assertEquals(404, actualResponse);
+
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testGetDITokenUsingAuthoritiesThrowsIOException() {
+    String cmisaction = "someAction";
+    String objectId = "someObjectId";
+    String userEmail = "user@example.com";
+    String subdomain = "testSubdomain";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+
+    // Mocking static methods
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(sdmCredentials);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain))
+          .thenThrow(new IOException("Could not delete the document"));
+
+      // Since the exception is thrown before OkHttpClient is used, no need to mock httpClient
+      // behavior.
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      // Assert exception
+      IOException thrown =
+          assertThrows(
+              IOException.class,
+              () -> {
+                // Call the method under test
+                sdmServiceImpl.deleteDocument(cmisaction, objectId, userEmail, subdomain);
+              });
+
+      // Verify the exception message
+      assertEquals("Could not delete the document", thrown.getMessage());
     }
   }
 

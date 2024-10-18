@@ -9,16 +9,21 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
@@ -28,6 +33,7 @@ import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.messages.Message;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,14 +51,40 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private JwtTokenAuthenticationInfo mockJwtTokenInfo;
   private SDMAttachmentsServiceHandler handlerSpy;
   private PersistenceService persistenceService;
+  @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
+  @Mock private AttachmentRestoreEventContext restoreEventContext;
   private SDMService sdmService;
+  @Mock private CdsModel cdsModel;
+
+  @Mock private CdsEntity cdsEntity;
+
+  @Mock private UserInfo userInfo;
+
+  String objectId = "objectId";
+  String folderId = "folderId";
+  String userEmail = "email";
+  String subdomain = "subdomain";
+  JsonObject mockPayload = new JsonObject();
   @Mock private SDMCredentials sdmCredentials;
+  @Mock private DeletionUserInfo deletionUserInfo;
 
   @BeforeEach
   public void setUp() {
+    mockPayload.addProperty("email", "john.doe@example.com");
+    mockPayload.addProperty("exp", "1234567890");
+    mockPayload.addProperty("zid", "tenant-id-value");
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.addProperty("zdn", "tenant");
+    mockPayload.add("ext_attr", jsonObject);
     MockitoAnnotations.openMocks(this);
     persistenceService = mock(PersistenceService.class);
     sdmService = mock(SDMServiceImpl.class);
+    when(attachmentMarkAsDeletedEventContext.getContentId())
+        .thenReturn("objectId:folderId:entity:subdomain");
+    when(attachmentMarkAsDeletedEventContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn(userEmail);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn(userEmail);
     handlerSpy = spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
   }
 
@@ -116,6 +148,49 @@ public class SDMAttachmentsServiceHandlerTest {
   }
 
   @Test
+  public void testDocumentDeletion() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId1");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
+    }
+  }
+
+  @Test
+  public void testDocumentDeletionForObjectPresent() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+    }
+  }
+
+  @Test
   public void testCreateNonVersionedDIDuplicate() throws IOException {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
@@ -167,9 +242,25 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages)
           .error("The following files already exist and cannot be uploaded:\n• sample.pdf\n");
+    }
+  }
+
+  @Test
+  public void testFolderDeletion() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
     }
   }
 
@@ -225,6 +316,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages)
           .error(
@@ -284,6 +376,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
       handlerSpy.createAttachment(mockContext);
       verify(mockMessages).error("The following files cannot be uploaded:\n• sample.pdf\n");
     }
@@ -464,5 +557,10 @@ public class SDMAttachmentsServiceHandlerTest {
 
       assertEquals("Failed to read document from SDM service", exception.getMessage());
     }
+  }
+
+  @Test
+  public void testRestoreAttachment() {
+    handlerSpy.restoreAttachment(restoreEventContext);
   }
 }

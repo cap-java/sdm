@@ -2,9 +2,9 @@ namespace sap.attachments;
 
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 extend aspect Attachments with {
-    folderId : String  @readonly;
-    repositoryId : String  @readonly;
-    url : String  @readonly;
+    folderId : String ;
+    repositoryId : String ;
+    url : String ;
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
@@ -21,7 +21,7 @@ annotate Attachments with @UI: {
     ]
 } {
     note       @(title: '{i18n>attachment_note}');
-   modifiedAt @(odata.etag);
+   modifiedAt @(odata.etag: null);
    content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
 }

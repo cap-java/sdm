@@ -2,6 +2,7 @@ package com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -44,6 +45,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String repocheck = sdmService.checkRepositoryType(repositoryId);
     CmisDocument cmisDocument = new CmisDocument();
@@ -73,6 +75,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           AuthenticationInfo authInfo = context.getAuthenticationInfo();
           JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
           String jwtToken = jwtTokenInfo.getToken();
+          JsonObject tokenDetails = TokenHandler.getTokenFields(jwtToken);
+          JsonObject tenantDetails = tokenDetails.get("ext_attr").getAsJsonObject();
+          subdomain = tenantDetails.get("zdn").getAsString();
           String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
           cmisDocument.setFileName(filename);
           cmisDocument.setAttachmentId(fileid);
@@ -112,17 +117,49 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         }
       }
     }
-    context.setContentId(cmisDocument.getObjectId() + ":" + cmisDocument.getFolderId());
+    context.setContentId(
+        cmisDocument.getObjectId()
+            + ":"
+            + cmisDocument.getFolderId()
+            + ":"
+            + context.getAttachmentEntity()
+            + ":"
+            + subdomain);
     context.getData().setStatus("Clean");
     context.getData().setContent(null);
     context.setCompleted();
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
-  public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context) {}
+  public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
+      throws IOException {
+    String[] contextValues = context.getContentId().split(":");
+    if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
+      String objectId = contextValues[0];
+      String folderId = contextValues[1];
+      String userEmail = context.getDeletionUserInfo().getName();
+      String entity = contextValues[2];
+      String subdomain = contextValues[3];
+      // check if only attachment exists against the folderId
+      Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity);
+      List<CmisDocument> cmisDocuments =
+          DBQuery.getAttachmentsForFolder(attachmentEntity.get(), persistenceService, folderId);
+      if (cmisDocuments.isEmpty()) {
+        // deleteFolder API
+        sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
+      } else {
+        if (!isObjectIdPresent(cmisDocuments, objectId)) {
+          sdmService.deleteDocument("delete", objectId, userEmail, subdomain);
+        }
+      }
+    }
+    context.setCompleted();
+  }
 
   @On(event = AttachmentService.EVENT_RESTORE_ATTACHMENT)
-  public void restoreAttachment(AttachmentRestoreEventContext context) {}
+  public void restoreAttachment(AttachmentRestoreEventContext context) {
+    context.setCompleted();
+  }
 
   @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
@@ -142,6 +179,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     } catch (Exception e) {
       throw new IOException("Failed to read document from SDM service", e);
     }
+    context.setCompleted();
   }
 
   public boolean duplicateCheck(String filename, String fileid, Result result) {
@@ -162,5 +200,14 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
 
     return duplicate != null;
+  }
+
+  private boolean isObjectIdPresent(List<CmisDocument> documents, String objectId) {
+    for (CmisDocument doc : documents) {
+      if (objectId.equals(doc.getObjectId())) {
+        return true;
+      }
+    }
+    return false;
   }
 }
