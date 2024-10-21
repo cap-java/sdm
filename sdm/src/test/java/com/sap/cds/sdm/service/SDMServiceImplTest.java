@@ -1,16 +1,23 @@
 package com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.ehcache.Cache;
@@ -332,13 +339,9 @@ public class SDMServiceImplTest {
       Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
 
-      IOException exception =
-          assertThrows(
-              IOException.class,
-              () -> {
-                sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
-              });
-      assertEquals("Could not upload", exception.getMessage());
+      String folderId =
+          sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
+      assertNull(folderId, "Expected folderId to be null");
 
     } finally {
       mockWebServer.shutdown();
@@ -564,6 +567,31 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  void testGetFolderId_FolderIdPresentInResult() throws IOException {
+    PersistenceService persistenceService = mock(PersistenceService.class);
+    Result result = mock(Result.class);
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("folderId", "folder123");
+    List<Map> resultList = Arrays.asList((Map) attachment);
+
+    when(result.listOf(Map.class)).thenReturn((List) resultList);
+
+    String jwtToken = "jwtToken";
+    String up__ID = "up__ID";
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
+          .thenReturn("mockAccessToken");
+      String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
+      assertEquals("folder123", folderId, "Expected folderId from result list");
+    }
+  }
+
+  @Test
   public void testDeleteDocument() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
@@ -653,6 +681,217 @@ public class SDMServiceImplTest {
 
       // Verify the exception message
       assertEquals("Could not delete the document", thrown.getMessage());
+    }
+  }
+
+  @Test
+  void testGetFolderId_GetFolderIdByPathReturns() throws IOException {
+    Result result = mock(Result.class);
+    PersistenceService persistenceService = mock(PersistenceService.class);
+
+    List<Map> resultList = new ArrayList<>();
+    when(result.listOf(Map.class)).thenReturn((List) resultList);
+
+    String jwtToken = "jwtToken";
+    String up__ID = "up__ID";
+
+    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl());
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      doReturn("folderByPath123")
+          .when(sdmServiceImpl)
+          .getFolderIdByPath(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl("mockUrl");
+      MockWebServer mockWebServer = new MockWebServer();
+      mockWebServer.start();
+      String mockUrl = mockWebServer.url("/").toString();
+      sdmCredentials.setUrl(mockUrl);
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(sdmCredentials);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
+          .thenReturn("mockAccessToken");
+      MockResponse mockResponse1 =
+          new MockResponse().setResponseCode(200).setBody("folderByPath123");
+      mockWebServer.enqueue(mockResponse1);
+      String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
+      assertEquals("folderByPath123", folderId, "Expected folderId from getFolderIdByPath");
+    }
+  }
+
+  @Test
+  void testGetFolderId_CreateFolderWhenFolderIdNull() throws IOException {
+    // Mock the dependencies
+    Result result = mock(Result.class);
+    PersistenceService persistenceService = mock(PersistenceService.class);
+
+    // Mock the result list as empty
+    List<Map> resultList = new ArrayList<>();
+    when(result.listOf(Map.class)).thenReturn((List) resultList);
+
+    String jwtToken = "jwtToken";
+    String up__ID = "up__ID";
+
+    // Create a spy of the SDMServiceImpl to mock specific methods
+    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl());
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      // Mock the getFolderIdByPath method to return null (so that it will try to create a folder)
+      doReturn(null)
+          .when(sdmServiceImpl)
+          .getFolderIdByPath(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+
+      // Mock the TokenHandler static method and SDMCredentials instantiation
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl("mockUrl");
+
+      // Use MockWebServer to set the URL for SDMCredentials
+      MockWebServer mockWebServer = new MockWebServer();
+      mockWebServer.start();
+      String mockUrl = mockWebServer.url("/").toString();
+      sdmCredentials.setUrl(mockUrl);
+
+      // Mock the static method to return a valid SDMCredentials instance
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(sdmCredentials);
+
+      // Mock the token retrieval as well
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
+          .thenReturn("mockAccessToken");
+
+      // Mock the createFolder method to return a folder ID when invoked
+      JSONObject jsonObject = new JSONObject();
+      JSONObject succinctProperties = new JSONObject();
+      succinctProperties.put("cmis:objectId", "newFolderId123");
+      jsonObject.put("succinctProperties", succinctProperties);
+
+      // Enqueue the mock response on the MockWebServer
+      MockResponse mockResponse1 =
+          new MockResponse().setResponseCode(200).setBody("newFolderId123");
+      mockWebServer.enqueue(mockResponse1);
+
+      doReturn(jsonObject.toString())
+          .when(sdmServiceImpl)
+          .createFolder(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+
+      // Invoke the method
+      String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
+
+      // Assert the folder ID is the newly created one
+      assertEquals("newFolderId123", folderId, "Expected newly created folderId");
+    }
+  }
+
+  @Test
+  public void testReadDocument_Success() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedContent = "This is a document content.";
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setBody(expectedContent)
+              .addHeader("Content-Type", "application/octet-stream"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      MediaData mockData = mock(MediaData.class);
+      when(mockContext.getData()).thenReturn(mockData);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+
+      verify(mockData).setContent(any(InputStream.class));
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadDocument_UnsuccessfulResponse() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
+              .setBody(
+                  "{\"error\":\"Server Error\"}") // Update the error message to match the actual
+              // response
+              .addHeader("Content-Type", "application/json"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      IOException exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+              });
+
+      // Check if the exception message contains the expected first part
+      String expectedMessagePart1 =
+          "Unexpected code Response{protocol=http/1.1, code=500, message=Server Error, url="
+              + mockUrl;
+      assertTrue(exception.getMessage().contains(expectedMessagePart1));
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadDocument_ExceptionWhileSettingContent() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String expectedContent = "This is a document content.";
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setBody(expectedContent)
+              .addHeader("Content-Type", "application/octet-stream"));
+      String objectId = "testObjectId";
+      String jwtToken = "testJwtToken";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
+      MediaData mockData = mock(MediaData.class);
+      when(mockContext.getData()).thenReturn(mockData);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      doThrow(new RuntimeException("Failed to set document stream in context"))
+          .when(mockData)
+          .setContent(any(InputStream.class));
+
+      IOException exception =
+          assertThrows(
+              IOException.class,
+              () -> {
+                sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
+              });
+      assertEquals("Failed to set document stream in context", exception.getMessage());
+    } finally {
+      mockWebServer.shutdown();
     }
   }
 }

@@ -1,15 +1,5 @@
 package com.sap.cds.sdm.configuration;
 
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.CreateAttachmentEvent;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.DefaultModifyAttachmentEventFactory;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.DoNothingAttachmentEvent;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.ModifyAttachmentEvent;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.modifyevents.UpdateAttachmentEvent;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.transaction.CreationChangeSetListener;
-import com.sap.cds.feature.attachments.handler.applicationservice.processor.transaction.ListenerProvider;
-import com.sap.cds.feature.attachments.handler.common.AttachmentsReader;
-import com.sap.cds.feature.attachments.handler.common.DefaultAssociationCascader;
-import com.sap.cds.feature.attachments.handler.common.DefaultAttachmentsReader;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.utilities.LoggingMarker;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -61,7 +51,6 @@ public class Registration implements CdsRuntimeConfiguration {
                 OutboxService.class,
                 OutboxService.PERSISTENT_UNORDERED_NAME); // need to check if required
     var outboxedAttachmentService = outbox.outboxed(attachmentService);
-    System.out.println("Registration");
     SDMService sdmService = new SDMServiceImpl();
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
   }
@@ -69,44 +58,5 @@ public class Registration implements CdsRuntimeConfiguration {
   private AttachmentService buildAttachmentService() {
     logger.info(marker, "Registering SDM attachment service");
     return new SDMAttachmentsService();
-  }
-
-  protected DefaultModifyAttachmentEventFactory buildAttachmentEventFactory(
-      AttachmentService attachmentService,
-      ModifyAttachmentEvent deleteContentEvent,
-      AttachmentService outboxedAttachmentService) {
-    var creationChangeSetListener = createCreationFailedListener(outboxedAttachmentService);
-    var createAttachmentEvent =
-        new CreateAttachmentEvent(attachmentService, creationChangeSetListener);
-    var updateAttachmentEvent =
-        new UpdateAttachmentEvent(createAttachmentEvent, deleteContentEvent);
-
-    var doNothingAttachmentEvent = new DoNothingAttachmentEvent();
-    return new DefaultModifyAttachmentEventFactory(
-        createAttachmentEvent, updateAttachmentEvent, deleteContentEvent, doNothingAttachmentEvent);
-  }
-
-  private ListenerProvider createCreationFailedListener(
-      AttachmentService outboxedAttachmentService) {
-    return (contentId, cdsRuntime) ->
-        new CreationChangeSetListener(contentId, cdsRuntime, outboxedAttachmentService);
-  }
-
-  //	protected EventHandler buildCreateHandler(ModifyAttachmentEventFactory factory,
-  // ThreadLocalDataStorage storage,PersistenceService persistenceService) {
-  //		SDMService sdmService = new SDMServiceImpl();
-  //		return new SDMCreateEventHandler(factory, storage, persistenceService, sdmService);
-  //	}
-  //
-  //	protected EventHandler buildUpdateHandler(ModifyAttachmentEventFactory factory,
-  // AttachmentsReader attachmentsReader,
-  //											  ThreadLocalDataStorage storage,PersistenceService persistenceService) {
-  //		SDMService sdmService = new SDMServiceImpl();
-  //		return new SDMUpdateEventHandler(factory,attachmentsReader, storage, persistenceService,
-  // sdmService);
-  //	}
-  protected AttachmentsReader buildAttachmentsReader(PersistenceService persistenceService) {
-    var cascader = new DefaultAssociationCascader();
-    return new DefaultAttachmentsReader(cascader, persistenceService);
   }
 }

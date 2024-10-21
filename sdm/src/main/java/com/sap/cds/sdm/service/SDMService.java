@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -16,7 +17,7 @@ public interface SDMService {
       throws IOException;
 
   public String getFolderId(
-      String jwtToken, Result result, PersistenceService persistenceService, String up__ID)
+      String jwtToken, Result result, PersistenceService persistenceService, String upID)
       throws IOException;
 
   public String getFolderIdByPath(
@@ -31,5 +32,12 @@ public interface SDMService {
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
   public int deleteDocument(String cmisaction, String objectId, String userEmail, String subdomain)
+      throws IOException;
+
+  public void readDocument(
+      String objectId,
+      String jwtToken,
+      SDMCredentials sdmCredentials,
+      AttachmentReadEventContext context)
       throws IOException;
 }
