@@ -199,12 +199,12 @@
         <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </snapshotRepository>
         <repository>
             <id>artifactory</id>
             <name>Artifactory_DMZ</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </repository>
     </distributionManagement>
 
