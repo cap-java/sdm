@@ -1,12 +1,15 @@
 package com.sap.cds.sdm.configuration;
 
+import com.sap.cds.feature.attachments.handler.applicationservice.processor.readhelper.modifier.BeforeReadItemsModifier;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.utilities.LoggingMarker;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
+import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntimeConfiguration;
@@ -51,12 +54,20 @@ public class Registration implements CdsRuntimeConfiguration {
                 OutboxService.class,
                 OutboxService.PERSISTENT_UNORDERED_NAME); // need to check if required
     var outboxedAttachmentService = outbox.outboxed(attachmentService);
+
     SDMService sdmService = new SDMServiceImpl();
+    configurer.eventHandler(buildReadHandler(attachmentService, persistenceService));
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
   }
 
   private AttachmentService buildAttachmentService() {
     logger.info(marker, "Registering SDM attachment service");
     return new SDMAttachmentsService();
+  }
+
+  protected EventHandler buildReadHandler(
+      AttachmentService attachmentService, PersistenceService persistenceService) {
+    return new SDMReadAttachmentsHandler(
+        attachmentService, BeforeReadItemsModifier::new, persistenceService);
   }
 }

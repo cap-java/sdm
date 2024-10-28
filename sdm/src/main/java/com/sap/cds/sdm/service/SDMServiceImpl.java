@@ -157,16 +157,24 @@ public class SDMServiceImpl implements SDMService {
   public String getFolderId(
       String jwtToken, Result result, PersistenceService persistenceService, String upID)
       throws IOException {
+
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
             .collect(Collectors.toList());
 
     String folderId = null;
+    String repositoryId = null;
     for (Map<String, Object> attachment : resultList) {
       if (attachment.get("folderId") != null) {
         folderId = attachment.get("folderId").toString();
+        repositoryId = attachment.get("repositoryId").toString();
       }
+    }
+    String repoId = SDMConstants.REPOSITORY_ID;
+    // check if folderId exists for the repositoryId if not then make folderId null else continue
+    if (!repoId.equalsIgnoreCase(repositoryId)) {
+      folderId = null;
     }
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
