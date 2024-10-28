@@ -513,29 +513,6 @@ public class SDMAttachmentsServiceHandlerTest {
   }
 
   @Test
-  public void testReadAttachment_VersionedRepository() throws IOException {
-    when(mockReadContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
-    when(mockReadContext.getContentId()).thenReturn("objectId:part2");
-    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
-      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("Versioned");
-      when(mockReadContext.getMessages())
-          .thenReturn(mock(com.sap.cds.services.messages.Messages.class));
-
-      handlerSpy.readAttachment(mockReadContext);
-
-      // Verify error message was set in the context
-      verify(mockReadContext.getMessages())
-          .error("Upload not supported for versioned repositories");
-
-      // Verify that readDocument method was not called
-      verify(sdmService, never())
-          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
-    }
-  }
-
-  @Test
   public void testReadAttachment_FailureInReadDocument() throws IOException {
     when(mockReadContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
