@@ -572,6 +572,7 @@ public class SDMServiceImplTest {
     Result result = mock(Result.class);
     Map<String, Object> attachment = new HashMap<>();
     attachment.put("folderId", "folder123");
+    attachment.put("repositoryId", "repoId");
     List<Map> resultList = Arrays.asList((Map) attachment);
 
     when(result.listOf(Map.class)).thenReturn((List) resultList);
