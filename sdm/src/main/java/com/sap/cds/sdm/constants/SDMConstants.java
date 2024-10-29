@@ -1,6 +1,10 @@
 package com.sap.cds.sdm.constants;
 
 public class SDMConstants {
+  private SDMConstants() {
+    // Doesn't do anything
+  }
+
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String BEARER_TOKEN = "Bearer ";
 
