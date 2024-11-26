@@ -56,7 +56,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           while (iterator.hasNext()) {
             Map<String, Object> attachment = iterator.next();
             String filenameInRequest = (String) attachment.get("fileName");
-            String objectId = (String) attachment.get("url");
+            String objectId = (String) attachment.get("objectId");
             AuthenticationInfo authInfo = context.getAuthenticationInfo();
             JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
             String jwtToken = jwtTokenInfo.getToken();
