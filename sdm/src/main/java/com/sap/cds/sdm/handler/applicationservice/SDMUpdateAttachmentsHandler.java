@@ -74,7 +74,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           Map<String, Object> attachment = iterator.next();
           String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
           String filenameInRequest = (String) attachment.get("fileName");
-          String objectId = (String) attachment.get("url");
+          String objectId = (String) attachment.get("objectId");
 
           String fileNameInDB =
               DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
