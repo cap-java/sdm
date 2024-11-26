@@ -88,10 +88,11 @@ public class SDMServiceImpl implements SDMService {
         JSONObject jsonResponse = new JSONObject(responseBody);
         String message = jsonResponse.getString("message");
 
-        if (response.code() == 409) {
-          status = "duplicate";
-        } else if ("Malware Service Exception: Virus found in the file!".equals(message)) {
+        if (response.code() == 409
+            && "Malware Service Exception: Virus found in the file!".equals(message)) {
           status = "virus";
+        } else if (response.code() == 409) {
+          status = "duplicate";
         } else {
           status = "fail";
           error = message;

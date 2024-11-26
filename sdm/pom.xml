@@ -50,37 +50,66 @@
         </dependency>
         <dependency>
             <groupId>com.sap.cds</groupId>
-            <artifactId>cds-services-utils</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-codec</groupId>
-                    <artifactId>commons-codec</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>cds4j-api</artifactId>
+            <version>3.4.0</version>
         </dependency>
         <dependency>
-            <groupId>com.sap.cds</groupId>
-            <artifactId>cds-integration-cloud-sdk</artifactId>
+            <groupId>com.sap.cloud.security.xsuaa</groupId>
+            <artifactId>token-client</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
+            <artifactId>java-access-api</artifactId>
+            <version>0.10.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
+            <artifactId>java-core-api</artifactId>
+            <version>0.10.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.4.16</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.18.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.13</version>
         </dependency>
 
         <!-- TESTS -->
-        <dependency>
-            <groupId>com.sap.cds</groupId>
-            <artifactId>cds-services-impl</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.5.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
-            <version>4.2.1</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -90,7 +119,7 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.9.0</version>
+            <version>4.12.0</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -102,16 +131,6 @@
           <groupId>com.sap.cds</groupId>
            <artifactId>cds-feature-attachments</artifactId>
           <version>${attachments_version}</version>
-        </dependency>
-        <dependency> 
-            <groupId>com.sap.cds</groupId>
-            <artifactId>cds-starter-cloudfoundry</artifactId> 
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.sap.cloud.environment.servicebinding/java-sap-vcap-services -->
-        <dependency>
-            <groupId>com.sap.cloud.environment.servicebinding</groupId>
-            <artifactId>java-sap-vcap-services</artifactId>
-            <version>0.10.5</version>
         </dependency>
         <dependency>
             <groupId>commons-codec</groupId>

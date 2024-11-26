@@ -9,8 +9,8 @@ extend aspect Attachments with {
 annotate Attachments with @UI: {
     HeaderInfo: {
         $Type         : 'UI.HeaderInfoType',
-        TypeName      : '{i18n>attachment}',
-        TypeNamePlural: '{i18n>attachments}',
+        TypeName      : '{i18n>Attachment}',
+        TypeNamePlural: '{i18n>Attachments}',
     },
     LineItem  : [
         {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
