@@ -166,10 +166,10 @@ public class TokenHandler {
     String email = payloadObj.get("email").getAsString();
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
     String subdomain = tenantDetails.get("zdn").getAsString();
-    String token_expiry = payloadObj.get("exp").getAsString();
+    String tokenexpiry = payloadObj.get("exp").getAsString();
     CacheKey cacheKey = new CacheKey();
     cacheKey.setKey(email + "_" + subdomain);
-    cacheKey.setExpiration(token_expiry);
+    cacheKey.setExpiration(tokenexpiry);
     String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
     if (cachedToken == null) {
       cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);

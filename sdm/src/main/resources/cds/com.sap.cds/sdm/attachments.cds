@@ -4,7 +4,7 @@ using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 extend aspect Attachments with {
     folderId : String ;
     repositoryId : String ;
-    url : String ;
+    objectId : String ;
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
@@ -21,11 +21,16 @@ annotate Attachments with @UI: {
     ]
 } {
     note       @(title: '{i18n>Note}');
-       fileName  @(title: '{i18n>Filename}');
-      modifiedAt @(odata.etag: null);
-      content
-          @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
-           @(title: '{i18n>Attachment}');
+    fileName  @(title: '{i18n>Filename}');
+    modifiedAt @(odata.etag: null);
+    content
+       @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
+        @(title: '{i18n>Attachment}');
+       folderId @UI.Hidden;
+    repositoryId  @UI.Hidden ;
+    objectId  @UI.Hidden ;
+    mimeType @UI.Hidden;
+    status @UI.Hidden;
 }
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
     SourceProperties: [content],
