@@ -38,14 +38,9 @@ public class Registration implements CdsRuntimeConfiguration {
             .getCdsRuntime()
             .getServiceCatalog()
             .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
-    var attachmentService =
-        configurer
-            .getCdsRuntime()
-            .getServiceCatalog()
-            .getService(AttachmentService.class, AttachmentService.DEFAULT_NAME);
 
     SDMService sdmService = new SDMServiceImpl();
-    configurer.eventHandler(buildReadHandler(attachmentService, persistenceService));
+    configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
@@ -56,8 +51,7 @@ public class Registration implements CdsRuntimeConfiguration {
     return new SDMAttachmentsService();
   }
 
-  protected EventHandler buildReadHandler(
-      AttachmentService attachmentService, PersistenceService persistenceService) {
-    return new SDMReadAttachmentsHandler(attachmentService, persistenceService);
+  protected EventHandler buildReadHandler() {
+    return new SDMReadAttachmentsHandler();
   }
 }

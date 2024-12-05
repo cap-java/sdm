@@ -16,7 +16,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import okhttp3.*;
-import org.apache.commons.io.IOUtils;
+import okhttp3.RequestBody;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 
 public class SDMServiceImpl implements SDMService {
@@ -27,93 +36,95 @@ public class SDMServiceImpl implements SDMService {
       throws IOException {
     String accessToken;
     Map<String, String> finalResponse = new HashMap<>();
-
-    OkHttpClient client = new OkHttpClient();
     accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
-    try {
-      byte[] fileContent = IOUtils.toByteArray(cmisDocument.getContent());
-      RequestBody fileBody =
-          RequestBody.create(fileContent, MediaType.parse("application/octet-stream"));
+    try (CloseableHttpClient httpClient =
+        HttpClients.custom()
+            .setDefaultRequestConfig(
+                RequestConfig.custom()
+                    .setConnectTimeout(SDMConstants.TIMEOUT * 1000)
+                    .setSocketTimeout(SDMConstants.TIMEOUT * 1000)
+                    .setConnectionRequestTimeout(SDMConstants.TIMEOUT * 1000)
+                    .build())
+            .build()) {
 
-      RequestBody requestBody =
-          new MultipartBody.Builder()
-              .setType(MultipartBody.FORM)
-              .addFormDataPart("cmisaction", "createDocument")
-              .addFormDataPart(
-                  "objectId", cmisDocument.getFolderId()) // Note: removed quotes from folderId
-              .addFormDataPart("propertyId[0]", "cmis:name")
-              .addFormDataPart("propertyValue[0]", cmisDocument.getFileName())
-              .addFormDataPart("propertyId[1]", "cmis:objectTypeId")
-              .addFormDataPart("propertyValue[1]", "cmis:document")
-              .addFormDataPart("succinct", "true")
-              .addFormDataPart("filename", cmisDocument.getFileName(), fileBody)
-              .build();
-
-      handleDocumentCreationRequest(
-          cmisDocument, client, requestBody, sdmUrl, accessToken, finalResponse);
-
+      HttpPost uploadFile = new HttpPost(sdmUrl);
+      MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+      uploadFile.setHeader("Authorization", "Bearer " + accessToken);
+      builder.addBinaryBody(
+          "filename",
+          cmisDocument.getContent(),
+          ContentType.create(cmisDocument.getMimeType()),
+          cmisDocument.getFileName());
+      // Add additional form fields
+      builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
+      builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
+      builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+      HttpEntity multipart = builder.build();
+      uploadFile.setEntity(multipart);
+      executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
     return new JSONObject(finalResponse);
   }
 
-  private void handleDocumentCreationRequest(
+  private void executeHttpPost(
+      CloseableHttpClient httpClient,
+      HttpPost uploadFile,
       CmisDocument cmisDocument,
-      OkHttpClient client,
-      RequestBody requestBody,
-      String sdmUrl,
-      String accessToken,
       Map<String, String> finalResponse)
-      throws IOException {
-    Request request =
-        new Request.Builder()
-            .url(sdmUrl)
-            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
-            .post(requestBody)
-            .build();
+      throws ServiceException {
+    try (CloseableHttpResponse response = httpClient.execute(uploadFile)) {
+      formResponse(cmisDocument, finalResponse, response);
+    } catch (IOException e) {
+      throw new ServiceException("Error in setting timeout", e.getMessage());
+    }
+  }
 
-    try (Response response = client.newCall(request).execute()) {
-      String status = "success";
-      String error = "";
-      String name = cmisDocument.getFileName();
-      String id = cmisDocument.getAttachmentId();
-      String objectId = "";
-
-      if (!response.isSuccessful()) {
-        String responseBody = response.body().string();
-        JSONObject jsonResponse = new JSONObject(responseBody);
+  private void formResponse(
+      CmisDocument cmisDocument,
+      Map<String, String> finalResponse,
+      CloseableHttpResponse response) {
+    String status = "success";
+    String name = cmisDocument.getFileName();
+    String id = cmisDocument.getAttachmentId();
+    String objectId = "";
+    String error = "";
+    try {
+      String responseString = EntityUtils.toString(response.getEntity());
+      JSONObject jsonResponse = new JSONObject(responseString);
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode == 201 || responseCode == 200) {
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        status = "success";
+        objectId = succinctProperties.getString("cmis:objectId");
+      } else {
         String message = jsonResponse.getString("message");
-
-        if (response.code() == 409
+        if (responseCode == 409
             && "Malware Service Exception: Virus found in the file!".equals(message)) {
           status = "virus";
-        } else if (response.code() == 409) {
+        } else if (responseCode == 409) {
           status = "duplicate";
         } else {
           status = "fail";
           error = message;
         }
-      } else {
-        String responseBody = response.body().string();
-        JSONObject jsonResponse = new JSONObject(responseBody);
-        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-        status = "success";
-        objectId = succinctProperties.getString("cmis:objectId");
       }
-
       // Construct the final response
       finalResponse.put("name", name);
       finalResponse.put("id", id);
       finalResponse.put("status", status);
       finalResponse.put("message", error);
       if (!objectId.isEmpty()) {
-        finalResponse.put("url", objectId);
+        finalResponse.put("objectId", objectId);
       }
-
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }

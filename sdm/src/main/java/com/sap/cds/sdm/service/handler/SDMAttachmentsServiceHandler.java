@@ -66,6 +66,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
         String filename = data.getFileName();
         String fileid = (String) attachmentIds.get("ID");
+        String mimeType = (String) data.get("mimeType");
         String errorMessageDI = "";
 
         Boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
@@ -94,6 +95,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
           cmisDocument.setRepositoryId(repositoryId);
           cmisDocument.setFolderId(folderId);
+          cmisDocument.setMimeType(mimeType);
           SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
           JSONObject createResult =
               sdmService.createDocument(cmisDocument, jwtToken, sdmCredentials);
@@ -106,7 +108,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             errorMessageDI = createResult.get("message").toString();
             throw new ServiceException(errorMessageDI);
           } else {
-            cmisDocument.setObjectId(createResult.get("url").toString());
+            cmisDocument.setObjectId(createResult.get("objectId").toString());
             addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
           }
         }

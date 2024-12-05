@@ -15,15 +15,22 @@
         <url>https://www.sap.com</url>
     </organization>
 
+    <developers>
+        <developer>
+            <organization>SAP SE</organization>
+            <organizationUrl>https://www.sap.com</organizationUrl>
+        </developer>
+    </developers>
+
     <properties>
-        <revision>1.0.0-SNAPSHOT</revision>
+        <revision>1.0.0</revision>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <excluded.generation.package>sdm/generated/</excluded.generation.package>
-        <cds.services.version>2.9.1</cds.services.version>
+        <cds.services.version>3.4.1</cds.services.version>
 
         <generation-folder>src/gen</generation-folder>
 
@@ -36,6 +43,7 @@
     <packaging>pom</packaging>
 
     <name>CDS Feature for SAP Document Management Service - Root</name>
+    <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
     <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
 
     <modules>
@@ -84,13 +92,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.10.2</version>
+            <version>5.11.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -105,6 +107,11 @@
             <artifactId>mockito-core</artifactId>
             <version>5.12.0</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>4.5.14</version> <!-- Use the latest version available -->
         </dependency>
     </dependencies>
 
@@ -191,21 +198,41 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.2.0</version> <!-- Use the latest version -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>analyze</goal>
+                        </goals>
+                        <configuration>
+                            <analyzeTestScopedDependencies>true</analyzeTestScopedDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
         </plugins>
     </build>
-
     <distributionManagement>
         <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </snapshotRepository>
         <repository>
             <id>artifactory</id>
             <name>Artifactory_DMZ</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-java</url>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </repository>
     </distributionManagement>
+         
+    <scm>
+        <url>https://github.com/cap-java/sdm</url>
+        <connection>scm:git:git@github.com:cap-java/sdm.git</connection>
+        <developerConnection>scm:git:git@github.com:cap-java/sdm.git</developerConnection>
+    </scm>
 
 </project>

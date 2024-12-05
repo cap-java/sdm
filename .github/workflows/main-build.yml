@@ -1,0 +1,70 @@
+name: Main build and snapshot deploy
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.6.3'
+
+on:
+  push:
+    branches: [ "develop" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [ 17 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          java-version: ${{ matrix.java-version }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+  deploy-snapshot:
+    name: Deploy snapshot to Artifactory
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: sapmachine
+          cache: maven
+          server-id: artifactory
+          server-username: CAP_DEPLOYMENT_USER
+          server-password: CAP_DEPLOYMENT_PASS
+
+      - name: Set up Maven ${{ env.MAVEN_VERSION }}
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Get Revision
+        id: get-revision
+        run: |
+          echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Print Revision
+        run: echo "Current revision ${{ steps.get-revision.outputs.REVISION }}"
+        shell: bash
+  
+      - name: Deploy snapshot
+        if: ${{ endsWith(steps.get-revision.outputs.REVISION, '-SNAPSHOT') }}
+        # https://maven.apache.org/plugins/maven-deploy-plugin/usage.html#the-deploy-deploy-mojo
+        run: |
+          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+        shell: bash

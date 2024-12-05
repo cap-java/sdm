@@ -21,4 +21,5 @@ public class CmisDocument {
   private String folderId;
   private String repositoryId;
   private String status;
+  private String mimeType;
 }

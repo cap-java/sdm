@@ -1,0 +1,40 @@
+name: Update POM with new release
+description: Updates the revision property in the POM file with the new release version.
+
+inputs:
+  java-version:
+    description: "The Java version the build shall run with."
+    required: true
+  maven-version:
+    description: "The Maven version the build shall run with."
+    default: '3.6.3'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: sapmachine
+        cache: maven
+
+    - name: Setup Maven ${{ inputs.maven-version }}
+      uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: ${{ inputs.maven-version }}
+
+    - name: Update version
+      run: |
+        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+        echo $VERSION > cap-notebook/version.txt
+        mvn --no-transfer-progress versions:set-property -Dproperty=revision -DnewVersion=$VERSION
+        #chmod +x ensure-license.sh
+        #./ensure-license.sh
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git checkout -b develop
+        git commit -am "Update version to $VERSION"
+        git push --set-upstream origin develop
+      shell: bash
