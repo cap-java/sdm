@@ -57,7 +57,7 @@ jobs:
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           #git checkout deploy
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          cd /sapmnt/home/I355238/actions-runner_cap-java/_work/sdm/sdm/sdm/cap-notebook/demoapp
           #wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           #tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           #sudo mv mbt /usr/local/bin/
