@@ -26,6 +26,24 @@ jobs:
           java-version: 17
           distribution: 'temurin'
           
+      - name: Login to Cloud Foundry
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+
+      - name: Build and package
+        run: |
+          cd sdm
+          pwd
+          echo "Listing the content before build"
+          ls -lart
+          mvn clean install
+          echo "Listing the content after build"
+          ls -lart    
+          
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -39,11 +57,7 @@ jobs:
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           #git checkout deploy
-          cd /home/runner/work/sdm/sdm/sdm
-          echo "current directory"
-          pwd
-          echo "directory content"
-          ls -lart
+          cd /home/runner/work/sdm/sdm/sdm/cap-notebook/demoapp
           wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           sudo mv mbt /usr/local/bin/
