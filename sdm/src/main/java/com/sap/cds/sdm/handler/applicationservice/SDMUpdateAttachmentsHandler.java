@@ -47,15 +47,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   }
 
   public void updateName(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
-    List<String> fileNameWithRestrictedCharacters =
-        SDMUtils.isFileNameContainsRestrictedCharaters(data);
-    if (!fileNameWithRestrictedCharacters.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters)));
-    }
-    System.out.println("Name constraint check complete");
     Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
     if (!duplicateFilenames.isEmpty()) {
       context
@@ -75,6 +66,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity, CdsUpdateEventContext context, List<CdsData> data)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
+    List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
       if (attachments != null) {
@@ -98,6 +90,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             fileNameInSDM = fileNameInDB;
           }
           if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+            if (SDMUtils.isRestrictedCharactersInName(filenameInRequest)) {
+              fileNameWithRestrictedCharacters.add(filenameInRequest);
+              attachment.replace("fileName", fileNameInSDM);
+              continue;
+            }
+            System.out.println("Name constraint check complete");
             CmisDocument cmisDocument = new CmisDocument();
             cmisDocument.setFileName(filenameInRequest);
             cmisDocument.setObjectId(objectId);
@@ -109,6 +107,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           }
         }
       }
+    }
+    if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      // String warningMessage =
+      // SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters);
+      // context.getMessages().warn(warningMessage);
+
+      String warningMessage =
+          String.format(
+              SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
+              String.join(", ", fileNameWithRestrictedCharacters));
+      System.out.println(warningMessage);
+      context.getMessages().warn(warningMessage);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context

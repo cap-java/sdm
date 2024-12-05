@@ -44,7 +44,7 @@ public class SDMUtils {
         while (iterator.hasNext()) {
           Map<String, Object> attachment = iterator.next();
           String filenameInRequest = (String) attachment.get("fileName");
-          if (getRestrictedCharactersInName(filenameInRequest)) {
+          if (isRestrictedCharactersInName(filenameInRequest)) {
             restrictedFilenames.add(filenameInRequest);
           }
         }
@@ -53,7 +53,7 @@ public class SDMUtils {
     return restrictedFilenames;
   }
 
-  public static Boolean getRestrictedCharactersInName(String cmisName) {
+  public static Boolean isRestrictedCharactersInName(String cmisName) {
     String regex = "[\\[\\]/<>\\\\|\\?\\*:;,\"#$%^~&\\+\\{\\}!]";
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(cmisName);

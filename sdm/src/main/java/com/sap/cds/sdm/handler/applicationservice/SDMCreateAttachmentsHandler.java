@@ -38,15 +38,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   public void updateName(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    List<String> fileNameWithRestrictedCharacters =
-        SDMUtils.isFileNameContainsRestrictedCharaters(data);
-    if (!fileNameWithRestrictedCharacters.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters)));
-    }
-    System.out.println("Name constraint check complete");
     Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
     if (!duplicateFilenames.isEmpty()) {
       context
@@ -56,6 +47,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                   SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
                   String.join(", ", duplicateFilenames)));
     } else {
+      List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       for (Map<String, Object> entity : data) {
         List<Map<String, Object>> attachments =
@@ -73,6 +65,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
 
             if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+              if (SDMUtils.isRestrictedCharactersInName(filenameInRequest)) {
+                fileNameWithRestrictedCharacters.add(filenameInRequest);
+                attachment.replace("fileName", fileNameInSDM);
+                continue;
+              }
               CmisDocument cmisDocument = new CmisDocument();
               cmisDocument.setFileName(filenameInRequest);
               cmisDocument.setObjectId(objectId);
@@ -85,6 +82,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             }
           }
         }
+      }
+      if (!fileNameWithRestrictedCharacters.isEmpty()) {
+        // context
+        //     .getMessages()
+        //     .warn(SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters));
+        context
+            .getMessages()
+            .warn(
+                String.format(
+                    SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
+                    String.join(", ", fileNameWithRestrictedCharacters)));
       }
       if (!duplicateFileNameList.isEmpty()) {
         context
