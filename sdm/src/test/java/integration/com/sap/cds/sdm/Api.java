@@ -127,7 +127,7 @@ public class Api {
 
         try (Response draftResponse = httpClient.newCall(request).execute()) {
           if (draftResponse.code() != 200) {
-            throw new IOException("Could not save entity");
+            return (draftResponse.body().string());
           }
           return "Saved";
         } catch (IOException e) {
@@ -430,7 +430,6 @@ public class Api {
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
-        System.out.println(renameResponse);
         throw new IOException("Attachment was not renamed");
       }
       return "Renamed";
