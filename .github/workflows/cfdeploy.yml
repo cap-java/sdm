@@ -1,18 +1,25 @@
 name: Deploy to Cloud Foundry JAVA 17
 on:
   push:
-    branches: ["develop", "Release*","cfdeploy"]
+    branches: ["develop", "Release*", "cfdeploy"]
   pull_request:
     branches: ["develop", "Release*", "cfdeploy"]
   workflow_dispatch:
 
 permissions:
   pull-requests: read
+
 jobs:
   deploy:
     if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
-    steps:        
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: develop
+        
       - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
@@ -26,10 +33,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install cf8-cli
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
-          
-      - name: Clone and prepare projects
-        run: |
-          git clone --single-branch --branch develop https://github.com/cap-java/sdm.git
 
       - name: Build and package
         run: |
@@ -41,7 +44,7 @@ jobs:
           echo "Listing the content after build"
           ls -lart
 
-      - name: Deploy to Cloud Foundry
+      - name: Prepare and Deploy to Cloud Foundry
         run: |
           git checkout deploy
           cd sdm/cap-notebook/demoapp
@@ -50,4 +53,3 @@ jobs:
           sudo mv mbt /usr/local/bin/
           mbt build
           cf deploy mta_archives/**.mtar
- 
