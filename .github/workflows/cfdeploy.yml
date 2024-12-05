@@ -39,11 +39,7 @@ jobs:
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           #git checkout deploy
-          echo "current directory"
-          pwd
-          echo "directory content"
-          ls -lart
-          cd /sdm/sdm/sdm
+          cd /home/runner/work/sdm/sdm/sdm
           echo "current directory"
           pwd
           echo "directory content"
