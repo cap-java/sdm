@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.handler;
+package unit.com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;

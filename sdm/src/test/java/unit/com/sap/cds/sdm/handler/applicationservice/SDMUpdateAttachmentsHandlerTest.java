@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.handler.applicationservice;
+package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;

@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.service;
+package unit.com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;

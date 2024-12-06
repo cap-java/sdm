@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.configuration;
+package unit.com.sap.cds.sdm.configuration;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.mockito.Mockito.*;

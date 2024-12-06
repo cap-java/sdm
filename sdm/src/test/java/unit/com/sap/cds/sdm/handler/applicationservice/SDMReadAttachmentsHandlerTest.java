@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.handler.applicationservice;
+package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;

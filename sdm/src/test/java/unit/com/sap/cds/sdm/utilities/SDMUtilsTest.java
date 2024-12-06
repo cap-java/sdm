@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.utilities;
+package unit.com.sap.cds.sdm.utilities;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
