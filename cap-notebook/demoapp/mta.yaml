@@ -18,7 +18,7 @@ modules:
         SPRING_PROFILES_ACTIVE: cloud,sandbox
         JBP_CONFIG_COMPONENTS: "jres: ['com.sap.xs.java.buildpack.jre.SAPMachineJRE']"
         JBP_CONFIG_SAP_MACHINE_JRE: '{ version: 17.+ }'
-        REPOSITORY_ID: ${{ variables.REPOSITORY_ID }}
+        REPOSITORY_ID: ${{ vars.REPOSITORY_ID }}
     build-parameters:
       builder: custom
       commands:
