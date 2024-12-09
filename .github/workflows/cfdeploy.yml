@@ -2,7 +2,9 @@ name: Deploy to Cloud Foundry JAVA 17
 
 on:
   pull_request:
-    branches: ["develop", "Release*", "cfdeploy"]
+    types: [closed]
+    branches:
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -10,7 +12,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == false
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     steps:
