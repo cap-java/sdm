@@ -18,7 +18,7 @@ modules:
         SPRING_PROFILES_ACTIVE: cloud,sandbox
         JBP_CONFIG_COMPONENTS: "jres: ['com.sap.xs.java.buildpack.jre.SAPMachineJRE']"
         JBP_CONFIG_SAP_MACHINE_JRE: '{ version: 17.+ }'
-        REPOSITORY_ID: SAMPLE-REPO
+        REPOSITORY_ID: ${{ variables.REPOSITORY_ID }}
     build-parameters:
       builder: custom
       commands:
@@ -28,7 +28,7 @@ modules:
       - name: demoappjava-hdi-container
       - name: demoappjava-public-uaa
       - name: cf-logging
-      - name: sdm
+      - name: sdm-di-instance
     provides:
       - name: srv-api
         properties:
@@ -79,7 +79,7 @@ resources:
       service-plan: application
       path: ./xs-security.json
       config: # override xsappname as it needs to be unique
-        xsappname: demoappjava-sdmgoogleworkspacedev-develop
+        xsappname: demoappjava-sdmgoogleworkspacedev-rishi
         oauth2-configuration:
           redirect-uris:
           - ~{app-api/app-url}/**
@@ -98,5 +98,5 @@ resources:
   - name: sdm
     type: org.cloudfoundry.managed-service
     parameters:
-      service: sdm
+      service: sdm-di-instance
       service-plan: standard
