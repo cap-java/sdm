@@ -33,7 +33,9 @@ jobs:
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
-          sudo cf install-plugin multiapps -Y
+          
+          #sudo cf install-plugin multiapps -Y
+          
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
       - name: Build and package
