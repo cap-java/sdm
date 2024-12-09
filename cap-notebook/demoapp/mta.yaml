@@ -28,7 +28,7 @@ modules:
       - name: demoappjava-hdi-container
       - name: demoappjava-public-uaa
       - name: cf-logging
-      - name: sdm-di-instance
+      - name: sdm
     provides:
       - name: srv-api
         properties:
@@ -79,7 +79,7 @@ resources:
       service-plan: application
       path: ./xs-security.json
       config: # override xsappname as it needs to be unique
-        xsappname: demoappjava-sdmgoogleworkspacedev-rishi
+        xsappname: demoappjava-sdmgoogleworkspacedev-develop
         oauth2-configuration:
           redirect-uris:
           - ~{app-api/app-url}/**
@@ -95,7 +95,7 @@ resources:
     parameters:
       service: application-logs
       service-plan: lite
-  - name: sdm-di-instance
+  - name: sdm
     type: org.cloudfoundry.managed-service
     parameters:
       service: sdm
