@@ -36,23 +36,23 @@ jobs:
           sudo cf install-plugin multiapps -f
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
-      - name: Build and package
-        run: |
-          cd sdm
-          pwd
-          echo "Listing the content before build"
-          ls -lart
-          mvn clean install
-          echo "Listing the content after build"
-          ls -lart    
+      #- name: Build and package
+        #run: |
+          #cd sdm
+          #pwd
+          #echo "Listing the content before build"
+          #ls -lart
+          #mvn clean install
+          #echo "Listing the content after build"
+          #ls -lart    
           
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
           if git rev-parse --verify origin/deploy; then
-            git checkout deploy
+            git checkout develop_deploy
           else
-            echo "Branch 'deploy' not found. Please verify the branch name."
+            echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
 
@@ -78,4 +78,4 @@ jobs:
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
           #cf help -a
           echo "running deploy"
-          cf deploy mta_archives/**.mtar -f --no-confirm
+          cf deploy mta_archives/**.mtar -f
