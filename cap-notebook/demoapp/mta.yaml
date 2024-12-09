@@ -95,8 +95,8 @@ resources:
     parameters:
       service: application-logs
       service-plan: lite
-  - name: sdm
+  - name: sdm-di-instance
     type: org.cloudfoundry.managed-service
     parameters:
-      service: sdm-di-instance
+      service: sdm
       service-plan: standard
