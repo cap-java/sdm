@@ -76,6 +76,6 @@ jobs:
           #echo "cf help command..."
           cf install-plugin multiapps -f
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
-          cf help -a
+          #cf help -a
           echo "running deploy"
           cf deploy mta_archives/**.mtar
