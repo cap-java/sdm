@@ -33,10 +33,7 @@ jobs:
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
-        
-          #sudo cf install-plugin -r CF-Community "mta" -f
           sudo cf install-plugin multiapps -f
-          
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
       - name: Build and package
@@ -77,6 +74,8 @@ jobs:
           echo "Listing the content of current directory"
           ls -lart
           #echo "cf help command..."
-          #cf help -a
+          sudo cf install-plugin multiapps -f
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+          cf help -a
           echo "running deploy"
           cf deploy mta_archives/**.mtar
