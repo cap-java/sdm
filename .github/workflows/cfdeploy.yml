@@ -75,7 +75,7 @@ jobs:
           pwd
           echo "Listing the content of current directory"
           ls -lart
-          echo"cf help command..."
+          echo "cf help command..."
           cf help -a
           echo "running cf deploy"
           cf deploy mta_archives/**.mtar
