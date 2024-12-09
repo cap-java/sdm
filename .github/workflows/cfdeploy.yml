@@ -60,7 +60,8 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
-        
+          echo "Current Branch......"
+          git branch
           cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
           #cd /sapmnt/home/I355238/actions-runner_cap-java/_work/sdm/sdm/cap-notebook/demoapp/db
           echo "running mvn clean install"
@@ -71,5 +72,10 @@ jobs:
           #cd ..
           echo "running mbt build"
           mbt build
+          pwd
+          echo "Listing the content of current directory"
+          ls -lart
+          echo"cf help command..."
+          cf help -a
           echo "running cf deploy"
           cf deploy mta_archives/**.mtar
