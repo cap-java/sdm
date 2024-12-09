@@ -74,7 +74,7 @@ jobs:
           echo "Listing the content of current directory"
           ls -lart
           #echo "cf help command..."
-          sudo cf install-plugin multiapps -f
+          cf install-plugin multiapps -f
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
           cf help -a
           echo "running deploy"
