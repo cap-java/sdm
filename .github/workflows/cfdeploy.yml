@@ -42,9 +42,7 @@ jobs:
           pwd
           echo "Listing the content before build"
           ls -lart
-          mvn clean install
-          echo "Listing the content after build"
-          ls -lart    
+          mvn clean install   
           
       - name: Verify and Checkout Deploy Branch
         run: |
