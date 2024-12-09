@@ -36,15 +36,15 @@ jobs:
           sudo cf install-plugin multiapps -f
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
-      #- name: Build and package
-        #run: |
-          #cd sdm
-          #pwd
-          #echo "Listing the content before build"
-          #ls -lart
-          #mvn clean install
-          #echo "Listing the content after build"
-          #ls -lart    
+      - name: Build and package
+        run: |
+          cd sdm
+          pwd
+          echo "Listing the content before build"
+          ls -lart
+          mvn clean install
+          echo "Listing the content after build"
+          ls -lart    
           
       - name: Verify and Checkout Deploy Branch
         run: |
