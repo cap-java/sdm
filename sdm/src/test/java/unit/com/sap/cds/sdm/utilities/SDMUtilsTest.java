@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
