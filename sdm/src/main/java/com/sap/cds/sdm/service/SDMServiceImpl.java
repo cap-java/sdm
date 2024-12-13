@@ -1,8 +1,10 @@
 package com.sap.cds.sdm.service;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -336,12 +338,18 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String checkRepositoryType(String repositoryId) throws IOException {
-    String type = CacheConfig.getVersionedRepoCache().get(repositoryId);
+  public String checkRepositoryType(String repositoryId, String jwttoken) throws IOException {
+    RepoKey repoKey = new RepoKey();
+    JsonObject payloadObj = TokenHandler.getTokenFields(jwttoken);
+    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+    String subdomain = tenantDetails.get("zdn").getAsString();
+    repoKey.setSubdomain(subdomain);
+    repoKey.setRepoId(repositoryId);
+    String type = CacheConfig.getVersionedRepoCache().get(repoKey);
     Boolean isVersioned;
     if (type == null) {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      String token = TokenHandler.getAccessToken(sdmCredentials);
+      String token = TokenHandler.getAccessToken(sdmCredentials, jwttoken);
       JSONObject repoInfo = getRepositoryInfo(token, sdmCredentials);
       isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
     } else {
@@ -349,10 +357,16 @@ public class SDMServiceImpl implements SDMService {
     }
 
     if (Boolean.TRUE.equals(isVersioned)) {
-      CacheConfig.getVersionedRepoCache().put(repositoryId, "Versioned");
+      repoKey = new RepoKey();
+      repoKey.setSubdomain(subdomain);
+      repoKey.setRepoId(repositoryId);
+      CacheConfig.getVersionedRepoCache().put(repoKey, "Versioned");
       return "Versioned";
     } else {
-      CacheConfig.getVersionedRepoCache().put(repositoryId, "Non Versioned");
+      repoKey = new RepoKey();
+      repoKey.setSubdomain(subdomain);
+      repoKey.setRepoId(repositoryId);
+      CacheConfig.getVersionedRepoCache().put(repoKey, "Non Versioned");
       return "Non Versioned";
     }
   }

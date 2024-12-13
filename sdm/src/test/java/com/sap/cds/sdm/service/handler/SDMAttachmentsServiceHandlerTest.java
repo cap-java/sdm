@@ -38,7 +38,10 @@ import com.sap.cds.services.request.UserInfo;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.*;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,6 +69,9 @@ public class SDMAttachmentsServiceHandlerTest {
   String userEmail = "email";
   String subdomain = "subdomain";
   JsonObject mockPayload = new JsonObject();
+  String token =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTY4MzQxODI4MCwiZXhwIjoxNjg1OTQ0MjgwLCJleHRfYXR0ciI6eyJ6ZG4iOiJ0ZW5hbnQifX0.efgtgCjF7bxG2kEgYbkTObovuZN5YQP5t7yr9aPKntk";
+
   @Mock private SDMCredentials sdmCredentials;
   @Mock private DeletionUserInfo deletionUserInfo;
 
@@ -97,13 +103,15 @@ public class SDMAttachmentsServiceHandlerTest {
     MediaData mockMediaData = mock(MediaData.class);
     CdsModel mockModel = mock(CdsModel.class);
 
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Versioned");
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn("Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockMessages.error("Upload not supported for versioned repositories."))
         .thenReturn(mockMessage);
     when(mockContext.getData()).thenReturn(mockMediaData);
     when(mockContext.getModel()).thenReturn(mockModel);
-
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     // Use assertThrows to expect a ServiceException and validate the message
     ServiceException thrown =
         assertThrows(
@@ -140,7 +148,7 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
@@ -153,7 +161,9 @@ public class SDMAttachmentsServiceHandlerTest {
       DBQueryMockedStatic.when(
               () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
           .thenReturn(mockResult);
-
+      when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+      when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+      when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -219,7 +229,171 @@ public class SDMAttachmentsServiceHandlerTest {
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
-    MediaData mockMediaData = mock(MediaData.class);
+    MediaData mockMediaData =
+        new MediaData() {
+          @Override
+          public InputStream getContent() {
+            return null;
+          }
+
+          @Override
+          public void setContent(InputStream inputStream) {}
+
+          @Override
+          public String getMimeType() {
+            return null;
+          }
+
+          @Override
+          public void setMimeType(String s) {}
+
+          @Override
+          public String getFileName() {
+            return "sample.pdf";
+          }
+
+          @Override
+          public void setFileName(String s) {}
+
+          @Override
+          public String getContentId() {
+            return null;
+          }
+
+          @Override
+          public void setContentId(String s) {}
+
+          @Override
+          public String getStatus() {
+            return null;
+          }
+
+          @Override
+          public void setStatus(String s) {}
+
+          @Override
+          public Instant getScannedAt() {
+            return null;
+          }
+
+          @Override
+          public void setScannedAt(Instant instant) {}
+
+          @Override
+          public Object get(Object o) {
+            return null;
+          }
+
+          @Override
+          public <T> T getPath(String s) {
+            return null;
+          }
+
+          @Override
+          public <T> T getPathOrDefault(String s, T t) {
+            return null;
+          }
+
+          @Override
+          public <T> T putPath(String s, T t) {
+            return null;
+          }
+
+          @Override
+          public <T> T putPathIfAbsent(String s, T t) {
+            return null;
+          }
+
+          @Override
+          public boolean containsPath(String s) {
+            return false;
+          }
+
+          @Override
+          public <T> T removePath(String s) {
+            return null;
+          }
+
+          @Override
+          public <T extends CdsData> T forRemoval(boolean b) {
+            return null;
+          }
+
+          @Override
+          public boolean isForRemoval() {
+            return false;
+          }
+
+          @Override
+          public <T> T getMetadata(String s) {
+            return null;
+          }
+
+          @Override
+          public <T> T putMetadata(String s, T t) {
+            return null;
+          }
+
+          @Override
+          public String toJson() {
+            return null;
+          }
+
+          @Override
+          public int size() {
+            return 0;
+          }
+
+          @Override
+          public boolean isEmpty() {
+            return false;
+          }
+
+          @Override
+          public boolean containsKey(Object key) {
+            return false;
+          }
+
+          @Override
+          public boolean containsValue(Object value) {
+            return false;
+          }
+
+          @Nullable
+          @Override
+          public Object put(String key, Object value) {
+            return null;
+          }
+
+          @Override
+          public Object remove(Object key) {
+            return null;
+          }
+
+          @Override
+          public void putAll(@NotNull Map<? extends String, ?> m) {}
+
+          @Override
+          public void clear() {}
+
+          @NotNull
+          @Override
+          public Set<String> keySet() {
+            return null;
+          }
+
+          @NotNull
+          @Override
+          public Collection<Object> values() {
+            return null;
+          }
+
+          @NotNull
+          @Override
+          public Set<Entry<String, Object>> entrySet() {
+            return null;
+          }
+        };
     Messages mockMessages = mock(Messages.class);
     CdsEntity targetMock = mock(CdsEntity.class);
     CdsEntity mockEntity = mock(CdsEntity.class);
@@ -230,9 +404,7 @@ public class SDMAttachmentsServiceHandlerTest {
     JSONObject mockCreateResult = new JSONObject();
     mockCreateResult.put("status", "duplicate");
     mockCreateResult.put("name", "sample.pdf");
-
-    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockMediaData.getContent()).thenReturn(contentStream);
+    // when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getTarget()).thenReturn(targetMock);
     when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
     when(mockContext.getModel()).thenReturn(mockModel);
@@ -240,7 +412,8 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
+        .thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
@@ -324,7 +497,7 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
@@ -394,7 +567,7 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
@@ -460,7 +633,7 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(anyString())).thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
@@ -551,7 +724,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
     try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
-      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("NotVersioned");
+      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
+          .thenReturn("NotVersioned");
       when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
       handlerSpy.readAttachment(mockReadContext);
@@ -569,7 +743,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
     try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
-      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID)).thenReturn("NotVersioned");
+      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
+          .thenReturn("NotVersioned");
       when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
       doThrow(new RuntimeException("Read error"))
           .when(sdmService)
