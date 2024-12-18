@@ -54,7 +54,7 @@ public class SDMUtils {
   }
 
   public static Boolean isRestrictedCharactersInName(String cmisName) {
-    String regex = "[\\[\\]/<>\\\\|\\?\\*:;,\"#$%^~&\\+\\{\\}!]";
+    String regex = "[/\\\\]";
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(cmisName);
     return matcher.find();
