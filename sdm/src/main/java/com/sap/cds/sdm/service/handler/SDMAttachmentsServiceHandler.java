@@ -49,7 +49,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck = sdmService.checkRepositoryType(repositoryId);
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    String repocheck = sdmService.checkRepositoryType(repositoryId, jwtToken);
     CmisDocument cmisDocument = new CmisDocument();
     if ("Versioned".equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
@@ -81,9 +84,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         if (Boolean.TRUE.equals(duplicate)) {
           throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
         } else {
-          AuthenticationInfo authInfo = context.getAuthenticationInfo();
-          JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-          String jwtToken = jwtTokenInfo.getToken();
           JsonObject tokenDetails = TokenHandler.getTokenFields(jwtToken);
           JsonObject tenantDetails = tokenDetails.get("ext_attr").getAsJsonObject();
           subdomain = tenantDetails.get("zdn").getAsString();
