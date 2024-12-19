@@ -31,7 +31,6 @@ import java.util.Set;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
-
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
 
@@ -70,43 +69,87 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
       if (attachments != null) {
-        Iterator<Map<String, Object>> iterator = attachments.iterator();
-        while (iterator.hasNext()) {
-          Map<String, Object> attachment = iterator.next();
-          String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-          String filenameInRequest = (String) attachment.get("fileName");
-          String objectId = (String) attachment.get("objectId");
-
-          String fileNameInDB =
-              DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-          String fileNameInSDM = null;
-          AuthenticationInfo authInfo = context.getAuthenticationInfo();
-          JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-          String jwtToken = jwtTokenInfo.getToken();
-          SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-          if (Objects.isNull(fileNameInDB)) {
-            fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
-          } else {
-            fileNameInSDM = fileNameInDB;
-          }
-          if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-            if (SDMUtils.isRestrictedCharactersInName(filenameInRequest)) {
-              fileNameWithRestrictedCharacters.add(filenameInRequest);
-              attachment.replace("fileName", fileNameInSDM);
-              continue;
-            }
-            CmisDocument cmisDocument = new CmisDocument();
-            cmisDocument.setFileName(filenameInRequest);
-            cmisDocument.setObjectId(objectId);
-            int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument);
-            if (responseCode == 409) {
-              duplicateFileNameList.add(filenameInRequest);
-              attachment.replace("fileName", fileNameInSDM);
-            }
-          }
-        }
+        processAttachments(
+            attachmentEntity,
+            context,
+            attachments,
+            duplicateFileNameList,
+            fileNameWithRestrictedCharacters);
       }
     }
+    handleWarnings(context, duplicateFileNameList, fileNameWithRestrictedCharacters);
+  }
+
+  private void processAttachments(
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      List<Map<String, Object>> attachments,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters)
+      throws IOException {
+    Iterator<Map<String, Object>> iterator = attachments.iterator();
+    while (iterator.hasNext()) {
+      Map<String, Object> attachment = iterator.next();
+      processAttachment(
+          attachmentEntity,
+          context,
+          attachment,
+          duplicateFileNameList,
+          fileNameWithRestrictedCharacters);
+    }
+  }
+
+  private void processAttachment(
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      Map<String, Object> attachment,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters)
+      throws IOException {
+    String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
+    String filenameInRequest = (String) attachment.get("fileName");
+    String objectId = (String) attachment.get("objectId");
+    String fileNameInDB =
+        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
+    if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+      if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+        fileNameWithRestrictedCharacters.add(filenameInRequest);
+        attachment.replace("fileName", fileNameInSDM);
+        return;
+      }
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName(filenameInRequest);
+      cmisDocument.setObjectId(objectId);
+      int responseCode =
+          sdmService.renameAttachments(
+              context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+              TokenHandler.getSDMCredentials(),
+              cmisDocument);
+      if (responseCode == 409) {
+        duplicateFileNameList.add(filenameInRequest);
+        attachment.replace("fileName", fileNameInSDM);
+      }
+    }
+  }
+
+  private String getFileNameInSDM(
+      CdsUpdateEventContext context, String fileNameInDB, String objectId) throws IOException {
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    if (Objects.isNull(fileNameInDB)) {
+      return sdmService.getObject(jwtToken, objectId, sdmCredentials);
+    } else {
+      return fileNameInDB;
+    }
+  }
+
+  private void handleWarnings(
+      CdsUpdateEventContext context,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()

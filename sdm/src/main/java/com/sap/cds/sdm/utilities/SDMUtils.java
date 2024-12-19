@@ -53,7 +53,7 @@ public class SDMUtils {
     return restrictedFilenames;
   }
 
-  public static Boolean isRestrictedCharactersInName(String cmisName) {
+  public static boolean isRestrictedCharactersInName(String cmisName) {
     String regex = "[/\\\\]";
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(cmisName);
