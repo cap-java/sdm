@@ -24,7 +24,7 @@ public class SDMConstants {
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
-      "Enter a valid file name for %s The following characters are not supported: /, \\";
+      "Enter a valid file name for %s. The following characters are not supported: /, \\";
 
   public static String getDuplicateFilesError(String filename) {
     return String.format(DUPLICATE_FILES_ERROR, filename);
@@ -37,15 +37,4 @@ public class SDMConstants {
   public static String getVirusFilesError(String filename) {
     return String.format(VIRUS_ERROR, filename);
   }
-
-  // public static String getNameConstraintError(List<String> fileNames) {
-  //   String bulletPoints =
-  //       fileNames.stream().map(file -> "• " + file).collect(Collectors.joining("\n"));
-  //   // return "Enter a valid file name for:\n"
-  //   //     + bulletPoints
-  //   //     + "\nThe following characters are not supported: [, ], /, <, >, , |, ?, *, :, ;, \\\",
-  // #,
-  //   // $, %, ^, ~, &, +, {, }, !\"";
-  //   return String.format(NAME_CONSTRAINT_ERROR, bulletPoints);
-  // }
 }

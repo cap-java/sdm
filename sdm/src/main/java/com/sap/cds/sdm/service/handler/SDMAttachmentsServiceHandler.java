@@ -71,15 +71,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         String fileid = (String) attachmentIds.get("ID");
         String mimeType = (String) data.get("mimeType");
         String errorMessageDI = "";
-
-        Boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
+        boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
         if (nameConstraint) {
-          // List<String> filenames = Collections.singletonList(filename);
-          // throw new ServiceException(SDMConstants.getNameConstraintError(filenames));
           throw new ServiceException(
               String.format(SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, filename));
         }
-        System.out.println("Name constraint check complete");
         Boolean duplicate = duplicateCheck(filename, fileid, result);
         if (Boolean.TRUE.equals(duplicate)) {
           throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));

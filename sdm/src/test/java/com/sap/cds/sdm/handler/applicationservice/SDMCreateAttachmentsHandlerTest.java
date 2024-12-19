@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -258,5 +260,90 @@ public class SDMCreateAttachmentsHandlerTest {
     // Verify that a warning message was added to the context
     verify(messages, times(0))
         .warn("The following files could not be renamed as they already exist:\nfile1.txt\n");
+  }
+
+  @Test
+  public void testRenameWithRestrictedCharacters() throws IOException {
+    // Prepare the test data with restricted characters in filenames
+    List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file\\3.txt");
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    when(context.getMessages()).thenReturn(messages);
+
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+        .thenCallRealMethod(); // Use the actual implementation
+
+    when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
+
+    handler.updateName(context, data);
+
+    // Verify the warning message for restricted filenames
+    verify(messages, times(1))
+        .warn(
+            String.format(SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, "file/2.txt, file\\3.txt"));
+
+    // Verify the filenames with restricted characters are replaced in attachments
+    for (CdsData cdsData : data) {
+      List<Map<String, Object>> attachments =
+          (List<Map<String, Object>>) cdsData.get("attachments");
+      for (Map<String, Object> attachment : attachments) {
+        String filename = (String) attachment.get("fileName");
+        if (filename.equals("file/2.txt") || filename.equals("file\\3.txt")) {
+          verify(attachment).replace("fileName", "file-in-sdm");
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testWarnOnRestrictedCharacters() throws IOException {
+    List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file3\\abc.txt");
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+    // Mock the SDM service responses
+    when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
+
+    when(context.getMessages()).thenReturn(messages);
+
+    // No duplicate filenames, simulate restricted characters only.
+    handler.updateName(context, data);
+
+    // Verify the warning message for restricted filenames
+    verify(messages, times(1))
+        .warn(
+            String.format(
+                SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, "file/2.txt, file3\\abc.txt"));
+
+    // Verify no error message is issued
+    verify(messages, never()).error(anyString());
+  }
+
+  private List<CdsData> prepareMockAttachmentData(String... fileNames) {
+    List<CdsData> data = new ArrayList<>();
+    for (String fileName : fileNames) {
+      CdsData cdsData = mock(CdsData.class);
+      List<Map<String, Object>> attachments = new ArrayList<>();
+      Map<String, Object> attachment = new HashMap<>();
+      attachment.put("ID", UUID.randomUUID().toString());
+      attachment.put("fileName", fileName);
+      attachment.put("objectId", "objectId-" + UUID.randomUUID());
+      attachments.add(attachment);
+      when(cdsData.get("attachments")).thenReturn(attachments);
+      data.add(cdsData);
+    }
+    return data;
   }
 }

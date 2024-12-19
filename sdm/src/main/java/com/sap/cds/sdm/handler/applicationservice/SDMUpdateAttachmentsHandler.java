@@ -95,7 +95,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               attachment.replace("fileName", fileNameInSDM);
               continue;
             }
-            System.out.println("Name constraint check complete");
             CmisDocument cmisDocument = new CmisDocument();
             cmisDocument.setFileName(filenameInRequest);
             cmisDocument.setObjectId(objectId);
@@ -109,16 +108,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
     }
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
-      // String warningMessage =
-      // SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters);
-      // context.getMessages().warn(warningMessage);
-
-      String warningMessage =
-          String.format(
-              SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
-              String.join(", ", fileNameWithRestrictedCharacters));
-      System.out.println(warningMessage);
-      context.getMessages().warn(warningMessage);
+      context
+          .getMessages()
+          .warn(
+              String.format(
+                  SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
+                  String.join(", ", fileNameWithRestrictedCharacters)));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context

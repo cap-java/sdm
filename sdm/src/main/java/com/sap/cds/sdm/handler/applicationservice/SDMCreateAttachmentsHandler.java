@@ -84,9 +84,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
       if (!fileNameWithRestrictedCharacters.isEmpty()) {
-        // context
-        //     .getMessages()
-        //     .warn(SDMConstants.getNameConstraintError(fileNameWithRestrictedCharacters));
         context
             .getMessages()
             .warn(
