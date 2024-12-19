@@ -17,6 +17,9 @@ public class AttachmentsSDMTest {
   private static String entityID;
   private static String entityID2;
   private static String appUrl;
+  private static String authUrl;
+  private static String username;
+  private static String password;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String srvpath = "AdminService";
@@ -33,6 +36,9 @@ public class AttachmentsSDMTest {
     String clientId = credentialsProperties.getProperty("clientID");
     String clientSecret = credentialsProperties.getProperty("clientSecret");
     appUrl = credentialsProperties.getProperty("appUrl");
+    authUrl = credentialsProperties.getProperty("authUrl");
+    username = credentialsProperties.getProperty("username");
+    password = credentialsProperties.getProperty("password");
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -40,25 +46,21 @@ public class AttachmentsSDMTest {
         "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 
     OkHttpClient client = new OkHttpClient().newBuilder().build();
-    MediaType mediaType = MediaType.parse("application/x-www-form-urlencoded");
-
-    // Usually, a GET request should not have a body. For OAuth token requests with
-    // client_credentials, it's a POST request.
-    RequestBody body = RequestBody.create("", mediaType);
-
+    MediaType mediaType = MediaType.parse("text/plain");
+    RequestBody body = RequestBody.create(mediaType, "");
     Request request =
         new Request.Builder()
             .url(
-                credentialsProperties.getProperty("authUrl")
-                    + "/oauth/token?grant_type=client_credentials")
+                authUrl
+                    + "/oauth/token?grant_type=password&username="
+                    + username
+                    + "&password="
+                    + password)
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
-            .addHeader("Content-Type", "application/x-www-form-urlencoded")
             .build();
-
     Response response = client.newCall(request).execute();
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    token = "sample token";
     response.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);

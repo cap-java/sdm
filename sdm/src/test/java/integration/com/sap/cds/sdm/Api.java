@@ -16,7 +16,7 @@ public class Api {
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
     this.httpClient = new OkHttpClient();
-    this.token = "sample token";
+    this.token = this.config.get("Authorization");
   }
 
   public String createEntityDraft(
@@ -34,7 +34,7 @@ public class Api {
             .url("https://" + appUrl + "/odata/v4/" + serviceName + "/" + entityName)
             .method("POST", body)
             .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response response = httpClient.newCall(request).execute()) {
@@ -67,7 +67,7 @@ public class Api {
                     + srvpath
                     + ".draftEdit")
             .post(RequestBody.create("{\"PreserveChanges\":true}", mediaType))
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response response = httpClient.newCall(request).execute()) {
@@ -100,7 +100,7 @@ public class Api {
             .post(
                 RequestBody.create(
                     "{\"SideEffectsQualifier\":\"\"}", MediaType.parse("application/json")))
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response response = httpClient.newCall(request).execute()) {
@@ -122,7 +122,7 @@ public class Api {
                         + srvpath
                         + ".draftActivate")
                 .post(RequestBody.create("", null))
-                .addHeader("Authorization", "Bearer " + token)
+                .addHeader("Authorization", token)
                 .build();
 
         try (Response draftResponse = httpClient.newCall(request).execute()) {
@@ -156,7 +156,7 @@ public class Api {
                     + entityID
                     + ",IsActiveEntity=true)")
             .delete()
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response response = httpClient.newCall(request).execute()) {
@@ -183,7 +183,7 @@ public class Api {
                     + "(ID="
                     + entityID
                     + ",IsActiveEntity=true)")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response checkResponse = httpClient.newCall(request).execute()) {
@@ -231,7 +231,7 @@ public class Api {
                     + ",IsActiveEntity=false)/attachments")
             .method("POST", body)
             .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response response = httpClient.newCall(postRequest).execute()) {
@@ -257,7 +257,7 @@ public class Api {
                       + attachmentID
                       + ",IsActiveEntity=false)/content")
               .put(fileBody)
-              .addHeader("Authorization", "Bearer " + token)
+              .addHeader("Authorization", token)
               .build();
 
       try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
@@ -277,7 +277,7 @@ public class Api {
                           + attachmentID
                           + ",IsActiveEntity=false)")
                   .delete()
-                  .addHeader("Authorization", "Bearer " + token)
+                  .addHeader("Authorization", token)
                   .build();
 
           try (Response deleteResponse = httpClient.newCall(request).execute()) {
@@ -328,7 +328,7 @@ public class Api {
                     + ",ID="
                     + attachmentID
                     + ",IsActiveEntity=true)/content")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .get()
             .build();
 
@@ -362,7 +362,7 @@ public class Api {
                     + ",ID="
                     + attachmentID
                     + ",IsActiveEntity=false)/content")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .get()
             .build();
 
@@ -392,7 +392,7 @@ public class Api {
                     + attachmentID
                     + ",IsActiveEntity=false)")
             .delete()
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response deleteResponse = httpClient.newCall(request).execute()) {
@@ -425,7 +425,7 @@ public class Api {
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", "Bearer " + token)
+            .addHeader("Authorization", token)
             .build();
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
@@ -434,7 +434,6 @@ public class Api {
       }
       return "Renamed";
     } catch (IOException e) {
-      System.out.println(e);
       return "Attachment was not renamed";
     }
   }
