@@ -149,9 +149,14 @@ public class TokenHandler {
     // Create body parameters including the grant type and authorities
     String bodyParams = "grant_type=client_credentials&authorities=" + encodedAuthorities;
     byte[] postData = bodyParams.getBytes(StandardCharsets.UTF_8);
-
+    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+    if (subdomain != null && !subdomain.equals("")) {
+      String providersubdomain =
+          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+    }
     // Create the URL for the token endpoint
-    String authUrl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+    String authUrl = baseTokenUrl + "/oauth/token";
     URL url = new URL(authUrl);
 
     // Open the connection and set the properties
