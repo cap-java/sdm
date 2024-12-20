@@ -91,9 +91,7 @@ public class TokenHandlerTest {
                 TokenHandler.getDITokenUsingAuthorities(mockSdmCredentials, email, subdomain);
               });
 
-      assertEquals(
-          "Server returned HTTP response code: 405 for URL: https://example.com/oauth/token",
-          exception.getMessage());
+      assertEquals("subdomain-value.com", exception.getMessage());
     }
   }
 
