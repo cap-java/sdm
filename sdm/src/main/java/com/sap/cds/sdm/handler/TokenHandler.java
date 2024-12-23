@@ -78,16 +78,31 @@ public class TokenHandler {
     return sdmCredentials;
   }
 
-  public static String getAccessToken(SDMCredentials sdmCredentials) throws IOException {
+  public static String getAccessToken(SDMCredentials sdmCredentials, String token)
+      throws IOException {
     // Fetch the token from Cache if present use it else generate and store
-    String cachedToken = CacheConfig.getClientCredentialsTokenCache().get("clientCredentialsToken");
+    JsonObject payloadObj = getTokenFields(token);
+    String email = payloadObj.get("email").getAsString();
+    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+    String subdomain = tenantDetails.get("zdn").getAsString();
+    String tokenexpiry = payloadObj.get("exp").getAsString();
+    CacheKey cacheKey = new CacheKey();
+    cacheKey.setKey(email + "_" + subdomain);
+    cacheKey.setExpiration(tokenexpiry);
+    String cachedToken = CacheConfig.getClientCredentialsTokenCache().get(cacheKey);
     if (cachedToken == null) {
       String userCredentials =
           sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
       String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
       String bodyParams = "grant_type=client_credentials";
       byte[] postData = toBytes(bodyParams);
-      String authurl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+      String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+      if (subdomain != null && !subdomain.equals("")) {
+        String providersubdomain =
+            baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+        baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+      }
+      String authurl = baseTokenUrl + "/oauth/token";
       URL url = new URL(authurl);
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestProperty("Authorization", authHeaderValue);
@@ -108,7 +123,13 @@ public class TokenHandler {
       }
       conn.disconnect();
       cachedToken = mapper.readValue(resp, JsonNode.class).get("access_token").asText();
-      CacheConfig.getClientCredentialsTokenCache().put("clientCredentialsToken", cachedToken);
+      String expiryTime = payloadObj.get("exp").getAsString();
+      cacheKey = new CacheKey();
+      JsonObject jsonTenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+      subdomain = jsonTenantDetails.get("zdn").getAsString();
+      cacheKey.setKey(payloadObj.get("email").getAsString() + "_" + subdomain);
+      cacheKey.setExpiration(expiryTime);
+      CacheConfig.getClientCredentialsTokenCache().put(cacheKey, cachedToken);
     }
     return cachedToken;
   }
@@ -128,9 +149,14 @@ public class TokenHandler {
     // Create body parameters including the grant type and authorities
     String bodyParams = "grant_type=client_credentials&authorities=" + encodedAuthorities;
     byte[] postData = bodyParams.getBytes(StandardCharsets.UTF_8);
-
+    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+    if (subdomain != null && !subdomain.equals("")) {
+      String providersubdomain =
+          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+    }
     // Create the URL for the token endpoint
-    String authUrl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+    String authUrl = baseTokenUrl + "/oauth/token";
     URL url = new URL(authUrl);
 
     // Open the connection and set the properties

@@ -30,7 +30,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <excluded.generation.package>sdm/generated/</excluded.generation.package>
-        <cds.services.version>3.4.1</cds.services.version>
+        <cds.services.version>3.5.0</cds.services.version>
 
         <generation-folder>src/gen</generation-folder>
 
