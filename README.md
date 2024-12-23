@@ -140,7 +140,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 1. Add the following dependency in pom.xml in the srv folder
    
-   ```sh
+   ```xml
    <dependency>
       <groupId>com.sap.cds</groupId>
       <artifactId>sdm</artifactId>
@@ -184,7 +184,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
    
 2. To use sdm plugin in your CAP application, create an element with an `Attachments` type. Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. Refer the following example from a sample Bookshop app:
 
-   ```
+   ```cds
    using {my.bookshop.Books } from '../db/books';
    using {sap.attachments.Attachments} from`com.sap.cds/sdm`;
    
@@ -195,7 +195,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 3. Create a SAP Document Management Integration Option [Service instance and key](https://help.sap.com/docs/document-management-service/sap-document-management-service/creating-service-instance-and-service-key). Bind your CAP application to this SDM instance. Add the details of this instance to the resources section in the `mta.yaml` of your CAP application. Refer the following example from a sample Bookshop app.
 
-   ```
+   ```yaml
    modules:
       - name: bookshop-srv
       type: java
@@ -213,7 +213,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 4. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. Refer the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
 
-    ```
+    ```yaml
     modules:
       - name: bookshop-srv
       type: java
@@ -225,7 +225,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
     ```
 
 5. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
-   ```sh
+   ```cds
       {
          $Type : 'UI.ReferenceFacet',
          ID     : 'AttachmentsFacet',
