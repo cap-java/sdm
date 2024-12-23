@@ -36,7 +36,7 @@ jobs:
 
     - name: Install dependencies and run tests with coverage
       run: |
-        mvn clean install
+        mvn clean install -P unit-tests  -DskipIntegrationTests
 
     - name: Upload code coverage report
       uses: actions/upload-artifact@v3
