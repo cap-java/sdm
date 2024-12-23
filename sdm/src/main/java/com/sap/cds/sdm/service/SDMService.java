@@ -24,7 +24,7 @@ public interface SDMService {
       String parentId, String jwtToken, String repositoryId, SDMCredentials sdmCredentials)
       throws IOException;
 
-  public String checkRepositoryType(String repositoryId) throws IOException;
+  public String checkRepositoryType(String repositoryId, String token) throws IOException;
 
   public JSONObject getRepositoryInfo(String token, SDMCredentials sdmCredentials)
       throws IOException;

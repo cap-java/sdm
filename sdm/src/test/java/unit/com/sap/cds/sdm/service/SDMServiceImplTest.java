@@ -5,10 +5,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -33,10 +35,23 @@ import org.mockito.Mockito;
 public class SDMServiceImplTest {
   private static final String REPO_ID = "repo";
   private SDMService SDMService;
+  JsonObject expected;
+  RepoKey repoKey;
 
   @BeforeEach
   public void setUp() {
     SDMService = new SDMServiceImpl();
+    repoKey = new RepoKey();
+    expected = new JsonObject();
+    expected.addProperty(
+        "email", "john.doe@example.com"); // Correct the property name as expected in the method
+    expected.addProperty(
+        "exp", "1234567890"); // Correct the property name as expected in the method
+    JsonObject jsonObject = new JsonObject();
+    jsonObject.addProperty("zdn", "tenant");
+    expected.add("ext_attr", jsonObject);
+    repoKey.setRepoId("repo");
+    repoKey.setSubdomain("tenant");
   }
 
   @Test
@@ -134,12 +149,15 @@ public class SDMServiceImplTest {
   @Test
   public void testCheckRepositoryTypeCacheVersioned() throws IOException {
     String repositoryId = "repo";
-    try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-        Mockito.mockStatic(CacheConfig.class)) {
-      Cache<String, String> mockCache = Mockito.mock(Cache.class);
-      Mockito.when(mockCache.get(repositoryId)).thenReturn("Versioned");
+    String token = "token";
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class); ) {
+      Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      Mockito.when(mockCache.get(repoKey)).thenReturn("Versioned");
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      String result = SDMService.checkRepositoryType(repositoryId);
+      String result = SDMService.checkRepositoryType(repositoryId, token);
       assertEquals("Versioned", result);
     }
   }
@@ -147,12 +165,15 @@ public class SDMServiceImplTest {
   @Test
   public void testCheckRepositoryTypeCacheNonVersioned() throws IOException {
     String repositoryId = "repo";
-    try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-        Mockito.mockStatic(CacheConfig.class)) {
-      Cache<String, String> mockCache = Mockito.mock(Cache.class);
-      Mockito.when(mockCache.get(repositoryId)).thenReturn("Non Versioned");
+    String token = "token";
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class); ) {
+      Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      Mockito.when(mockCache.get(repoKey)).thenReturn("Non Versioned");
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      String result = SDMService.checkRepositoryType(repositoryId);
+      String result = SDMService.checkRepositoryType(repositoryId, token);
       assertEquals("Non Versioned", result);
     }
   }
@@ -160,17 +181,20 @@ public class SDMServiceImplTest {
   @Test
   public void testCheckRepositoryTypeNoCacheVersioned() throws IOException {
     String repositoryId = "repo";
+    String token = "token";
     SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl());
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
         MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class)) {
-      Cache<String, String> mockCache = Mockito.mock(Cache.class);
-      Mockito.when(mockCache.get(repositoryId)).thenReturn(null);
+      Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials))
+          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials, token))
           .thenReturn("token");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
 
       JSONObject capabilities = new JSONObject();
@@ -186,7 +210,7 @@ public class SDMServiceImplTest {
           .when(spySDMService)
           .getRepositoryInfo("token", mockSdmCredentials);
 
-      String result = spySDMService.checkRepositoryType(repositoryId);
+      String result = spySDMService.checkRepositoryType(repositoryId, token);
       assertEquals("Versioned", result);
     }
   }
@@ -194,16 +218,19 @@ public class SDMServiceImplTest {
   @Test
   public void testCheckRepositoryTypeNoCacheNonVersioned() throws IOException {
     String repositoryId = "repo";
+    String token = "token";
     SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl());
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
         MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class)) {
-      Cache<String, String> mockCache = Mockito.mock(Cache.class);
-      Mockito.when(mockCache.get(repositoryId)).thenReturn(null);
+
+      Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials))
+          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials, token))
           .thenReturn("token");
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
 
@@ -220,7 +247,7 @@ public class SDMServiceImplTest {
           .when(spySDMService)
           .getRepositoryInfo("token", mockSdmCredentials);
 
-      String result = spySDMService.checkRepositoryType(repositoryId);
+      String result = spySDMService.checkRepositoryType(repositoryId, token);
       assertEquals("Non Versioned", result);
     }
   }

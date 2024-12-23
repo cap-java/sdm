@@ -1,0 +1,79 @@
+name: Deploy to Cloud Foundry JAVA 17
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: develop
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          
+      - name: Login to Cloud Foundry
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+
+      - name: Build and package
+        run: |
+          cd sdm
+          mvn clean install
+
+      - name: Verify and Checkout Deploy Branch
+        run: |
+          git fetch origin
+          if git rev-parse --verify origin/develop_deploy; then
+            git checkout develop_deploy
+          else
+            echo "Branch 'develop_deploy' not found. Please verify the branch name."
+            exit 1
+          fi
+
+      - name: Prepare and Deploy to Cloud Foundry
+        run: |
+          echo "Current Branch......"
+          git branch
+          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+
+          # Replace placeholder with actual REPOSITORY_ID value
+          sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
+          
+          # Download and install the MBT tool
+          wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          sudo mv mbt /usr/local/bin/
+          
+          # Build the MTA project
+          echo "Running mbt build"
+          mbt build -p=cf -t mta_archives --mtar demoappjava-1.0.0.mtar
+          
+          # Install cf CLI plugin
+          cf install-plugin multiapps -f
+          
+          # Login to Cloud Foundry again to ensure session is active
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+          
+          # Deploy the application
+          echo "Running cf deploy"
+          cf deploy mta_archives/demoappjava-1.0.0.mtar -f
