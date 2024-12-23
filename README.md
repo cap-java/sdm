@@ -147,6 +147,40 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
       <version>{version}</version>
    </dependency>
    ```
+
+   To be able to also use the cds models defined in this plugin the `cds-maven-plugin` needs to be used with the
+   `resolve` goal to make the cds models available in the project:
+
+   ```xml
+   <plugin>
+      <groupId>com.sap.cds</groupId>
+      <artifactId>cds-maven-plugin</artifactId>
+      <version>${cds.services.version}</version>
+      <executions>
+         <execution>
+            <id>cds.resolve</id>
+            <goals>
+               <goal>resolve</goal>
+            </goals>
+         </execution>
+      </executions>
+   </plugin>
+   ```
+
+   If the cds models needs to be used in the `db` folder the `cds-maven-plugin` needs to be included also in the
+   `db` folder of the project.
+   This means the `db` folder needs to have a `pom.xml` with the `cds-maven-plugin` included and the `cds-maven-plugin`
+   needs to be run.
+
+   If the `cds-maven-plugin` is used correctly and executed the following lines should be visible in the build log:
+
+   ````log
+   [INFO] --- cds:3.4.1:resolve (cds.resolve) @ your-project ---
+   [INFO] CdsResolveMojo: Extracting models from com.sap.cds:sdm:jar:<latest-version>:compile (<project-folder>)
+   [INFO] CdsResolveMojo: Extracting models from com.sap.cds:cds-feature-attachments:jar:1.0.5:compile (<project-folder>)
+   ````
+
+   After that the models can be used.
    
 2. To use sdm plugin in your CAP application, create an element with an `Attachments` type. Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. Refer the following example from a sample Bookshop app:
 
