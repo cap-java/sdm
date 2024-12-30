@@ -288,7 +288,8 @@ public class Api {
             createResponse.add(error);
             return createResponse;
           } catch (IOException e) {
-            System.out.println("Attachment was not created and its container was not deleted : " + e);
+            System.out.println(
+                "Attachment was not created and its container was not deleted : " + e);
           }
         }
         long endTime = System.nanoTime(); // Record end time
