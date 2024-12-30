@@ -44,7 +44,7 @@ public class Api {
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
       return (String) responseMap.get("ID");
     } catch (IOException e) {
-      System.out.println("Could not create entity");
+      System.out.println("Could not create entity : " + e);
     }
     return ("Could not create entity");
   }
@@ -76,7 +76,7 @@ public class Api {
       }
       return "Entity in draft mode";
     } catch (IOException e) {
-      System.out.println("Could not edit entity");
+      System.out.println("Could not edit entity : " + e);
     }
     return "Could not edit entity";
   }
@@ -131,11 +131,11 @@ public class Api {
           }
           return "Saved";
         } catch (IOException e) {
-          System.out.println("Could not save entity");
+          System.out.println("Could not save entity : " + e);
         }
       }
     } catch (IOException e) {
-      System.out.println("Could not save entity");
+      System.out.println("Could not save entity : " + e);
     }
 
     return "Could not save entity";
@@ -165,7 +165,7 @@ public class Api {
       }
       return "Entity Deleted";
     } catch (IOException e) {
-      System.out.println("Could not delete entity");
+      System.out.println("Could not delete entity : " + e);
     }
     return ("Could not delete entity");
   }
@@ -193,7 +193,7 @@ public class Api {
         return "Entity exists";
       }
     } catch (IOException e) {
-      System.out.println("Could not verify entity");
+      System.out.println("Could not verify entity : " + e);
     }
     return ("Entity doesn't exist");
   }
@@ -288,7 +288,7 @@ public class Api {
             createResponse.add(error);
             return createResponse;
           } catch (IOException e) {
-            System.out.println("Attachment was not created and its container was not deleted");
+            System.out.println("Attachment was not created and its container was not deleted : " + e);
           }
         }
         long endTime = System.nanoTime(); // Record end time
@@ -299,10 +299,10 @@ public class Api {
         createResponse.add(attachmentID);
         return createResponse;
       } catch (IOException e) {
-        System.out.println("Attachment was not created and its container was not deleted");
+        System.out.println("Attachment was not created and its container was not deleted : " + e);
       }
     } catch (IOException e) {
-      System.out.println("Attachment was not created");
+      System.out.println("Attachment was not created : " + e);
     }
     List<String> createResponse = new ArrayList<>();
     createResponse.add("Attachment was not created");
@@ -339,6 +339,7 @@ public class Api {
       }
       return "OK";
     } catch (IOException e) {
+      System.out.println("Could not read attachment : " + e);
       return "Could not read attachment";
     }
   }
@@ -373,6 +374,7 @@ public class Api {
       }
       return "OK";
     } catch (IOException e) {
+      System.out.println("Could not read attachment : " + e);
       return "Could not read attachment";
     }
   }
@@ -401,6 +403,7 @@ public class Api {
       }
       return "Deleted";
     } catch (IOException e) {
+      System.out.println("Attachment was not deleted : " + e);
       return "Attachment was not deleted";
     }
   }
@@ -434,6 +437,7 @@ public class Api {
       }
       return "Renamed";
     } catch (IOException e) {
+      System.out.println("Attachment was not renamed : " + e);
       return "Attachment was not renamed";
     }
   }
