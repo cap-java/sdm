@@ -278,7 +278,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 ## Known Restrictions
 
 - Repository : This plugin does not support the use of versioned repositories.
-- File size : Attachments are limited to a maximum size of 700 MB.
+- File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are are limited to a maximum size of 400 MB. 
 
 ## Support, Feedback, Contributing
 
