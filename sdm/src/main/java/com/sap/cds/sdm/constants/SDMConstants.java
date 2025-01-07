@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.constants;
 
+import java.util.List;
+
 public class SDMConstants {
   private SDMConstants() {
     // Doesn't do anything
@@ -25,6 +27,26 @@ public class SDMConstants {
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
+
+  public static String nameConstraintMessage(
+      List<String> fileNameWithRestrictedCharacters, String operation) {
+    // Create the base message
+    String prefixMessage =
+        "%s unsuccessful. The following file names contain unsupported characters (/, \\). \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage, operation);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : fileNameWithRestrictedCharacters) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nRename the files and try again.");
+    return bulletPoints.toString();
+  }
 
   public static String getDuplicateFilesError(String filename) {
     return String.format(DUPLICATE_FILES_ERROR, filename);

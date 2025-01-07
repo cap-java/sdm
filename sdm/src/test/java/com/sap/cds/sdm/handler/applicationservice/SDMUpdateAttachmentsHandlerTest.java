@@ -289,6 +289,9 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Test
   public void testRenameWithRestrictedFilenames() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file2/abc.txt", "file3\\abc.txt");
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file2/abc.txt");
+    fileNameWithRestrictedChars.add("file3\\abc.txt");
 
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
@@ -322,10 +325,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(messages, times(1))
-        .warn(
-            String.format(
-                SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
-                String.join(", ", Arrays.asList("file2/abc.txt", "file3\\abc.txt"))));
+        .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
 
     verify(messages, never()).error(anyString());
   }
@@ -336,6 +336,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file2/abc.txt");
     attachment.put("fileName", "file2/abc.txt");
     attachment.put("objectId", "objectId-123");
     attachment.put("ID", "id-123");
@@ -383,7 +385,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     verify(messages, times(1))
         .warn(
             String.format(
-                SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, String.join(", ", "file2/abc.txt")));
+                SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename")));
   }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {

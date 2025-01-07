@@ -153,10 +153,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(
-              String.format(
-                  SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE,
-                  String.join(", ", fileNameWithRestrictedCharacters)));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context

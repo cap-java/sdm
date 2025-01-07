@@ -266,6 +266,9 @@ public class SDMCreateAttachmentsHandlerTest {
   public void testRenameWithRestrictedCharacters() throws IOException {
     // Prepare the test data with restricted characters in filenames
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file\\3.txt");
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file/2.txt");
+    fileNameWithRestrictedChars.add("file\\3.txt");
 
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
@@ -278,16 +281,12 @@ public class SDMCreateAttachmentsHandlerTest {
     sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
         .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
-        .thenCallRealMethod(); // Use the actual implementation
-
+        .thenCallRealMethod();
     when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
 
     handler.updateName(context, data);
-
-    // Verify the warning message for restricted filenames
     verify(messages, times(1))
-        .warn(
-            String.format(SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, "file/2.txt, file\\3.txt"));
+        .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
 
     // Verify the filenames with restricted characters are replaced in attachments
     for (CdsData cdsData : data) {
@@ -306,6 +305,9 @@ public class SDMCreateAttachmentsHandlerTest {
   public void testWarnOnRestrictedCharacters() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file3\\abc.txt");
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file/2.txt");
+    fileNameWithRestrictedChars.add("file3\\abc.txt");
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
@@ -323,9 +325,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Verify the warning message for restricted filenames
     verify(messages, times(1))
-        .warn(
-            String.format(
-                SDMConstants.NAME_CONSTRAINT_WARNING_MESSAGE, "file/2.txt, file3\\abc.txt"));
+        .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
 
     // Verify no error message is issued
     verify(messages, never()).error(anyString());
