@@ -321,7 +321,19 @@ public class SDMServiceImplTest {
     mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-      String expectedResponse = "Folder ID";
+      String expectedResponse =
+          "{"
+              + "\"properties\": {"
+              + "\"cmis:objectId\": {"
+              + "\"id\": \"cmis:objectId\","
+              + "\"localName\": \"cmis:objectId\","
+              + "\"displayName\": \"cmis:objectId\","
+              + "\"queryName\": \"cmis:objectId\","
+              + "\"type\": \"id\","
+              + "\"cardinality\": \"single\","
+              + "\"value\": \"ExpectedFolderId\""
+              + "}}"
+              + "}";
       mockWebServer.enqueue(
           new MockResponse()
               .setBody(expectedResponse)
@@ -338,7 +350,7 @@ public class SDMServiceImplTest {
       String actualResponse =
           sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
 
-      assertEquals(expectedResponse, actualResponse);
+      assertEquals("ExpectedFolderId", actualResponse);
 
     } finally {
       mockWebServer.shutdown();
