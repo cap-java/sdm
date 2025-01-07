@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import okhttp3.*;
-import okhttp3.RequestBody;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -298,7 +297,12 @@ public class SDMServiceImpl implements SDMService {
       if (!response.isSuccessful()) {
         return null;
       } else {
-        return response.body().string();
+        String responseBody = response.body().string();
+        JSONObject jsonObject = new JSONObject(responseBody);
+        JSONObject properties = jsonObject.getJSONObject("properties");
+        JSONObject cmisObjectId = properties.getJSONObject("cmis:objectId");
+        String folderId = cmisObjectId.getString("value");
+        return folderId;
       }
     }
   }
