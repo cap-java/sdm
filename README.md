@@ -224,7 +224,22 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
+5. To allow the application to upload large files, add the following variables in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+
+   ```yaml
+   modules:
+      - name: bookshop-srv
+      type: java
+      path: srv
+      properties:
+            REPOSITORY_ID: <REPO ID>
+            INCOMING_CONNECTION_TIMEOUT: 900000
+            INCOMING_REQUEST_TIMEOUT: 900000
+            timeout: 900000
+   ```
+
+6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
+
    ```cds
       {
          $Type : 'UI.ReferenceFacet',
