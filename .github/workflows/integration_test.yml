@@ -1,11 +1,13 @@
 name: Integration Test
-
 on:
-  workflow_run:
+  push:
     branches:
-      - 'Integration_Test'
+      - develop
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
-
 jobs:
   integration-test:
     #needs: deploy
