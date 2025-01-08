@@ -424,8 +424,7 @@ public class AttachmentsSDMTest {
       if (response == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
-          response = api.readAttachment(appUrl, serviceName, entityName, entityID,
-  attachmentID1);
+          response = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID1);
           if (response.equals("Could not read attachment")) {
             testStatus = true;
           }
@@ -449,10 +448,8 @@ public class AttachmentsSDMTest {
       if (response1 == "Deleted" && response2 == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
-          response1 = api.readAttachment(appUrl, serviceName, entityName, entityID,
-  attachmentID2);
-          response2 = api.readAttachment(appUrl, serviceName, entityName, entityID,
-  attachmentID3);
+          response1 = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID2);
+          response2 = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID3);
           if (response1.equals("Could not read attachment")
               && response2.equals("Could not read attachment")) {
             testStatus = true;
