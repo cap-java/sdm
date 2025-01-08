@@ -60,6 +60,11 @@ public class AttachmentsSDMTest {
             .addHeader("Authorization", basicAuth)
             .build();
     Response response = client.newCall(request).execute();
+    if (response.code() != 200) {
+      System.out.println("Token generation failed. Response code: " + response.code());
+      String errorBody = response.body().string();
+      System.out.println("Error body: " + errorBody);
+    }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
     response.close();
     Map<String, String> config = new HashMap<>();
@@ -388,7 +393,8 @@ public class AttachmentsSDMTest {
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sample123 have been added multiple times. Please rename and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sample123 have been added "
+                + "multiple times. Please rename and try again.\"}}";
         if (response.equals(expected)) {
           response = api.renameAttachment(appUrl, serviceName, entityID, attachmentID3, name2);
           if (response.equals("Renamed")) {
@@ -418,7 +424,8 @@ public class AttachmentsSDMTest {
       if (response == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
-          response = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID1);
+          response = api.readAttachment(appUrl, serviceName, entityName, entityID,
+  attachmentID1);
           if (response.equals("Could not read attachment")) {
             testStatus = true;
           }
@@ -442,8 +449,10 @@ public class AttachmentsSDMTest {
       if (response1 == "Deleted" && response2 == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
-          response1 = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID2);
-          response2 = api.readAttachment(appUrl, serviceName, entityName, entityID, attachmentID3);
+          response1 = api.readAttachment(appUrl, serviceName, entityName, entityID,
+  attachmentID2);
+          response2 = api.readAttachment(appUrl, serviceName, entityName, entityID,
+  attachmentID3);
           if (response1.equals("Could not read attachment")
               && response2.equals("Could not read attachment")) {
             testStatus = true;

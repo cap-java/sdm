@@ -39,6 +39,7 @@ public class Api {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
+        System.out.println("Create entity failed. Error : " + response.body().string());
         throw new IOException("Could not create entity");
       }
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
@@ -72,6 +73,7 @@ public class Api {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
+        System.out.println("Edit entity failed. Error : " + response.body().string());
         throw new IOException("Could not edit entity");
       }
       return "Entity in draft mode";
@@ -105,6 +107,7 @@ public class Api {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
+        System.out.println("Save entity failed. Error : " + response.body().string());
         throw new IOException("Could not save entity");
       } else {
         request =
@@ -127,7 +130,9 @@ public class Api {
 
         try (Response draftResponse = httpClient.newCall(request).execute()) {
           if (draftResponse.code() != 200) {
-            return (draftResponse.body().string());
+            String draftResponseBodyString = draftResponse.body().string();
+            System.out.println("Save entity failed. Error : " + draftResponseBodyString);
+            return (draftResponseBodyString);
           }
           return "Saved";
         } catch (IOException e) {
@@ -161,6 +166,7 @@ public class Api {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
+        System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
       }
       return "Entity Deleted";
@@ -188,6 +194,7 @@ public class Api {
 
     try (Response checkResponse = httpClient.newCall(request).execute()) {
       if (checkResponse.code() != 200) {
+        System.out.println("Verify entity failed. Error : " + checkResponse.body().string());
         throw new IOException("Entity doesn't exist");
       } else {
         return "Entity exists";
@@ -236,6 +243,7 @@ public class Api {
 
     try (Response response = httpClient.newCall(postRequest).execute()) {
       if (response.code() != 201) {
+        System.out.println("Create attachment failed. Error : " + response.body().string());
         throw new IOException("Could not create attachment");
       }
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
@@ -262,8 +270,9 @@ public class Api {
 
       try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
         if (fileResponse.code() != 204) {
-          // Deleting the incorrect attachment before saving the entity
-          error = fileResponse.body().string();
+          String responseBodyString = fileResponse.body().string();
+          System.out.println("Create attachment failed. Error : " + responseBodyString);
+          error = responseBodyString;
           Request request =
               new Request.Builder()
                   .url(
@@ -282,6 +291,8 @@ public class Api {
 
           try (Response deleteResponse = httpClient.newCall(request).execute()) {
             if (deleteResponse.code() != 204) {
+              System.out.println(
+                  "Delete attachment failed. Error : " + deleteResponse.body().string());
               throw new IOException("Attachment was not created and its container was not deleted");
             }
             List<String> createResponse = new ArrayList<>();
@@ -336,6 +347,7 @@ public class Api {
     try {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
+        System.out.println("Read attachment failed. Error : " + response.body().string());
         throw new IOException("Could not read attachment");
       }
       return "OK";
@@ -371,6 +383,7 @@ public class Api {
     try {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
+        System.out.println("Read draft attachment failed. Error : " + response.body().string());
         throw new IOException("Could not read attachment");
       }
       return "OK";
@@ -400,6 +413,7 @@ public class Api {
 
     try (Response deleteResponse = httpClient.newCall(request).execute()) {
       if (deleteResponse.code() != 204) {
+        System.out.println("Delete attachment failed. Error : " + deleteResponse.body().string());
         throw new IOException("Attachment was not deleted");
       }
       return "Deleted";
@@ -434,6 +448,7 @@ public class Api {
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
+        System.out.println("Rename attachment failed. Error : " + renameResponse.body().string());
         throw new IOException("Attachment was not renamed");
       }
       return "Renamed";
