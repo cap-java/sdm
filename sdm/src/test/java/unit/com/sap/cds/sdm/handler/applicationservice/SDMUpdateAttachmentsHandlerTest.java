@@ -11,6 +11,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -284,6 +285,108 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     verify(sdmService, never())
         .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+  }
+
+  @Test
+  public void testRenameWithRestrictedFilenames() throws IOException {
+    List<CdsData> data = prepareMockAttachmentData("file1.txt", "file2/abc.txt", "file3\\abc.txt");
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file2/abc.txt");
+    fileNameWithRestrictedChars.add("file3\\abc.txt");
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    when(model.findEntity("some.qualified.Name.attachments"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    when(context.getMessages()).thenReturn(messages);
+
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+        .thenAnswer(
+            invocation -> {
+              String filename = invocation.getArgument(0);
+              return filename.contains("/") || filename.contains("\\");
+            });
+
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
+    dbQueryMockedStatic
+        .when(
+            () ->
+                getAttachmentForID(
+                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file-in-sdm.txt");
+
+    handler.updateName(context, data);
+
+    verify(messages, times(1))
+        .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
+
+    verify(messages, never()).error(anyString());
+  }
+
+  @Test
+  public void testRenameWithValidRestrictedNames() throws IOException {
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    fileNameWithRestrictedChars.add("file2/abc.txt");
+    attachment.put("fileName", "file2/abc.txt");
+    attachment.put("objectId", "objectId-123");
+    attachment.put("ID", "id-123");
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    when(model.findEntity("some.qualified.Name.attachments"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    when(context.getMessages()).thenReturn(messages);
+
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+        .thenAnswer(
+            invocation -> {
+              String filename = invocation.getArgument(0);
+              return filename.contains("/") || filename.contains("\\");
+            });
+
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
+    dbQueryMockedStatic
+        .when(
+            () ->
+                getAttachmentForID(
+                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file3/abc.txt");
+
+    handler.updateName(context, data);
+
+    // Verify the attachment's file name was replaced with the name in SDM
+    verify(attachment).replace("fileName", "file3/abc.txt");
+
+    // Verify that a warning message is correct
+    verify(messages, times(1))
+        .warn(
+            String.format(
+                SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename")));
   }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {
