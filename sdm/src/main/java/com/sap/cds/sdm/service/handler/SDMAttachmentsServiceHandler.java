@@ -46,6 +46,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    long begin = System.currentTimeMillis();
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String repocheck = sdmService.checkRepositoryType(repositoryId);
@@ -116,6 +117,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     context.getData().setStatus("Clean");
     context.getData().setContent(null);
     context.setCompleted();
+    long end = System.currentTimeMillis();
+    System.out.println("event handler createAttachment time spent in mills =" + (end - begin));
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)

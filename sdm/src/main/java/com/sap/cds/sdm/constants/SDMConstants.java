@@ -5,9 +5,9 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "RepoFromM1";
   public static final String BEARER_TOKEN = "Bearer ";
-  public static final int TIMEOUT = 900;
+  public static final int TIMEOUT = 1800;
 
   public static final String TENANT_ID = "X-zid";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =

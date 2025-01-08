@@ -11,6 +11,9 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +37,24 @@ public class SDMServiceImpl implements SDMService {
   public JSONObject createDocument(
       CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials)
       throws IOException {
+    long begin = System.currentTimeMillis();
+    System.out.println("INCOMING.REQUEST.TIMEOUT:" + System.getenv("INCOMING_REQUEST_TIMEOUT"));
     String accessToken;
+    // Get the MemoryMXBean instance to monitor heap memory usage
+    MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+
     Map<String, String> finalResponse = new HashMap<>();
     accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    // Get the current heap memory usage
+    MemoryUsage heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
+
+    // Print the heap memory usage details
+    System.out.println("Heap Memory Usage Before the Upload:");
+    System.out.printf("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
+    System.out.printf("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
+    System.out.printf("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
+    System.out.printf("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
+    System.out.printf("--------------------------------------------------------------------");
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -68,11 +86,39 @@ public class SDMServiceImpl implements SDMService {
       builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
       HttpEntity multipart = builder.build();
       uploadFile.setEntity(multipart);
+      // Print the heap memory usage details
+      heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
+      System.out.println("Heap Memory Usage During the Upload Just before http execute:");
+      System.out.printf("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
+      System.out.printf("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
+      System.out.printf("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
+      System.out.printf("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
+      System.out.printf("--------------------------------------------------------------------");
+      long intermediate1 = System.currentTimeMillis();
+      System.out.println(
+          "Time spent until executePost is called from createDocument is "
+              + (intermediate1 - begin));
+
       executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+      long intermediate2 = System.currentTimeMillis();
+      System.out.println("Total time spent in createDocument is " + (intermediate2 - begin));
+      // Print the heap memory usage details
+      heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
+      System.out.println("Heap Memory Usage After http execute:");
+      System.out.printf("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
+      System.out.printf("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
+      System.out.printf("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
+      System.out.printf("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
+      System.out.printf("--------------------------------------------------------------------");
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
     return new JSONObject(finalResponse);
+  }
+
+  // Helper method to convert bytes to megabytes
+  private static long bytesToMegabytes(long bytes) {
+    return bytes / (1024 * 1024);
   }
 
   private void executeHttpPost(
@@ -98,9 +144,11 @@ public class SDMServiceImpl implements SDMService {
     String objectId = "";
     String error = "";
     try {
+      long begin = System.currentTimeMillis();
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
+      System.out.println("Raw Response code from DI call is " + responseCode);
       if (responseCode == 201 || responseCode == 200) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
@@ -125,6 +173,8 @@ public class SDMServiceImpl implements SDMService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
+      long end = System.currentTimeMillis();
+      System.out.println("Total time spent in processing formResponse is " + (end - begin));
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
@@ -342,6 +392,7 @@ public class SDMServiceImpl implements SDMService {
     if (type == null) {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
       String token = TokenHandler.getAccessToken(sdmCredentials);
+      System.out.println("Token is " + token);
       JSONObject repoInfo = getRepositoryInfo(token, sdmCredentials);
       isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
     } else {
