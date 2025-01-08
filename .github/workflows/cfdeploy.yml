@@ -77,3 +77,24 @@ jobs:
           # Deploy the application
           echo "Running cf deploy"
           cf deploy mta_archives/demoappjava-1.0.0.mtar -f
+
+  integration-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run integration tests
+        run: |
+          appUrl=${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com
+          echo "app url: ${appUrl}"
+          # JSON file path
+          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+          # Modify PROPERTIES file
+          jq --arg appUrl "$appUrl" --arg authUrl "${{ secrets.CAPAUTH_URL }}" --arg clientID "${{ secrets.CAPSDM_CLIENT_ID }}" --arg clientSecret "${{ secrets.CAPSDM_CLIENT_SECRET }}" --arg username "${{ secrets.CF_USER }}" --arg password "${{ secrets.CF_PASSWORD }}" \
+          '.appUrl = $appUrl | .authUrl = $authUrl | .clientID = $clientID | .clientSecret = $clientSecret | .username = $username | .password = $password' $PROPERTIES_FILE > "temp.properties" \
+          && mv "temp.properties" $PROPERTIES
+          cat $PROPERTIES
+          mvn clean verify -P integration-tests -DskipUnitTests
