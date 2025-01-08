@@ -224,7 +224,22 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
+5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+
+   ```yaml
+   modules:
+      - name: bookshop-srv
+      type: java
+      path: srv
+      properties:
+            REPOSITORY_ID: <REPO ID>
+            INCOMING_CONNECTION_TIMEOUT: 900000
+            INCOMING_REQUEST_TIMEOUT: 900000
+            timeout: 900000
+   ```
+
+6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
+
    ```cds
       {
          $Type : 'UI.ReferenceFacet',
@@ -278,7 +293,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 ## Known Restrictions
 
 - Repository : This plugin does not support the use of versioned repositories.
-- File size : Attachments are limited to a maximum size of 700 MB.
+- File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
 
 ## Support, Feedback, Contributing
 

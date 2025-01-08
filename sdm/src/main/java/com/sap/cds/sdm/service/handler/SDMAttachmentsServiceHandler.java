@@ -18,6 +18,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
@@ -27,6 +28,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,7 +72,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         String fileid = (String) attachmentIds.get("ID");
         String mimeType = (String) data.get("mimeType");
         String errorMessageDI = "";
-
+        boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
+        if (nameConstraint) {
+          throw new ServiceException(
+              SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
+        }
         Boolean duplicate = duplicateCheck(filename, fileid, result);
         if (Boolean.TRUE.equals(duplicate)) {
           throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));

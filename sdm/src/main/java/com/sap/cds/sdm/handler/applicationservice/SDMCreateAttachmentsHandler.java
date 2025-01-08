@@ -17,7 +17,6 @@ import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,51 +39,89 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   public void updateName(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
     if (!duplicateFilenames.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(
-                  SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                  String.join(", ", duplicateFilenames)));
+      handleDuplicateFilenames(context, duplicateFilenames);
     } else {
+      List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       for (Map<String, Object> entity : data) {
-        List<Map<String, Object>> attachments =
-            (List<Map<String, Object>>) entity.get("attachments");
-        if (attachments != null) {
-          Iterator<Map<String, Object>> iterator = attachments.iterator();
-          while (iterator.hasNext()) {
-            Map<String, Object> attachment = iterator.next();
-            String filenameInRequest = (String) attachment.get("fileName");
-            String objectId = (String) attachment.get("objectId");
-            AuthenticationInfo authInfo = context.getAuthenticationInfo();
-            JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-            String jwtToken = jwtTokenInfo.getToken();
-            SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-            String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
+        processEntity(context, entity, fileNameWithRestrictedCharacters, duplicateFileNameList);
+      }
+      handleWarnings(context, fileNameWithRestrictedCharacters, duplicateFileNameList);
+    }
+  }
 
-            if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-              CmisDocument cmisDocument = new CmisDocument();
-              cmisDocument.setFileName(filenameInRequest);
-              cmisDocument.setObjectId(objectId);
-              int responseCode =
-                  sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument);
-              if (responseCode == 409) {
-                duplicateFileNameList.add(filenameInRequest);
-                attachment.replace("fileName", fileNameInSDM);
-              }
-            }
-          }
+  private void handleDuplicateFilenames(
+      CdsCreateEventContext context, Set<String> duplicateFilenames) {
+    context
+        .getMessages()
+        .error(
+            String.format(
+                SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
+                String.join(", ", duplicateFilenames)));
+  }
+
+  private void processEntity(
+      CdsCreateEventContext context,
+      Map<String, Object> entity,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList)
+      throws IOException {
+    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+    if (attachments != null) {
+      for (Map<String, Object> attachment : attachments) {
+        processAttachment(
+            context, attachment, fileNameWithRestrictedCharacters, duplicateFileNameList);
+      }
+    }
+  }
+
+  private void processAttachment(
+      CdsCreateEventContext context,
+      Map<String, Object> attachment,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList)
+      throws IOException {
+    String filenameInRequest = (String) attachment.get("fileName");
+    String objectId = (String) attachment.get("objectId");
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
+
+    if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+      if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+        fileNameWithRestrictedCharacters.add(filenameInRequest);
+        attachment.replace("fileName", fileNameInSDM);
+      } else {
+        CmisDocument cmisDocument = new CmisDocument();
+        cmisDocument.setFileName(filenameInRequest);
+        cmisDocument.setObjectId(objectId);
+        int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument);
+        if (responseCode == 409) {
+          duplicateFileNameList.add(filenameInRequest);
+          attachment.replace("fileName", fileNameInSDM);
         }
       }
-      if (!duplicateFileNameList.isEmpty()) {
-        context
-            .getMessages()
-            .warn(
-                String.format(
-                    SDMConstants.FILES_RENAME_WARNING_MESSAGE,
-                    String.join(", ", duplicateFileNameList)));
-      }
+    }
+  }
+
+  private void handleWarnings(
+      CdsCreateEventContext context,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList) {
+    if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      context
+          .getMessages()
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
+    }
+    if (!duplicateFileNameList.isEmpty()) {
+      context
+          .getMessages()
+          .warn(
+              String.format(
+                  SDMConstants.FILES_RENAME_WARNING_MESSAGE,
+                  String.join(", ", duplicateFileNameList)));
     }
   }
 }
