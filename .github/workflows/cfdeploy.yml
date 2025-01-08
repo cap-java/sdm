@@ -1,4 +1,4 @@
-name: Deploy to Cloud Foundry JAVA 17
+name: Deploy and Integration Test
 
 on:
   pull_request:
