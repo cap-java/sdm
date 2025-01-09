@@ -35,7 +35,8 @@ jobs:
           # Function to partially mask sensitive information
           mask() {
             local value="$1"
-            echo "${value:0:3}*****"
+            local mask_length=5
+            echo "${value:0:3}$(printf '*%.0s' $(seq ${mask_length}))"
           }
 
           # Print masked versions of the credentials for debugging
@@ -50,19 +51,12 @@ jobs:
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
 
           # Modify properties file with jq
-          jq -n --arg appUrl "$appUrl" --arg authUrl "$authUrl" --arg clientID "$clientID" --arg clientSecret "$clientSecret" --arg username "$username" --arg password "$password" \
-          '{
-            AppUrl: $appUrl,
-            AuthUrl: $authUrl,
-            ClientID: $clientID,
-            ClientSecret: $clientSecret,
-            Username: $username,
-            Password: $password
-          }' > "$PROPERTIES_FILE" || { echo "Failed to update properties file"; exit 1; }
+          jq --arg appUrl "$appUrl" --arg authUrl "$authUrl" --arg clientID "$clientID" --arg clientSecret "$clientSecret" --arg username "$username" --arg password "$password" \
+          '.appUrl = $appUrl | .authUrl = $authUrl | .clientID = $clientID | .clientSecret = $clientSecret | .username = $username | .password = $password' "$PROPERTIES_FILE" > "temp.properties" \
+          && mv "temp.properties" "$PROPERTIES_FILE" || { echo "Failed to update properties file"; exit 1; }
           
-          # Print the modified properties file for verification
-          echo "Contents of $PROPERTIES_FILE:"
-          cat "$PROPERTIES_FILE"
+          # Print confirmation of file modification without actual values
+          echo "Successfully updated $PROPERTIES_FILE"
           
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
