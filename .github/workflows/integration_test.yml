@@ -35,6 +35,14 @@ jobs:
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
 
+          # Ensure all required variables are set
+          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+
           # Function to partially mask sensitive information
           mask() {
             local value="$1"
@@ -52,7 +60,7 @@ jobs:
           # Properties file path
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
 
-          # Create a new JSON file
+          # Modify properties file with jq
           jq -n \
             --arg appUrl "$appUrl" \
             --arg authUrl "$authUrl" \
@@ -61,17 +69,24 @@ jobs:
             --arg username "$username" \
             --arg password "$password" \
             '{
-              "appUrl": $appUrl,
-              "authUrl": $authUrl,
-              "clientID": $clientID,
-              "clientSecret": $clientSecret,
-              "username": $username,
-              "password": $password
+              "ConnectionSettings": {
+                "EnableOverrides": false,
+                "AppId": "com.sap.sdm.mobileapp",
+                "ClientId": $clientID,
+                "ServerUrl": $appUrl,
+                "AuthorizationEndpointUrl": $authUrl,
+                "RedirectUrl": "https://sdmgoogleworkspace-cpok9mi1.sdmextmobiletest.cfapps.eu12.hana.ondemand.com",
+                "TokenUrl": $authUrl,
+                "MultiUserSettings": {
+                  "MultiUserEnabled": false
+                }
+              }
             }' > "$PROPERTIES_FILE" \
-            || { echo "Failed to update properties file"; exit 1; }  # Exit if jq command fails
+            || { echo "Failed to update properties file"; exit 1; }
 
-          # Print confirmation of file modification without actual values
-          echo "Successfully updated $PROPERTIES_FILE"
+          # Print the modified properties file for verification
+          echo "Contents of $PROPERTIES_FILE:"
+          cat "$PROPERTIES_FILE"
 
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
