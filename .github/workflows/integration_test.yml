@@ -64,27 +64,24 @@ jobs:
           # Properties file path
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
 
-          # Modify properties file with jq using real values
-          jq -n \
-            --arg appUrl "$appUrl" \
-            --arg authUrl "$authUrl" \
-            --arg clientID "$clientID" \
-            --arg clientSecret "$clientSecret" \
-            --arg username "$username" \
-            --arg password "$password" \
-            '{
-              "appUrl": $appUrl,
-              "authUrl": $authUrl,
-              "clientID": $clientID,
-              "clientSecret": $clientSecret,
-              "username": $username,
-              "password": $password
-            }' > "$PROPERTIES_FILE" \
-            || { echo "Failed to update properties file"; exit 1; }
+          # Update properties file with real values
+          cat > "$PROPERTIES_FILE" <<EOL
+appUrl=$appUrl
+authUrl=$authUrl
+clientID=$clientID
+clientSecret=$clientSecret
+username=$username
+password=$password
+EOL
 
-          # Print the masked credentials JSON (without actual values)
+          # Print the masked credentials properties file for verification
           echo "Contents of $PROPERTIES_FILE (masked):"
-          jq '. | {appUrl: .appUrl, authUrl: "***", clientID: "***", clientSecret: "***", username: "***", password: "***"}' "$PROPERTIES_FILE"
+          echo "appUrl=$appUrl"
+          echo "authUrl=$(mask "$authUrl")"
+          echo "clientID=$(mask "$clientID")"
+          echo "clientSecret=$(mask "$clientSecret")"
+          echo "username=$(mask "$username")"
+          echo "password=$(mask "$password")"
 
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
