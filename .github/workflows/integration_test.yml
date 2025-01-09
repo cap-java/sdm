@@ -83,5 +83,7 @@ jobs:
           echo "username=$(mask "$username")"
           echo "password=$(mask "$password")"
 
+          cat $PROPERTIES_FILE
+
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
