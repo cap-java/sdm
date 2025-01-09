@@ -46,7 +46,11 @@ jobs:
           # Function to partially mask sensitive information
           mask() {
             local value="$1"
-            echo "${value:0:3}*****"
+            if [ ${#value} -gt 6 ]; then
+              echo "${value:0:3}*****${value: -3}"
+            else
+              echo "${value:0:2}*****"
+            fi
           }
 
           # Print masked versions of the credentials for debugging
@@ -69,18 +73,12 @@ jobs:
             --arg username "$username" \
             --arg password "$password" \
             '{
-              "ConnectionSettings": {
-                "EnableOverrides": false,
-                "AppId": "com.sap.sdm.mobileapp",
-                "ClientId": $clientID,
-                "ServerUrl": $appUrl,
-                "AuthorizationEndpointUrl": $authUrl,
-                "RedirectUrl": "https://sdmgoogleworkspace-cpok9mi1.sdmextmobiletest.cfapps.eu12.hana.ondemand.com",
-                "TokenUrl": $authUrl,
-                "MultiUserSettings": {
-                  "MultiUserEnabled": false
-                }
-              }
+              "appUrl": $appUrl,
+              "authUrl": $authUrl,
+              "clientID": $clientID,
+              "clientSecret": $clientSecret,
+              "username": $username,
+              "password": $password
             }' > "$PROPERTIES_FILE" \
             || { echo "Failed to update properties file"; exit 1; }
 
