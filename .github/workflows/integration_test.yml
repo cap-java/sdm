@@ -43,7 +43,7 @@ jobs:
           if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
           if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
 
-          # Function to partially mask sensitive information
+          # Function to partially mask sensitive information for logging
           mask() {
             local value="$1"
             if [ ${#value} -gt 6 ]; then
@@ -64,7 +64,7 @@ jobs:
           # Properties file path
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
 
-          # Modify properties file with jq
+          # Modify properties file with jq using real values
           jq -n \
             --arg appUrl "$appUrl" \
             --arg authUrl "$authUrl" \
@@ -82,9 +82,9 @@ jobs:
             }' > "$PROPERTIES_FILE" \
             || { echo "Failed to update properties file"; exit 1; }
 
-          # Print the modified properties file for verification
-          echo "Contents of $PROPERTIES_FILE:"
-          cat "$PROPERTIES_FILE"
+          # Print the masked credentials JSON (without actual values)
+          echo "Contents of $PROPERTIES_FILE (masked):"
+          jq '. | {appUrl: .appUrl, authUrl: "***", clientID: "***", clientSecret: "***", username: "***", password: "***"}' "$PROPERTIES_FILE"
 
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
