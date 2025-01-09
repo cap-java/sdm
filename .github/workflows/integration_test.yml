@@ -82,7 +82,7 @@ jobs:
           echo "clientID=$(mask "$clientID")"
           echo "clientSecret=$(mask "$clientSecret")"
           echo "username=$(mask "$username")"
-          echo "password=$(mask "$password")"
+          echo "password = $(mask "$password")"
 
           cat $PROPERTIES_FILE
 
