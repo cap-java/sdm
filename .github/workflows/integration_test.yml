@@ -26,7 +26,7 @@ jobs:
       - name: Run integration tests
         run: |
           set -e  # Enable error checking
-
+          cat $PROPERTIES_FILE
           # Gather secrets and other values
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
