@@ -66,13 +66,13 @@ jobs:
 
           # Update properties file with real values
           cat > "$PROPERTIES_FILE" <<EOL
-appUrl=$appUrl
-authUrl=$authUrl
-clientID=$clientID
-clientSecret=$clientSecret
-username=$username
-password=$password
-EOL
+          appUrl=$appUrl
+          authUrl=$authUrl
+          clientID=$clientID
+          clientSecret=$clientSecret
+          username=$username
+          password=$password
+          EOL
 
           # Print the masked credentials properties file for verification
           echo "Contents of $PROPERTIES_FILE (masked):"
