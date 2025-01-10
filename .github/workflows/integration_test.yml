@@ -27,7 +27,6 @@ jobs:
         run: |
           set -e  # Enable error checking
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          cat $PROPERTIES_FILE
           # Gather secrets and other values
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
@@ -51,15 +50,6 @@ jobs:
               echo "${value:0:2}*****"
             fi
           }
-          # Print masked versions of the credentials for debugging
-          echo "App URL: $appUrl"
-          echo "Auth URL: $(mask "$authUrl")"
-          echo "Client ID: $(mask "$clientID")"
-          echo "Client Secret: $(mask "$clientSecret")"
-          echo "Username: $(mask "$username")"
-          echo "Password: $(mask "$password")"
-          # Properties file path
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
           # Update properties file with real values
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
@@ -69,14 +59,5 @@ jobs:
           username=$username
           password=$password
           EOL
-          # Print the masked credentials properties file for verification
-          echo "Contents of $PROPERTIES_FILE (masked):"
-          echo "appUrl=$appUrl"
-          echo "authUrl=$(mask "$authUrl")"
-          echo "clientID=$(mask "$clientID")"
-          echo "clientSecret=$(mask "$clientSecret")"
-          echo "username=$(mask "$username")"
-          echo "password = $(mask "$password")"
-          cat $PROPERTIES_FILE
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
