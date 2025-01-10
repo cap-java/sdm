@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.service.handler;
+package unit.com.sap.cds.sdm.service.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,6 +28,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
+import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;

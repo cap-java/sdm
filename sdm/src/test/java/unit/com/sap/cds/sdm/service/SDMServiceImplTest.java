@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.service;
+package unit.com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,6 +14,8 @@ import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.service.*;
+import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;

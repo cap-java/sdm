@@ -1,4 +1,4 @@
-name: Deploy to Cloud Foundry JAVA 17
+name: Deploy and Integration Test
 
 on:
   pull_request:
@@ -38,7 +38,7 @@ jobs:
       - name: Build and package
         run: |
           cd sdm
-          mvn clean install
+          mvn clean install -P unit-tests  -DskipIntegrationTests
 
       - name: Verify and Checkout Deploy Branch
         run: |
@@ -77,3 +77,50 @@ jobs:
           # Deploy the application
           echo "Running cf deploy"
           cf deploy mta_archives/demoappjava-1.0.0.mtar -f
+
+  integration-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run integration tests
+        run: |
+          set -e  # Enable error checking
+          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+          # Gather secrets and other values
+          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="${{ secrets.CAPAUTH_URL }}"
+          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
+          clientSecret="${{ secrets.CAPSDM_CLIENT_SECRET }}"
+          username="${{ secrets.CF_USER }}"
+          password="${{ secrets.CF_PASSWORD }}"
+          # Ensure all required variables are set
+          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+          # Function to partially mask sensitive information for logging
+          mask() {
+            local value="$1"
+            if [ ${#value} -gt 6 ]; then
+              echo "${value:0:3}*****${value: -3}"
+            else
+              echo "${value:0:2}*****"
+            fi
+          }
+          # Update properties file with real values
+          cat > "$PROPERTIES_FILE" <<EOL
+          appUrl=$appUrl
+          authUrl=$authUrl
+          clientID=$clientID
+          clientSecret=$clientSecret
+          username=$username
+          password=$password
+          EOL
+          # Run Maven integration tests
+          mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }

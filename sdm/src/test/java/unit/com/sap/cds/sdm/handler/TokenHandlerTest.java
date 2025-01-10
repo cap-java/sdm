@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.handler;
+package unit.com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 import com.google.gson.JsonObject;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.CacheKey;
+import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cloud.environment.servicebinding.api.DefaultServiceBindingAccessor;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;

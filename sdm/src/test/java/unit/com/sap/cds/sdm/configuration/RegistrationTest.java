@@ -1,9 +1,10 @@
-package com.sap.cds.sdm.configuration;
+package unit.com.sap.cds.sdm.configuration;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.feature.attachments.service.AttachmentService;
+import com.sap.cds.sdm.configuration.Registration;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.services.Service;
 import com.sap.cds.services.ServiceCatalog;

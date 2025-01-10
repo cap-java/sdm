@@ -1,4 +1,4 @@
-package com.sap.cds.sdm.utilities;
+package unit.com.sap.cds.sdm.utilities;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
