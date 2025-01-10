@@ -32,10 +32,10 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -187,7 +187,8 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
+  public static String getDIToken(
+      String token, SDMCredentials sdmCredentials, HttpClient httpClient) throws IOException {
     JsonObject payloadObj = getTokenFields(token);
     String email = payloadObj.get("email").getAsString();
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
@@ -198,7 +199,7 @@ public class TokenHandler {
     cacheKey.setExpiration(tokenexpiry);
     String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
     if (cachedToken == null) {
-      cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);
+      cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj, httpClient);
     }
     return cachedToken;
   }
@@ -215,12 +216,12 @@ public class TokenHandler {
   }
 
   private static String generateDITokenFromTokenExchange(
-      String token, SDMCredentials sdmCredentials, JsonObject payloadObj)
+      String token, SDMCredentials sdmCredentials, JsonObject payloadObj, HttpClient httpClient)
       throws OAuth2ServiceException {
     String cachedToken = null;
-    CloseableHttpClient httpClient = null;
+    // CloseableHttpClient httpClient = null;
     try {
-      httpClient = HttpClients.createDefault();
+      // httpClient = HttpClients.createDefault();
       if (sdmCredentials.getClientId() == null) {
         throw new IOException("No SDM binding found");
       }
@@ -257,7 +258,7 @@ public class TokenHandler {
     } catch (IOException e) {
       logger.error("Error in POST request while fetching token with JWT bearer", e.getMessage());
     } finally {
-      safeClose(httpClient);
+      safeClose((CloseableHttpClient) httpClient);
     }
     return cachedToken;
   }

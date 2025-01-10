@@ -46,6 +46,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    System.out.println("********Start time *********" + System.currentTimeMillis());
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -79,6 +80,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           JsonObject tenantDetails = tokenDetails.get("ext_attr").getAsJsonObject();
           subdomain = tenantDetails.get("zdn").getAsString();
           String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
+          System.out.println("FOLDERID " + folderId);
           cmisDocument.setFileName(filename);
           cmisDocument.setAttachmentId(fileid);
           InputStream contentStream = (InputStream) data.get("content");
@@ -116,6 +118,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     context.getData().setStatus("Clean");
     context.getData().setContent(null);
     context.setCompleted();
+    System.out.println("********End time *********" + System.currentTimeMillis());
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)

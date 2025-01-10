@@ -9,10 +9,10 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.service.client.httpclient.SDMClientProviderFactory;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,17 +20,20 @@ import java.util.stream.Collectors;
 import okhttp3.*;
 import okhttp3.RequestBody;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 
 public class SDMServiceImpl implements SDMService {
+  private final SDMClientProviderFactory clientProviderFactory;
+
+  public SDMServiceImpl(SDMClientProviderFactory clientProviderFactory) {
+    this.clientProviderFactory = clientProviderFactory;
+  }
 
   @Override
   public JSONObject createDocument(
@@ -38,52 +41,54 @@ public class SDMServiceImpl implements SDMService {
       throws IOException {
     String accessToken;
     Map<String, String> finalResponse = new HashMap<>();
-    accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient("sdm-destination-token-exchange");
+    // accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
-    try (CloseableHttpClient httpClient =
-        HttpClients.custom()
-            .setDefaultRequestConfig(
-                RequestConfig.custom()
-                    .setConnectTimeout(SDMConstants.TIMEOUT * 1000)
-                    .setSocketTimeout(SDMConstants.TIMEOUT * 1000)
-                    .setConnectionRequestTimeout(SDMConstants.TIMEOUT * 1000)
-                    .build())
-            .build()) {
-
-      HttpPost uploadFile = new HttpPost(sdmUrl);
-      MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-      uploadFile.setHeader("Authorization", "Bearer " + accessToken);
-      builder.addBinaryBody(
-          "filename",
-          cmisDocument.getContent(),
-          ContentType.create(cmisDocument.getMimeType()),
-          cmisDocument.getFileName());
-      // Add additional form fields
-      builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
-      builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
-      builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
-      builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
-      builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
-      builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
-      builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
-      HttpEntity multipart = builder.build();
-      uploadFile.setEntity(multipart);
-      executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
-    } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
-    }
+    //    try (CloseableHttpClient httpClient =
+    //        HttpClients.custom()
+    //            .setDefaultRequestConfig(
+    //                RequestConfig.custom()
+    //                    .setConnectTimeout(SDMConstants.TIMEOUT * 1000)
+    //                    .setSocketTimeout(SDMConstants.TIMEOUT * 1000)
+    //                    .setConnectionRequestTimeout(SDMConstants.TIMEOUT * 1000)
+    //                    .build())
+    //            .build()) {
+    System.out.println("sdmUrl " + sdmUrl);
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    // uploadFile.setHeader("Authorization", "Bearer " + accessToken);
+    builder.addBinaryBody(
+        "filename",
+        cmisDocument.getContent(),
+        ContentType.create(cmisDocument.getMimeType()),
+        cmisDocument.getFileName());
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    //    } catch (IOException e) {
+    //      throw new ServiceException(SDMConstants.getGenericError("upload"));
+    //    }
     return new JSONObject(finalResponse);
   }
 
   private void executeHttpPost(
-      CloseableHttpClient httpClient,
+      HttpClient httpClient,
       HttpPost uploadFile,
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
-    try (CloseableHttpResponse response = httpClient.execute(uploadFile)) {
+    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
       throw new ServiceException("Error in setting timeout", e.getMessage());
@@ -103,6 +108,7 @@ public class SDMServiceImpl implements SDMService {
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
+      System.out.println("Create document by path response " + responseCode + ":" + responseString);
       if (responseCode == 201 || responseCode == 200) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
@@ -138,7 +144,8 @@ public class SDMServiceImpl implements SDMService {
       throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     OkHttpClient client = new OkHttpClient();
-    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient("sdm-destination-token-exchange");
+    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     String fileName = cmisDocument.getFileName();
     String objectId = cmisDocument.getObjectId();
@@ -169,7 +176,8 @@ public class SDMServiceImpl implements SDMService {
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException {
     OkHttpClient client = new OkHttpClient();
-    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient();
+    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -207,7 +215,8 @@ public class SDMServiceImpl implements SDMService {
       throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     OkHttpClient client = new OkHttpClient();
-    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient("sdm-destination-token-exchange");
+    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -215,24 +224,24 @@ public class SDMServiceImpl implements SDMService {
             + "/root?objectID="
             + objectId
             + "&cmisselector=content";
-    Request request =
-        new Request.Builder()
-            .url(sdmUrl)
-            .addHeader("Authorization", "Bearer " + accessToken)
-            .get()
-            .build();
+    //    Request request =
+    //        new Request.Builder()
+    //            .url(sdmUrl)
+    //            .addHeader("Authorization", "Bearer " + accessToken)
+    //            .get()
+    //            .build();
+    //
+    //    Response response = client.newCall(request).execute();
+    //    if (!response.isSuccessful()) {
+    //      response.close();
+    //      throw new ServiceException("Unexpected code");
+    //    }
 
-    Response response = client.newCall(request).execute();
-    if (!response.isSuccessful()) {
-      response.close();
-      throw new ServiceException("Unexpected code");
-    }
-
-    InputStream documentStream = response.body().byteStream();
-    try {
-      context.getData().setContent(documentStream);
-    } catch (Exception e) {
-      response.close();
+    HttpPost getContentRequest = new HttpPost(sdmUrl);
+    getContentRequest.setHeader("Authorization", "Bearer " + accessToken);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
+      context.getData().setContent(response.getEntity().getContent());
+    } catch (IOException e) {
       throw new ServiceException("Failed to set document stream in context");
     }
   }
@@ -279,7 +288,8 @@ public class SDMServiceImpl implements SDMService {
       String parentId, String jwtToken, String repositoryId, SDMCredentials sdmCredentials)
       throws IOException {
     OkHttpClient client = new OkHttpClient();
-    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient("sdm-destination-token-exchange");
+    // String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -287,19 +297,35 @@ public class SDMServiceImpl implements SDMService {
             + "/root/"
             + parentId
             + "?cmisselector=object";
-    Request request =
-        new Request.Builder()
-            .url(sdmUrl)
-            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
-            .get()
-            .build();
+    //    Request request =
+    //        new Request.Builder()
+    //            .url(sdmUrl)
+    //            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
+    //            .get()
+    //            .build();
+    //
+    //    try (Response response = client.newCall(request).execute()) {
+    //      if (!response.isSuccessful()) {
+    //        return null;
+    //      } else {
+    //        return response.body().string();
+    //      }
+    //    }
 
-    try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
+    HttpPost getFolderRequest = new HttpPost(sdmUrl);
+    // getFolderRequest.setHeader("Authorization", "Bearer " + accessToken);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
+      System.out.println(
+          "GET folder by path response "
+              + response.getStatusLine().getStatusCode()
+              + ":"
+              + EntityUtils.toString(response.getEntity()));
+      if (response.getStatusLine().getStatusCode() != 200) {
         return null;
-      } else {
-        return response.body().string();
       }
+      return EntityUtils.toString(response.getEntity());
+    } catch (IOException e) {
+      throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }
 
@@ -308,32 +334,58 @@ public class SDMServiceImpl implements SDMService {
       String parentId, String jwtToken, String repositoryId, SDMCredentials sdmCredentials)
       throws IOException {
     OkHttpClient client = new OkHttpClient();
-    String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+    var httpClient = clientProviderFactory.getHttpClient("sdm-destination-token-exchange");
+    // String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials, httpClient);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
-    RequestBody requestBody =
-        new MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("cmisaction", "createFolder")
-            .addFormDataPart("propertyId[0]", "cmis:name")
-            .addFormDataPart("propertyValue[0]", parentId)
-            .addFormDataPart("propertyId[1]", "cmis:objectTypeId")
-            .addFormDataPart("propertyValue[1]", "cmis:folder")
-            .addFormDataPart("succinct", "true")
-            .build();
+    //    RequestBody requestBody =
+    //        new MultipartBody.Builder()
+    //            .setType(MultipartBody.FORM)
+    //            .addFormDataPart("cmisaction", "createFolder")
+    //            .addFormDataPart("propertyId[0]", "cmis:name")
+    //            .addFormDataPart("propertyValue[0]", parentId)
+    //            .addFormDataPart("propertyId[1]", "cmis:objectTypeId")
+    //            .addFormDataPart("propertyValue[1]", "cmis:folder")
+    //            .addFormDataPart("succinct", "true")
+    //            .build();
+    //
+    //    Request request =
+    //        new Request.Builder()
+    //            .url(sdmUrl)
+    //            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
+    //            .post(requestBody)
+    //            .build();
+    //
+    //    try (Response response = client.newCall(request).execute()) {
+    //      if (!response.isSuccessful())
+    //        throw new ServiceException(SDMConstants.getGenericError("upload"));
+    //      return response.body().string();
+    //    } catch (IOException e) {
+    //      throw new ServiceException(SDMConstants.getGenericError("upload"));
+    //    }
+    HttpPost createFolderRequest = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    // createFolderRequest.setHeader("Authorization", "Bearer " + accessToken);
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "createFolder", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[0]", parentId, ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[1]", "cmis:folder", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    HttpEntity multipart = builder.build();
+    createFolderRequest.setEntity(multipart);
+    try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
+      int responseCode = response.getStatusLine().getStatusCode();
+      String responseBody = EntityUtils.toString(response.getEntity());
+      System.out.println("CREATE folder by path response " + responseCode + ":" + responseBody);
 
-    Request request =
-        new Request.Builder()
-            .url(sdmUrl)
-            .addHeader("Authorization", SDMConstants.BEARER_TOKEN + accessToken)
-            .post(requestBody)
-            .build();
-
-    try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful())
-        throw new ServiceException(SDMConstants.getGenericError("upload"));
-      return response.body().string();
+      if (responseCode != 201) {
+        System.out.println("Check");
+        throw new ServiceException("Failed to create folder" + responseBody);
+      }
+      return responseBody;
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
+      throw new ServiceException("Failed to create folder " + e.getMessage());
     }
   }
 

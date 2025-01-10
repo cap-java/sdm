@@ -57,7 +57,8 @@ public class TokenHandlerTest {
       String result =
           TokenHandler.getDIToken(
               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTY4MzQxODI4MCwiZXhwIjoxNjg1OTQ0MjgwLCJleHRfYXR0ciI6eyJ6ZG4iOiJ0ZW5hbnQifX0.efgtgCjF7bxG2kEgYbkTObovuZN5YQP5t7yr9aPKntk",
-              mockSdmCredentials);
+              mockSdmCredentials,
+              any());
       assertEquals("cachedToken", result); // Adjust based on the expected result
     } catch (OAuth2ServiceException e) {
       throw new RuntimeException(e);
@@ -132,7 +133,8 @@ public class TokenHandlerTest {
       String result =
           TokenHandler.getDIToken(
               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTY4MzQxODI4MCwiZXhwIjoxNjg1OTQ0MjgwLCJ6aWQiOiJ0ZW5hbnQtaWQtdmFsdWUiLCJleHRfYXR0ciI6eyJ6ZG4iOiJ0ZW5hbnQifX0.MHwowSANGLEUQojz65Y7EVFC_bvojDL8guXA5kjuKuw",
-              mockSdmCredentials);
+              mockSdmCredentials,
+              any());
       assertEquals("mockedToken", result); // Adjust based on the expected result
     } catch (OAuth2ServiceException e) {
       throw new RuntimeException(e);
@@ -176,7 +178,8 @@ public class TokenHandlerTest {
       String result =
           TokenHandler.getDIToken(
               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTY4MzQxODI4MCwiZXhwIjoxNjg1OTQ0MjgwLCJleHRfYXR0ciI6eyJ6ZG4iOiJ0ZW5hbnQifX0.efgtgCjF7bxG2kEgYbkTObovuZN5YQP5t7yr9aPKntk",
-              mockSdmCredentials);
+              mockSdmCredentials,
+              any());
       assertEquals(null, result); // Adjust based on the expected result
     } catch (OAuth2ServiceException e) {
       throw new RuntimeException(e);
@@ -220,7 +223,8 @@ public class TokenHandlerTest {
       String result =
           TokenHandler.getDIToken(
               "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG4uZG9lQGV4YW1wbGUuY29tIiwic3ViIjoiMTIzNDU2Nzg5MCIsIm5hbWUiOiJKb2huIERvZSIsImlhdCI6MTY4MzQxODI4MCwiZXhwIjoxNjg1OTQ0MjgwLCJ6aWQiOiJ0ZW5hbnQtaWQtdmFsdWUiLCJleHRfYXR0ciI6eyJ6ZG4iOiJ0ZW5hbnQifX0.MHwowSANGLEUQojz65Y7EVFC_bvojDL8guXA5kjuKuw",
-              mockSdmCredentials);
+              mockSdmCredentials,
+              any());
       assertEquals("mockedToken", result); // Adjust based on the expected result
     } catch (OAuth2ServiceException e) {
       throw new RuntimeException(e);

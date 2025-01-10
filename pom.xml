@@ -23,7 +23,7 @@
     </developers>
 
     <properties>
-        <revision>1.0.1</revision>
+        <revision>1.0.2-SNAPSHOT</revision>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -35,6 +35,7 @@
         <generation-folder>src/gen</generation-folder>
 
         <test-spring-boot-version>3.2.5</test-spring-boot-version>
+        <sdk-bom-version>5.15.0</sdk-bom-version>
     </properties>
 
     <groupId>com.sap.cds</groupId>
@@ -80,6 +81,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+                    <dependency>
+                        <groupId>com.sap.cloud.sdk</groupId>
+                        <artifactId>sdk-bom</artifactId>
+                        <version>${sdk-bom-version}</version>
+                        <type>pom</type>
+                        <scope>import</scope>
+                    </dependency>
         </dependencies>
     </dependencyManagement>
 

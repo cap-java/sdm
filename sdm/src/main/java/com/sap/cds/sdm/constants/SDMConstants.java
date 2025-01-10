@@ -5,7 +5,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "MY_REPO";
   public static final String BEARER_TOKEN = "Bearer ";
   public static final int TIMEOUT = 900;
 
@@ -23,6 +23,7 @@ public class SDMConstants {
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
+  public static final String SDM_ENV_NAME = "sdm";
 
   public static String getDuplicateFilesError(String filename) {
     return String.format(DUPLICATE_FILES_ERROR, filename);
