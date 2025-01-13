@@ -78,8 +78,8 @@ jobs:
             # Form the new version
             new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
 
-            # Update the version in pom.xml
-            mvn versions:set -DnewVersion=$new_version -DgenerateBackupPoms=false
+            # Update the <revision> property in pom.xml
+            sed -i "s|<revision>.*</revision>|<revision>${new_version}</revision>|" pom.xml
 
             echo "Updated version to $new_version"
 
