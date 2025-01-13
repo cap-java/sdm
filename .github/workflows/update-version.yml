@@ -1,0 +1,56 @@
+name: Update Version
+
+on:
+  workflow_dispatch: # Allows manual triggers
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/testversion' # Ensure it only runs on the testversion branch
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      with:
+        ref: testversion # Ensure the action checks out the testversion branch
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Increment version in pom.xml
+      id: increment-version
+      run: |
+        # Extract the current version
+        current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+
+        # Split the current version into major, minor, and patch parts
+        IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
+
+        # Increment the patch number
+        new_patch=$((patch + 1))
+
+        # Form the new version string
+        new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
+
+        # Replace the version in pom.xml
+        sed -i "s/<revision>.*<\/revision>/<revision>${new_version}<\/revision>/" pom.xml
+
+        # Verify changes
+        echo "Updated Version: $(grep '<revision>' pom.xml | sed 's/.*<revision>\(.*\)<\/revision>.*/\1/')"
+
+    - name: Commit changes
+      run: |
+        git config --local user.name "github-actions"
+        git config --local user.email "github-actions@github.com"
+
+        git add pom.xml
+        git commit -m "Increment version to ${new_version}"
+
+    - name: Push changes
+      run: |
+        git push origin HEAD
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
