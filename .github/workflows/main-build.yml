@@ -26,10 +26,10 @@ jobs:
           java-version: ${{ matrix.java-version }}
           maven-version: ${{ env.MAVEN_VERSION }}
 
-  deploy-snapshot:
-    name: Deploy snapshot to Artifactory
+  update-version:
+    name: Update version
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [ build ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,16 +52,57 @@ jobs:
       - name: Get Revision
         id: get-revision
         run: |
-          echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> $GITHUB_OUTPUT
+          current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Current version: $current_version"
+          echo "REVISION=$current_version" >> $GITHUB_ENV
         shell: bash
 
-      - name: Print Revision
-        run: echo "Current revision ${{ steps.get-revision.outputs.REVISION }}"
+      - name: Check and Update Version
+        if: github.ref == 'refs/heads/develop'
+        id: check-and-update-version
+        run: |
+          current_version=${{ env.REVISION }}
+
+          # Check if the version already contains '-SNAPSHOT'
+          if [[ $current_version != *-SNAPSHOT ]]; then
+            echo "Current version does not contain -SNAPSHOT, updating version..."
+
+            # Split version into major, minor, and patch parts
+            IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
+
+            # Increment the patch number
+            new_patch=$((patch + 1))
+
+            # Form the new version
+            new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
+
+            # Update the <revision> property in pom.xml
+            sed -i "s|<revision>.*</revision>|<revision>${new_version}</revision>|" pom.xml
+
+            echo "Updated version to $new_version"
+
+            # Commit the version change
+            git config --local user.name "github-actions"
+            git config --local user.email "github-actions@github.com"
+            git add pom.xml
+            git commit -m "Increment version to ${new_version}"
+            git push origin HEAD:testversion
+          else
+            echo "Current version already contains -SNAPSHOT, no update needed."
+          fi
+
+          # Export the updated or original version
+          updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
-  
+
+      - name: Print Updated Version
+        run: |
+          echo "Updated version: ${{ env.UPDATED_VERSION }}"
+        shell: bash
+
       - name: Deploy snapshot
-        if: ${{ endsWith(steps.get-revision.outputs.REVISION, '-SNAPSHOT') }}
-        # https://maven.apache.org/plugins/maven-deploy-plugin/usage.html#the-deploy-deploy-mojo
+        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
           mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
         env:
