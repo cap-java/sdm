@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   sonar-scan:
-    runs-on: cap-java
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -37,9 +37,9 @@ jobs:
       - name: Install SonarQube Scanner
         run: |
           if [ ! -L /usr/local/bin/sonar-scanner ]; then
-            curl -sSLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+            curl -sSLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
             unzip sonar-scanner-cli.zip
-            sudo mv sonar-scanner-4.7.0.2747-linux /opt/sonar-scanner
+            sudo mv sonar-scanner-5.0.1.3006-linux /opt/sonar-scanner
             sudo ln -s /opt/sonar-scanner/bin/sonar-scanner /usr/local/bin/sonar-scanner
           fi
 
