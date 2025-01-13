@@ -102,3 +102,12 @@ jobs:
         run: |
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
+
+      - name: Deploy snapshot
+        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
+        run: |
+          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+        shell: bash
