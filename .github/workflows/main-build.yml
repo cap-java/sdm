@@ -6,7 +6,9 @@ env:
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "testversion" ]
+  pull_request:
+    branches: [ "testversion" ]
   workflow_dispatch:
 
 jobs:
@@ -49,22 +51,55 @@ jobs:
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
 
-      - name: Get Revision
-        id: get-revision
+      - name: Get Version and Update if Necessary
+        id: get-and-update-version
         run: |
-          echo "REVISION=$(mvn help:evaluate -Dexpression=revision -q -DforceStdout)" >> $GITHUB_OUTPUT
+          # Extract the current version from the pom.xml
+          current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Current version: $current_version"
+          
+          # Check if the version already contains '-SNAPSHOT'
+          if [[ $current_version != *-SNAPSHOT ]]; then
+            echo "Current version does not contain -SNAPSHOT, updating version..."
+            
+            # Split version into major, minor, and patch parts
+            IFS='.' read -r major minor patch <<< "$current_version"
+            
+            # Increment the patch number
+            new_patch=$((patch + 1))
+            
+            # Form the new version
+            new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
+
+            # Update the version in pom.xml
+            mvn versions:set -DnewVersion=$new_version -DgenerateBackupPoms=false
+            
+            echo "Updated version to $new_version"
+            
+            # Commit the version change
+            git config --local user.name "github-actions"
+            git config --local user.email "github-actions@github.com"
+            git add pom.xml
+            git commit -m "Increment version to ${new_version}"
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "Current version already contains -SNAPSHOT, no update needed."
+          fi
+          
+          # Export the updated or original version for later steps
+          updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
 
-      - name: Print Revision
-        run: echo "Current revision ${{ steps.get-revision.outputs.REVISION }}"
+      - name: Print Updated Version
+        run: echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
   
-      - name: Deploy snapshot
-        if: ${{ endsWith(steps.get-revision.outputs.REVISION, '-SNAPSHOT') }}
-        # https://maven.apache.org/plugins/maven-deploy-plugin/usage.html#the-deploy-deploy-mojo
-        run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
-        env:
-          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
-          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
-        shell: bash
+      #- name: Deploy snapshot
+       # if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
+       # run: |
+        #  mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
+       # env:
+        #  CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+         # CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+        #shell: bash
