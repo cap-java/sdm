@@ -39,7 +39,7 @@
 
     <groupId>com.sap.cds</groupId>
     <artifactId>sdm-root</artifactId>
-    <version>${revision}</version>
+    <version>1.0.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>CDS Feature for SAP Document Management Service - Root</name>
@@ -71,7 +71,7 @@
             <dependency>
                 <groupId>com.sap.cds</groupId>
                 <artifactId>sdm</artifactId>
-                <version>${revision}</version>
+                <version>1.0.2-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>com.sap.cloud.environment.servicebinding</groupId>
