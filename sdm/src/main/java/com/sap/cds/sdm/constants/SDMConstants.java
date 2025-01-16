@@ -7,7 +7,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = "e7d35bdc-772b-4d88-83c5-d70a7ffc2dd8";
+  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String BEARER_TOKEN = "Bearer ";
   public static final int TIMEOUT = 900;
 
