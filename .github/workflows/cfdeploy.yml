@@ -92,7 +92,48 @@ jobs:
           java-version: 17
           distribution: 'temurin'
 
+      - name: Install Cloud Foundry CLI and jq
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli jq
+      - name: Login to Cloud Foundry
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ secrets.CF_SPACE }}
+      - name: Fetch and Escape Client Secret
+        id: fetch_secret
+        run: |
+          # Fetch the service instance GUID
+          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "Error: Unable to retrieve service instance GUID"; exit 1;
+          fi
+          # Fetch the binding GUID
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          
+          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "Error: Unable to retrieve binding GUID"; exit 1;
+          fi
+          
+          # Fetch the clientSecret
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+            echo "Error: clientSecret is not set or is null"; exit 1;
+          fi
+          
+          # Escape any $ characters in the clientSecret
+          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
       - name: Run integration tests
+        env:
+          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
         run: |
           set -e  # Enable error checking
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -100,7 +141,7 @@ jobs:
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
           clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
-          clientSecret="${{ secrets.CAPSDM_CLIENT_SECRET }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
           # Ensure all required variables are set
