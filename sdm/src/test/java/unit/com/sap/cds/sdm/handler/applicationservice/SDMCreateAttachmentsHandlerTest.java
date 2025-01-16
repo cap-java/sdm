@@ -1,6 +1,8 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,6 +18,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
@@ -216,6 +219,51 @@ public class SDMCreateAttachmentsHandlerTest {
     // Verify that a warning message was added to the context
     verify(messages, times(1))
         .warn("The following files could not be renamed as they already exist:\nfile1.txt\n");
+  }
+
+  @Test
+  public void testCreateAttachmentWithNoSDMRoles() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    // Mock the authentication context
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+    // Mock the SDM service responses
+    when(sdmService.getObject(any(), any(), any()))
+        .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(403); // Mock conflict response code
+
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(403); // Mock conflict response code
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handler.updateName(context, data);
+            });
+
+    assertEquals(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, exception.getMessage());
   }
 
   @Test

@@ -7,7 +7,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "e7d35bdc-772b-4d88-83c5-d70a7ffc2dd8";
   public static final String BEARER_TOKEN = "Bearer ";
   public static final int TIMEOUT = 900;
 
@@ -27,6 +27,8 @@ public class SDMConstants {
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
+  public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
+      "You do not have the required permissions to rename attachments. Kindly contact the admin";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
