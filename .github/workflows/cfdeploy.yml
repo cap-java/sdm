@@ -55,7 +55,7 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
-          echo "Current Branch......"
+          echo "Current Branch....."
           git branch
           cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
 
