@@ -3,10 +3,10 @@ name: Deploy and Integration Test
 on:
   push:
     branches:
-      - fix_IntegrationTest
+      - fix_integrationtest
   pull_request:
     branches:
-      - fix_IntegrationTest
+      - fix_integrationtest
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
     
     steps:
