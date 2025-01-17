@@ -17,7 +17,7 @@ jobs:
   deploy:
     if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -27,39 +27,110 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-          
-      - name: Setup Maven settings.xml
+
+      # Place settings.xml with the required configuration in the .m2 directory
+      - name: Setup settings.xml for Maven
         run: |
+          mkdir -p $HOME/.m2
           cat > $HOME/.m2/settings.xml <<EOL
-          <settings>
-            <profiles>
-              <profile>
-                <id>default</id>
-                <repositories>
-                  <repository>
-                    <id>sap-public-repo</id>
-                    <name>SAP Public Repository</name>
-                    <url>https://maven.sap.com</url>
-                    <releases>
-                      <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                      <enabled>true</enabled>
-                    </snapshots>
-                  </repository>
-                  <repository>
-                    <id>cap-sdm-java</id>
-                    <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>
-                  </repository>
-                </repositories>
-              </profile>
-            </profiles>
-            <activeProfiles>
-              <activeProfile>default</activeProfile>
-            </activeProfiles>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+             <!-- Id: com.sap:artifactory:1.0.0:settings.xml -->
+             <profiles>
+                <profile>
+                   <id>release.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>milestone.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>snapshot.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>cap-java</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>
+                      </repository>
+                       <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                      </repository>
+                      <repository>
+                         <id>cap-sdm-java</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>sonar</id>
+                   <activation>
+                      <activeByDefault>true</activeByDefault>
+                   </activation>
+                   <properties>
+                      <sonar.host.url>https://sonar.tools.sap</sonar.host.url>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+             </profiles>
+             <activeProfiles>
+                <activeProfile>snapshot.build</activeProfile>
+             </activeProfiles>
+             <pluginGroups>
+                <pluginGroup>com.sap.ldi</pluginGroup>
+             </pluginGroups>
+             <servers>
+              <server>
+                <id>artifactory</id>
+                <username>${{ secrets.SERVER_USER }}</username>
+                <password>${{ secrets.SERVER_PASSWORD }}</password>
+              </server>
+             </servers>
           </settings>
           EOL
-          
+
       - name: Login to Cloud Foundry
         run: |
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
@@ -67,7 +138,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install cf8-cli
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
-          
+
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -77,17 +148,15 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
-          
+
       - name: Build and Deploy
         run: |
           echo "Current Branch....."
           git branch
           pwd
           ls -lart
-          cd /home/runner/work/sdm/sdm
+          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
           mvn clean install -P unit-tests -DskipIntegrationTests --settings $HOME/.m2/settings.xml
-          cd cap-notebook/demoapp
-          ls -lart
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
           # Download and install the MBT tool
@@ -125,7 +194,7 @@ jobs:
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli jq
-          
+
       - name: Login to Cloud Foundry
         run: |
           cf login -a ${{ secrets.CF_API }} \
@@ -133,7 +202,7 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
-            
+
       - name: Fetch and Escape Client Secret
         id: fetch_secret
         run: |
@@ -157,7 +226,7 @@ jobs:
           # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-          
+
       - name: Run integration tests
         env:
           CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
@@ -197,4 +266,4 @@ jobs:
           password=$password
           EOL
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
+          mvn clean verify -P integration-tests -DskipUnitTests --settings $HOME/.m2/settings.xml || { echo "Maven tests failed"; exit 1; }
