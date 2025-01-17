@@ -16,7 +16,7 @@ permissions:
 jobs:
   deploy:
     if: github.event.pull_request.merged == false
-    runs-on: ubuntu-latest
+    runs-on: cap-java
     
     steps:
       - name: Checkout repository
