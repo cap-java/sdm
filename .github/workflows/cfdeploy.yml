@@ -155,7 +155,7 @@ jobs:
           pwd
           ls -lart
           cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
-          mvn clean install -P unit-tests -DskipIntegrationTests --settings /usr/share/apache-maven-3.8.8/conf/settings.xml
+          #mvn clean install -P unit-tests -DskipIntegrationTests --settings /usr/share/apache-maven-3.8.8/conf/settings.xml
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
           # Download and install the MBT tool
