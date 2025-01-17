@@ -32,8 +32,8 @@ jobs:
       - name: Setup settings.xml for Maven
         run: |
           mvn -v
-          mkdir -p $HOME/.m2
-          cat > $HOME/.m2/settings.xml <<EOL
+          echo $MAVEN_HOME
+          cat > /usr/share/apache-maven-3.8.8/conf/settings.xml <<EOL
           <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
