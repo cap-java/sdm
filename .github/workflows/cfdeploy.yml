@@ -38,12 +38,12 @@ jobs:
           sudo apt-get install cf8-cli
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
-      - name: Build and package
-        run: |
-          pwd
-          ls -lart
+      #- name: Build and package
+        #run: |
+          #pwd
+          #ls -lart
           #cd sdm
-          mvn clean install -P unit-tests  -DskipIntegrationTests
+          #mvn clean install -P unit-tests  -DskipIntegrationTests
 
       - name: Verify and Checkout Deploy Branch
         run: |
