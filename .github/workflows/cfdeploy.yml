@@ -132,6 +132,8 @@ jobs:
       - name: varify the m2 directory
         run: |
           cd 
+          pwd
+          ls
           cd .m2/repository/com/sap/cds/sdm
           ls
           echo "..........."
