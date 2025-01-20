@@ -129,13 +129,8 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
-      - name: varify the m2 directory
+      - name: varify the settings.xml
         run: |
-          cd 
-          pwd
-          ls
-          cd .m2/repository/com/sap/cds/sdm
-          ls
           echo "..........."
           echo "..........."
           echo "content of settings.xml"
