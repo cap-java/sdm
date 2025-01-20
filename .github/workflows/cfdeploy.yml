@@ -35,11 +35,6 @@ jobs:
           sudo apt-get install cf8-cli
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
-      - name: Build and package
-        run: |
-          #cd sdm
-          mvn clean install -P unit-tests  -DskipIntegrationTests
-
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -65,8 +60,14 @@ jobs:
           sudo mv mbt /usr/local/bin/
           
           # Build the MTA project
+          echo "maven version.."
+          mvn -v
+          echo "removing .m2/repository folder"
+          rm -rf ~/.m2/repository/com/sap/cds/sdm
+          echo "current directory.."
+          pwd
           echo "Running mbt build"
-          mbt build -p=cf -t mta_archives --mtar demoappjava-1.0.0.mtar
+          mbt build
           
           # Install cf CLI plugin
           cf install-plugin multiapps -f
