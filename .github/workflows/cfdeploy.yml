@@ -37,7 +37,7 @@ jobs:
 
       - name: Build and package
         run: |
-          cd sdm
+          #cd sdm
           mvn clean install -P unit-tests  -DskipIntegrationTests
 
       - name: Verify and Checkout Deploy Branch
