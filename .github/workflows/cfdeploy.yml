@@ -129,7 +129,17 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
-  
+      - name: varify the m2 directory
+        run: |
+          cd 
+          cd .m2/repository/com/sap/cds/sdm
+          ls
+          echo "..........."
+          echo "..........."
+          echo "content of settings.xml"
+          cd
+          cat /usr/share/apache-maven-3.8.8/conf/settings.xml
+
       # Step 5: Run the mbt build
       - name: Run mbt build
         run: |
