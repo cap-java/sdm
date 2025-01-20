@@ -1,10 +1,13 @@
 name: Deploy and Integration Test
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
-      - develop
+      - snapshot_deploy
+  pull_request:
+    branches:
+      - snapshot_deploy
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +15,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
     
     steps:
