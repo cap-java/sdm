@@ -29,7 +29,7 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-          
+
       - name: Login to Cloud Foundry
         run: |
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
@@ -47,6 +47,105 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
+      - name: Modify settings.xml
+        run: |
+          cat <<EOF > /usr/share/apache-maven-3.8.8/conf/settings.xml
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+             <!--  Id: com.sap:artifactory:1.0.0:settings.xml  -->
+             <profiles>
+                <profile>
+                   <id>release.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>milestone.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>snapshot.build</id>
+                   <pluginRepositories>
+                      <pluginRepository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                      </pluginRepository>
+                   </pluginRepositories>
+                   <repositories>
+                      <repository>
+                         <id>cap-java</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>
+                      </repository>
+                       <repository>
+                         <id>artifactory</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                      </repository>
+                      <repository>
+                         <id>cap-sdm-java</id>
+                         <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>
+                      </repository>
+                   </repositories>
+                   <properties>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+                <profile>
+                   <id>sonar</id>
+                   <activation>
+                      <activeByDefault>true</activeByDefault>
+                   </activation>
+                   <properties>
+                      <sonar.host.url>https://sonar.tools.sap</sonar.host.url>
+                      <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                      <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                   </properties>
+                </profile>
+             </profiles>
+             <activeProfiles>
+                <activeProfile>snapshot.build</activeProfile>
+             </activeProfiles>
+             <pluginGroups>
+                <pluginGroup>com.sap.ldi</pluginGroup>
+             </pluginGroups>
+             <servers>
+              <server>
+                <id>artifactory</id>
+                <username>${{ secrets.SERVER_USER }}</username>
+                <password>${{ secrets.SERVER_PASSWORD }}</password>
+              </server>
+             </servers>
+          </settings>
+          EOF
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
