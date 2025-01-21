@@ -27,6 +27,10 @@ public class SDMConstants {
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
+  public static final String SDM_ENV_NAME = "sdm";
+
+  public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
+  public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

@@ -14,7 +14,9 @@ import com.sap.cds.services.outbox.OutboxService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.runtime.CdsRuntime;
 import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
+import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -39,6 +41,17 @@ public class RegistrationTest {
     when(cdsRuntime.getServiceCatalog()).thenReturn(serviceCatalog);
     CdsEnvironment environment = mock(CdsEnvironment.class);
     when(cdsRuntime.getEnvironment()).thenReturn(environment);
+    ServiceBinding binding1 = mock(ServiceBinding.class);
+    ServiceBinding binding2 = mock(ServiceBinding.class);
+    ServiceBinding binding3 = mock(ServiceBinding.class);
+
+    // Create a stream of bindings to be returned by environment.getServiceBindings()
+    Stream<ServiceBinding> bindingsStream = Stream.of(binding1, binding2, binding3);
+    when(environment.getProperty("cds.attachments.sdm.http.timeout", Integer.class, 1200))
+        .thenReturn(1800);
+    when(environment.getProperty("cds.attachments.sdm.http.maxConnections", Integer.class, 100))
+        .thenReturn(200);
+
     persistenceService = mock(PersistenceService.class);
     attachmentService = mock(AttachmentService.class);
     outboxService = mock(OutboxService.class);
@@ -53,6 +66,9 @@ public class RegistrationTest {
     verify(configurer).service(serviceArgumentCaptor.capture());
     var services = serviceArgumentCaptor.getAllValues();
     assertThat(services).hasSize(1);
+    String prefix = "test";
+
+    // Perform the property reading
 
     var attachmentServiceFound =
         services.stream().anyMatch(service -> service instanceof AttachmentService);
