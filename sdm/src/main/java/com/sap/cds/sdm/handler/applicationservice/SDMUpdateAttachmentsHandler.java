@@ -148,7 +148,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
   }
 
-  public String getFileNameInSDM(
+  private String getFileNameInSDM(
       CdsUpdateEventContext context, String fileNameInDB, String objectId) throws IOException {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
