@@ -100,7 +100,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
   }
 
-  private void processAttachment(
+  public void processAttachment(
       Optional<CdsEntity> attachmentEntity,
       CdsUpdateEventContext context,
       Map<String, Object> attachment,
@@ -127,18 +127,28 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
               TokenHandler.getSDMCredentials(),
               cmisDocument);
-      if (responseCode == 403) {
-        // SDM Roles for user are missing
-        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
-      }
-      if (responseCode == 409) {
-        duplicateFileNameList.add(filenameInRequest);
-        attachment.replace("fileName", fileNameInSDM);
+      switch (responseCode) {
+        case 403:
+          // SDM Roles for user are missing
+          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+
+        case 409:
+          duplicateFileNameList.add(filenameInRequest);
+          attachment.replace("fileName", fileNameInSDM);
+          break;
+
+        case 200:
+        case 201:
+          // Success cases, do nothing
+          break;
+
+        default:
+          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
       }
     }
   }
 
-  private String getFileNameInSDM(
+  public String getFileNameInSDM(
       CdsUpdateEventContext context, String fileNameInDB, String objectId) throws IOException {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);

@@ -243,6 +243,60 @@ public class SDMUpdateAttachmentsHandlerTest {
   }
 
   @Test
+  public void testRenameWith500Error() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    when(model.findEntity("some.qualified.Name.attachments"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+
+    // Mock the authentication context
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
+    dbQueryMockedStatic
+        .when(
+            () ->
+                getAttachmentForID(
+                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
+
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(500); // Mock conflict response code
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handler.updateName(context, data);
+            });
+
+    assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
+  }
+
+  @Test
   public void testRenameWith200ResponseCode() throws IOException {
     // Mock the data structure to simulate the attachments
     System.out.println("testRenameWithConflictResponseCode");
@@ -371,6 +425,10 @@ public class SDMUpdateAttachmentsHandlerTest {
               String filename = invocation.getArgument(0);
               return filename.contains("/") || filename.contains("\\");
             });
+
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(409); // Mock conflict response code
 
     dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic

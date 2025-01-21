@@ -29,6 +29,8 @@ public class SDMConstants {
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
       "You do not have the required permissions to rename attachments. Kindly contact the admin";
+  public static final String SDM_ROLES_ERROR_MESSAGE =
+      "Unable to rename the file due to an error at the server";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
