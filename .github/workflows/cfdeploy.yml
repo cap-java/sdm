@@ -136,6 +136,6 @@ jobs:
           echo "content of settings.xml"
           cd
           pwd
-          cat /root/.m2/settings.xml
+          sudo cat /root/.m2/settings.xml
 
       
