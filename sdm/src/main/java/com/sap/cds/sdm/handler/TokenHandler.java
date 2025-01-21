@@ -34,7 +34,7 @@ public class TokenHandler {
 
   private static final ObjectMapper mapper = new ObjectMapper();
 
-  public TokenHandler() {
+  private TokenHandler() {
     throw new IllegalStateException("TokenHandler class");
   }
 
