@@ -14,29 +14,30 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: develop
-
-      #- name: Set up Java 17
-        #uses: actions/setup-java@v3
-        #with:
-          #java-version: 17
-          #distribution: 'temurin'
-          
+      
+      - name: Fetch deploy branch
+        run: git fetch origin develop_deploy
 
       - name: Verify and Checkout Deploy Branch
         run: |
-          git fetch origin
           if git rev-parse --verify origin/develop_deploy; then
             git checkout develop_deploy
           else
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
       # Step 5: Run the mbt build
       - name: Run mbt build
         run: |
           cd cap-notebook/demoapp
-          # Download and install the MBT tool
-          wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
-          tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          # Download and install the MBT tool (Reducing verbosity)
+          wget -q -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          tar -xzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           sudo mv mbt /usr/local/bin/
-          sudo mbt build
+          sudo mbt build > build_output.log 2>&1
+          
+      - name: Output mbt build logs (for Debugging)
+        run: |
+          echo "mbt build logs:"
+          cat cap-notebook/demoapp/build_output.log
