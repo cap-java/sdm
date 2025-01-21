@@ -7,15 +7,118 @@ on:
 
 jobs:
   build:
-    runs-on: cap-java
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
           ref: develop
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
           
 
+      # Step 3: Update settings.xml
+      - name: Update settings.xml
+        run: |
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > /usr/share/apache-maven-3.8.8/conf/settings.xml
+          echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">' >> settings.xml
+          echo '   <profiles>' >> settings.xml
+          echo '      <profile>' >> settings.xml
+          echo '         <id>release.build</id>' >> settings.xml
+          echo '         <pluginRepositories>' >> settings.xml
+          echo '            <pluginRepository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>' >> settings.xml
+          echo '            </pluginRepository>' >> settings.xml
+          echo '         </pluginRepositories>' >> settings.xml
+          echo '         <repositories>' >> settings.xml
+          echo '            <repository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>' >> settings.xml
+          echo '            </repository>' >> settings.xml
+          echo '         </repositories>' >> settings.xml
+          echo '         <properties>' >> settings.xml
+          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> settings.xml
+          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> settings.xml
+          echo '         </properties>' >> settings.xml
+          echo '      </profile>' >> settings.xml
+          echo '      <profile>' >> settings.xml
+          echo '         <id>milestone.build</id>' >> settings.xml
+          echo '         <pluginRepositories>' >> settings.xml
+          echo '            <pluginRepository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>' >> settings.xml
+          echo '            </pluginRepository>' >> settings.xml
+          echo '         </pluginRepositories>' >> settings.xml
+          echo '         <repositories>' >> settings.xml
+          echo '            <repository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>' >> settings.xml
+          echo '            </repository>' >> settings.xml
+          echo '         </repositories>' >> settings.xml
+          echo '         <properties>' >> settings.xml
+          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> settings.xml
+          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> settings.xml
+          echo '         </properties>' >> settings.xml
+          echo '      </profile>' >> settings.xml
+          echo '      <profile>' >> settings.xml
+          echo '         <id>snapshot.build</id>' >> settings.xml
+          echo '         <pluginRepositories>' >> settings.xml
+          echo '            <pluginRepository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>' >> settings.xml
+          echo '            </pluginRepository>' >> settings.xml
+          echo '         </pluginRepositories>' >> settings.xml
+          echo '         <repositories>' >> settings.xml
+          echo '            <repository>' >> settings.xml
+          echo '               <id>cap-java</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>' >> settings.xml
+          echo '            </repository>' >> settings.xml
+          echo '            <repository>' >> settings.xml
+          echo '               <id>artifactory</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>' >> settings.xml
+          echo '            </repository>' >> settings.xml
+          echo '            <repository>' >> settings.xml
+          echo '               <id>cap-sdm-java</id>' >> settings.xml
+          echo '               <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>' >> settings.xml
+          echo '            </repository>' >> settings.xml
+          echo '         </repositories>' >> settings.xml
+          echo '         <properties>' >> settings.xml
+          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> settings.xml
+          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> settings.xml
+          echo '         </properties>' >> settings.xml
+          echo '      </profile>' >> settings.xml
+          echo '      <profile>' >> settings.xml
+          echo '         <id>sonar</id>' >> settings.xml
+          echo '         <activation>' >> settings.xml
+          echo '            <activeByDefault>true</activeByDefault>' >> settings.xml
+          echo '         </activation>' >> settings.xml
+          echo '         <properties>' >> settings.xml
+          echo '            <sonar.host.url>https://sonar.tools.sap</sonar.host.url>' >> settings.xml
+          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> settings.xml
+          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> settings.xml
+          echo '         </properties>' >> settings.xml
+          echo '      </profile>' >> settings.xml
+          echo '   </profiles>' >> settings.xml
+          echo '   <activeProfiles>' >> settings.xml
+          echo '      <activeProfile>snapshot.build</activeProfile>' >> settings.xml
+          echo '   </activeProfiles>' >> settings.xml
+          echo '   <pluginGroups>' >> settings.xml
+          echo '      <pluginGroup>com.sap.ldi</pluginGroup>' >> settings.xml
+          echo '   </pluginGroups>' >> settings.xml
+          echo '   <servers>' >> settings.xml
+          echo '      <server>' >> settings.xml
+          echo '         <id>artifactory</id>' >> settings.xml
+          echo '         <username>${env.SERVER_USER}</username>' >> settings.xml
+          echo '         <password>${env.SERVER_PASSWORD}</password>' >> settings.xml
+          echo '      </server>' >> settings.xml
+          echo '   </servers>' >> settings.xml
+          echo '</settings>' >> settings.xml
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -25,6 +128,13 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+      - name: varify the settings.xml
+        run: |
+          echo "..........."
+          echo "..........."
+          echo "content of settings.xml"
+          cd
+          cat /usr/share/apache-maven-3.8.8/conf/settings.xml
       # Step 5: Run the mbt build
       - name: Run mbt build
         run: |
@@ -34,4 +144,4 @@ jobs:
           wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           sudo mv mbt /usr/local/bin/
-          sudo mbt build
+          mbt build
