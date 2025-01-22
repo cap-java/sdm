@@ -26,6 +26,8 @@ public class SDMConstants {
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
   public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
+  public static final String USER_NOT_AUTHORISED_ERROR =
+      "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
