@@ -403,14 +403,24 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(403);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream(SDMConstants.USER_NOT_AUTHORISED_ERROR.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       ServiceException exception =
           assertThrows(
               ServiceException.class,
               () -> {
-                sdmServiceImpl.createFolder(parentId, jwtToken, repositoryId, sdmCredentials);
+                sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, jwtToken);
               });
       assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 
@@ -506,14 +516,25 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(403);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream(
+              "Failed to create folder. Could not upload  the document".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       ServiceException exception =
           assertThrows(
               ServiceException.class,
               () -> {
-                sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
+                sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, jwtToken);
               });
       assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 

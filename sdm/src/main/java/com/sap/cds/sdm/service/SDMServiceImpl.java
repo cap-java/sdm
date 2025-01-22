@@ -267,10 +267,13 @@ public class SDMServiceImpl implements SDMService {
             + "?cmisselector=object";
     HttpPost getFolderRequest = new HttpPost(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
-      if (response.getStatusLine().getStatusCode() != 200) {
-        return null;
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode == 200) {
+        return EntityUtils.toString(response.getEntity());
+      } else if (responseCode == 403) {
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       }
-      return EntityUtils.toString(response.getEntity());
+      return null;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
@@ -297,10 +300,12 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseBody = EntityUtils.toString(response.getEntity());
-      if (responseCode != 201) {
+      if (responseCode == 201) return responseBody;
+      else if (responseCode == 403) {
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+      } else {
         throw new ServiceException("Failed to create folder. " + responseBody);
       }
-      return responseBody;
     } catch (IOException e) {
       throw new ServiceException("Failed to create folder " + e.getMessage());
     }
