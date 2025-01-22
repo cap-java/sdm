@@ -8,10 +8,6 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
-  public static final String BEARER_TOKEN = "Bearer ";
-  public static final int TIMEOUT = 900;
-
-  public static final String TENANT_ID = "X-zid";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
@@ -25,12 +21,11 @@ public class SDMConstants {
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
-  public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
-      "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String SDM_ENV_NAME = "sdm";
 
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
   public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
+  public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

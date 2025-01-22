@@ -148,43 +148,45 @@ public class TokenHandler {
       CdsProperties.ConnectionPool connectionPoolConfig,
       String subdomain,
       String type) {
+    if (!binding.getCredentials().isEmpty()) {
+      Map<String, Object> uaaCredentials = binding.getCredentials();
+      Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
+      ClientCredentials clientCredentials =
+          new ClientCredentials(uaa.get(CLIENT_ID).toString(), uaa.get(CLIENT_SECRET).toString());
+      String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
+      if (subdomain != null && !subdomain.isEmpty()) {
+        String providersubdomain =
+            baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+        baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+      }
 
-    Map<String, Object> uaaCredentials = binding.getCredentials();
-    Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
-    ClientCredentials clientCredentials =
-        new ClientCredentials(uaa.get(CLIENT_ID).toString(), uaa.get(CLIENT_SECRET).toString());
-    String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
-    if (subdomain != null && !subdomain.equals("")) {
-      String providersubdomain =
-          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
-      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+      DefaultHttpDestination destination;
+      if (type.equals("TOKEN_EXCHANGE")) {
+        destination =
+            OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
+                .withTokenEndpoint(baseTokenUrl)
+                .withClient(clientCredentials, OnBehalfOf.NAMED_USER_CURRENT_TENANT)
+                .property("name", SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
+                .build();
+      } else {
+        destination =
+            OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
+                .withTokenEndpoint(baseTokenUrl)
+                .withClient(clientCredentials, OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT)
+                .property("name", SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
+                .build();
+      }
+
+      DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
+          DefaultHttpClientFactory.builder();
+      builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
+      builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
+      builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
+      DefaultHttpClientFactory factory = builder.build();
+
+      return factory.createHttpClient(destination);
     }
-
-    DefaultHttpDestination destination;
-    if (type.equals("TOKEN_EXCHANGE")) {
-      destination =
-          OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
-              .withTokenEndpoint(baseTokenUrl)
-              .withClient(clientCredentials, OnBehalfOf.NAMED_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
-              .build();
-    } else {
-      destination =
-          OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
-              .withTokenEndpoint(baseTokenUrl)
-              .withClient(clientCredentials, OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
-              .build();
-    }
-
-    DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
-        DefaultHttpClientFactory.builder();
-    builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
-    builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
-    builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
-    DefaultHttpClientFactory factory = builder.build();
-
-    return factory.createHttpClient(destination);
+    return null;
   }
 
   public static String getSubdomainFromToken(String token) {

@@ -72,7 +72,7 @@ public class Registration implements CdsRuntimeConfiguration {
 
   private static CdsProperties.ConnectionPool getConnectionPool(CdsEnvironment env) {
     // the common prefix for the connection pool configuration
-    final String prefix = "cds.attachments.sdm.http.%s";
+    final String prefix = SDMConstants.SDM_CONNECTIONPOOL_PREFIX;
     Duration timeout =
         Duration.ofSeconds(env.getProperty(prefix.formatted("timeout"), Integer.class, 1200));
     int maxConnections = env.getProperty(prefix.formatted("maxConnections"), Integer.class, 100);
