@@ -37,4 +37,18 @@ jobs:
           cd cap-notebook/demoapp
           mbt build
 
+      - name: Prepare and Deploy to Cloud Foundry
+        run: |
+          echo "Current Branch......"
+          git branch
+          pwd
+          cd cap-notebook/demoapp
+          mbt build
+          # Login to Cloud Foundry again to ensure session is active
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+          
+          # Deploy the application
+          echo "Running cf deploy"
+          cf deploy mta_archives/demoappjava-1.0.0.mtar -f
+
       
