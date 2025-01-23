@@ -34,11 +34,11 @@ jobs:
           mvn clean install -P unit-tests  -DskipIntegrationTests
         
       - name: Download Synopsys Detect Script
-        run: curl --silent -O https://detect.synopsys.com/detect10.sh
+        run: curl --silent -O https://detect.synopsys.com/detect9.sh
 
       - name: Run & analyze BlackDuck Scan
         run: |
-          bash ./detect10.sh -d \
+          bash ./detect9.sh -d \
           --logging.level.com.synopsys.integration=DEBUG  \
           --blackduck.url="https://sap.blackducksoftware.com" \
           --blackduck.api.token=""${{ secrets.BLACKDUCK_TOKEN }}""   \
