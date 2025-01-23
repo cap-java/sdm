@@ -41,6 +41,10 @@ jobs:
           git branch
           pwd
           cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          
+          #Replace placeholder with actual REPOSITORY_ID value
+          sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
+          
           mbt build
 
           # Install cf CLI plugin
