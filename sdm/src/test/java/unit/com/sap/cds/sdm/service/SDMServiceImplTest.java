@@ -11,13 +11,15 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.*;
-import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,10 +27,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.ehcache.Cache;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -37,10 +46,23 @@ public class SDMServiceImplTest {
   private SDMService SDMService;
   JsonObject expected;
   RepoKey repoKey;
+  @Mock ServiceBinding binding;
+  @Mock CdsProperties.ConnectionPool connectionPool;
+  String subdomain = "SUBDOMAIN";
+
+  private CloseableHttpClient httpClient;
+  private CloseableHttpResponse response;
+
+  StatusLine statusLine;
+  HttpEntity entity;
 
   @BeforeEach
   public void setUp() {
-    SDMService = new SDMServiceImpl();
+    httpClient = mock(CloseableHttpClient.class);
+    response = mock(CloseableHttpResponse.class);
+    statusLine = mock(StatusLine.class);
+    entity = mock(HttpEntity.class);
+    SDMService = new SDMServiceImpl(binding, connectionPool);
     repoKey = new RepoKey();
     expected = new JsonObject();
     expected.addProperty(
@@ -90,60 +112,64 @@ public class SDMServiceImplTest {
 
   @Test
   public void testGetRepositoryInfo() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
-    String mockUrl = mockWebServer.url("/").toString();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class); ) {
+      JSONObject capabilities = new JSONObject();
+      capabilities.put("capabilityContentStreamUpdatability", "other");
+      JSONObject repoInfo = new JSONObject();
+      repoInfo.put("capabilities", capabilities);
+      JSONObject root = new JSONObject();
+      root.put(REPO_ID, repoInfo);
+      tokenHandlerMockedStatic
+          .when(
+              () ->
+                  TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+          .thenReturn(httpClient);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when((response.getEntity())).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(root.toString().getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
 
-    JSONObject capabilities = new JSONObject();
-    capabilities.put("capabilityContentStreamUpdatability", "other");
-    JSONObject repoInfo = new JSONObject();
-    repoInfo.put("capabilities", capabilities);
-    JSONObject root = new JSONObject();
-    root.put(REPO_ID, repoInfo);
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl("test");
+      com.sap.cds.sdm.service.SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
+      JSONObject json = sdmService.getRepositoryInfo(sdmCredentials, subdomain);
 
-    mockWebServer.enqueue(
-        new MockResponse().setBody(root.toString()).addHeader("Content-Type", "application/json"));
-
-    SDMCredentials sdmCredentials = new SDMCredentials();
-    sdmCredentials.setUrl(mockUrl);
-    String token = "token";
-
-    JSONObject json = SDMService.getRepositoryInfo(token, sdmCredentials);
-
-    JSONObject fetchedRepoInfo = json.getJSONObject(REPO_ID);
-    JSONObject fetchedCapabilities = fetchedRepoInfo.getJSONObject("capabilities");
-    assertEquals("other", fetchedCapabilities.getString("capabilityContentStreamUpdatability"));
-
-    mockWebServer.shutdown();
+      JSONObject fetchedRepoInfo = json.getJSONObject(REPO_ID);
+      JSONObject fetchedCapabilities = fetchedRepoInfo.getJSONObject("capabilities");
+      assertEquals("other", fetchedCapabilities.getString("capabilityContentStreamUpdatability"));
+    }
   }
 
   @Test
   public void testGetRepositoryInfoFail() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
-    String mockUrl = mockWebServer.url("/").toString();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class); ) {
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl("test");
+      String token = "token";
+      com.sap.cds.sdm.service.SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test");
+      tokenHandlerMockedStatic
+          .when(
+              () ->
+                  TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+          .thenReturn(httpClient);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
 
-    mockWebServer.enqueue(
-        new MockResponse()
-            .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
-            .setBody(
-                "{\"error\":\"Internal Server Error\"}") // Optional: Provide an error message in
-            // the body
-            .addHeader("Content-Type", "application/json"));
-
-    SDMCredentials sdmCredentials = new SDMCredentials();
-    sdmCredentials.setUrl(mockUrl);
-    String token = "token";
-
-    ServiceException exception =
-        assertThrows(
-            ServiceException.class,
-            () -> {
-              SDMService.getRepositoryInfo(token, sdmCredentials);
-            });
-    assertEquals("Failed to get repository info.", exception.getMessage());
-
-    mockWebServer.shutdown();
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmService.getRepositoryInfo(sdmCredentials, subdomain);
+              });
+      assertEquals("Failed to get repository info.", exception.getMessage());
+    }
   }
 
   @Test
@@ -155,9 +181,12 @@ public class SDMServiceImplTest {
             Mockito.mockStatic(TokenHandler.class); ) {
       Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
       tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
       Mockito.when(mockCache.get(repoKey)).thenReturn("Versioned");
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      String result = SDMService.checkRepositoryType(repositoryId, token);
+      String result = SDMService.checkRepositoryType(token, repositoryId);
       assertEquals("Versioned", result);
     }
   }
@@ -170,10 +199,24 @@ public class SDMServiceImplTest {
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class); ) {
       Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test");
+      tokenHandlerMockedStatic
+          .when(
+              () ->
+                  TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+          .thenReturn(httpClient);
       tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getSDMCredentials())
+          .thenReturn(mockSdmCredentials);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when((response.getEntity())).thenReturn(entity);
       Mockito.when(mockCache.get(repoKey)).thenReturn("Non Versioned");
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      String result = SDMService.checkRepositoryType(repositoryId, token);
+      String result = SDMService.checkRepositoryType(token, repositoryId);
       assertEquals("Non Versioned", result);
     }
   }
@@ -182,7 +225,7 @@ public class SDMServiceImplTest {
   public void testCheckRepositoryTypeNoCacheVersioned() throws IOException {
     String repositoryId = "repo";
     String token = "token";
-    SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl());
+    SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
         MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class)) {
@@ -190,13 +233,27 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test");
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials, token))
-          .thenReturn("token");
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-
+          .when(
+              () ->
+                  TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+          .thenReturn(httpClient);
+      HttpGet getRepoInfoRequest =
+          new HttpGet(
+              mockSdmCredentials.getUrl()
+                  + "browser/"
+                  + repositoryId
+                  + "?cmisselector=repositoryInfo");
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getSDMCredentials())
+          .thenReturn(mockSdmCredentials);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when((response.getEntity())).thenReturn(entity);
       JSONObject capabilities = new JSONObject();
       capabilities.put(
           "capabilityContentStreamUpdatability",
@@ -205,12 +262,10 @@ public class SDMServiceImplTest {
       repoInfo.put("capabilities", capabilities);
       JSONObject mockRepoData = new JSONObject();
       mockRepoData.put(repositoryId, repoInfo);
+      InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
 
-      Mockito.doReturn(mockRepoData)
-          .when(spySDMService)
-          .getRepositoryInfo("token", mockSdmCredentials);
-
-      String result = spySDMService.checkRepositoryType(repositoryId, token);
+      String result = spySDMService.checkRepositoryType(token, repositoryId);
       assertEquals("Versioned", result);
     }
   }
@@ -219,7 +274,7 @@ public class SDMServiceImplTest {
   public void testCheckRepositoryTypeNoCacheNonVersioned() throws IOException {
     String repositoryId = "repo";
     String token = "token";
-    SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl());
+    SDMServiceImpl spySDMService = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
         MockedStatic<CacheConfig> cacheConfigMockedStatic = Mockito.mockStatic(CacheConfig.class)) {
@@ -227,12 +282,26 @@ public class SDMServiceImplTest {
       Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test");
+      tokenHandlerMockedStatic
+          .when(
+              () ->
+                  TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+          .thenReturn(httpClient);
+      HttpGet getRepoInfoRequest =
+          new HttpGet(
+              mockSdmCredentials.getUrl()
+                  + "browser/"
+                  + repositoryId
+                  + "?cmisselector=repositoryInfo");
       tokenHandlerMockedStatic.when(() -> TokenHandler.getTokenFields(token)).thenReturn(expected);
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getAccessToken(mockSdmCredentials, token))
-          .thenReturn("token");
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+          .when(() -> TokenHandler.getSDMCredentials())
+          .thenReturn(mockSdmCredentials);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
 
       JSONObject capabilities = new JSONObject();
       capabilities.put(
@@ -243,57 +312,90 @@ public class SDMServiceImplTest {
       JSONObject mockRepoData = new JSONObject();
       mockRepoData.put(repositoryId, repoInfo);
 
-      Mockito.doReturn(mockRepoData)
-          .when(spySDMService)
-          .getRepositoryInfo("token", mockSdmCredentials);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
 
-      String result = spySDMService.checkRepositoryType(repositoryId, token);
+      String result = spySDMService.checkRepositoryType(token, repositoryId);
       assertEquals("Non Versioned", result);
     }
   }
 
   @Test
   public void testCreateFolder() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String expectedResponse = "Folder ID";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(expectedResponse)
-              .addHeader("Content-Type", "application/json"));
+
       String parentId = "123";
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(201);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(expectedResponse.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       String actualResponse =
-          sdmServiceImpl.createFolder(parentId, jwtToken, repositoryId, sdmCredentials);
+          sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, jwtToken);
 
       assertEquals(expectedResponse, actualResponse);
-
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testCreateFolderFail() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String parentId = "123";
+      String jwtToken = "jwt_token";
+      String repositoryId = "repository_id";
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream(
+              "Failed to create folder. Could not upload  the document".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, jwtToken);
+              });
+      assertEquals(
+          "Failed to create folder. Failed to create folder. Could not upload  the document",
+          exception.getMessage());
+    }
+  }
+
+  @Test
+  public void testCreateFolderFailResponseCode403() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       mockWebServer.enqueue(
           new MockResponse()
-              .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
-              .setBody(
-                  "{\"error\":\"Internal Server Error\"}") // Optional: Provide an error message in
-              // the body
+              .setResponseCode(403) // Set HTTP status code to 403
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
               .addHeader("Content-Type", "application/json"));
       String parentId = "123";
       String jwtToken = "jwt_token";
@@ -301,16 +403,26 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(403);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream(SDMConstants.USER_NOT_AUTHORISED_ERROR.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       ServiceException exception =
           assertThrows(
               ServiceException.class,
               () -> {
-                sdmServiceImpl.createFolder(parentId, jwtToken, repositoryId, sdmCredentials);
+                sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, jwtToken);
               });
-      assertEquals("Could not upload the document.", exception.getMessage());
+      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 
     } finally {
       mockWebServer.shutdown();
@@ -319,8 +431,6 @@ public class SDMServiceImplTest {
 
   @Test
   public void testGetFolderIdByPath() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String expectedResponse =
@@ -336,40 +446,68 @@ public class SDMServiceImplTest {
               + "\"value\": \"ExpectedFolderId\""
               + "}}"
               + "}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(expectedResponse)
-              .addHeader("Content-Type", "application/json"));
+
       String parentId = "123";
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("ExpectedFolderId".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       String actualResponse =
-          sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
+          sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, jwtToken);
 
       assertEquals("ExpectedFolderId", actualResponse);
-
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testGetFolderIdByPathFail() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      String parentId = "123";
+      String jwtToken = "jwt_token";
+      String repositoryId = "repository_id";
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("Internal Server".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      String folderId =
+          sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, jwtToken);
+      assertNull(folderId, "Expected folderId to be null");
+    }
+  }
+
+  @Test
+  public void testGetFolderIdByPathFailResponseCode403() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       mockWebServer.enqueue(
           new MockResponse()
-              .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
-              .setBody(
-                  "{\"error\":\"Internal Server Error\"}") // Optional: Provide an error message in
+              .setResponseCode(403) // Set HTTP status code to 403 for an internal server error
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
               // the body
               .addHeader("Content-Type", "application/json"));
       String parentId = "123";
@@ -378,12 +516,27 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      String folderId =
-          sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
-      assertNull(folderId, "Expected folderId to be null");
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(403);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream(
+              "Failed to create folder. Could not upload  the document".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, jwtToken);
+              });
+      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 
     } finally {
       mockWebServer.shutdown();
@@ -392,15 +545,10 @@ public class SDMServiceImplTest {
 
   @Test
   public void testCreateDocument() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
+
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(mockResponseBody)
-              .addHeader("Content-Type", "application/json"));
 
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("sample.pdf");
@@ -415,17 +563,22 @@ public class SDMServiceImplTest {
       cmisDocument.setMimeType("application/pdf");
 
       String jwtToken = "jwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
 
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(201);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, jwtToken, sdmCredentials);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -434,23 +587,14 @@ public class SDMServiceImplTest {
       expectedResponse.put("message", "");
       expectedResponse.put("status", "success");
       assertEquals(expectedResponse.toString(), actualResponse.toString());
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testCreateDocumentFailDuplicate() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String mockResponseBody = "{\"message\": \"Duplicate document found\"}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(mockResponseBody)
-              .setResponseCode(409)
-              .addHeader("Content-Type", "application/json"));
 
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("sample.pdf");
@@ -465,17 +609,21 @@ public class SDMServiceImplTest {
       cmisDocument.setMimeType("application/pdf");
 
       String jwtToken = "jwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
-
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(409);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, jwtToken, sdmCredentials);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -483,24 +631,16 @@ public class SDMServiceImplTest {
       expectedResponse.put("message", "");
       expectedResponse.put("status", "duplicate");
       assertEquals(expectedResponse.toString(), actualResponse.toString());
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testCreateDocumentFailVirus() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
+
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String mockResponseBody =
           "{\"message\": \"Malware Service Exception: Virus found in the file!\"}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(mockResponseBody)
-              .setResponseCode(409)
-              .addHeader("Content-Type", "application/json"));
 
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("sample.pdf");
@@ -515,17 +655,22 @@ public class SDMServiceImplTest {
       cmisDocument.setMimeType("application/pdf");
 
       String jwtToken = "jwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
 
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(409);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, jwtToken, sdmCredentials);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -533,25 +678,15 @@ public class SDMServiceImplTest {
       expectedResponse.put("message", "");
       expectedResponse.put("status", "virus");
       assertEquals(expectedResponse.toString(), actualResponse.toString());
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testCreateDocumentFailOther() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
+
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String mockResponseBody = "{\"message\": \"An unexpected error occurred\"}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(mockResponseBody)
-              .setResponseCode(
-                  500) // Assuming 500 Internal Server Error or another server error code
-              .addHeader("Content-Type", "application/json"));
-
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("sample.pdf");
       cmisDocument.setAttachmentId("attachmentId");
@@ -565,17 +700,22 @@ public class SDMServiceImplTest {
       cmisDocument.setMimeType("application/pdf");
 
       String jwtToken = "jwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
 
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, jwtToken, sdmCredentials);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -583,21 +723,13 @@ public class SDMServiceImplTest {
       expectedResponse.put("message", "An unexpected error occurred");
       expectedResponse.put("status", "fail");
       assertEquals(expectedResponse.toString(), actualResponse.toString());
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testCreateDocumentFailRequestError() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-
-      // Enqueue a failure to simulate a network error
-      mockWebServer.shutdown(); // Shut down the server to simulate network error
-
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("sample.pdf");
       cmisDocument.setAttachmentId("attachmentId");
@@ -610,26 +742,27 @@ public class SDMServiceImplTest {
       cmisDocument.setFolderId("folderId");
       cmisDocument.setMimeType("application/pdf");
       String jwtToken = "jwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
-
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream("{\"message\":\"Error in setting timeout\"}".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       try {
-        sdmServiceImpl.createDocument(cmisDocument, jwtToken, sdmCredentials);
-        fail("Expected ServiceException to be thrown");
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
       } catch (ServiceException e) {
         // Expected exception to be thrown
         assertEquals("Error in setting timeout", e.getMessage());
       }
-
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
@@ -649,7 +782,7 @@ public class SDMServiceImplTest {
 
       Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
           .thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int actualResponse =
           sdmServiceImpl.deleteDocument("deleteTree", "objectId", "email", "subdomain");
@@ -677,24 +810,29 @@ public class SDMServiceImplTest {
 
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       SDMCredentials sdmCredentials = new SDMCredentials();
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(sdmCredentials);
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+
       // Mock the method `getFolderIdByPath`
       SDMServiceImpl spyService = spy(sdmServiceImpl);
       doReturn(null)
           .when(spyService)
-          .getFolderIdByPath(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+          .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyString());
 
       // Mock the method `createFolder`
       doReturn("{\"succinctProperties\":{\"cmis:objectId\":\"newFolderId123\"}}")
           .when(spyService)
-          .createFolder(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+          .createFolder(anyString(), anyString(), any(SDMCredentials.class), anyString());
 
-      String folderId = spyService.getFolderId(jwtToken, result, persistenceService, up__ID);
+      String folderId = spyService.getFolderId(result, persistenceService, up__ID, jwtToken);
       assertEquals("newFolderId123", folderId, "Expected folderId from result list");
     }
   }
@@ -715,7 +853,7 @@ public class SDMServiceImplTest {
 
       Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
           .thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int actualResponse =
           sdmServiceImpl.deleteDocument("delete", "objectId", "email", "subdomain");
@@ -746,7 +884,7 @@ public class SDMServiceImplTest {
 
       Mockito.when(TokenHandler.getDITokenUsingAuthorities(sdmCredentials, "email", "subdomain"))
           .thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int actualResponse = sdmServiceImpl.deleteDocument("delete", "ewdwe", "email", "subdomain");
 
@@ -777,7 +915,7 @@ public class SDMServiceImplTest {
 
       // Since the exception is thrown before OkHttpClient is used, no need to mock httpClient
       // behavior.
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       // Assert exception
       IOException thrown =
           assertThrows(
@@ -803,13 +941,13 @@ public class SDMServiceImplTest {
     String jwtToken = "jwtToken";
     String up__ID = "up__ID";
 
-    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl());
+    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl(binding, connectionPool));
 
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       doReturn("folderByPath123")
           .when(sdmServiceImpl)
-          .getFolderIdByPath(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+          .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyString());
 
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl("mockUrl");
@@ -819,12 +957,17 @@ public class SDMServiceImplTest {
       sdmCredentials.setUrl(mockUrl);
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(sdmCredentials);
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+
       MockResponse mockResponse1 =
           new MockResponse().setResponseCode(200).setBody("folderByPath123");
       mockWebServer.enqueue(mockResponse1);
-      String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
+      String folderId = sdmServiceImpl.getFolderId(result, persistenceService, up__ID, jwtToken);
       assertEquals("folderByPath123", folderId, "Expected folderId from getFolderIdByPath");
     }
   }
@@ -843,14 +986,14 @@ public class SDMServiceImplTest {
     String up__ID = "up__ID";
 
     // Create a spy of the SDMServiceImpl to mock specific methods
-    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl());
+    SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl(binding, connectionPool));
 
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       // Mock the getFolderIdByPath method to return null (so that it will try to create a folder)
       doReturn(null)
           .when(sdmServiceImpl)
-          .getFolderIdByPath(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+          .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyString());
 
       // Mock the TokenHandler static method and SDMCredentials instantiation
       SDMCredentials sdmCredentials = new SDMCredentials();
@@ -867,8 +1010,12 @@ public class SDMServiceImplTest {
 
       // Mock the token retrieval as well
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getDIToken(jwtToken, sdmCredentials))
-          .thenReturn("mockAccessToken");
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
 
       // Mock the createFolder method to return a folder ID when invoked
       JSONObject jsonObject = new JSONObject();
@@ -883,10 +1030,10 @@ public class SDMServiceImplTest {
 
       doReturn(jsonObject.toString())
           .when(sdmServiceImpl)
-          .createFolder(anyString(), anyString(), anyString(), any(SDMCredentials.class));
+          .createFolder(anyString(), anyString(), any(SDMCredentials.class), anyString());
 
       // Invoke the method
-      String folderId = sdmServiceImpl.getFolderId(jwtToken, result, persistenceService, up__ID);
+      String folderId = sdmServiceImpl.getFolderId(result, persistenceService, up__ID, jwtToken);
 
       // Assert the folder ID is the newly created one
       assertEquals("newFolderId123", folderId, "Expected newly created folderId");
@@ -895,57 +1042,58 @@ public class SDMServiceImplTest {
 
   @Test
   public void testReadDocument_Success() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String expectedContent = "This is a document content.";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(expectedContent)
-              .addHeader("Content-Type", "application/octet-stream"));
       String objectId = "testObjectId";
       String jwtToken = "testJwtToken";
       String repositoryId = "repository_id";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
       MediaData mockData = mock(MediaData.class);
       when(mockContext.getData()).thenReturn(mockData);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream("{\"message\":\"Server error\"}".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
 
       verify(mockData).setContent(any(InputStream.class));
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testReadDocument_UnsuccessfulResponse() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
+
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setResponseCode(500) // Set HTTP status code to 500 for an internal server error
-              .setBody(
-                  "{\"error\":\"Server Error\"}") // Update the error message to match the actual
-              // response
-              .addHeader("Content-Type", "application/json"));
       String objectId = "testObjectId";
       String jwtToken = "testJwtToken";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream =
+          new ByteArrayInputStream("{\"message\":\"Server error\"}".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       ServiceException exception =
           assertThrows(
@@ -955,35 +1103,34 @@ public class SDMServiceImplTest {
               });
 
       // Check if the exception message contains the expected first part
-      String expectedMessagePart1 = "Unexpected code";
+      String expectedMessagePart1 = "Failed to set document stream in context";
       assertTrue(exception.getMessage().contains(expectedMessagePart1));
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testReadDocument_ExceptionWhileSettingContent() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
       String expectedContent = "This is a document content.";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setBody(expectedContent)
-              .addHeader("Content-Type", "application/octet-stream"));
       String objectId = "testObjectId";
       String jwtToken = "testJwtToken";
-      String repositoryId = "repository_id";
-      String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
-      sdmCredentials.setUrl(mockUrl);
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
       MediaData mockData = mock(MediaData.class);
       when(mockContext.getData()).thenReturn(mockData);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(expectedContent.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       doThrow(new RuntimeException("Failed to set document stream in context"))
           .when(mockData)
@@ -996,94 +1143,87 @@ public class SDMServiceImplTest {
                 sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
               });
       assertEquals("Failed to set document stream in context", exception.getMessage());
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testRenameAttachments_Success() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
-
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
-      // Enqueue a successful response
-      mockWebServer.enqueue(new MockResponse().setResponseCode(200));
-
       String jwtToken = "jwt_token";
-      String mockUrl = mockWebServer.url("/").toString();
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("newFileName");
       cmisDocument.setObjectId("objectId");
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
-      when(mockSdmCredentials.getUrl()).thenReturn(mockUrl);
-      when(TokenHandler.getDIToken(jwtToken, mockSdmCredentials)).thenReturn("mockAccessToken");
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int responseCode =
           sdmServiceImpl.renameAttachments(jwtToken, mockSdmCredentials, cmisDocument);
 
       // Verify the response code
       assertEquals(200, responseCode);
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testGetObject_Success() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-      String mockResponseBody = "{\"succinctProperties\": {\"cmis:name\": \"desiredObjectName\"}}";
-      mockWebServer.enqueue(
-          new MockResponse()
-              .setResponseCode(200)
-              .setBody(mockResponseBody)
-              .addHeader("Content-Type", "application/json"));
+      String mockResponseBody = "{\"succinctProperties\": {\"cmis:name\":\"desiredObjectName\"}}";
       String jwtToken = "jwt_token";
       String objectId = "objectId";
-      String mockUrl = mockWebServer.url("/").toString();
+      SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
+      SDMCredentials sdmCredentials = new SDMCredentials();
 
-      SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl());
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-      Mockito.when(mockSdmCredentials.getUrl()).thenReturn(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, mockSdmCredentials))
-          .thenReturn("mockAccessToken");
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      String objectName = sdmServiceImpl.getObject(jwtToken, objectId, mockSdmCredentials);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      String objectName = sdmServiceImpl.getObject(jwtToken, objectId, sdmCredentials);
       assertEquals("desiredObjectName", objectName);
-
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 
   @Test
   public void testGetObject_Failure() throws IOException {
-    MockWebServer mockWebServer = new MockWebServer();
-    mockWebServer.start();
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
         Mockito.mockStatic(TokenHandler.class)) {
-      mockWebServer.enqueue(
-          new MockResponse().setResponseCode(500).addHeader("Content-Type", "application/json"));
       String jwtToken = "jwt_token";
       String objectId = "objectId";
-      String mockUrl = mockWebServer.url("/").toString();
+      SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
+      SDMCredentials sdmCredentials = new SDMCredentials();
 
-      SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl());
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-      Mockito.when(mockSdmCredentials.getUrl()).thenReturn(mockUrl);
-      Mockito.when(TokenHandler.getDIToken(jwtToken, mockSdmCredentials))
-          .thenReturn("mockAccessToken");
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-      String objectName = sdmServiceImpl.getObject(jwtToken, objectId, mockSdmCredentials);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+
+      String objectName = sdmServiceImpl.getObject(jwtToken, objectId, sdmCredentials);
       assertNull(objectName);
-
-    } finally {
-      mockWebServer.shutdown();
     }
   }
 }

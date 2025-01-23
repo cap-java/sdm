@@ -8,10 +8,6 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
-  public static final String BEARER_TOKEN = "Bearer ";
-  public static final int TIMEOUT = 900;
-
-  public static final String TENANT_ID = "X-zid";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
@@ -31,6 +27,13 @@ public class SDMConstants {
       "You do not have the required permissions to rename attachments. Kindly contact the admin";
   public static final String SDM_ROLES_ERROR_MESSAGE =
       "Unable to rename the file due to an error at the server";
+  public static final String SDM_ENV_NAME = "sdm";
+
+  public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
+  public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
+  public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
+  public static final String USER_NOT_AUTHORISED_ERROR =
+      "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
