@@ -7,6 +7,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
@@ -98,9 +99,23 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         cmisDocument.setFileName(filenameInRequest);
         cmisDocument.setObjectId(objectId);
         int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument);
-        if (responseCode == 409) {
-          duplicateFileNameList.add(filenameInRequest);
-          attachment.replace("fileName", fileNameInSDM);
+        switch (responseCode) {
+          case 403:
+            // SDM Roles for user are missing
+            throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+
+          case 409:
+            duplicateFileNameList.add(filenameInRequest);
+            attachment.replace("fileName", fileNameInSDM);
+            break;
+
+          case 200:
+          case 201:
+            // Success cases, do nothing
+            break;
+
+          default:
+            throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
         }
       }
     }

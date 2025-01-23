@@ -1,6 +1,8 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -16,6 +18,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
@@ -219,6 +222,91 @@ public class SDMCreateAttachmentsHandlerTest {
   }
 
   @Test
+  public void testCreateAttachmentWithNoSDMRoles() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    // Mock the authentication context
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+    // Mock the SDM service responses
+    when(sdmService.getObject(any(), any(), any()))
+        .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(403); // Mock conflict response code
+
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(403); // Mock conflict response code
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handler.updateName(context, data);
+            });
+
+    assertEquals(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, exception.getMessage());
+  }
+
+  @Test
+  public void testCreateAttachmentWith500Error() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    // Mock the authentication context
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+    // Mock the SDM service responses
+    when(sdmService.getObject(any(), any(), any()))
+        .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
+    when(sdmService.renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+        .thenReturn(500); // Mock conflict response code
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handler.updateName(context, data);
+            });
+
+    assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
+  }
+
+  @Test
   public void testRenameWith200ResponseCode() throws IOException {
     // Mock the data structure to simulate the attachments
     System.out.println("testRenameWithConflictResponseCode");
@@ -271,21 +359,35 @@ public class SDMCreateAttachmentsHandlerTest {
     fileNameWithRestrictedChars.add("file/2.txt");
     fileNameWithRestrictedChars.add("file\\3.txt");
 
+    // Mock the CdsEntity and setup context
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-
     when(context.getMessages()).thenReturn(messages);
 
-    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    // Mock SDMUtils to simulate restricted characters
+    MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
         .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
-        .thenCallRealMethod();
+        .thenAnswer(
+            invocation -> {
+              String filename = invocation.getArgument(0);
+              return filename.contains("/") || filename.contains("\\");
+            });
+
+    // Mock the SDM service object retrieval
     when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
 
+    // Ensure renameAttachments behaves as expected
+    when(sdmService.renameAttachments(anyString(), any(), any(CmisDocument.class)))
+        .thenReturn(200); // or a desired response code
+
+    // Act
     handler.updateName(context, data);
+
+    // Verify warning message about restricted characters
     verify(messages, times(1))
         .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
 
@@ -296,40 +398,61 @@ public class SDMCreateAttachmentsHandlerTest {
       for (Map<String, Object> attachment : attachments) {
         String filename = (String) attachment.get("fileName");
         if (filename.equals("file/2.txt") || filename.equals("file\\3.txt")) {
+          // Ensure the filename is replaced
           verify(attachment).replace("fileName", "file-in-sdm");
         }
       }
     }
+
+    // Close the mocked static method
+    sdmUtilsMockedStatic.close();
   }
 
   @Test
   public void testWarnOnRestrictedCharacters() throws IOException {
+    // Prepare the sample data with restricted characters
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file3\\abc.txt");
-    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     List<String> fileNameWithRestrictedChars = new ArrayList<>();
     fileNameWithRestrictedChars.add("file/2.txt");
     fileNameWithRestrictedChars.add("file3\\abc.txt");
+
+    // Mock context and related authentication methods
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-    // Mock the static TokenHandler
-    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-    // Mock the SDM service responses
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
     when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
 
+    // Mock message handling
     when(context.getMessages()).thenReturn(messages);
 
-    // No duplicate filenames, simulate restricted characters only.
-    handler.updateName(context, data);
+    // Mock SDMUtils restricted character check
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .thenAnswer(
+              invocation -> {
+                String filename = invocation.getArgument(0);
+                return filename.contains("/") || filename.contains("\\");
+              });
 
-    // Verify the warning message for restricted filenames
-    verify(messages, times(1))
-        .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
+      // Mock renameAttachments implementation to avoid ServiceExceptions for testing
+      when(sdmService.renameAttachments(any(String.class), any(), any(CmisDocument.class)))
+          .thenReturn(200); // assuming successful rename
 
-    // Verify no error message is issued
-    verify(messages, never()).error(anyString());
+      // Act by invoking the handler updateName method with the context and data
+      handler.updateName(context, data);
+
+      // Verify the warning for restricted filenames is correctly handled
+      verify(messages, times(1))
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
+
+      // Ensure no error messages are appearing unexpectedly
+      verify(messages, never()).error(anyString());
+    }
   }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {
