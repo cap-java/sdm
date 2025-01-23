@@ -11,11 +11,11 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.*;
-import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.ByteArrayInputStream;
@@ -318,6 +318,39 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testCreateFolderFailResponseCode403() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setResponseCode(403) // Set HTTP status code to 403
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
+              .addHeader("Content-Type", "application/json"));
+      String parentId = "123";
+      String jwtToken = "jwt_token";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.createFolder(parentId, jwtToken, repositoryId, sdmCredentials);
+              });
+      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
+
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
   public void testGetFolderIdByPath() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
@@ -384,6 +417,40 @@ public class SDMServiceImplTest {
       String folderId =
           sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
       assertNull(folderId, "Expected folderId to be null");
+
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testGetFolderIdByPathFailResponseCode403() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      mockWebServer.enqueue(
+          new MockResponse()
+              .setResponseCode(403) // Set HTTP status code to 403 for an internal server error
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
+              // the body
+              .addHeader("Content-Type", "application/json"));
+      String parentId = "123";
+      String jwtToken = "jwt_token";
+      String repositoryId = "repository_id";
+      String mockUrl = mockWebServer.url("/").toString();
+      SDMCredentials sdmCredentials = new SDMCredentials();
+      sdmCredentials.setUrl(mockUrl);
+      Mockito.when(TokenHandler.getDIToken(jwtToken, sdmCredentials)).thenReturn("mockAccessToken");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl();
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getFolderIdByPath(parentId, jwtToken, repositoryId, sdmCredentials);
+              });
+      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 
     } finally {
       mockWebServer.shutdown();

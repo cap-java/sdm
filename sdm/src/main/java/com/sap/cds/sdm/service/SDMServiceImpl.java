@@ -295,6 +295,9 @@ public class SDMServiceImpl implements SDMService {
 
     try (Response response = client.newCall(request).execute()) {
       if (!response.isSuccessful()) {
+        if (response.code() == 403) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        }
         return null;
       } else {
         String responseBody = response.body().string();
@@ -333,8 +336,12 @@ public class SDMServiceImpl implements SDMService {
             .build();
 
     try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful())
+      if (!response.isSuccessful()) {
+        if (response.code() == 403) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        }
         throw new ServiceException(SDMConstants.getGenericError("upload"));
+      }
       return response.body().string();
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
