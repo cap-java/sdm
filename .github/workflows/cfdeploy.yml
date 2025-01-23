@@ -31,12 +31,6 @@ jobs:
             exit 1
           fi
 
-      - name: Run mbt build
-        run: |
-          pwd
-          cd cap-notebook/demoapp
-          mbt build
-
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           echo "Current Branch......"
@@ -49,8 +43,8 @@ jobs:
           cf install-plugin multiapps -f
 
           pwd
-          ls
           cd mta_archives
+          ls
           
           # Login to Cloud Foundry again to ensure session is active
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
