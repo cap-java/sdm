@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: cap-java
     
     steps:
       - name: Checkout repository
@@ -21,104 +21,6 @@ jobs:
           java-version: 17
           distribution: 'temurin'
 
-      # Step 3: Update settings.xml
-      - name: Update settings.xml
-        run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/xsd/settings-1.0.0.xsd">' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   <profiles>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <id>release.build</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      </profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <id>milestone.build</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      </profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <id>snapshot.build</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </pluginRepository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </pluginRepositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>cap-java</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <id>cap-sdm-java</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '               <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            </repository>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </repositories>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      </profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <id>sonar</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <activation>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <activeByDefault>true</activeByDefault>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </activation>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <sonar.host.url>https://sonar.tools.sap</sonar.host.url>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '            <tycho.localArtifacts>ignore</tycho.localArtifacts>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         </properties>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      </profile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   </profiles>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   <activeProfiles>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <activeProfile>snapshot.build</activeProfile>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   </activeProfiles>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   <pluginGroups>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <pluginGroup>com.sap.ldi</pluginGroup>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   </pluginGroups>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   <servers>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      <server>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <id>artifactory</id>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <username>${{ env.SERVER_USER }}</username>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '         <password>${{ env.SERVER_PASSWORD }}</password>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '      </server>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '   </servers>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-          echo '</settings>' >> /usr/share/apache-maven-3.8.8/conf/settings.xml
-
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -129,14 +31,9 @@ jobs:
             exit 1
           fi
 
-      - name: Verify the settings.xml
+      - name: Run mbt build
         run: |
-          echo "..........."
-          echo "..........."
-          echo "content of settings.xml"
-          cd
           pwd
           ls
-          sudo cat /home/runner/root/.m2/settings.xml
 
       
