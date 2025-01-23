@@ -41,16 +41,12 @@ jobs:
 
           # Install cf CLI plugin
           cf install-plugin multiapps -f
-
-          pwd
-          cd mta_archives
-          ls
           
           # Login to Cloud Foundry again to ensure session is active
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
 
           # Deploy the application
           echo "Running cf deploy"
-          cf deploy /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp/mta_archives/demoappjava-1.0.0.mtar -f
+          cf deploy mta_archives/demoappjava_1.0.0.mtar -f
 
       
