@@ -34,6 +34,7 @@ jobs:
       - name: Run mbt build
         run: |
           pwd
-          ls
+          cd cap-notebook/demoapp
+          mbt build
 
       
