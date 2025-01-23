@@ -51,6 +51,6 @@ jobs:
 
           # Deploy the application
           echo "Running cf deploy"
-          cf deploy demoappjava-1.0.0.mtar -f
+          cf deploy /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp/mta_archives/demoappjava-1.0.0.mtar -f
 
       
