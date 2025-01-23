@@ -1,13 +1,19 @@
 name: Deploy and Integration Test
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - snapshot_deploy
+      - develop
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
 
 jobs:
   deploy:
-    runs-on: cap-java
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
