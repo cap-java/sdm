@@ -2,7 +2,6 @@ package com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
-import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -53,7 +52,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
-    String repocheck = sdmService.checkRepositoryType(repositoryId, jwtToken);
+    String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
     CmisDocument cmisDocument = new CmisDocument();
     if ("Versioned".equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
@@ -81,10 +80,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         if (Boolean.TRUE.equals(duplicate)) {
           throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
         } else {
-          JsonObject tokenDetails = TokenHandler.getTokenFields(jwtToken);
-          JsonObject tenantDetails = tokenDetails.get("ext_attr").getAsJsonObject();
-          subdomain = tenantDetails.get("zdn").getAsString();
-          String folderId = sdmService.getFolderId(jwtToken, result, persistenceService, upID);
+          subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+          String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
           cmisDocument.setFileName(filename);
           cmisDocument.setAttachmentId(fileid);
           InputStream contentStream = (InputStream) data.get("content");
@@ -95,7 +92,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setMimeType(mimeType);
           SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
           JSONObject createResult =
-              sdmService.createDocument(cmisDocument, jwtToken, sdmCredentials);
+              sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
           if (createResult.get("status") == "duplicate") {
             throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
