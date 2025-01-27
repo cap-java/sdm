@@ -200,17 +200,15 @@ public class SDMServiceImpl implements SDMService {
             + objectId
             + "&cmisselector=content";
 
-    Response response = client.newCall(request).execute();
-    
     HttpGet getContentRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode != 200) {
-      response.close();
-      if (response.code() == 404) {
-        throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
-      }
-      throw new ServiceException("Unexpected code");
+        response.close();
+        if (responseCode == 404) {
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        }
+        throw new ServiceException("Unexpected code");
       }
       byte[] responseBody = EntityUtils.toByteArray(response.getEntity());
       try (InputStream inputStream = new ByteArrayInputStream(responseBody)) {
