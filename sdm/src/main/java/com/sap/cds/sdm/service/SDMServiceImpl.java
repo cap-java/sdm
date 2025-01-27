@@ -223,6 +223,9 @@ public class SDMServiceImpl implements SDMService {
 
     Response response = client.newCall(request).execute();
     if (!response.isSuccessful()) {
+      if (response.code() == 404) {
+        throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+      }
       response.close();
       throw new ServiceException("Unexpected code");
     }

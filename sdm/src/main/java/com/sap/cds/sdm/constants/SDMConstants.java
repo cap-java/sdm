@@ -29,6 +29,7 @@ public class SDMConstants {
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
+  public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

@@ -166,7 +166,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     try {
       sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
     } catch (Exception e) {
-      throw new ServiceException(SDMConstants.NOT_FOUND_ERROR);
+      throw new ServiceException(e.getMessage());
     }
     context.setCompleted();
   }
