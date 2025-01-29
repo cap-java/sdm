@@ -747,7 +747,7 @@ public class SDMAttachmentsServiceHandlerTest {
       when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
           .thenReturn("NotVersioned");
       when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
-      doThrow(new RuntimeException("Read error"))
+      doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
           .when(sdmService)
           .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
 
@@ -758,7 +758,7 @@ public class SDMAttachmentsServiceHandlerTest {
                 handlerSpy.readAttachment(mockReadContext);
               });
 
-      assertEquals("Failed to read document.", exception.getMessage());
+      assertEquals("Object not found in repository", exception.getMessage());
     }
   }
 

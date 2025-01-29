@@ -205,7 +205,10 @@ public class SDMServiceImpl implements SDMService {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode != 200) {
         response.close();
-        throw new ServiceException("Unexpected code " + responseCode);
+        if (responseCode == 404) {
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        }
+        throw new ServiceException("Unexpected code");
       }
       byte[] responseBody = EntityUtils.toByteArray(response.getEntity());
       try (InputStream inputStream = new ByteArrayInputStream(responseBody)) {
