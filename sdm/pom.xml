@@ -109,11 +109,6 @@
             <artifactId>java-core-api</artifactId>
             <version>0.10.5</version>
         </dependency>
-        <!-- <dependency>
-            <groupId>org.apache.httpcomponents.core5</groupId>
-            <artifactId>httpcore5</artifactId>
-            <version>5.3.1</version>
-        </dependency> -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
