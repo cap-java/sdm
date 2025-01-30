@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
-import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
 import com.sap.cds.feature.attachments.service.model.service.CreateAttachmentInput;
 import com.sap.cds.feature.attachments.service.model.service.MarkAsDeletedInput;
@@ -10,6 +9,8 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.sdm.service.handler.LinkContext;
+import com.sap.cds.sdm.service.handler.SDMActionsService;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
@@ -18,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SDMAttachmentsService extends ServiceDelegator
-    implements AttachmentService, RegisterService {
+    implements SDMActionsService, RegisterService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsService.class);
 
   public SDMAttachmentsService() {
@@ -84,4 +85,16 @@ public class SDMAttachmentsService extends ServiceDelegator
     deletionUserInfo.setName(userInfo.getName());
     return deletionUserInfo;
   }
+
+  @Override
+  public void createLink(String linkName, String url) {
+    logger.info("Creating link {}{}", linkName, url);
+    var linkContext = LinkContext.create();
+    linkContext.setLinkName(linkName);
+
+    emit(linkContext);
+  }
+
+  @Override
+  public void editLink(String linkName, String url) {}
 }

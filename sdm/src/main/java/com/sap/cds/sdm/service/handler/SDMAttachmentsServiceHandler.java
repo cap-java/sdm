@@ -34,7 +34,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
 
-@ServiceName(value = "*", type = AttachmentService.class)
+@ServiceName(value = "*", type = SDMActionsService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
@@ -195,5 +195,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       }
     }
     return false;
+  }
+
+  @On(event = SDMActionsService.EVENT_CREATE_LINK)
+  public void createLink(LinkContext context) {
+    System.out.println("Link created " + context.getLinkName() + ":" + context.getUrl());
+    context.setCompleted();
   }
 }

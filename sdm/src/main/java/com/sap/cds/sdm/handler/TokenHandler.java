@@ -176,6 +176,11 @@ public class TokenHandler {
                 .property("name", SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
                 .build();
       }
+      //      ApacheHttpClient5Factory customFactory = new ApacheHttpClient5FactoryBuilder()
+      //              .timeout(Duration.ofMinutes(connectionPoolConfig.getTimeout().toMinutes()))
+      //              .maxConnectionsTotal(connectionPoolConfig.getMaxConnectionsPerRoute())
+      //              .maxConnectionsPerRoute(connectionPoolConfig.getMaxConnections())
+      //              .build();
 
       DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
           DefaultHttpClientFactory.builder();
