@@ -1,13 +1,6 @@
 name: Integration Test
 
 on:
-  push:
-    branches:
-      - Integration-Test
-  pull_request:
-    branches:
-      - Integration-Test
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
