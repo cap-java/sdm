@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.0.2
+
+### Added
+
+- Validation of special characters in attachment names.
+- Implemented API requests to SDM using Cloud SDK library.
+
+### Fixed
+
+- Check for SDM roles while renaming attachments.
+- Error message when a user with no SDM roles uploads an attachment.
+
 ## Version 1.0.1
 
 ### Fixed
