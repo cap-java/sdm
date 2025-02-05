@@ -5,7 +5,7 @@ env:
   MAVEN_VERSION: '3.6.3'
 
 on:
-  pull_request:
+  push:
     branches: [ "snapshot_test" ]
   workflow_dispatch:
 
