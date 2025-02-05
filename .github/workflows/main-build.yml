@@ -108,7 +108,7 @@ jobs:
             git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin HEAD:snapshot_test
+            git push origin HEAD:develop
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
