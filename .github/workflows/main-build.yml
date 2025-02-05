@@ -28,6 +28,7 @@ jobs:
 
   check-files:
     name: Check Changes
+    needs: [ build ]
     runs-on: ubuntu-latest
     outputs:
       should-run: ${{ steps.check-changes.outputs.should-run }}
