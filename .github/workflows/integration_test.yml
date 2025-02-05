@@ -7,9 +7,6 @@ on:
         description: 'Specify the Cloud Foundry space to run integration tests on'
         required: true
 
-permissions:
-  pull-requests: read
-
 jobs:
   integration-test:
     runs-on: ubuntu-latest
