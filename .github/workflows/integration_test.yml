@@ -6,9 +6,6 @@ on:
       cf_space:
         description: 'Specify the Cloud Foundry space to run integration tests on'
         required: true
-  push:
-    branches:
-      - deploy_and_integration
 jobs:
   integration-test:
     runs-on: ubuntu-latest
