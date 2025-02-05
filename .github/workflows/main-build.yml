@@ -1,4 +1,3 @@
-#######
 name: Main build and snapshot deploy
 
 env:
@@ -6,16 +5,40 @@ env:
   MAVEN_VERSION: '3.6.3'
 
 on:
-  #push:
-   # branches: [ "snapshot_test" ]
   pull_request:
     branches: [ "snapshot_test" ]
   workflow_dispatch:
 
 jobs:
+  check-files:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check-files.outputs.should-run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check if Only pom.xml Changed
+        id: check-files
+        run: |
+          # Get the list of changed files
+          changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+
+          # If there are changes other than pom.xml, set should-run to true
+          if echo "$changed_files" | grep -q -v "^pom.xml$"; then
+            echo "Changes detected in files other than pom.xml"
+            echo "should-run=true" >> $GITHUB_OUTPUT
+          else
+            echo "Only changes in pom.xml detected"
+            echo "should-run=false" >> $GITHUB_OUTPUT
+          fi
+
   update-version:
     name: Update version
     runs-on: ubuntu-latest
+    needs: check-files
+    if: needs.check-files.outputs.should-run == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,26 +66,8 @@ jobs:
           echo "REVISION=$current_version" >> $GITHUB_ENV
         shell: bash
 
-      - name: Check if version was changed in PR
-        id: check-version-changed
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge:pr
-          if git diff --name-only pr HEAD~1 | grep -q "pom.xml"; then
-            echo "Version was changed in the PR"
-            echo "VERSION_CHANGED=true" >> $GITHUB_ENV
-          else
-            echo "Version was not changed in the PR"
-            echo "VERSION_CHANGED=false" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Set version changed to false for non-PR
-        if: ${{ github.event_name != 'pull_request' }}
-        run: echo "VERSION_CHANGED=false" >> $GITHUB_ENV
-        shell: bash
-
       - name: Check and Update Version
-        if: ${{ env.VERSION_CHANGED != 'true' && github.ref == 'refs/heads/snapshot_test' }}
+        if: github.ref == 'refs/heads/snapshot_test'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
@@ -104,4 +109,3 @@ jobs:
         run: |
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
-#######
