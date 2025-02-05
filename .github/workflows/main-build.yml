@@ -24,7 +24,9 @@ jobs:
         id: check-changes
         run: |
           # Get the list of changed files
-          changed_files=$(git diff --name-only origin/${{ github.event.repository.default_branch }} ${{ github.sha }})
+          #changed_files=$(git diff --name-only origin/${{ github.event.repository.default_branch }} ${{ github.sha }})
+          changed_files=$(git diff --name-only origin/snapshot_test ${{ github.sha }})
+
           echo "Changed files: $changed_files"
           # Check if pom.xml is in the list of changed files
           if echo "$changed_files" | grep -q "^pom.xml$"; then
