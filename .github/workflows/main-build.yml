@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "snapshot_test" ]
   workflow_dispatch:
 
 jobs:
