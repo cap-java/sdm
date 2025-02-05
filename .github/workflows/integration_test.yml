@@ -2,7 +2,10 @@ name: Integration Test
 
 on:
   workflow_dispatch:
-
+    inputs:
+      cf_space:
+        description: 'Specify the Cloud Foundry space to run integration tests on'
+        required: true
 permissions:
   pull-requests: read
 
