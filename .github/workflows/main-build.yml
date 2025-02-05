@@ -6,7 +6,9 @@ env:
   MAVEN_VERSION: '3.6.3'
 
 on:
-  push:
+  #push:
+   # branches: [ "snapshot_test" ]
+  pull_request:
     branches: [ "snapshot_test" ]
   workflow_dispatch:
 
@@ -43,14 +45,20 @@ jobs:
 
       - name: Check if version was changed in PR
         id: check-version-changed
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          git fetch origin +refs/pull/${{ github.event.number }}/merge:pr
+          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge:pr
           if git diff --name-only pr HEAD~1 | grep -q "pom.xml"; then
             echo "Version was changed in the PR"
             echo "VERSION_CHANGED=true" >> $GITHUB_ENV
           else
             echo "Version was not changed in the PR"
             echo "VERSION_CHANGED=false" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set version changed to false for non-PR
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "VERSION_CHANGED=false" >> $GITHUB_ENV
         shell: bash
 
       - name: Check and Update Version
