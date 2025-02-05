@@ -7,7 +7,7 @@ env:
 
 on:
   #push:
-   # branches: [ "snapshot_test" ]
+    #branches: [ "snapshot_test" ]
   pull_request:
     branches: [ "snapshot_test" ]
   workflow_dispatch:
