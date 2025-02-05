@@ -86,6 +86,11 @@ jobs:
             git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
+
+            # Pull latest changes from remote branch to avoid conflicts
+            git pull origin testversion --rebase
+            
+            # Push changes to remote testversion branch
             git push origin HEAD:testversion
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
