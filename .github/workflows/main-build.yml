@@ -42,7 +42,7 @@ jobs:
         shell: bash
 
       - name: Check and Update Version
-        if: github.ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/snapshot_test'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
