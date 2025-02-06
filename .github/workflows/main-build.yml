@@ -1,3 +1,4 @@
+######
 name: Main build and snapshot deploy
 
 env:
@@ -6,33 +7,18 @@ env:
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "testing_version" ]
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java-version: [ 17 ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build
-        uses: ./.github/actions/build
-        with:
-          java-version: ${{ matrix.java-version }}
-          maven-version: ${{ env.MAVEN_VERSION }}
-
   update-version:
     name: Update version
     runs-on: ubuntu-latest
-    needs: [ build ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
@@ -40,26 +26,36 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: sapmachine
           cache: maven
-          server-id: artifactory
-          server-username: CAP_DEPLOYMENT_USER
-          server-password: CAP_DEPLOYMENT_PASS
 
       - name: Set up Maven ${{ env.MAVEN_VERSION }}
         uses: stCarolas/setup-maven@v5
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
 
-      - name: Get Revision
-        id: get-revision
+      - name: Get Current Version
+        id: get-current-version
         run: |
           current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "Current version: $current_version"
           echo "REVISION=$current_version" >> $GITHUB_ENV
         shell: bash
 
+      - name: Create Branch if Version is not SNAPSHOT
+        if: "! contains(env.REVISION, '-SNAPSHOT')"
+        id: create-branch
+        run: |
+          current_version=${{ env.REVISION }}
+          new_branch="Rel_v${current_version}"
+          echo "Creating new branch: $new_branch"
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+          git checkout -b $new_branch
+          git push origin $new_branch
+        shell: bash
+
       - name: Check and Update Version
-        if: github.ref == 'refs/heads/develop'
         id: check-and-update-version
+        if: contains(env.REVISION, '-SNAPSHOT') == false
         run: |
           current_version=${{ env.REVISION }}
 
@@ -86,7 +82,7 @@ jobs:
             git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin HEAD:testversion
+            git push origin HEAD:$GITHUB_REF_NAME
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
@@ -100,12 +96,4 @@ jobs:
         run: |
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
-
-      - name: Deploy snapshot
-        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
-        run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
-        env:
-          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
-          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
-        shell: bash
+######
