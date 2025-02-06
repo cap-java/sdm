@@ -38,6 +38,12 @@
         <lombok.version>1.18.36</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <ehcache-version>3.10.8</ehcache-version>
+        <token-client-version>3.5.7</token-client-version>
+        <jackson-databind-version>2.18.2</jackson-databind-version>
+        <json-version>20250107</json-version>
+        <commons-codec-version>1.18.0</commons-codec-version>
+        <jackson-core-version>2.18.2</jackson-core-version>
+        <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
     </properties>
 
     <profiles>
@@ -96,7 +102,7 @@
         <dependency>
             <groupId>com.sap.cloud.security.xsuaa</groupId>
             <artifactId>token-client</artifactId>
-            <version>3.5.7</version>
+            <version>${token-client-version}</version>
         </dependency>
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
@@ -111,12 +117,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.18.2</version>
+            <version>${jackson-databind-version}</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20250107</version>
+            <version>${json-version}</version>
         </dependency>
         <dependency>
             <groupId>org.ehcache</groupId>
@@ -132,13 +138,13 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.18.0</version>
+            <version>${commons-codec-version}</version>
         </dependency>
         <!-- TESTS -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.18.2</version>
+            <version>${jackson-core-version}</version>
         </dependency>
         <dependency>
             <groupId>com.sap.cds</groupId>
@@ -176,7 +182,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.15.2</version>
+            <version>${mockito-junit-jupiter-version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
