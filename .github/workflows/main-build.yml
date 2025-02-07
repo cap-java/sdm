@@ -7,7 +7,7 @@ env:
 
 on:
   push:
-    branches: [ "develop" ]
+    #branches: [ "SDMEXT-1046" ]
   workflow_dispatch:
 
 jobs:
@@ -57,54 +57,41 @@ jobs:
           echo "REVISION=$current_version" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create Branch if Version is not SNAPSHOT
-        if: "! contains(env.REVISION, '-SNAPSHOT')"
-        id: create-branch
-        run: |
-          current_version=${{ env.REVISION }}
-          new_branch="Release_v${current_version}"
-          echo "Checking if branch $new_branch already exists"
-          if git ls-remote --exit-code --heads origin $new_branch; then
-            echo "Branch $new_branch already exists, not creating new branch."
-          else
-            echo "Branch $new_branch does not exist, creating new branch."
-            git config --local user.name "github-actions"
-            git config --local user.email "github-actions@github.com"
-            git checkout -b $new_branch
-            git push origin $new_branch
-          fi
-        shell: bash
-
-      - name: Check and Update Version
-        id: check-and-update-version
-        if: contains(env.REVISION, '-SNAPSHOT') == false
+      - name: Create Branch and Update Version
+        id: create-branch-and-update-version
         run: |
           current_version=${{ env.REVISION }}
           # Check if the version already contains '-SNAPSHOT'
+          branch_name="update-version-${{ github.sha }}"
+          git config --local user.name "github-actions"
+          git config --local user.email "github-actions@github.com"
+          git checkout -b $branch_name
           if [[ $current_version != *-SNAPSHOT ]]; then
             echo "Current version does not contain -SNAPSHOT, updating version..."
-            # Split version into major, minor, and patch parts
             IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
-            # Increment the patch number
             new_patch=$((patch + 1))
-            # Form the new version
             new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
-            # Update the <revision> property in pom.xml
             sed -i "s|<revision>.*</revision>|<revision>${new_version}</revision>|" pom.xml
             echo "Updated version to $new_version"
-            # Commit the version change
-            git config --local user.name "github-actions"
-            git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin HEAD:$GITHUB_REF_NAME
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
-          # Export the updated or original version
           updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          git push origin HEAD:$branch_name
           echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
+
+      - name: Create Pull Request
+        id: create-pull-request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          commit-message: 'Increment version to ${{ env.UPDATED_VERSION }}'
+          branch: ${{ steps.create-branch-and-update-version.outputs.branch_name }}
+          title: 'Increment version to ${{ env.UPDATED_VERSION }}'
+          body: 'Updating version to ${{ env.UPDATED_VERSION }}'
+          labels: 'automerge'
 
       - name: Print Updated Version
         run: |
@@ -119,4 +106,4 @@ jobs:
           CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
           CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
         shell: bash
-######
+########
