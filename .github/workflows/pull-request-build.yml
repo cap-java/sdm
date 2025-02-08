@@ -1,0 +1,29 @@
+name: Pull Request Builder
+
+env:
+  MAVEN_VERSION: '3.6.3'
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        java-version: [ 17 ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          java-version: ${{ matrix.java-version }}
+          maven-version: ${{ env.MAVEN_VERSION }}

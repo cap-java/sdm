@@ -1,0 +1,247 @@
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>SAP SE</name>
+        <url>https://www.sap.com</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <organization>SAP SE</organization>
+            <organizationUrl>https://www.sap.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <properties>
+        <revision>1.0.2</revision>
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <excluded.generation.package>sdm/generated/</excluded.generation.package>
+        <cds.services.version>3.5.0</cds.services.version>
+
+        <generation-folder>src/gen</generation-folder>
+
+        <test-spring-boot-version>3.2.5</test-spring-boot-version>
+        <sdk-bom-version>5.15.0</sdk-bom-version>
+    </properties>
+
+    <groupId>com.sap.cds</groupId>
+    <artifactId>sdm-root</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>CDS Feature for SAP Document Management Service - Root</name>
+    <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
+    <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
+
+    <modules>
+        <module>sdm</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.sap.cds</groupId>
+                <artifactId>cds-services-bom</artifactId>
+                <version>${cds.services.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-bom</artifactId>
+                <version>5.12.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.sap.cds</groupId>
+                <artifactId>sdm</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sap.cloud.environment.servicebinding</groupId>
+                <artifactId>java-bom</artifactId>
+                <version>0.10.5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.sdk</groupId>
+            <artifactId>sdk-bom</artifactId>
+            <version>${sdk-bom-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        </dependencies>
+
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.sap.cds</groupId>
+            <artifactId>cds-services-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.11.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.25.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.12.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>4.5.14</version> <!-- Use the latest version available -->
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration> 
+                    <environmentVariables>
+                        <REPOSITORY_ID>repoid</REPOSITORY_ID>
+                    </environmentVariables>
+                </configuration> 
+            </plugin>
+
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <configuration>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                        <importOrder/>
+                        <removeUnusedImports/>
+                        <googleJavaFormat/>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>  <!-- Added for applying formatting -->
+                        </goals>
+                        <phase>compile</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- POM FLATTENING FOR CI FRIENDLY VERSIONS -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <id>no-duplicate-declared-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <banDuplicatePomDependencyVersions/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.2.0</version> <!-- Use the latest version -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>analyze</goal>
+                        </goals>
+                        <configuration>
+                            <analyzeTestScopedDependencies>true</analyzeTestScopedDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>artifactory</id>
+            <name>Artifactory_DMZ-snapshots</name>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+        </snapshotRepository>
+        <repository>
+            <id>artifactory</id>
+            <name>Artifactory_DMZ</name>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+        </repository>
+    </distributionManagement>
+         
+    <scm>
+        <url>https://github.com/cap-java/sdm</url>
+        <connection>scm:git:git@github.com:cap-java/sdm.git</connection>
+        <developerConnection>scm:git:git@github.com:cap-java/sdm.git</developerConnection>
+    </scm>
+
+</project>
