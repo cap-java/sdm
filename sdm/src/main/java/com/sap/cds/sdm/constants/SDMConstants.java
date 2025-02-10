@@ -40,7 +40,7 @@ public class SDMConstants {
       List<String> fileNameWithRestrictedCharacters, String operation) {
     // Create the base message
     String prefixMessage =
-        "%s unsuccessful. The following file names contain unsupported characters (/, \\). \n\n";
+        "%s unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
 
     // Create the formatted prefix message
     String formattedPrefixMessage = String.format(prefixMessage, operation);
