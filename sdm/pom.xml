@@ -37,8 +37,13 @@
         <attachments_version>1.0.5</attachments_version>
         <lombok.version>1.18.36</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
-        <commons-codec.version>1.17.2</commons-codec.version>
         <ehcache-version>3.10.8</ehcache-version>
+        <token-client-version>3.5.7</token-client-version>
+        <jackson-databind-version>2.18.2</jackson-databind-version>
+        <json-version>20250107</json-version>
+        <commons-codec-version>1.18.0</commons-codec-version>
+        <jackson-core-version>2.18.2</jackson-core-version>
+        <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
     </properties>
 
     <profiles>
@@ -97,7 +102,7 @@
         <dependency>
             <groupId>com.sap.cloud.security.xsuaa</groupId>
             <artifactId>token-client</artifactId>
-            <version>3.5.3</version>
+            <version>${token-client-version}</version>
         </dependency>
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
@@ -110,24 +115,14 @@
             <version>0.10.5</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents.core5</groupId>
-            <artifactId>httpcore5</artifactId>
-            <version>5.3.1</version>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.18.0</version>
+            <version>${jackson-databind-version}</version>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20240303</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents.client5</groupId>
-            <artifactId>httpclient5</artifactId>
-            <version>5.4.1</version>
+            <version>${json-version}</version>
         </dependency>
         <dependency>
             <groupId>org.ehcache</groupId>
@@ -141,31 +136,15 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.17.0</version>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>${commons-codec-version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>2.18.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.13</version>
-        </dependency>
-
         <!-- TESTS -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>2.17.2</version>
+            <version>${jackson-core-version}</version>
         </dependency>
         <dependency>
             <groupId>com.sap.cds</groupId>
@@ -201,14 +180,9 @@
           </exclusions>
         </dependency>
         <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>${commons-codec.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.12.0</version>
+            <version>${mockito-junit-jupiter-version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
