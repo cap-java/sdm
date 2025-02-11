@@ -10,7 +10,8 @@ import org.json.JSONObject;
 
 public interface SDMService {
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException;
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken, String type)
+      throws IOException;
 
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken)

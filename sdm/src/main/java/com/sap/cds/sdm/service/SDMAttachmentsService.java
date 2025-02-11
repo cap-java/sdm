@@ -50,7 +50,6 @@ public class SDMAttachmentsService extends ServiceDelegator
     mediaData.setMimeType(input.mimeType());
     mediaData.setContent(input.content());
     createContext.setData(mediaData);
-
     emit(createContext);
 
     return new AttachmentModificationResult(

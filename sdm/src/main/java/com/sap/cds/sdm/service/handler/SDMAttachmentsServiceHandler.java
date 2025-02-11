@@ -92,7 +92,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setMimeType(mimeType);
           SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
           JSONObject createResult =
-              sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+              sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
 
           if (createResult.get("status") == "duplicate") {
             throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));

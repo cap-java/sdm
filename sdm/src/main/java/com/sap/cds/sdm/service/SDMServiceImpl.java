@@ -42,7 +42,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken, String type)
       throws IOException {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
@@ -52,19 +52,31 @@ public class SDMServiceImpl implements SDMService {
 
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    builder.addBinaryBody(
-        "filename",
-        cmisDocument.getContent(),
-        ContentType.create(cmisDocument.getMimeType()),
-        cmisDocument.getFileName());
-    // Add additional form fields
-    builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
-    builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
-    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    if (type == null) {
+      builder.addBinaryBody(
+          "filename",
+          cmisDocument.getContent(),
+          ContentType.create(cmisDocument.getMimeType()),
+          cmisDocument.getFileName());
+      builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+    } else {
+      // Add additional form fields
+      builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
+
+      builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[2]", "cmis:secondaryObjectTypeIds", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[2]", "sap:createLink", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[3]", "sap:linkRepositoryId", ContentType.TEXT_PLAIN);
+      builder.addTextBody(
+          "propertyValue[3]", cmisDocument.getRepositoryId(), ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[4]", "sap:linkExternalURL", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[4]", cmisDocument.getUrl(), ContentType.TEXT_PLAIN);
+
+      builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    }
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
     executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
@@ -96,7 +108,9 @@ public class SDMServiceImpl implements SDMService {
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonResponse = new JSONObject(responseString);
+      System.out.println("jsonResponse token " + jsonResponse);
       int responseCode = response.getStatusLine().getStatusCode();
+      System.out.println("responseCode token " + responseCode);
       if (responseCode == 201 || responseCode == 200) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";

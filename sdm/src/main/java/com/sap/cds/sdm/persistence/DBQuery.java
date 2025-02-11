@@ -2,8 +2,10 @@ package com.sap.cds.sdm.persistence;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
@@ -56,6 +58,25 @@ public class DBQuery {
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
+  }
+
+  public static void addLinkToDraft(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      CmisDocument cmisDocument) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", cmisDocument.getObjectId());
+    updatedFields.put("repositoryId", repositoryId);
+    // updatedFields.put("folderId", cmisDocument.getFolderId());
+    updatedFields.put("status", "Clean");
+    updatedFields.put("ID", "123");
+    updatedFields.put("mimeType", cmisDocument.getMimeType());
+    updatedFields.put("filename", cmisDocument.getFileName());
+    var data = List.of(Map.of("ID", 101, "title", "Capire"));
+
+    CqnInsert insert = Insert.into(attachmentEntity).entry(updatedFields);
+    persistenceService.run(insert);
   }
 
   public static String getFolderIdForActiveEntity(

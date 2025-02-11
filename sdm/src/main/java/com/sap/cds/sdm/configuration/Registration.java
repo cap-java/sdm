@@ -10,6 +10,7 @@ import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
+import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -60,6 +61,7 @@ public class Registration implements CdsRuntimeConfiguration {
 
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
     configurer.eventHandler(buildReadHandler());
+    configurer.eventHandler(new SDMServiceGenericHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMCreateAttachmentsHandler(sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));

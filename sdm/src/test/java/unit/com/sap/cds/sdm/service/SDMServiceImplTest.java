@@ -578,7 +578,7 @@ public class SDMServiceImplTest {
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -623,7 +623,7 @@ public class SDMServiceImplTest {
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -670,7 +670,7 @@ public class SDMServiceImplTest {
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -715,7 +715,7 @@ public class SDMServiceImplTest {
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
       JSONObject actualResponse =
-          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+          sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
 
       JSONObject expectedResponse = new JSONObject();
       expectedResponse.put("name", "sample.pdf");
@@ -758,7 +758,7 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       try {
-        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken, null);
       } catch (ServiceException e) {
         // Expected exception to be thrown
         assertEquals("Error in setting timeout", e.getMessage());
