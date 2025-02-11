@@ -1,6 +1,5 @@
 name: Main build and snapshot deploy
 
-
 env:
   JAVA_VERSION: '17'
   MAVEN_VERSION: '3.6.3'
@@ -25,6 +24,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: sapmachine
           cache: maven
+          server-id: artifactory
+          server-username: CAP_DEPLOYMENT_USER
+          server-password: CAP_DEPLOYMENT_PASS
 
       - name: Set up Maven ${{ env.MAVEN_VERSION }}
         uses: stCarolas/setup-maven@v5
@@ -46,17 +48,7 @@ jobs:
           current_version=${{ env.REVISION }}
           # Check if the version already contains '-SNAPSHOT'
           if [[ $current_version != *-SNAPSHOT ]]; then
-            echo "Current version does not contain -SNAPSHOT, checking branch..."
-            branch_name="Rel_v${current_version}"
-            # Check if the branch already exists
-            if git ls-remote --exit-code --heads origin "$branch_name"; then
-              echo "Branch $branch_name already exists. Skipping branch creation."
-            else
-              echo "Branch $branch_name does not exist. Creating branch..."
-              git branch "$branch_name"
-              git push origin "$branch_name"
-            fi
-            echo "Updating version..."
+            echo "Current version does not contain -SNAPSHOT, updating version..."
             # Split version into major, minor, and patch parts
             IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
             # Increment the patch number
@@ -69,10 +61,9 @@ jobs:
             # Commit the version change
             git config --local user.name "github-actions"
             git config --local user.email "github-actions@github.com"
-            git checkout -b update-version-${new_version}
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin -u update-version-${new_version}
+            git push origin HEAD:snapshot-version
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
@@ -80,18 +71,6 @@ jobs:
           updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
-
-      - name: Create Pull Request
-        if: ${{ steps.check-and-update-version.outcome == 'success' }}
-        uses: peter-evans/create-pull-request@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Increment version to ${{ env.UPDATED_VERSION }}
-          branch: update-version-${{ env.UPDATED_VERSION }}
-          delete-branch: true
-          title: Update version to ${{ env.UPDATED_VERSION }}
-          body: This pull request updates the project version to ${{ env.UPDATED_VERSION }}
-          base: snapshot-version
 
       - name: Print Updated Version
         run: |
