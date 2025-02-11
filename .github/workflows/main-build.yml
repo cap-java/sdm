@@ -25,9 +25,6 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: sapmachine
           cache: maven
-          server-id: artifactory
-          server-username: CAP_DEPLOYMENT_USER
-          server-password: CAP_DEPLOYMENT_PASS
 
       - name: Set up Maven ${{ env.MAVEN_VERSION }}
         uses: stCarolas/setup-maven@v5
@@ -72,9 +69,10 @@ jobs:
             # Commit the version change
             git config --local user.name "github-actions"
             git config --local user.email "github-actions@github.com"
+            git checkout -b update-version-${new_version}
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin HEAD:snapshot-version
+            git push origin -u update-version-${new_version}
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
@@ -83,16 +81,19 @@ jobs:
           echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
 
+      - name: Create Pull Request
+        if: ${{ steps.check-and-update-version.outcome == 'success' }}
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Increment version to ${{ env.UPDATED_VERSION }}
+          branch: update-version-${{ env.UPDATED_VERSION }}
+          delete-branch: true
+          title: Update version to ${{ env.UPDATED_VERSION }}
+          body: This pull request updates the project version to ${{ env.UPDATED_VERSION }}
+          base: snapshot-version
+
       - name: Print Updated Version
         run: |
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
-        shell: bash
-
-      - name: Deploy snapshot
-        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
-        run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
-        env:
-          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
-          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
         shell: bash
