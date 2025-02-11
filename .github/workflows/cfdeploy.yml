@@ -49,7 +49,7 @@ jobs:
         id: set_repository_id
         run: |
           if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
-            echo "Using REPOSITORY_ID from secrets'
+            echo "Using REPOSITORY_ID from secrets"
             echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
           else
             if [ -z "${{ github.event.inputs.repository_id }}" ]; then
