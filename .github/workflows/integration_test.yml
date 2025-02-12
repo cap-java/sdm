@@ -41,7 +41,6 @@ jobs:
 
       - name: Login to Cloud Foundry
         run: |
-          echo "Org Name: ${{ secrets.CF_ORG }}"
           echo "Space Name: ${{ steps.determine_space.outputs.space }}"
           cf login -a ${{ secrets.CF_API }} \
             -u ${{ secrets.CF_USER }} \
@@ -49,35 +48,46 @@ jobs:
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Fetch and Escape Client Secret
-        id: fetch_secret
+      - name: Fetch and Escape Client Details
+        id: fetch_credentials
         run: |
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
+          
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
           binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
             echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
+          
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo "Error: clientSecret is not set or is null"; exit 1;
           fi
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "Error: clientID is not set or is null"; exit 1;
+          fi
+          
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
+          echo "::set-output name=CLIENT_ID::$clientID"
 
       - name: Run integration tests
         env:
-          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
           appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
+          clientID="${{ env.CLIENT_ID }}"
           clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
