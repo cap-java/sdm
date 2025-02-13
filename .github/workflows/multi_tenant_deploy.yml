@@ -1,6 +1,8 @@
 name: Build Cloud Cap Samples Java
 
 on:
+  push:
+    branches: [cfdeploy]
   workflow_dispatch:
 
 jobs:
