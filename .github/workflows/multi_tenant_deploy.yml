@@ -5,12 +5,12 @@ name: Build Cloud Cap Samples Java
 on:
   # Trigger the workflow on push to main branch and manual runs.
   push:
-    branches: [cfdeploy]
+    branches: [multi_tenant_deploy]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: cap-java
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout this repository
