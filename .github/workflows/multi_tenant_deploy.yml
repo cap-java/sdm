@@ -1,8 +1,11 @@
+# .github/workflows/build.yml
+
 name: Build Cloud Cap Samples Java
 
 on:
+  # Trigger the workflow on push to main branch and manual runs.
   push:
-    branches: [cfdeploy]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -16,9 +19,16 @@ jobs:
     - name: Set up JDK 21
       uses: actions/setup-java@v3
       with:
-        distribution: 'temurin' # This specifies the distribution of Java. Temurin is a popular choice.
-        java-version: '21'     # This specifies the use of Java 21.
+        distribution: 'temurin'
+        java-version: '21'
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16' # You can specify a version depending on your needs.
+
+    - name: Install MBT
+      run: npm install -g mbt
 
     - name: Clone the cloud-cap-samples-java repo
       run: git clone --depth 1 --branch main https://github.com/vibhutikumar07/cloud-cap-samples-java.git
