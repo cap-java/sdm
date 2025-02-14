@@ -2,9 +2,13 @@ name: Build Cloud Cap Samples Java
 
 on:
   # Trigger the workflow on push to main branch and manual runs.
-  push:
-    branches: [multi_tenant_deploy]
+  #push:
+   # branches: [multi_tenant_deploy]
   workflow_dispatch:
+    inputs:
+      cf_space:
+        description: 'Specify the Cloud Foundry space to deploy to'
+        required: true
 
 jobs:
   build:
@@ -41,3 +45,17 @@ jobs:
           echo "java version"
           java --version
           mbt build
+
+    - name: Deploy to Cloud Foundry
+      run: | 
+          echo "Deploying to ${{ github.event.inputs.cf_space }}......"
+          
+          # Install cf CLI plugin
+          cf install-plugin multiapps -f
+
+          # Login to Cloud Foundry again to ensure session is active
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+
+          # Deploy the application
+          echo "Running cf deploy"
+          cf deploy mta_archives/bookshop-mt_1.0.0.mta -f
