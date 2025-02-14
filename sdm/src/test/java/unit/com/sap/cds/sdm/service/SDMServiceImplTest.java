@@ -3,6 +3,7 @@ package unit.com.sap.cds.sdm.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
@@ -1167,9 +1168,10 @@ public class SDMServiceImplTest {
       when(entity.getContent()).thenReturn(inputStream);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
-
+      Map<String, String> secondaryTypes = new HashMap<>();
       int responseCode =
-          sdmServiceImpl.renameAttachments(jwtToken, mockSdmCredentials, cmisDocument);
+          sdmServiceImpl.renameAttachments(
+              jwtToken, mockSdmCredentials, cmisDocument, secondaryTypes);
 
       // Verify the response code
       assertEquals(200, responseCode);

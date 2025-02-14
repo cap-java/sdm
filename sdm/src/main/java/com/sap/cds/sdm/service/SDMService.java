@@ -6,6 +6,8 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.json.JSONObject;
 
 public interface SDMService {
@@ -42,8 +44,15 @@ public interface SDMService {
       throws IOException;
 
   public int renameAttachments(
-      String jwtToken, SDMCredentials sdmCredentials, CmisDocument cmisDocument) throws IOException;
+      String jwtToken,
+      SDMCredentials sdmCredentials,
+      CmisDocument cmisDocument,
+      Map<String, String> updatedSecondaryProperties)
+      throws IOException;
 
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException;
+
+  public List<String> getSecondaryTypes(
+      String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws IOException;
 }

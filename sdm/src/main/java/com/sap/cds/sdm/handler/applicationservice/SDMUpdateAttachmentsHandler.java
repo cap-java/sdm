@@ -3,6 +3,8 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -11,7 +13,6 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
-import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
@@ -23,6 +24,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +91,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
+    System.out.println("Attachments : " + attachments);
     while (iterator.hasNext()) {
       Map<String, Object> attachment = iterator.next();
       processAttachment(
@@ -107,18 +110,61 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
+    List<String> keysList = new ArrayList<>(attachment.keySet());
+    List<String> secondaryTypeProperties = new ArrayList<>();
+    secondaryTypeProperties.add("fileName");
+    if (attachmentEntity.isPresent()) {
+      CdsEntity entity = attachmentEntity.get();
+      for (String key : keysList) {
+        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+          continue; // Skip processing for DRAFT_READONLY_CONTEXT
+        }
+        CdsElement element = entity.getElement(key);
+        if (element != null) {
+          Optional<CdsAnnotation<Object>> annotation = element.findAnnotation("@cmisSecondaryType");
+          if (annotation.isPresent()) {
+            secondaryTypeProperties.add(element.getName());
+          }
+        }
+      }
+    } else {
+      System.out.println("Entity not found.");
+    }
+
+    Map<String, Object> propertiesMap = new HashMap<>();
+    for (String property : secondaryTypeProperties) {
+      Object value = attachment.get(property);
+      propertiesMap.put(property, value);
+    }
+    System.out.println("Properties Map : " + propertiesMap);
+
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
-    String fileNameInDB =
-        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-    String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
-    if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-      if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
-        fileNameWithRestrictedCharacters.add(filenameInRequest);
-        attachment.replace("fileName", fileNameInSDM);
-        return;
+    List<String> propertiesInDB = new ArrayList<>();
+    propertiesInDB =
+        DBQuery.getpropertiesForID(
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+    System.out.println("Properties in DB" + propertiesInDB);
+    // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
+    Map<String, String> updatedSecondaryProperties = new HashMap<>();
+    for (String property : secondaryTypeProperties) {
+      String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
+      Object valueInMap = propertiesMap.get(property);
+
+      if (valueInMap != null && !valueInMap.toString().equals(valueInDB)) {
+        updatedSecondaryProperties.put(property, valueInMap.toString());
       }
+    }
+    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
+
+    if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+      fileNameWithRestrictedCharacters.add(filenameInRequest);
+      // attachment.replace("fileName", fileNameInSDM);
+      return;
+    }
+
+    if (!updatedSecondaryProperties.isEmpty()) {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
@@ -126,26 +172,41 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           sdmService.renameAttachments(
               context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
               TokenHandler.getSDMCredentials(),
-              cmisDocument);
-      switch (responseCode) {
-        case 403:
-          // SDM Roles for user are missing
-          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
-
-        case 409:
-          duplicateFileNameList.add(filenameInRequest);
-          attachment.replace("fileName", fileNameInSDM);
-          break;
-
-        case 200:
-        case 201:
-          // Success cases, do nothing
-          break;
-
-        default:
-          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-      }
+              cmisDocument,
+              updatedSecondaryProperties);
     }
+
+    // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+    //   if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+    //
+    //   }
+    //   CmisDocument cmisDocument = new CmisDocument();
+    //   cmisDocument.setFileName(filenameInRequest);
+    //   cmisDocument.setObjectId(objectId);
+    //   int responseCode =
+    //       sdmService.renameAttachments(
+    //           context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+    //           TokenHandler.getSDMCredentials(),
+    //           cmisDocument);
+    //   switch (responseCode) {
+    //     case 403:
+    //       // SDM Roles for user are missing
+    //       throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+
+    //     case 409:
+    //       duplicateFileNameList.add(filenameInRequest);
+    //       attachment.replace("fileName", fileNameInSDM);
+    //       break;
+
+    //     case 200:
+    //     case 201:
+    //       // Success cases, do nothing
+    //       break;
+
+    //     default:
+    //       throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
+    //   }
+    // }
   }
 
   private String getFileNameInSDM(

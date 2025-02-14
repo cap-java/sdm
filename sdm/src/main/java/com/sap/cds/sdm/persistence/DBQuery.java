@@ -40,6 +40,28 @@ public class DBQuery {
     return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
   }
 
+  public static List<String> getpropertiesForID(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String id,
+      List<String> properties) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(properties.toArray(new String[0]))
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    System.out.println("DB query result: " + result);
+    if (result.rowCount() == 0) {
+      return null;
+    }
+    List<String> values = new ArrayList<>();
+    for (String property : properties) {
+      Object value = result.list().get(0).get(property);
+      values.add(value != null ? value.toString() : null);
+    }
+    return values;
+  }
+
   public static void addAttachmentToDraft(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,

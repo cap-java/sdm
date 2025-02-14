@@ -7,12 +7,13 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID =
+      "43e88401-59f7-4d87-8cf2-ccfccc1f0251"; // System.getenv("REPOSITORY_ID");
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
       "The following files could not be renamed as they already exist:\n%s\n";
-  public static final String COULD_NOT_RENAME_THE_ATTACHMENT = "Could not rename the attachment";
+  public static final String COULD_NOT_UPDATE_THE_ATTACHMENT = "Could not update the attachment";
   public static final String ATTACHMENT_NOT_FOUND = "Attachment not found";
   public static final String DUPLICATE_FILES_ERROR = "%s already exists.";
   public static final String GENERIC_ERROR = "Could not %s the document.";
@@ -24,9 +25,9 @@ public class SDMConstants {
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
-      "You do not have the required permissions to rename attachments. Kindly contact the admin";
+      "You do not have the required permissions to update attachments. Kindly contact the admin";
   public static final String SDM_ROLES_ERROR_MESSAGE =
-      "Unable to rename the file due to an error at the server";
+      "Unable to update the file due to an error at the server";
   public static final String SDM_ENV_NAME = "sdm";
 
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
