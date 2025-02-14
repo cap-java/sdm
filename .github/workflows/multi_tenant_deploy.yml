@@ -25,11 +25,6 @@ jobs:
       with:
         node-version: '18' # Change this to at least version 18
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16' # You can specify a version depending on your needs.
-
     - name: Install MBT
       run: npm install -g mbt
 
