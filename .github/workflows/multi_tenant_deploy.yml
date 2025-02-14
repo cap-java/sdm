@@ -121,13 +121,6 @@ jobs:
            <pluginGroups>
               <pluginGroup>com.sap.ldi</pluginGroup>
            </pluginGroups>
-           <servers>
-             <server>
-               <id>artifactory</id>
-               <username>$SERVER_USER</username>
-               <password>$SERVER_PASSWORD</password>
-             </server>
-           </servers>
         </settings>
         EOF
 
