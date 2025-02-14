@@ -1,5 +1,3 @@
-# .github/workflows/build.yml
-
 name: Build Cloud Cap Samples Java
 
 on:
@@ -30,114 +28,112 @@ jobs:
       run: npm install -g mbt
 
     - name: Set up Maven settings
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
       run: |
         mkdir -p $HOME/.m2
-        echo """<settings xmlns=\"http://maven.apache.org/SETTINGS/1.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd\">
-          <!--  Id: com.sap:artifactory:1.0.0:settings.xml  -->
-          <profiles>
-             <profile>
-                <id>release.build</id>
-                <pluginRepositories>
-                   <pluginRepository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
-                   </pluginRepository>
-                </pluginRepositories>
-                <repositories>
-                   <repository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
-                   </repository>
-                </repositories>
-                <properties>
-                   <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
-                   <tycho.localArtifacts>ignore</tycho.localArtifacts>
-                </properties>
-             </profile>
-             <profile>
-                <id>milestone.build</id>
-                <pluginRepositories>
-                   <pluginRepository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
-                   </pluginRepository>
-                </pluginRepositories>
-                <repositories>
-                   <repository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
-                   </repository>
-                </repositories>
-                <properties>
-                   <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
-                   <tycho.localArtifacts>ignore</tycho.localArtifacts>
-                </properties>
-             </profile>
-             <profile>
-                <id>snapshot.build</id>
-                <pluginRepositories>
-                   <pluginRepository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
-                   </pluginRepository>
-                </pluginRepositories>
-                <repositories>
-                   <repository>
-                      <id>cap-java</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>
-                   </repository>
+        cat <<EOF > $HOME/.m2/settings.xml
+        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+           <profiles>
+              <profile>
+                 <id>release.build</id>
+                 <pluginRepositories>
+                    <pluginRepository>
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                    </pluginRepository>
+                 </pluginRepositories>
+                 <repositories>
                     <repository>
-                      <id>artifactory</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
-                   </repository>
-                   <repository>
-                      <id>cap-sdm-java</id>
-                      <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>
-                   </repository>
-                </repositories>
-                <properties>
-                   <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
-                   <tycho.localArtifacts>ignore</tycho.localArtifacts>
-                </properties>
-             </profile>
-             <profile>
-                <id>sonar</id>
-                <activation>
-                   <activeByDefault>true</activeByDefault>
-                </activation>
-                <properties>
-                   <sonar.host.url>https://sonar.tools.sap</sonar.host.url>
-                   <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
-                   <tycho.localArtifacts>ignore</tycho.localArtifacts>
-                </properties>
-             </profile>
-          </profiles>
-          <activeProfiles>
-             <activeProfile>snapshot.build</activeProfile>
-          </activeProfiles>
-          <pluginGroups>
-             <pluginGroup>com.sap.ldi</pluginGroup>
-          </pluginGroups>
-          <servers>
-            <server>
-              <id>artifactory</id>
-              <username>${env.SERVER_USER}</username>
-              <password>${env.SERVER_PASSWORD}</password>
-            </server>
-          </servers>
-        </settings>""" > $HOME/.m2/settings.xml
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-releases/</url>
+                    </repository>
+                 </repositories>
+                 <properties>
+                    <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                    <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                 </properties>
+              </profile>
+              <profile>
+                 <id>milestone.build</id>
+                 <pluginRepositories>
+                    <pluginRepository>
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                    </pluginRepository>
+                 </pluginRepositories>
+                 <repositories>
+                    <repository>
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-milestones/</url>
+                    </repository>
+                 </repositories>
+                 <properties>
+                    <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                    <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                 </properties>
+              </profile>
+              <profile>
+                 <id>snapshot.build</id>
+                 <pluginRepositories>
+                    <pluginRepository>
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                    </pluginRepository>
+                 </pluginRepositories>
+                 <repositories>
+                    <repository>
+                       <id>cap-java</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-java/</url>
+                    </repository>
+                    <repository>
+                       <id>artifactory</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/build-snapshots/</url>
+                    </repository>
+                    <repository>
+                       <id>cap-sdm-java</id>
+                       <url>https://int.repositories.cloud.sap/artifactory/proxy-cap-sdm-java/</url>
+                    </repository>
+                 </repositories>
+                 <properties>
+                    <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                    <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                 </properties>
+              </profile>
+              <profile>
+                 <id>sonar</id>
+                 <activation>
+                    <activeByDefault>true</activeByDefault>
+                 </activation>
+                 <properties>
+                    <sonar.host.url>https://sonar.tools.sap</sonar.host.url>
+                    <tycho.disableP2Mirrors>true</tycho.disableP2Mirrors>
+                    <tycho.localArtifacts>ignore</tycho.localArtifacts>
+                 </properties>
+              </profile>
+           </profiles>
+           <activeProfiles>
+              <activeProfile>snapshot.build</activeProfile>
+           </activeProfiles>
+           <pluginGroups>
+              <pluginGroup>com.sap.ldi</pluginGroup>
+           </pluginGroups>
+           <servers>
+             <server>
+               <id>artifactory</id>
+               <username>$SERVER_USER</username>
+               <password>$SERVER_PASSWORD</password>
+             </server>
+           </servers>
+        </settings>
+        EOF
 
     - name: Clone the cloud-cap-samples-java repo
       run: git clone --depth 1 --branch main https://github.com/vibhutikumar07/cloud-cap-samples-java.git
 
-    - name: Change directory to cloud-cap-samples-java
-      working-directory: cloud-cap-samples-java
-      run: pwd
-
     - name: Run mbt build
       working-directory: cloud-cap-samples-java
       run: mbt build
-
-    env:
-      SERVER_USER: ${{ secrets.SERVER_USER }}
-      SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
