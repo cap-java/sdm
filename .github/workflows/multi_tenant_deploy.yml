@@ -1,9 +1,6 @@
 name: Build Cloud Cap Samples Java
 
 on:
-  # Trigger the workflow on push to main branch and manual runs.
-  push:
-   branches: [multi_tenant_deploy]
   workflow_dispatch:
     inputs:
       cf_space:
