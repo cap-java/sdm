@@ -103,6 +103,16 @@
             <groupId>com.sap.cloud.security.xsuaa</groupId>
             <artifactId>token-client</artifactId>
             <version>${token-client-version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.checkerframework</groupId>
+                    <artifactId>checker-qual</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>java-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
@@ -170,8 +180,25 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
                 </exclusion>
+                 <exclusion>
+                    <groupId>org.checkerframework</groupId>
+                    <artifactId>checker-qual</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>env</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>java-api</artifactId>
+                </exclusion>
             </exclusions>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.security</groupId>
+            <artifactId>java-api</artifactId>
+            <version>3.5.8</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -252,6 +279,18 @@
                 <exclusion>
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.security</groupId>
+                    <artifactId>spring-security-oauth2-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>resourceserver-security-spring-boot-starter</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>java-api</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
