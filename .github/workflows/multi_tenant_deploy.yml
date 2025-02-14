@@ -46,6 +46,7 @@ jobs:
           mbt build
 
     - name: Deploy to Cloud Foundry
+      working-directory: cloud-cap-samples-java
       run: | 
           echo "Deploying to ${{ github.event.inputs.cf_space }}......"
           
