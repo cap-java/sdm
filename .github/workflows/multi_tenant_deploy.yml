@@ -57,5 +57,8 @@ jobs:
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE_RISHI }}
 
           # Deploy the application
+          echo "Current directory.."
+          pwd
+          ls -lrth
           echo "Running cf deploy"
           cf deploy mta_archives/bookshop-mt_1.0.0.mta -f
