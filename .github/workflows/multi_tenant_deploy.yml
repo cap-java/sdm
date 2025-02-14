@@ -1,8 +1,6 @@
 name: Build Cloud Cap Samples Java
 
 on:
-  push:
-    branches: [multi_tenant_deploy]
   workflow_dispatch:
     inputs:
       cf_space:
