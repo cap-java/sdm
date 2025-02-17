@@ -230,17 +230,19 @@ public class SDMServiceImpl implements SDMService {
 
     String folderId = null;
     String repositoryId = null;
+    String repoId = SDMConstants.REPOSITORY_ID;
     for (Map<String, Object> attachment : resultList) {
       if (attachment.get("folderId") != null) {
-        folderId = attachment.get("folderId").toString();
         repositoryId = attachment.get("repositoryId").toString();
+        // check if folderId exists for the repositoryId if not then make folderId null else
+        // continue
+        if (repoId.equalsIgnoreCase(repositoryId)) {
+          folderId = attachment.get("folderId").toString();
+          break;
+        }
       }
     }
-    String repoId = SDMConstants.REPOSITORY_ID;
-    // check if folderId exists for the repositoryId if not then make folderId null else continue
-    if (!repoId.equalsIgnoreCase(repositoryId)) {
-      folderId = null;
-    }
+
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {

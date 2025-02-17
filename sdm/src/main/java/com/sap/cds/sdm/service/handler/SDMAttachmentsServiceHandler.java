@@ -179,7 +179,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     for (Map<String, Object> attachment : resultList) {
       String resultFileName = (String) attachment.get("fileName");
       String resultId = (String) attachment.get("ID");
-      if (filename.equals(resultFileName) && !fileid.equals(resultId)) {
+      String repositoryId = (String) attachment.get("repositoryId");
+      // add a check with repositoryId
+      if (filename.equals(resultFileName)
+          && !fileid.equals(resultId)
+          && SDMConstants.REPOSITORY_ID.equals(repositoryId)) {
         duplicate = attachment;
         break;
       }
