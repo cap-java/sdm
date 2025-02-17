@@ -28,8 +28,10 @@ public class SDMUtilsTest {
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment1 = new HashMap<>();
     attachment1.put("fileName", "file1.txt");
+    attachment1.put("repositoryId", "repo1");
     Map<String, Object> attachment2 = new HashMap<>();
     attachment2.put("fileName", "file1.txt");
+    attachment2.put("repositoryId", "repo1");
     attachments.add(attachment1);
     attachments.add(attachment2);
     entity.put("attachments", attachments);
