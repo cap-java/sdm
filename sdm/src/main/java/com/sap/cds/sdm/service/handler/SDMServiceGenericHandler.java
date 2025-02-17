@@ -36,13 +36,6 @@ public class SDMServiceGenericHandler implements EventHandler {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
     System.out.println("Handling event: " + eventName);
-    CdsDataProcessor.Converter converter =
-        (path) -> {
-          System.out.println("PATH " + path.target().values());
-          return path;
-          //      handleAttachmentForEntity(existingDataList, eventFactory,
-          //              eventContext, path, (InputStream) value);
-        };
 
     // ApplicationHandlerHelper.callProcessor(entity, data,
     // ApplicationHandlerHelper.MEDIA_CONTENT_FILTER, converter);
