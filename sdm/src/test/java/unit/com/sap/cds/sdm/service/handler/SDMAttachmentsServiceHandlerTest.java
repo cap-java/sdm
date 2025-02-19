@@ -131,6 +131,7 @@ public class SDMAttachmentsServiceHandlerTest {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
+    mockattachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
@@ -227,6 +228,7 @@ public class SDMAttachmentsServiceHandlerTest {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
+    mockattachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
@@ -474,6 +476,7 @@ public class SDMAttachmentsServiceHandlerTest {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
+    mockattachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
@@ -543,6 +546,7 @@ public class SDMAttachmentsServiceHandlerTest {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
+    mockattachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
@@ -611,6 +615,7 @@ public class SDMAttachmentsServiceHandlerTest {
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
+    mockattachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     MediaData mockMediaData = mock(MediaData.class);
     Messages mockMessages = mock(Messages.class);
@@ -696,12 +701,12 @@ public class SDMAttachmentsServiceHandlerTest {
     // Creating a map with duplicate filename but different file ID
     Map<String, Object> attachment1 = new HashMap<>();
     attachment1.put("fileName", "sample.pdf");
-    attachment1.put("ID", "123"); // Different ID, not a duplicate
-
+    attachment1.put("ID", "1234"); // Different ID, not a duplicate
+    attachment1.put("repositoryId", "repoid");
     Map<String, Object> attachment2 = new HashMap<>();
     attachment2.put("fileName", "sample.pdf");
     attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
-
+    attachment1.put("repositoryId", "repoid");
     mockedResultList.add((Map) attachment1);
     mockedResultList.add((Map) attachment2);
 
@@ -716,6 +721,38 @@ public class SDMAttachmentsServiceHandlerTest {
 
     // Assert that a duplicate is found
     assertTrue(isDuplicate, "Expected to find a duplicate");
+  }
+
+  @Test
+  void testDuplicateCheck_WithDuplicateFilesFor2DifferentRepositories() {
+    Result result = mock(Result.class);
+
+    // Mocking a raw list of maps
+    List<Map> mockedResultList = new ArrayList<>();
+
+    // Creating a map with duplicate filename but different file ID
+    Map<String, Object> attachment1 = new HashMap<>();
+    attachment1.put("fileName", "sample.pdf");
+    attachment1.put("ID", "123"); // Different ID, not a duplicate
+    attachment1.put("repositoryId", "repoid");
+    Map<String, Object> attachment2 = new HashMap<>();
+    attachment2.put("fileName", "sample.pdf");
+    attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
+    attachment1.put("repositoryId", "repoid");
+    mockedResultList.add((Map) attachment1);
+    mockedResultList.add((Map) attachment2);
+
+    // Mocking the result to return the list containing the attachments
+    when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
+
+    String filename = "sample.pdf";
+    String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
+
+    // Checking for duplicate
+    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
+
+    // Assert that a duplicate is found
+    assertTrue(!isDuplicate, "Expected to find a duplicate");
   }
 
   @Test

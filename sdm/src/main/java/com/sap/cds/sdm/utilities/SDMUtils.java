@@ -26,7 +26,9 @@ public class SDMUtils {
         while (iterator.hasNext()) {
           Map<String, Object> attachment = iterator.next();
           String filenameInRequest = (String) attachment.get("fileName");
-          if (!uniqueFilenames.add(filenameInRequest)) {
+          String repositoryInRequest = (String) attachment.get("repositoryId");
+          String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
+          if (!uniqueFilenames.add(fileRepositorySpecific)) {
             duplicateFilenames.add(filenameInRequest);
           }
         }
