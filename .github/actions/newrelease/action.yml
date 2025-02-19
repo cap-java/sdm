@@ -35,6 +35,8 @@ runs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git checkout -b Release_v$VERSION
-        git commit -am "Update version to $VERSION"
+        # Stage the untracked files
+        git add cap-notebook/version.txt
+        git commit -am "Update version to Release_v$VERSION"
         git push --set-upstream origin Release_v$VERSION
       shell: bash
