@@ -6,6 +6,7 @@ on:
       cf_space:
         description: 'Specify the Cloud Foundry space to run integration tests on'
         required: true
+
 jobs:
   integration-test:
     runs-on: ubuntu-latest
@@ -26,60 +27,78 @@ jobs:
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli jq
+
+      - name: Determine Cloud Foundry Space
+        id: determine_space
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+            space="${{ secrets.CF_SPACE }}"
+          else
+            space="${{ github.event.inputs.cf_space }}"
+          fi
+          echo "Space determined: $space"
+          echo "::set-output name=space::$space"
+
       - name: Login to Cloud Foundry
         run: |
+          echo "Space Name: ${{ steps.determine_space.outputs.space }}"
           cf login -a ${{ secrets.CF_API }} \
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
-      - name: Fetch and Escape Client Secret
-        id: fetch_secret
+            -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Fetch and Escape Client Details
+        id: fetch_credentials
         run: |
-          # Fetch the service instance GUID
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
-          # Fetch the binding GUID
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
           
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
           binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
             echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
           
-          # Fetch the clientSecret
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo "Error: clientSecret is not set or is null"; exit 1;
           fi
-          
-          # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "Error: clientID is not set or is null"; exit 1;
+          fi
+          
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
+          echo "::set-output name=CLIENT_ID::$clientID"
+
       - name: Run integration tests
         env:
-          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
         run: |
-          set -e  # Enable error checking
+          set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          # Gather secrets and other values
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
+          clientID="${{ env.CLIENT_ID }}"
           clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
-          # Ensure all required variables are set
+
           if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
           if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
           if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
           if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
           if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
           if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
-          # Function to partially mask sensitive information for logging
+
           mask() {
             local value="$1"
             if [ ${#value} -gt 6 ]; then
@@ -88,7 +107,7 @@ jobs:
               echo "${value:0:2}*****"
             fi
           }
-          # Update properties file with real values
+
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           authUrl=$authUrl
@@ -97,5 +116,5 @@ jobs:
           username=$username
           password=$password
           EOL
-          # Run Maven integration tests
+
           mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
