@@ -1,4 +1,4 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -247,16 +247,16 @@
             <name>Artifactory_DMZ</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </repository>
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
-        </repository>
         <snapshotRepository>
             <id>github</id>
             <name>GitHub Packages Snapshots</name>
-            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
         </snapshotRepository>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
+        </repository>
     </distributionManagement>
 
     <scm>
