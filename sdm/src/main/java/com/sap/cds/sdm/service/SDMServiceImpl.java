@@ -18,6 +18,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -153,26 +154,27 @@ public class SDMServiceImpl implements SDMService {
     // String fileName = cmisDocument.getFileName();
 
     HttpPost updateRequest = new HttpPost(sdmUrl);
+    Map<String, String> updateRequestBody = new HashMap<>();
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
     // Add additional form fields
-    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyId[0]", "cmis:secondaryObjectTypeIds", ContentType.TEXT_PLAIN);
+    updateRequestBody.put("cmisaction", "update");
+    updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
+
     int index = 0;
     for (String type : secondaryTypes) {
       String propertyValueKey = "propertyValue[0][" + index + "]";
-      builder.addTextBody(propertyValueKey, type, ContentType.TEXT_PLAIN);
+      updateRequestBody.put(propertyValueKey, type);
       index++;
     }
+
     Iterator<Map.Entry<String, String>> iterator = updatedSecondaryProperties.entrySet().iterator();
     if (!updatedSecondaryProperties.isEmpty()) {
       String firstKey = updatedSecondaryProperties.keySet().iterator().next();
       if ("fileName".equals(firstKey)) {
-        builder.addTextBody("propertyId[1]", "cmis:name", ContentType.TEXT_PLAIN);
-        builder.addTextBody(
-            "propertyValue[1]",
-            updatedSecondaryProperties.entrySet().iterator().next().getValue(),
-            ContentType.TEXT_PLAIN);
-
+        updateRequestBody.put("propertyId[1]", "cmis:name");
+        updateRequestBody.put(
+            "propertyValue[1]", updatedSecondaryProperties.entrySet().iterator().next().getValue());
         if (iterator.hasNext()) {
           iterator.next(); // Skip the first entry
         }
@@ -182,16 +184,38 @@ public class SDMServiceImpl implements SDMService {
       }
     }
 
+    Map<String, String> updateRequestPropertiesBody = new HashMap<>();
     while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
+      System.out.println("Entry : " + entry.getKey() + " : " + entry.getValue());
+      if (entry.getKey().equals("cmis___rm_holdIds")) {
+        if (entry.getValue() == null) {
+          String updatedKey = "propertyId[" + index + "]";
+          String updatedValue = entry.getKey().replace("___", ":");
+          updateRequestPropertiesBody.put(updatedKey, updatedValue);
+          break;
+        }
+      }
       String updatedKey = "propertyId[" + index + "]";
       String updatedValue = entry.getKey().replace("___", ":");
-      builder.addTextBody(updatedKey, updatedValue, ContentType.TEXT_PLAIN);
+      updateRequestPropertiesBody.put(updatedKey, updatedValue);
 
       String valueKey = "propertyValue[" + index + "]";
-      builder.addTextBody(valueKey, entry.getValue(), ContentType.TEXT_PLAIN);
-
+      updateRequestPropertiesBody.put(valueKey, entry.getValue());
       index++;
+    }
+
+    System.out.println("updateRequestBody : " + updateRequestBody);
+    System.out.println("updateRequestPropertiesBody : " + updateRequestPropertiesBody);
+
+    // Populate builder with values from updateRequestBody
+    for (Map.Entry<String, String> entry : updateRequestBody.entrySet()) {
+      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
+    }
+
+    // Populate builder with values from updateRequestPropertiesBody
+    for (Map.Entry<String, String> entry : updateRequestPropertiesBody.entrySet()) {
+      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
     }
     System.out.println("builder : " + builder);
     HttpEntity multipart = builder.build();
@@ -212,7 +236,6 @@ public class SDMServiceImpl implements SDMService {
       HttpEntity responseEntity = response.getEntity();
       if (responseEntity != null) {
         String responseString = EntityUtils.toString(responseEntity, "UTF-8");
-        System.out.println("Response content: " + responseString);
       }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
@@ -235,7 +258,6 @@ public class SDMServiceImpl implements SDMService {
       List<String> result = new ArrayList<>();
       if (responseEntity != null) {
         String responseString = EntityUtils.toString(responseEntity, "UTF-8");
-        System.out.println("Response content: " + responseString);
         JSONArray jsonArray = new JSONArray(responseString);
         JSONArray secondaryTypesJSON = new JSONArray();
         for (int i = 0; i < jsonArray.length(); i++) {
@@ -280,12 +302,28 @@ public class SDMServiceImpl implements SDMService {
   }
 
   public static void extractTypeIds(JSONArray jsonArray, List<String> result) {
+    String secondaryType = new String();
+    List<String> excludedSecondaryTypes = new ArrayList<>();
+    Collections.addAll(
+        excludedSecondaryTypes,
+        "cmis:rm_clientMgtRetention",
+        "cmis:rm_destructionRetention",
+        "sap:createLink",
+        "sap:restoreVersion",
+        "sap:createFavorite");
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
       // Extract and store the type ID if it exists
       if (jsonObject.has("type") && jsonObject.getJSONObject("type").has("id")) {
-        System.out.println("Found a type : " + jsonObject.getJSONObject("type").getString("id"));
+        secondaryType = jsonObject.getJSONObject("type").getString("id");
+
+        // Check if the secondaryType is in the excludedSecondaryTypes list
+        if (excludedSecondaryTypes.contains(secondaryType)) {
+          continue; // Skip the current iteration
+        }
+
+        System.out.println("Found a type : " + secondaryType);
         result.add(jsonObject.getJSONObject("type").getString("id"));
       }
 

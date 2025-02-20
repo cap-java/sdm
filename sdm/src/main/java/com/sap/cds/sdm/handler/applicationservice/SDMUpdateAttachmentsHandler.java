@@ -13,6 +13,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
@@ -112,16 +113,22 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       throws IOException {
     List<String> keysList = new ArrayList<>(attachment.keySet());
     List<String> secondaryTypeProperties = new ArrayList<>();
-    secondaryTypeProperties.add("fileName");
+    secondaryTypeProperties.add(
+        "fileName"); // Adding this separately, because filename needs to be included in
+    // updateProperties call, but it will not have the AdditionalProperty
+    // annotation
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
         if ("DRAFT_READONLY_CONTEXT".equals(key)) {
-          continue; // Skip processing for DRAFT_READONLY_CONTEXT
+          continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
-          Optional<CdsAnnotation<Object>> annotation = element.findAnnotation("@cmisSecondaryType");
+          Optional<CdsAnnotation<Object>> annotation =
+              element.findAnnotation(
+                  "@AdditionalProperty"); // Checking if it's a Secondary Type, if so we need to add
+          // it to updateProperties call
           if (annotation.isPresent()) {
             secondaryTypeProperties.add(element.getName());
           }
@@ -131,32 +138,52 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       System.out.println("Entity not found.");
     }
 
-    Map<String, Object> propertiesMap = new HashMap<>();
+    Map<String, Object> propertiesMap =
+        new HashMap<>(); // Checking and storing the modified values of the secondary type
+    // properties
     for (String property : secondaryTypeProperties) {
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
     System.out.println("Properties Map : " + propertiesMap);
 
-    String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
+    String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
     List<String> propertiesInDB = new ArrayList<>();
     propertiesInDB =
         DBQuery.getpropertiesForID(
-            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+            attachmentEntity.get(),
+            persistenceService,
+            id,
+            secondaryTypeProperties); // Checking the values of the secondary type properties in DB
     System.out.println("Properties in DB" + propertiesInDB);
     // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     for (String property : secondaryTypeProperties) {
       String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
       Object valueInMap = propertiesMap.get(property);
-
-      if (valueInMap != null && !valueInMap.toString().equals(valueInDB)) {
-        updatedSecondaryProperties.put(property, valueInMap.toString());
+      if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
+        throw new ServiceException(
+            "The properties could not be modified because of an active hold. Please set the value of 'hold' to empty and try again.",
+            null); // for "hold". This scenario needs to be handled for delete
+      }
+      if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
+        continue; // for "hold", in case the value in DB was null and the current value is null,
+        // there is no change required, so this field is skipped
+      }
+      if (valueInMap != valueInDB) {
+        if (valueInMap != null) {
+          updatedSecondaryProperties.put(property, valueInMap.toString());
+        } else {
+          updatedSecondaryProperties.put(property, null);
+        }
       }
     }
-    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
+    System.out.println(
+        "Updated Secondary Properties : "
+            + updatedSecondaryProperties); // This contains the updated values of the secondary type
+    // properties.
 
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
