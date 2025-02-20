@@ -237,7 +237,7 @@
     </build>
 
     <distributionManagement>
-        <snapshotRepository>
+<!--         <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
@@ -246,7 +246,7 @@
             <id>artifactory</id>
             <name>Artifactory_DMZ</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </repository>
+        </repository> -->
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
