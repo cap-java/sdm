@@ -53,6 +53,35 @@ jobs:
           cd
           rm -rf .m2/repository/com/sap/cds
 
+      - name: Set up Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          echo "${{ secrets.SERVER_USER }}" > ~/.server_user
+          echo "${{ secrets.SERVER_PASSWORD }}" > ~/.server_password
+          echo "
+<settings xmlns=\"http://maven.apache.org/SETTINGS/1.0.0\"
+          xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+          xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.0.0
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd\">
+   <profiles>
+      <!-- Include your provided profiles here -->
+      <!-- The full settings.xml as you've provided -->
+   </profiles>
+   <activeProfiles>
+      <activeProfile>snapshot.build</activeProfile>
+   </activeProfiles>
+   <pluginGroups>
+      <pluginGroup>com.sap.ldi</pluginGroup>
+   </pluginGroups>
+   <servers>
+      <server>
+        <id>artifactory</id>
+        <username>\${env.SERVER_USER}</username>
+        <password>\${env.SERVER_PASSWORD}</password>
+      </server>
+   </servers>
+</settings>" > ~/.m2/settings.xml
+
       - name: Set REPOSITORY_ID
         id: set_repository_id
         run: |
@@ -79,7 +108,7 @@ jobs:
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           
-          mbt build
+          mbt build -s ~/.m2/settings.xml
 
           # Install cf CLI plugin
           cf install-plugin multiapps -f
