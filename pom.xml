@@ -250,12 +250,12 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/secrets.GITHUB_USERNAME/secrets.REPO_NAME</url>
+            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
         </repository>
         <snapshotRepository>
             <id>github</id>
             <name>GitHub Packages Snapshots</name>
-            <url>https://maven.pkg.github.com/secrets.GITHUB_USERNAME/secrets.REPO_NAME</url>
+            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
         </snapshotRepository>
     </distributionManagement>
 
