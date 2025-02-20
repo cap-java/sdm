@@ -1,4 +1,4 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
@@ -29,9 +29,12 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
         <excluded.generation.package>sdm/generated/</excluded.generation.package>
         <cds.services.version>3.5.0</cds.services.version>
+
         <generation-folder>src/gen</generation-folder>
+
         <test-spring-boot-version>3.2.5</test-spring-boot-version>
         <sdk-bom-version>5.15.0</sdk-bom-version>
         <mockito-bom-version>5.15.2</mockito-bom-version>
@@ -61,6 +64,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-bom</artifactId>
@@ -68,6 +72,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>com.sap.cds</groupId>
                 <artifactId>sdm</artifactId>
@@ -95,6 +100,7 @@
             <groupId>com.sap.cds</groupId>
             <artifactId>cds-services-api</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -107,6 +113,7 @@
             <version>${assertj-core-version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -128,6 +135,7 @@
 
     <build>
         <plugins>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -138,6 +146,7 @@
                     </environmentVariables>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -162,6 +171,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
@@ -187,6 +197,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -205,6 +216,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -220,32 +232,30 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 
     <distributionManagement>
-        <!-- Artifactory Repositories -->
-<!--         <repository>
-            <id>artifactory-release</id>
+        <snapshotRepository>
+            <id>artifactory</id>
+            <name>Artifactory_DMZ-snapshots</name>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+        </snapshotRepository>
+        <repository>
+            <id>artifactory</id>
             <name>Artifactory_DMZ</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </repository>
-        <snapshotRepository>
-            <id>artifactory-snapshot</id>
-            <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </snapshotRepository> -->
-
-        <!-- GitHub Packages Repositories -->
         <repository>
-            <id>github-release</id>
+            <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/cap-java/sdm</url>
+            <url>https://maven.pkg.github.com/secrets.GITHUB_USERNAME/secrets.REPO_NAME</url>
         </repository>
         <snapshotRepository>
-            <id>github-snapshot</id>
+            <id>github</id>
             <name>GitHub Packages Snapshots</name>
-            <url>https://maven.pkg.github.com/cap-java/sdm</url>
+            <url>https://maven.pkg.github.com/secrets.GITHUB_USERNAME/secrets.REPO_NAME</url>
         </snapshotRepository>
     </distributionManagement>
 
