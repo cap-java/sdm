@@ -110,5 +110,5 @@ jobs:
         run: |
           mvn deploy -DskipTests -s ~/.m2/settings.xml
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         shell: bash
