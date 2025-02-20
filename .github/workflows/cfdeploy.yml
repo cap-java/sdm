@@ -29,6 +29,14 @@ jobs:
           java-version: 17
           distribution: 'temurin'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install Cloud MTA Build Tool
+        run: npm install -g mbt
+
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
