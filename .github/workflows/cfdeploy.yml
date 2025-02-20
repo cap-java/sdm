@@ -143,8 +143,8 @@ jobs:
              <servers>
                 <server>
                    <id>artifactory</id>
-                   <username>${{ secrets.SERVER_USER }}</username>
-                   <password>${{ secrets.SERVER_PASSWORD }}</password>
+                   <username>${{ env.SERVER_USER }}</username>
+                   <password>${{ env.SERVER_PASSWORD }}</password>
                 </server>
              </servers>
           </settings>
@@ -153,7 +153,6 @@ jobs:
       - name: Set REPOSITORY_ID
         id: set_repository_id
         run: |
-          cat ~/.m2/settings.xml
           if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
             echo "Using REPOSITORY_ID from secrets"
             echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
@@ -169,6 +168,7 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
+          cat ~/.m2/settings.xml
           echo "Current Branch......"
           git branch
           pwd
@@ -176,9 +176,6 @@ jobs:
           
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
-
-          export MAVEN_CONFIG=/home/runner/.m2/settings.xml
-          export MAVEN_OPTS="-Dorg.apache.maven.user-settings=/home/runner/.m2/settings.xml"
           
           mbt build
 
