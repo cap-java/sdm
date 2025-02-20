@@ -225,7 +225,7 @@
 
     <distributionManagement>
         <!-- Artifactory Repositories -->
-        <repository>
+<!--         <repository>
             <id>artifactory-release</id>
             <name>Artifactory_DMZ</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
@@ -234,7 +234,7 @@
             <id>artifactory-snapshot</id>
             <name>Artifactory_DMZ-snapshots</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </snapshotRepository>
+        </snapshotRepository> -->
 
         <!-- GitHub Packages Repositories -->
         <repository>
