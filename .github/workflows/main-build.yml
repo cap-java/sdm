@@ -40,14 +40,24 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: sapmachine
           cache: maven
-          server-id: artifactory
-          server-username: CAP_DEPLOYMENT_USER
-          server-password: CAP_DEPLOYMENT_PASS
 
       - name: Set up Maven ${{ env.MAVEN_VERSION }}
         uses: stCarolas/setup-maven@v5
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Configure Maven for GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+                  <servers>
+                    <server>
+                      <id>github</id>
+                      <username>${{ github.actor }}</username>
+                      <password>${{ secrets.GITHUB_TOKEN }}</password>
+                    </server>
+                  </servers>
+                </settings>" > ~/.m2/settings.xml
 
       - name: Get Revision
         id: get-revision
@@ -62,19 +72,13 @@ jobs:
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
-          # Check if the version already contains '-SNAPSHOT'
           if [[ $current_version != *-SNAPSHOT ]]; then
             echo "Current version does not contain -SNAPSHOT, updating version..."
-            # Split version into major, minor, and patch parts
             IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
-            # Increment the patch number
             new_patch=$((patch + 1))
-            # Form the new version
             new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
-            # Update the <revision> property in pom.xml
             sed -i "s|<revision>.*</revision>|<revision>${new_version}</revision>|" pom.xml
             echo "Updated version to $new_version"
-            # Commit the version change
             git config --local user.name "github-actions"
             git config --local user.email "github-actions@github.com"
             git add pom.xml
@@ -83,7 +87,6 @@ jobs:
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
-          # Export the updated or original version
           updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
@@ -93,11 +96,19 @@ jobs:
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
 
-      - name: Deploy snapshot
+      - name: Deploy to Artifactory
         if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
           mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
         env:
           CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
           CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+        shell: bash
+
+      - name: Deploy to GitHub Packages
+        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
+        run: |
+          mvn deploy -DskipTests -s ~/.m2/settings.xml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
