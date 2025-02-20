@@ -153,6 +153,7 @@ jobs:
       - name: Set REPOSITORY_ID
         id: set_repository_id
         run: |
+          cat ~/.m2/settings.xml
           if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
             echo "Using REPOSITORY_ID from secrets"
             echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
@@ -176,7 +177,7 @@ jobs:
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           
-          mbt build --settings ~/.m2/settings.xml
+          mbt build
 
           # Install cf CLI plugin
           cf install-plugin multiapps -f
