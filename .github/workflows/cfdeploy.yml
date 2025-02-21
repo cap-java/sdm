@@ -42,20 +42,7 @@ jobs:
             exit 1
           fi
 
-      # Clean up local Maven repository for a fresh build
-      - name: Deleting the sdm directory for fresh build
-        run: |
-          rm -rf ~/.m2/repository/com/sap/cds
-
-      # Download packages from GitHub Packages
-      - name: Login to GitHub Packages
-        run: echo "${{ secrets.GIT_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Download dependencies from GitHub Packages
-        run: |
-          mvn dependency:go-offline -s settings.xml
-
-      # Set REPOSITORY_ID
+       # Set REPOSITORY_ID
       - name: Set REPOSITORY_ID
         id: set_repository_id
         run: |
@@ -72,25 +59,35 @@ jobs:
             fi
           fi
 
-      # Build the project
-      - name: Build project
+
+      - name: Authenticate with GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: echo "//maven.pkg.github.com/${{ github.repository }}:username=${{ github.actor }}:password=${{ secrets.GIT_TOKEN }}" >> ~/.m2/settings.xml
+        
+      - name: Build with Maven
         run: mvn clean install
 
-      # Prepare and Deploy to Cloud Foundry
-      - name: Prepare and Deploy to Cloud Foundry
-        run: |
-          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+
+      # # Build the project
+      # - name: Build project
+      #   run: mvn clean install
+
+      # # Prepare and Deploy to Cloud Foundry
+      # - name: Prepare and Deploy to Cloud Foundry
+      #   run: |
+      #     cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
           
-          # Replace placeholder with actual REPOSITORY_ID value
-          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
+      #     # Replace placeholder with actual REPOSITORY_ID value
+      #     sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           
-          mbt build
+      #     mbt build
 
-          # Install cf CLI plugin
-          cf install-plugin multiapps -f
+      #     # Install cf CLI plugin
+      #     cf install-plugin multiapps -f
 
-          # Login to Cloud Foundry again to ensure session is active
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+      #     # Login to Cloud Foundry again to ensure session is active
+      #     cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
 
-          # Deploy the application
-          cf deploy mta_archives/demoappjava_1.0.0.mtar -f
+      #     # Deploy the application
+      #     cf deploy mta_archives/demoappjava_1.0.0.mtar -f
