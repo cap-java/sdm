@@ -96,7 +96,7 @@ jobs:
       - name: Deploy snapshot
         if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/Shegox/sdm deploy
+          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/cap-java/sdm deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         shell: bash
