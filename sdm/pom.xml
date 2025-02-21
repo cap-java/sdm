@@ -115,6 +115,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.sap.cloud.security</groupId>
+            <artifactId>java-api</artifactId>
+            <version>3.5.8</version>
+        </dependency>
+        <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
             <artifactId>java-access-api</artifactId>
             <version>0.10.5</version>
