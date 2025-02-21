@@ -327,14 +327,14 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
                 </exclusion>
-                <exclusion>
+                <!-- <exclusion>
                     <groupId>org.springframework.security</groupId>
                     <artifactId>spring-security-oauth2-core</artifactId>
-                </exclusion>
-                <!-- <exclusion>
+                </exclusion> -->
+                <exclusion>
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>resourceserver-security-spring-boot-starter</artifactId>
-                </exclusion> -->
+                </exclusion>
                 <exclusion>
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-api</artifactId>
