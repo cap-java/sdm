@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "gihub_publish" ]
+    branches: [ "develop" ]
   workflow_dispatch:
 
 jobs:
@@ -30,6 +30,9 @@ jobs:
     name: Update version
     runs-on: ubuntu-latest
     needs: [ build ]
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,27 +43,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: sapmachine
           cache: maven
-          server-id: artifactory
-          server-username: CAP_DEPLOYMENT_USER
-          server-password: CAP_DEPLOYMENT_PASS
 
       - name: Set up Maven ${{ env.MAVEN_VERSION }}
         uses: stCarolas/setup-maven@v5
         with:
           maven-version: ${{ env.MAVEN_VERSION }}
-
-      - name: Configure Maven for GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          echo "<settings>
-                  <servers>
-                    <server>
-                      <id>github</id>
-                      <username>${{ github.actor }}</username>
-                      <password>${{ secrets.GITHUB_TOKEN }}</password>
-                    </server>
-                  </servers>
-                </settings>" > ~/.m2/settings.xml
 
       - name: Get Revision
         id: get-revision
@@ -71,7 +58,7 @@ jobs:
         shell: bash
 
       - name: Check and Update Version
-        if: github.ref == 'refs/heads/gihub_publish'
+        if: github.ref == 'refs/heads/develop'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
@@ -106,19 +93,12 @@ jobs:
           echo "Updated version: ${{ env.UPDATED_VERSION }}"
         shell: bash
 
-      # - name: Deploy to Artifactory
-      #   if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
-      #   run: |
-      #     mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
-      #   env:
-      #     CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
-      #     CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
-      #   shell: bash
-
-      - name: Deploy to GitHub Packages
+      - name: Deploy snapshot
         if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
-          mvn deploy -DskipTests -s ~/.m2/settings.xml
+          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/Shegox/sdm deploy 
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         shell: bash
