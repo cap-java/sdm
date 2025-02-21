@@ -100,5 +100,5 @@ jobs:
         env:
           CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
           CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
         shell: bash
