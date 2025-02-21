@@ -1,5 +1,4 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-         xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -48,7 +47,7 @@
     <packaging>pom</packaging>
 
     <name>CDS Feature for SAP Document Management Service - Root</name>
-    <description>This artifact is a CDS plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments (documents) by using an aspect Attachments in SAP Document Management Service.</description>
+    <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
     <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
 
     <modules>
@@ -85,14 +84,15 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>com.sap.cloud.sdk</groupId>
-                <artifactId>sdk-bom</artifactId>
-                <version>${sdk-bom-version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+        <dependency>
+            <groupId>com.sap.cloud.sdk</groupId>
+            <artifactId>sdk-bom</artifactId>
+            <version>${sdk-bom-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
         </dependencies>
+
     </dependencyManagement>
 
     <dependencies>
@@ -123,7 +123,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.5.14</version>
+            <version>4.5.14</version> <!-- Use the latest version available -->
             <exclusions>
                 <exclusion>
                     <groupId>commons-codec</groupId>
@@ -140,11 +140,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
-                <configuration>
+                <configuration> 
                     <environmentVariables>
                         <REPOSITORY_ID>repoid</REPOSITORY_ID>
                     </environmentVariables>
-                </configuration>
+                </configuration> 
             </plugin>
 
             <plugin>
@@ -165,13 +165,14 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>check</goal>
+                            <goal>check</goal>  <!-- Added for applying formatting -->
                         </goals>
                         <phase>compile</phase>
                     </execution>
                 </executions>
             </plugin>
 
+            <!-- POM FLATTENING FOR CI FRIENDLY VERSIONS -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
@@ -197,7 +198,6 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -216,11 +216,10 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.2.0</version> <!-- Use the latest version -->
                 <executions>
                     <execution>
                         <goals>
@@ -235,9 +234,8 @@
 
         </plugins>
     </build>
-
     <distributionManagement>
-<!--         <snapshotRepository>
+        <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
@@ -246,17 +244,7 @@
             <id>artifactory</id>
             <name>Artifactory_DMZ</name>
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </repository> -->
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
         </repository>
-        <snapshotRepository>
-            <id>github</id>
-            <name>GitHub Packages Snapshots</name>
-            <url>https://maven.pkg.github.com/vibhutikumar07/cap-java/sdm</url>
-        </snapshotRepository>
     </distributionManagement>
 
     <scm>
