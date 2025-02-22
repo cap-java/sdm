@@ -331,10 +331,6 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
                 </exclusion>
-                <exclusion>
-                    <groupId>com.sap.cloud.security</groupId>
-                    <artifactId>resourceserver-security-spring-boot-starter</artifactId>
-                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>
