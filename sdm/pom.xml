@@ -327,6 +327,10 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>env</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>java-security</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>
