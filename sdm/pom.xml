@@ -323,6 +323,10 @@
                     <groupId>commons-io</groupId>
                     <artifactId>commons-io</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>env</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>
