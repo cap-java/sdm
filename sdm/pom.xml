@@ -283,6 +283,10 @@
                     <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
                     <artifactId>resilience4j</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.security</groupId>
+                    <artifactId>env</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
