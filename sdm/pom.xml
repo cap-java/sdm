@@ -358,10 +358,6 @@
                     <groupId>io.projectreactor</groupId>
                     <artifactId>reactor-core</artifactId>
                 </exclusion>
-                <exclusion>
-                    <groupId>com.sap.cloud.security</groupId>
-                    <artifactId>spring-security</artifactId>
-                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>
