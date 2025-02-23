@@ -331,6 +331,10 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.nimbusds</groupId>
+                    <artifactId>nimbus-jose-jwt</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
     </dependencies>
