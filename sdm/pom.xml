@@ -218,6 +218,10 @@
                     <groupId>io.opentelemetry</groupId>
                     <artifactId>opentelemetry-api</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+                    <artifactId>connectivity-oauth</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -263,6 +267,10 @@
             <exclusion>
                     <groupId>org.apache.commons</groupId>
                     <artifactId>commons-lang3</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+                <artifactId>connectivity-oauth</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
