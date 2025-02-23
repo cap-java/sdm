@@ -275,6 +275,11 @@
           </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+            <artifactId>connectivity-oauth</artifactId>
+            <version>5.17.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>33.4.0-jre</version>
