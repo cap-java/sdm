@@ -41,7 +41,7 @@ public class Api {
       if (!response.isSuccessful()) {
         if (response.code() == 401) {
           System.out.println(
-              "Create entity faile due to incorrect token. Please check the credentials");
+              "Create entity failed due to incorrect token. Please check the credentials");
         }
         System.out.println("Create entity failed. Error : " + response.body().string());
         throw new IOException("Could not create entity");
