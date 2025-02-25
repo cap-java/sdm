@@ -84,13 +84,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        <dependency>
-            <groupId>com.sap.cloud.sdk</groupId>
-            <artifactId>sdk-bom</artifactId>
-            <version>${sdk-bom-version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
+            <dependency>
+                <groupId>com.sap.cloud.sdk</groupId>
+                <artifactId>sdk-bom</artifactId>
+                <version>${sdk-bom-version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
 
     </dependencyManagement>
@@ -99,6 +99,13 @@
         <dependency>
             <groupId>com.sap.cds</groupId>
             <artifactId>cds-services-api</artifactId>
+        </dependency>
+
+        <!-- New dependency added -->
+        <dependency>
+            <groupId>com.sap.cds</groupId>
+            <artifactId>sdm</artifactId>
+            <version>${revision}</version>
         </dependency>
 
         <dependency>
@@ -123,7 +130,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.5.14</version> <!-- Use the latest version available -->
+            <version>4.5.14</version>
             <exclusions>
                 <exclusion>
                     <groupId>commons-codec</groupId>
@@ -165,7 +172,7 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>check</goal>  <!-- Added for applying formatting -->
+                            <goal>check</goal>
                         </goals>
                         <phase>compile</phase>
                     </execution>
@@ -219,7 +226,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.2.0</version> <!-- Use the latest version -->
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <goals>
