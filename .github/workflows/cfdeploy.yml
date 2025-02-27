@@ -80,8 +80,10 @@ jobs:
           echo "Current Branch......"
           git branch
           pwd
+          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          echo "Cuurent directory.."
+          pwd
           ls -lart
-          cd /home/runner/work/sdm/sdm/sdm/cap-notebook/demoapp
           
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
