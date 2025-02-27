@@ -81,7 +81,7 @@ jobs:
           git branch
           pwd
           ls -lart
-          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
           
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
