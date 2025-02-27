@@ -97,7 +97,7 @@ jobs:
           
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
-          mbt build
+          mvn clean install
         #mvn clean install
 
 
