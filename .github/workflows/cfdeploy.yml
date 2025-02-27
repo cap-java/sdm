@@ -75,9 +75,22 @@ jobs:
           </settings>
           EOF
 
+      - name: Prepare and Deploy to Cloud Foundry
+        run: |
+          echo "Current Branch......"
+          git branch
+          pwd
+          ls -lart
+          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          
+          # Replace placeholder with actual REPOSITORY_ID value
+          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
+
+      
       # Build with Maven
       - name: Build with Maven
-        run: mvn clean install
+        run: mbt build
+        #mvn clean install
 
 
       # # Build the project
