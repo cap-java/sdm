@@ -86,6 +86,16 @@ jobs:
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
 
+       # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16' # You can specify a different version if required
+
+      # Install MTA Build Tool
+      - name: Install MTA Build Tool
+        run: npm install -g mbt
+
       
       # Build with Maven
       - name: Build with Maven
