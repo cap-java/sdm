@@ -13,5 +13,5 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RepositoryParams {
   private String paramName;
-  private FileExtension paramValue;
+  private String paramValue;
 }

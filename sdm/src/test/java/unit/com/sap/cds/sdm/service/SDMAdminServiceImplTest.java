@@ -4,8 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.sap.cds.sdm.handler.TokenHandler;
-import com.sap.cds.sdm.model.FileExtension;
 import com.sap.cds.sdm.model.Repository;
 import com.sap.cds.sdm.model.RepositoryParams;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -70,13 +71,22 @@ public class SDMAdminServiceImplTest {
       repository.setHashAlgorithms("SHA-256");
       RepositoryParams repositoryParam = new RepositoryParams();
       repositoryParam.setParamName("fileExtensions");
-      FileExtension paramValue = new FileExtension();
-      paramValue.setType("block");
-      List<String> list = new ArrayList<>();
-      list.add("pptx");
-      list.add("vds");
-      paramValue.setList(list);
-      repositoryParam.setParamValue(paramValue);
+      JsonObject fileExtensionsValue = new JsonObject();
+      fileExtensionsValue.addProperty("type", "allow");
+      fileExtensionsValue.add(
+          "list", new Gson().toJsonTree(new String[] {"png", "pdf", "jpg", "txt"}));
+
+      // Convert the nested JSON object to a JSON string
+      String jsonParamValue = fileExtensionsValue.toString();
+
+      // Create the outer JSON object
+      JsonObject repositoryParamVal = new JsonObject();
+      repositoryParamVal.addProperty("paramName", "fileExtensions");
+      repositoryParamVal.addProperty("paramValue", jsonParamValue);
+
+      // Serialize the entire object
+      String finalJson = new Gson().toJson(repositoryParam);
+      repositoryParam.setParamValue(finalJson);
       List<RepositoryParams> repositoryParams = new ArrayList<>();
       repositoryParams.add(repositoryParam);
       repository.setRepositoryParams(repositoryParams);
