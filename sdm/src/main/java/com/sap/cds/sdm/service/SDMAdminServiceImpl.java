@@ -21,7 +21,6 @@ public class SDMAdminServiceImpl implements SDMAdminService {
   @java.lang.Override
   public String onboardRepository(Repository repository)
       throws JsonProcessingException, UnsupportedEncodingException {
-    System.out.println("In plugin onboard");
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     var httpClient =
         TokenHandler.getHttpClient(
@@ -38,11 +37,8 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     onboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(onboardingReq)) {
       String responseString = EntityUtils.toString(response.getEntity());
-      System.out.println(
-          "Response " + responseString + ":" + response.getStatusLine().getStatusCode());
       JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
       String repositoryId = jsonObject.get("id").getAsString();
-      System.out.println("repo id " + repositoryId);
       return String.format(
           SDMConstants.ONBOARD_REPO_MESSAGE, repository.getDisplayName(), repositoryId);
     } catch (IOException e) {

@@ -25,7 +25,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -154,7 +153,7 @@ public class TokenHandler {
       CdsProperties.ConnectionPool connectionPoolConfig,
       String subdomain,
       String type) {
-    Map<String, Object> uaaCredentials = new HashMap<>();
+    Map<String, Object> uaaCredentials;
     if (binding != null && !binding.getCredentials().isEmpty()) {
       uaaCredentials = binding.getCredentials();
     } else {
