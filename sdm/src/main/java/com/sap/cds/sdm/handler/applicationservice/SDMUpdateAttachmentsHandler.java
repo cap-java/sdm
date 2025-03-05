@@ -3,7 +3,6 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -114,30 +113,29 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> keysList = new ArrayList<>(attachment.keySet());
     List<String> secondaryTypeProperties = new ArrayList<>();
     secondaryTypeProperties.add("fileName");
-    if (attachmentEntity.isPresent()) {
-      CdsEntity entity = attachmentEntity.get();
-      for (String key : keysList) {
-        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
-          continue;
-        }
-        CdsElement element = entity.getElement(key);
-        if (element != null) {
-          Optional<CdsAnnotation<Object>> annotation =
-              element.findAnnotation("@AdditionalProperty");
-          if (annotation.isPresent()) {
-            secondaryTypeProperties.add(element.getName());
-          }
-        }
-      }
-    } else {
+    if (attachmentEntity.isEmpty()) {
       throw new ServiceException("Entity not found");
+    }
+
+    CdsEntity entity = attachmentEntity.get();
+
+    for (String key : keysList) {
+      if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+        continue;
+      }
+
+      CdsElement element = entity.getElement(key);
+      if (element != null) {
+        element
+            .findAnnotation("@AdditionalProperty")
+            .ifPresent(annotation -> secondaryTypeProperties.add(element.getName()));
+      }
     }
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
-    System.out.println("Properties Map : " + propertiesMap);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
     List<String> propertiesInDB = new ArrayList<>();
@@ -149,9 +147,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
       Object valueInMap = propertiesMap.get(property);
       if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
-        throw new ServiceException(
-            "The properties could not be modified because of an active hold. Please set the value of 'hold' to empty and try again.",
-            null);
+        throw new ServiceException(SDMConstants.RM_HOLD_ERROR, null);
       }
       if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
         continue;
@@ -164,8 +160,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         }
       }
     }
-    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
-
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
       return;

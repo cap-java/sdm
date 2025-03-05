@@ -131,8 +131,6 @@ public class SDMUtils {
         if (excludedSecondaryTypes.contains(secondaryType)) {
           continue; // Skip the current iteration
         }
-
-        System.out.println("Found a type : " + secondaryType);
         result.add(jsonObject.getJSONObject("type").getString("id"));
       }
 
