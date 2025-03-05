@@ -9,6 +9,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -16,8 +17,8 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class SDMServiceImpl implements SDMService {
@@ -157,10 +159,11 @@ public class SDMServiceImpl implements SDMService {
       updateRequestBody.put("propertyValue[0][" + i + "]", secondaryTypes.get(i));
     }
 
-    int indexStart = prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    int indexStart =
+        SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    assembleRequestBody(builder, updateRequestBody, objectId);
+    SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
 
     // Set the multipart entity to the request
     updateRequest.setEntity(builder.build());
@@ -174,49 +177,6 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
     }
-  }
-
-  private int prepareSecondaryProperties(
-      Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
-    int index = 1;
-    Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
-
-    if (iterator.hasNext()) {
-      Map.Entry<String, String> entry = iterator.next();
-      if ("fileName".equals(entry.getKey())) {
-        requestBody.put("propertyId[1]", "cmis:name");
-        requestBody.put("propertyValue[1]", entry.getValue());
-        index++;
-      } else {
-        requestBody.put("propertyId[1]", "cmis:name");
-        requestBody.put("propertyValue[1]", fileName);
-      }
-
-      while (iterator.hasNext()) {
-        entry = iterator.next();
-        String updatedKey = "propertyId[" + index + "]";
-        String updatedValue = entry.getKey().replace("___", ":");
-        requestBody.put(updatedKey, updatedValue);
-
-        if (!"cmis___rm_holdIds".equals(entry.getKey()) || entry.getValue() != null) {
-          String valueKey = "propertyValue[" + index + "]";
-          requestBody.put(valueKey, entry.getValue());
-        }
-        index++;
-      }
-    }
-
-    return index;
-  }
-
-  private void assembleRequestBody(
-      MultipartEntityBuilder builder, Map<String, String> requestBody, String objectId) {
-    for (Map.Entry<String, String> entry : requestBody.entrySet()) {
-      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
-    }
-
-    builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
-    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
   }
 
   @Override
@@ -475,7 +435,33 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public List<String> getSecondaryTypes(
       String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws IOException {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getSecondaryTypes'");
+    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    var httpClient =
+        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String sdmUrl =
+        sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
+    HttpGet getTypesRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+      System.out.println("Response Status: " + response.getStatusLine());
+      HttpEntity responseEntity = response.getEntity();
+      List<String> result = new ArrayList<>();
+      if (responseEntity != null) {
+        String responseString = EntityUtils.toString(responseEntity, "UTF-8");
+        JSONArray jsonArray = new JSONArray(responseString);
+        JSONArray secondaryTypesJSON = new JSONArray();
+        for (int i = 0; i < jsonArray.length(); i++) {
+          JSONObject jsonObject = jsonArray.getJSONObject(i);
+          if (jsonObject.getJSONObject("type").getString("id").equals("cmis:secondary")) {
+            secondaryTypesJSON = jsonObject.getJSONArray("children");
+            break;
+          }
+        }
+        SDMUtils.extractSecondaryTypeIds(secondaryTypesJSON, result);
+      }
+
+      return result;
+    } catch (IOException e) {
+      throw new ServiceException("Could not update the attachment", e);
+    }
   }
 }
