@@ -3,6 +3,8 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -23,6 +25,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -108,8 +111,68 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
+    List<String> keysList = new ArrayList<>(attachment.keySet());
+    List<String> secondaryTypeProperties = new ArrayList<>();
+    secondaryTypeProperties.add("fileName");
+    if (attachmentEntity.isPresent()) {
+      CdsEntity entity = attachmentEntity.get();
+      for (String key : keysList) {
+        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+          continue;
+        }
+        CdsElement element = entity.getElement(key);
+        if (element != null) {
+          Optional<CdsAnnotation<Object>> annotation =
+              element.findAnnotation("@AdditionalProperty");
+          if (annotation.isPresent()) {
+            secondaryTypeProperties.add(element.getName());
+          }
+        }
+      }
+    } else {
+      throw new ServiceException("Entity not found");
+    }
+    Map<String, Object> propertiesMap = new HashMap<>();
+    for (String property : secondaryTypeProperties) {
+      Object value = attachment.get(property);
+      propertiesMap.put(property, value);
+    }
+    System.out.println("Properties Map : " + propertiesMap);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
+    List<String> propertiesInDB = new ArrayList<>();
+    propertiesInDB =
+        DBQuery.getpropertiesForID(
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+    Map<String, String> updatedSecondaryProperties = new HashMap<>();
+    for (String property : secondaryTypeProperties) {
+      String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
+      Object valueInMap = propertiesMap.get(property);
+      if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
+        throw new ServiceException(
+            "The properties could not be modified because of an active hold. Please set the value of 'hold' to empty and try again.",
+            null);
+      }
+      if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
+        continue;
+      }
+      if (valueInMap != valueInDB) {
+        if (valueInMap != null) {
+          updatedSecondaryProperties.put(property, valueInMap.toString());
+        } else {
+          updatedSecondaryProperties.put(property, null);
+        }
+      }
+    }
+    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
+
+    if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+      fileNameWithRestrictedCharacters.add(filenameInRequest);
+      return;
+    }
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setFileName(filenameInRequest);
+    cmisDocument.setObjectId(objectId);
     String fileNameInDB =
         DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
@@ -119,14 +182,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         attachment.replace("fileName", fileNameInSDM);
         return;
       }
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setFileName(filenameInRequest);
-      cmisDocument.setObjectId(objectId);
       int responseCode =
           sdmService.renameAttachments(
               context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
               TokenHandler.getSDMCredentials(),
-              cmisDocument);
+              cmisDocument,
+              updatedSecondaryProperties);
       switch (responseCode) {
         case 403:
           // SDM Roles for user are missing

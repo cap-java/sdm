@@ -100,7 +100,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         cmisDocument.setFileName(filenameInRequest);
         cmisDocument.setObjectId(objectId);
         Map<String, String> secondaryTypes = new HashMap<>();
-        int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument, secondaryTypes);
+        int responseCode =
+            sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument, secondaryTypes);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
