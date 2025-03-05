@@ -17,6 +17,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -128,28 +129,94 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public int renameAttachments(
-      String jwtToken, SDMCredentials sdmCredentials, CmisDocument cmisDocument) {
+      String jwtToken,
+      SDMCredentials sdmCredentials,
+      CmisDocument cmisDocument,
+      Map<String, String> secondaryProperties)
+      throws IOException {
+
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-    String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
-    String fileName = cmisDocument.getFileName();
     String objectId = cmisDocument.getObjectId();
-    HttpPost renameRequest = new HttpPost(sdmUrl);
+    String fileName = cmisDocument.getFileName();
+
+    List<String> secondaryTypes = getSecondaryTypes(repositoryId, jwtToken, sdmCredentials);
+    String sdmUrl =
+        sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
+
+    HttpPost updateRequest = new HttpPost(sdmUrl);
+
+    // Prepare the request body parts
+    Map<String, String> updateRequestBody = new HashMap<>();
+    updateRequestBody.put("cmisaction", "update");
+    updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
+
+    for (int i = 0; i < secondaryTypes.size(); i++) {
+      updateRequestBody.put("propertyValue[0][" + i + "]", secondaryTypes.get(i));
+    }
+
+    int indexStart = prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    // Add additional form fields
-    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyValue[0]", fileName, ContentType.TEXT_PLAIN);
-    builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
-    HttpEntity multipart = builder.build();
-    renameRequest.setEntity(multipart);
-    try (var response = (CloseableHttpResponse) httpClient.execute(renameRequest)) {
+    assembleRequestBody(builder, updateRequestBody, objectId);
+
+    // Set the multipart entity to the request
+    updateRequest.setEntity(builder.build());
+
+    try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
+      HttpEntity responseEntity = response.getEntity();
+      if (responseEntity != null) {
+        EntityUtils.toString(responseEntity, "UTF-8");
+      }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
     }
+  }
+
+  private int prepareSecondaryProperties(
+      Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
+    int index = 1;
+    Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
+
+    if (iterator.hasNext()) {
+      Map.Entry<String, String> entry = iterator.next();
+      if ("fileName".equals(entry.getKey())) {
+        requestBody.put("propertyId[1]", "cmis:name");
+        requestBody.put("propertyValue[1]", entry.getValue());
+        index++;
+      } else {
+        requestBody.put("propertyId[1]", "cmis:name");
+        requestBody.put("propertyValue[1]", fileName);
+      }
+
+      while (iterator.hasNext()) {
+        entry = iterator.next();
+        String updatedKey = "propertyId[" + index + "]";
+        String updatedValue = entry.getKey().replace("___", ":");
+        requestBody.put(updatedKey, updatedValue);
+
+        if (!"cmis___rm_holdIds".equals(entry.getKey()) || entry.getValue() != null) {
+          String valueKey = "propertyValue[" + index + "]";
+          requestBody.put(valueKey, entry.getValue());
+        }
+        index++;
+      }
+    }
+
+    return index;
+  }
+
+  private void assembleRequestBody(
+      MultipartEntityBuilder builder, Map<String, String> requestBody, String objectId) {
+    for (Map.Entry<String, String> entry : requestBody.entrySet()) {
+      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
+    }
+
+    builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
+    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
   }
 
   @Override
@@ -403,5 +470,12 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("delete"));
     }
+  }
+
+  @Override
+  public List<String> getSecondaryTypes(
+      String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws IOException {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getSecondaryTypes'");
   }
 }

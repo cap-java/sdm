@@ -18,6 +18,7 @@ import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -98,7 +99,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         CmisDocument cmisDocument = new CmisDocument();
         cmisDocument.setFileName(filenameInRequest);
         cmisDocument.setObjectId(objectId);
-        int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument);
+        Map<String, String> secondaryTypes = new HashMap<>();
+        int responseCode = sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument, secondaryTypes);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
