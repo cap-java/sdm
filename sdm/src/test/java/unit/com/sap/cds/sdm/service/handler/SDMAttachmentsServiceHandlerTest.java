@@ -54,7 +54,7 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
   @Mock private JwtTokenAuthenticationInfo mockJwtTokenInfo;
-  private SDMAttachmentsServiceHandler handlerSpy;
+  private SDMAttachmentsServiceHandler SDMAttachmentsServiceHandler;
   private PersistenceService persistenceService;
   @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
   @Mock private AttachmentRestoreEventContext restoreEventContext;
@@ -93,7 +93,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(deletionUserInfo.getName()).thenReturn(userEmail);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn(userEmail);
-    handlerSpy = spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
+    SDMAttachmentsServiceHandler =
+        spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
   }
 
   @Test
@@ -118,7 +119,7 @@ public class SDMAttachmentsServiceHandlerTest {
         assertThrows(
             ServiceException.class,
             () -> {
-              handlerSpy.createAttachment(mockContext);
+              SDMAttachmentsServiceHandler.createAttachment(mockContext);
             });
 
     // Verify the exception message
@@ -154,7 +155,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
+    doReturn(true).when(SDMAttachmentsServiceHandler).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
 
     try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class)) {
@@ -171,7 +172,7 @@ public class SDMAttachmentsServiceHandlerTest {
           assertThrows(
               ServiceException.class,
               () -> {
-                handlerSpy.createAttachment(mockContext);
+                SDMAttachmentsServiceHandler.createAttachment(mockContext);
               });
 
       // Verify the exception message
@@ -196,7 +197,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
           .thenReturn(cmisDocuments);
 
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      SDMAttachmentsServiceHandler.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
     }
   }
@@ -218,7 +219,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
           .thenReturn(cmisDocuments);
 
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      SDMAttachmentsServiceHandler.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
     }
   }
 
@@ -420,7 +421,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    doReturn(false).when(SDMAttachmentsServiceHandler).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -446,7 +447,7 @@ public class SDMAttachmentsServiceHandlerTest {
           assertThrows(
               ServiceException.class,
               () -> {
-                handlerSpy.createAttachment(mockContext);
+                SDMAttachmentsServiceHandler.createAttachment(mockContext);
               });
 
       assertEquals("sample.pdf already exists.", thrown.getMessage());
@@ -465,7 +466,7 @@ public class SDMAttachmentsServiceHandlerTest {
       mockedDBQuery
           .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
           .thenReturn(cmisDocuments);
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      SDMAttachmentsServiceHandler.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
     }
   }
@@ -505,7 +506,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    doReturn(false).when(SDMAttachmentsServiceHandler).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -531,7 +532,7 @@ public class SDMAttachmentsServiceHandlerTest {
           assertThrows(
               ServiceException.class,
               () -> {
-                handlerSpy.createAttachment(mockContext);
+                SDMAttachmentsServiceHandler.createAttachment(mockContext);
               });
 
       // Verify the exception message
@@ -576,7 +577,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    doReturn(false).when(SDMAttachmentsServiceHandler).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -602,7 +603,7 @@ public class SDMAttachmentsServiceHandlerTest {
           assertThrows(
               ServiceException.class,
               () -> {
-                handlerSpy.createAttachment(mockContext);
+                SDMAttachmentsServiceHandler.createAttachment(mockContext);
               });
 
       // Verify the exception message
@@ -643,7 +644,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    doReturn(false).when(SDMAttachmentsServiceHandler).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -660,7 +661,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      handlerSpy.createAttachment(mockContext);
+      SDMAttachmentsServiceHandler.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
     }
   }
@@ -687,7 +688,7 @@ public class SDMAttachmentsServiceHandlerTest {
     List<Map> resultList = Arrays.asList((Map) attachment);
     when(result.listOf(Map.class)).thenReturn((List) resultList);
 
-    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
+    boolean isDuplicate = SDMAttachmentsServiceHandler.duplicateCheck(filename, fileid, result);
     assertFalse(isDuplicate, "Expected no duplicates");
   }
 
@@ -711,13 +712,14 @@ public class SDMAttachmentsServiceHandlerTest {
     mockedResultList.add((Map) attachment2);
 
     // Mocking the result to return the list containing the attachments
+
     when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
 
     String filename = "sample.pdf";
     String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
 
     // Checking for duplicate
-    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
+    boolean isDuplicate = SDMAttachmentsServiceHandler.duplicateCheck(filename, fileid, result);
 
     // Assert that a duplicate is found
     assertTrue(isDuplicate, "Expected to find a duplicate");
@@ -749,7 +751,7 @@ public class SDMAttachmentsServiceHandlerTest {
     String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
 
     // Checking for duplicate
-    boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
+    boolean isDuplicate = SDMAttachmentsServiceHandler.duplicateCheck(filename, fileid, result);
 
     // Assert that a duplicate is found
     assertTrue(!isDuplicate, "Expected to find a duplicate");
@@ -766,7 +768,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("NotVersioned");
       when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-      handlerSpy.readAttachment(mockReadContext);
+      SDMAttachmentsServiceHandler.readAttachment(mockReadContext);
 
       // Verify that readDocument method was called
       verify(sdmService)
@@ -792,7 +794,7 @@ public class SDMAttachmentsServiceHandlerTest {
           assertThrows(
               ServiceException.class,
               () -> {
-                handlerSpy.readAttachment(mockReadContext);
+                SDMAttachmentsServiceHandler.readAttachment(mockReadContext);
               });
 
       assertEquals("Object not found in repository", exception.getMessage());
@@ -801,6 +803,6 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @Test
   public void testRestoreAttachment() {
-    handlerSpy.restoreAttachment(restoreEventContext);
+    SDMAttachmentsServiceHandler.restoreAttachment(restoreEventContext);
   }
 }
