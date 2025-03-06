@@ -3,6 +3,7 @@ package unit.com.sap.cds.sdm.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
@@ -1150,6 +1151,7 @@ public class SDMServiceImplTest {
   public void testRenameAttachments_Success() throws IOException {
     try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
       String jwtToken = "jwt_token";
+      Map<String, String> secondaryTypes = new HashMap();
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("newFileName");
       cmisDocument.setObjectId("objectId");
@@ -1169,7 +1171,8 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int responseCode =
-          sdmServiceImpl.renameAttachments(jwtToken, mockSdmCredentials, cmisDocument);
+          sdmServiceImpl.renameAttachments(
+              jwtToken, mockSdmCredentials, cmisDocument, secondaryTypes);
 
       // Verify the response code
       assertEquals(200, responseCode);

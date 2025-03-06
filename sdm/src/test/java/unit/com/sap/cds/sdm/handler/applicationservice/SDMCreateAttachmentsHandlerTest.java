@@ -106,6 +106,7 @@ public class SDMCreateAttachmentsHandlerTest {
   @Test
   public void testRenameWithNoAttachments() throws IOException {
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     CdsData mockCdsData = mock(CdsData.class);
     when(mockCdsData.get("attachments")).thenReturn(null);
     data.add(mockCdsData);
@@ -113,12 +114,14 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithoutFileInSDM() throws IOException {
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
@@ -143,12 +146,14 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithSameFileNameInSDM() throws IOException {
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
@@ -173,13 +178,15 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithConflictResponseCode() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -204,7 +211,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(any(), any(), any()))
         .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(409); // Mock conflict response code
 
     // Mock the returned messages
@@ -225,6 +232,7 @@ public class SDMCreateAttachmentsHandlerTest {
   public void testCreateAttachmentWithNoSDMRoles() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -249,11 +257,11 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(any(), any(), any()))
         .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(403); // Mock conflict response code
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(403); // Mock conflict response code
 
     ServiceException exception =
@@ -270,6 +278,7 @@ public class SDMCreateAttachmentsHandlerTest {
   public void testCreateAttachmentWith500Error() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -294,7 +303,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(any(), any(), any()))
         .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(500); // Mock conflict response code
     ServiceException exception =
         assertThrows(
@@ -311,6 +320,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Mock the data structure to simulate the attachments
     System.out.println("testRenameWithConflictResponseCode");
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -335,7 +345,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(any(), any(), any()))
         .thenReturn("file-sdm.txt"); // Mock a different file name in SDM to trigger renaming
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(200); // Mock conflict response code
 
     // Mock the returned messages
@@ -356,6 +366,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Prepare the test data with restricted characters in filenames
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file\\3.txt");
     List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     fileNameWithRestrictedChars.add("file/2.txt");
     fileNameWithRestrictedChars.add("file\\3.txt");
 
@@ -381,7 +392,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("file-in-sdm");
 
     // Ensure renameAttachments behaves as expected
-    when(sdmService.renameAttachments(anyString(), any(), any(CmisDocument.class)))
+    when(sdmService.renameAttachments(anyString(), any(), any(CmisDocument.class), secondaryTypes))
         .thenReturn(200); // or a desired response code
 
     // Act
@@ -413,6 +424,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Prepare the sample data with restricted characters
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file/2.txt", "file3\\abc.txt");
     List<String> fileNameWithRestrictedChars = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     fileNameWithRestrictedChars.add("file/2.txt");
     fileNameWithRestrictedChars.add("file3\\abc.txt");
 
@@ -440,7 +452,8 @@ public class SDMCreateAttachmentsHandlerTest {
               });
 
       // Mock renameAttachments implementation to avoid ServiceExceptions for testing
-      when(sdmService.renameAttachments(any(String.class), any(), any(CmisDocument.class)))
+      when(sdmService.renameAttachments(
+              any(String.class), any(), any(CmisDocument.class), secondaryTypes))
           .thenReturn(200); // assuming successful rename
 
       // Act by invoking the handler updateName method with the context and data

@@ -107,6 +107,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Test
   public void testRenameWithUniqueFilenames() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt");
+    Map<String, String> secondaryTypes = new HashMap();
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
@@ -127,13 +128,15 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     handler.updateName(context, data);
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithConflictResponseCode() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -171,7 +174,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(409); // Mock conflict response code
 
     // Mock the returned messages
@@ -192,6 +195,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   public void testRenameWithNoSDMRoles() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -229,7 +233,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(403); // Mock conflict response code
 
     ServiceException exception =
@@ -246,6 +250,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   public void testRenameWith500Error() throws IOException {
     // Mock the data structure to simulate the attachments
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -283,7 +288,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(500); // Mock conflict response code
 
     ServiceException exception =
@@ -301,6 +306,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mock the data structure to simulate the attachments
     System.out.println("testRenameWithConflictResponseCode");
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -338,7 +344,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(200); // Mock conflict response code
 
     // Execute the method under test
@@ -354,6 +360,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Test
   public void testRenameWithoutFileInSDM() throws IOException {
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    Map<String, String> secondaryTypes = new HashMap();
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
@@ -376,12 +383,14 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     handler.updateName(context, data);
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithNoAttachments() throws IOException {
     List<CdsData> data = new ArrayList<>();
+    Map<String, String> secondaryTypes = new HashMap();
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
@@ -395,12 +404,14 @@ public class SDMUpdateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(sdmService, never())
-        .renameAttachments(anyString(), any(SDMCredentials.class), any(CmisDocument.class));
+        .renameAttachments(
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes);
   }
 
   @Test
   public void testRenameWithRestrictedFilenames() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file2/abc.txt", "file3\\abc.txt");
+    Map<String, String> secondaryTypes = new HashMap();
     List<String> fileNameWithRestrictedChars = new ArrayList<>();
     fileNameWithRestrictedChars.add("file2/abc.txt");
     fileNameWithRestrictedChars.add("file3\\abc.txt");
@@ -427,7 +438,7 @@ public class SDMUpdateAttachmentsHandlerTest {
             });
 
     when(sdmService.renameAttachments(
-            anyString(), any(SDMCredentials.class), any(CmisDocument.class)))
+            anyString(), any(SDMCredentials.class), any(CmisDocument.class), secondaryTypes))
         .thenReturn(409); // Mock conflict response code
 
     dbQueryMockedStatic = mockStatic(DBQuery.class);
