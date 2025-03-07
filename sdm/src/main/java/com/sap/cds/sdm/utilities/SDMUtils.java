@@ -1,12 +1,20 @@
 package com.sap.cds.sdm.utilities;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsElement;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -140,5 +148,71 @@ public class SDMUtils {
         extractSecondaryTypeIds(children, result);
       }
     }
+  }
+
+  public static List<String> getSecondaryTypeProperties(
+      Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
+    List<String> keysList = new ArrayList<>(attachment.keySet());
+    List<String> secondaryTypeProperties = new ArrayList<>();
+    if (attachmentEntity.isPresent()) {
+      CdsEntity entity = attachmentEntity.get();
+      for (String key : keysList) {
+        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+          continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
+        }
+        CdsElement element = entity.getElement(key);
+        if (element != null) {
+          // Check if secondary property is present
+          Optional<CdsAnnotation<Object>> annotation =
+              element.findAnnotation("@AdditionalProperty");
+          if (annotation.isPresent()) {
+            secondaryTypeProperties.add(element.getName());
+          }
+        }
+      }
+    }
+    return secondaryTypeProperties;
+  }
+
+  public static Map<String, String> getUpdatedSecondaryProperties(
+      Optional<CdsEntity> attachmentEntity,
+      Map<String, Object> attachment,
+      PersistenceService persistenceService,
+      List<String> secondaryTypeProperties) {
+    Map<String, String> updatedSecondaryProperties = new HashMap<>();
+    String id = (String) attachment.get("ID");
+    List<String> propertiesInDB = new ArrayList<>();
+    // Checking and storing the modified values of the secondary type properties
+    Map<String, Object> propertiesMap = new HashMap<>();
+    for (String property : secondaryTypeProperties) {
+      Object value = attachment.get(property);
+      propertiesMap.put(property, value);
+    }
+    // Check the value of secondary properties in DB
+    propertiesInDB =
+        DBQuery.getpropertiesForID(
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+    for (String property : secondaryTypeProperties) {
+      String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
+      Object valueInMap = propertiesMap.get(property);
+      if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
+        throw new ServiceException(
+            "The properties could not be modified because of an active hold. Please set the value of 'hold' to empty and try again.",
+            null); // for "hold". This scenario needs to be handled for delete
+      }
+      if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
+        continue; // for "hold", in case the value in DB was null and the current value is null,
+        // there is no change required, so this field is skipped
+      }
+      if (valueInMap != valueInDB) {
+        if (valueInMap != null) {
+          updatedSecondaryProperties.put(property, valueInMap.toString());
+        } else {
+          updatedSecondaryProperties.put(property, null);
+        }
+      }
+    }
+
+    return updatedSecondaryProperties;
   }
 }

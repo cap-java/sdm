@@ -3,7 +3,6 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -110,56 +109,24 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-    List<String> keysList = new ArrayList<>(attachment.keySet());
-    List<String> secondaryTypeProperties = new ArrayList<>();
-    secondaryTypeProperties.add("fileName");
-    if (attachmentEntity.isEmpty()) {
-      throw new ServiceException("Entity not found");
-    }
-
-    CdsEntity entity = attachmentEntity.get();
-
-    for (String key : keysList) {
-      if ("DRAFT_READONLY_CONTEXT".equals(key)) {
-        continue;
-      }
-
-      CdsElement element = entity.getElement(key);
-      if (element != null) {
-        element
-            .findAnnotation("@AdditionalProperty")
-            .ifPresent(annotation -> secondaryTypeProperties.add(element.getName()));
-      }
-    }
+    // Get list of secondary type properties
+    List<String> secondaryTypeProperties =
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     Map<String, Object> propertiesMap = new HashMap<>();
-    for (String property : secondaryTypeProperties) {
-      Object value = attachment.get(property);
-      propertiesMap.put(property, value);
+    // For each property get the value
+    if (!secondaryTypeProperties.isEmpty()) {
+      for (String property : secondaryTypeProperties) {
+        Object value = attachment.get(property);
+        propertiesMap.put(property, value);
+      }
     }
+    // Get the updated secondary properties
+    Map<String, String> updatedSecondaryProperties =
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
-    List<String> propertiesInDB = new ArrayList<>();
-    propertiesInDB =
-        DBQuery.getpropertiesForID(
-            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
-    Map<String, String> updatedSecondaryProperties = new HashMap<>();
-    for (String property : secondaryTypeProperties) {
-      String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
-      Object valueInMap = propertiesMap.get(property);
-      if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
-        throw new ServiceException(SDMConstants.RM_HOLD_ERROR, null);
-      }
-      if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
-        continue;
-      }
-      if (valueInMap != valueInDB) {
-        if (valueInMap != null) {
-          updatedSecondaryProperties.put(property, valueInMap.toString());
-        } else {
-          updatedSecondaryProperties.put(property, null);
-        }
-      }
-    }
+
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
       return;
