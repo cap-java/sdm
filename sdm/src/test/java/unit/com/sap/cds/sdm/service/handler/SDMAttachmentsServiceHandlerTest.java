@@ -26,6 +26,7 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
@@ -59,6 +60,8 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
   @Mock private AttachmentRestoreEventContext restoreEventContext;
   private SDMService sdmService;
+
+  private DocumentUploadService documentService;
   @Mock private CdsModel cdsModel;
 
   @Mock private CdsEntity cdsEntity;
@@ -87,13 +90,15 @@ public class SDMAttachmentsServiceHandlerTest {
     MockitoAnnotations.openMocks(this);
     persistenceService = mock(PersistenceService.class);
     sdmService = mock(SDMServiceImpl.class);
+    documentService = mock(DocumentUploadService.class);
     when(attachmentMarkAsDeletedEventContext.getContentId())
         .thenReturn("objectId:folderId:entity:subdomain");
     when(attachmentMarkAsDeletedEventContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
     when(deletionUserInfo.getName()).thenReturn(userEmail);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn(userEmail);
-    handlerSpy = spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
+    handlerSpy =
+        spy(new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
   }
 
   @Test
