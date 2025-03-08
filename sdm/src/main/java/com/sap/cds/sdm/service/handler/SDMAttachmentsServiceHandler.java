@@ -54,7 +54,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     System.out.println(
-        "🔹 Event Received: "
+        "Event Received: "
             + context.getAttachmentEntity().getKey()
             + " at "
             + System.currentTimeMillis());
