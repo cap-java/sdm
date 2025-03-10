@@ -10,6 +10,8 @@ import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
+import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
+import com.sap.cds.services.Service;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -43,6 +45,7 @@ public class Registration implements CdsRuntimeConfiguration {
     CacheConfig.initializeCache();
     CdsRuntime runtime = configurer.getCdsRuntime();
     CdsEnvironment environment = runtime.getEnvironment();
+
     var persistenceService =
         configurer
             .getCdsRuntime()
@@ -63,6 +66,8 @@ public class Registration implements CdsRuntimeConfiguration {
     configurer.eventHandler(new SDMCreateAttachmentsHandler(sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
+    configurer.eventHandler(new SDMServiceGenericHandler(persistenceService, sdmService));
+    // configurer.eventHandler(new SDMDraftPatchHandler(persistenceService));
   }
 
   private AttachmentService buildAttachmentService() {

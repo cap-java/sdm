@@ -2,8 +2,10 @@ package com.sap.cds.sdm.persistence;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
+import com.sap.cds.ql.cqn.CqnInsert;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DBQuery {
+
   private DBQuery() {
     // Doesn't do anything
   }
@@ -54,8 +57,29 @@ public class DBQuery {
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
-            .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
+            .where(doc -> doc.get("ID").eq(cmisDocument.getParentId()));
     persistenceService.run(updateQuery);
+  }
+
+  public static void addLinkToDraft(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      CmisDocument cmisDocument) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", cmisDocument.getObjectId());
+    updatedFields.put("repositoryId", repositoryId);
+    // updatedFields.put("folderId", cmisDocument.getFolderId());
+    updatedFields.put("status", "Clean");
+    updatedFields.put("up__ID", cmisDocument.getParentId());
+    updatedFields.put("mimeType", cmisDocument.getMimeType());
+    updatedFields.put("fileName", cmisDocument.getFileName());
+    updatedFields.put("HasDraftEntity", false);
+    updatedFields.put("HasActiveEntity", false);
+    // updatedFields.put("up_", "eqd");
+    var data = List.of(updatedFields);
+    CqnInsert update = Insert.into(attachmentEntity).entry(updatedFields);
+    persistenceService.run(update);
   }
 
   public static String getFolderIdForActiveEntity(
