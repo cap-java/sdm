@@ -43,7 +43,6 @@ public class Registration implements CdsRuntimeConfiguration {
     CacheConfig.initializeCache();
     CdsRuntime runtime = configurer.getCdsRuntime();
     CdsEnvironment environment = runtime.getEnvironment();
-
     var persistenceService =
         configurer
             .getCdsRuntime()
