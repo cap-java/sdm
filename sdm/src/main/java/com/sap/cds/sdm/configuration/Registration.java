@@ -73,13 +73,20 @@ public class Registration implements CdsRuntimeConfiguration {
   private static CdsProperties.ConnectionPool getConnectionPool(CdsEnvironment env) {
     // the common prefix for the connection pool configuration
     final String prefix = SDMConstants.SDM_CONNECTIONPOOL_PREFIX;
-    Duration timeout =
-        Duration.ofSeconds(
-            env.getProperty(
-                prefix.formatted("timeout"), Integer.class, SDMConstants.CONNECTION_TIMEOUT));
-    int maxConnections =
-        env.getProperty(
-            prefix.formatted("maxConnections"), Integer.class, SDMConstants.MAX_CONNECTIONS);
+    Integer timeoutVal = env.getProperty(prefix.formatted("timeout"), Integer.class, null);
+
+    if (timeoutVal == null) {
+      // If the property is not found (or null), use a predefined default value
+      timeoutVal = SDMConstants.CONNECTION_TIMEOUT;
+    }
+    Duration timeout = Duration.ofSeconds(timeoutVal);
+    Integer maxConnections =
+        env.getProperty(prefix.formatted("maxConnections"), Integer.class, null);
+
+    if (maxConnections == null) {
+      // If the property is not found (or null), use a predefined default value
+      maxConnections = SDMConstants.MAX_CONNECTIONS;
+    }
     logger.debug(
         "Connection pool configuration: timeout={}, maxConnections={}", timeout, maxConnections);
     return new CdsProperties.ConnectionPool(timeout, maxConnections, maxConnections);

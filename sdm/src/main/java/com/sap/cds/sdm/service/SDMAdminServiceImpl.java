@@ -50,11 +50,15 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
   @java.lang.Override
   public String offboardRepository(String subdomain) {
+
+    // This is yet to be implemented
     return null;
   }
 
   @java.lang.Override
   public String restoreRepository(String subdomain) {
+
+    // This is yet to be implemented
     return null;
   }
 }
