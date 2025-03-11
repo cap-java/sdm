@@ -137,6 +137,8 @@ public class SDMServiceImpl implements SDMService {
       Map<String, String> secondaryProperties)
       throws IOException {
 
+    System.out.println("Entered rename attachments in sdm service imp");
+
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
@@ -170,6 +172,8 @@ public class SDMServiceImpl implements SDMService {
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
       HttpEntity responseEntity = response.getEntity();
+      System.out.println("Response entity: " + responseEntity.getContent());
+      System.out.println("Response code: " + response.getStatusLine().getStatusCode());
       if (responseEntity != null) {
         EntityUtils.toString(responseEntity, "UTF-8");
       }
