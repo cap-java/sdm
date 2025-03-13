@@ -5,7 +5,6 @@ import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.persistence.DBQuery;
-import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -97,14 +96,13 @@ public class SDMUtils {
         String updatedValue = entry.getKey().replace("___", ":");
         requestBody.put(updatedKey, updatedValue);
 
-        if (!"cmis___rm_holdIds".equals(entry.getKey()) || entry.getValue() != null) {
-          String valueKey = "propertyValue[" + index + "]";
-          requestBody.put(valueKey, entry.getValue());
-        }
-        index++;
+        // if (!"cmis___rm_holdIds".equals(entry.getKey()) || entry.getValue() != null) {
+        //   String valueKey = "propertyValue[" + index + "]";
+        //   requestBody.put(valueKey, entry.getValue());
+        // }
+        // index++;
       }
     }
-
     return index;
   }
 
@@ -195,15 +193,6 @@ public class SDMUtils {
     for (String property : secondaryTypeProperties) {
       String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
       Object valueInMap = propertiesMap.get(property);
-      if ("cmis___rm_holdIds".equals(property) && valueInMap != null && valueInDB != null) {
-        throw new ServiceException(
-            "The properties could not be modified because of an active hold. Please set the value of 'hold' to empty and try again.",
-            null); // for "hold". This scenario needs to be handled for delete
-      }
-      if ("cmis___rm_holdIds".equals(property) && valueInMap == null && valueInDB == null) {
-        continue; // for "hold", in case the value in DB was null and the current value is null,
-        // there is no change required, so this field is skipped
-      }
       if (valueInMap != valueInDB) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());

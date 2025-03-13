@@ -174,6 +174,11 @@ public class SDMServiceImpl implements SDMService {
       HttpEntity responseEntity = response.getEntity();
       System.out.println("Response entity: " + responseEntity.getContent());
       System.out.println("Response code: " + response.getStatusLine().getStatusCode());
+      if (response.getStatusLine().getStatusCode() == 400
+          && EntityUtils.toString(responseEntity).contains("is unknown!")) {
+        throw new ServiceException(
+            "Unknown secondary property, kindly verify all the secondary properties");
+      }
       if (responseEntity != null) {
         EntityUtils.toString(responseEntity, "UTF-8");
       }
