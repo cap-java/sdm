@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -17,24 +16,20 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private final SDMService sdmService;
-  private final PersistenceService persistenceService;
 
-  public SDMCreateAttachmentsHandler(SDMService sdmService, PersistenceService persistenceService) {
+  public SDMCreateAttachmentsHandler(SDMService sdmService) {
     this.sdmService = sdmService;
-    this.persistenceService = persistenceService;
   }
 
   @Before
@@ -93,25 +88,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
+    Map<String, String> secondaryProperties = new HashMap<>();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
-    Optional<CdsEntity> attachmentEntity =
-        Optional.ofNullable(context.getModel().getEntity(fileNameInSDM));
-    // Get list of secondary type properties
-    List<String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
-    Map<String, Object> propertiesMap = new HashMap<>();
-    // For each property get the value
-    if (!secondaryTypeProperties.isEmpty()) {
-      for (String property : secondaryTypeProperties) {
-        Object value = attachment.get(property);
-        propertiesMap.put(property, value);
-      }
-    }
-    // Get the updated secondary properties
-    Map<String, String> updatedSecondaryProperties =
-        SDMUtils.getUpdatedSecondaryProperties(
-            attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
 
     if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
       if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
@@ -121,9 +100,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         CmisDocument cmisDocument = new CmisDocument();
         cmisDocument.setFileName(filenameInRequest);
         cmisDocument.setObjectId(objectId);
-        Map<String, String> secondaryTypes = new HashMap<>();
         int responseCode =
-            sdmService.renameAttachments(jwtToken, sdmCredentials, cmisDocument, secondaryTypes);
+            sdmService.renameAttachments(
+                jwtToken, sdmCredentials, cmisDocument, secondaryProperties);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
