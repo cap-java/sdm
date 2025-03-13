@@ -67,7 +67,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
               attachmentCount = Long.parseLong(ann.getValue().toString());
               break;
             }
-            if(ann.getName().equals("SDM.Attachments.errormessage")){
+            if (ann.getName().equals("SDM.Attachments.errormessage")) {
               errorMessage = ann.getValue().toString();
             }
           }
@@ -94,7 +94,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         // check here for the count
         long rowCount = result.rowCount();
         if (rowCount > attachmentCount) {
-          if(errorMessage !=""){
+          if (errorMessage != "") {
             throw new ServiceException(errorMessage);
           }
           throw new ServiceException("Cannot upload more than " + attachmentCount + " attachments");
