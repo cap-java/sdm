@@ -49,7 +49,7 @@ public class ReadAheadInputStream extends InputStream {
               long bytesRead = 0;
               int readAttempt;
 
-              // 🔹 Keep reading until full chunk is read (unless EOF)
+              //  Keep reading until full chunk is read until EOF
               while (bytesRead < chunkSize
                   && (readAttempt =
                           originalStream.read(buffer, (int) bytesRead, chunkSize - (int) bytesRead))
@@ -116,7 +116,7 @@ public class ReadAheadInputStream extends InputStream {
 
   public synchronized long getRemainingBytes() {
     long remaining = totalSize - totalBytesRead;
-    System.out.println("🔹 Remaining Bytes: " + remaining);
+    System.out.println(" Remaining Bytes: " + remaining);
     return remaining > 0 ? remaining : 0;
   }
 
