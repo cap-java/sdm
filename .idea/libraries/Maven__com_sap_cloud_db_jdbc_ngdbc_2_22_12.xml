@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.db.jdbc:ngdbc:2.22.12" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.db.jdbc" artifactId="ngdbc" version="2.22.12" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/db/jdbc/ngdbc/2.22.12/ngdbc-2.22.12.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/db/jdbc/ngdbc/2.22.12/ngdbc-2.22.12-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/db/jdbc/ngdbc/2.22.12/ngdbc-2.22.12-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

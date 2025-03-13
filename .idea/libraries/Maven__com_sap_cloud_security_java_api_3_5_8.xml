@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.security:java-api:3.5.8" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.security" artifactId="java-api" version="3.5.8" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-api/3.5.8/java-api-3.5.8.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-api/3.5.8/java-api-3.5.8-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-api/3.5.8/java-api-3.5.8-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

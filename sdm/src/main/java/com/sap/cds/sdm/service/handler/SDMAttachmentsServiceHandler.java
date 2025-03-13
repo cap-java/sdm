@@ -63,11 +63,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         List<CdsElement> comp = cdsEntity.compositions().toList();
         for (CdsElement cdsElement : comp) {
           for (CdsAnnotation ann : cdsElement.annotations().toList()) {
-            if (ann.getName().equals("SDM.Attachments.maxcount")) {
+            if (ann.getName().equals("SDM.Attachments.maxCount")) {
               attachmentCount = Long.parseLong(ann.getValue().toString());
               break;
             }
-            if (ann.getName().equals("SDM.Attachments.errormessage")) {
+            if (ann.getName().equals("SDM.Attachments.maxCountError")) {
               errorMessage = ann.getValue().toString();
             }
           }

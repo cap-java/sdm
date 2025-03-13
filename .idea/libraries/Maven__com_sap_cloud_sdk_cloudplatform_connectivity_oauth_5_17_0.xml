@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.sdk.cloudplatform:connectivity-oauth:5.17.0" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.sdk.cloudplatform" artifactId="connectivity-oauth" version="5.17.0" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/sdk/cloudplatform/connectivity-oauth/5.17.0/connectivity-oauth-5.17.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/sdk/cloudplatform/connectivity-oauth/5.17.0/connectivity-oauth-5.17.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/sdk/cloudplatform/connectivity-oauth/5.17.0/connectivity-oauth-5.17.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
