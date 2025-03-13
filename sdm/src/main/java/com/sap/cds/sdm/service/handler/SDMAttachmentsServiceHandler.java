@@ -10,6 +10,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -33,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.json.JSONObject;
 
 @ServiceName(value = "*", type = AttachmentService.class)
@@ -51,24 +51,28 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
-
+    List<CdsEntity> entities = context.getModel().entities().toList();
     long attachmentCount = 0;
-    Stream<CdsAnnotation<?>> ann = context.getAttachmentEntity().annotations();
-    ann.forEach(
-        annotation -> {
-          // Process each annotation here
-          System.out.println(
-              annotation.getName() + ":" + annotation.getValue() + ":" + annotation.getKey());
-        });
-    Optional<CdsAnnotation<Object>> annotation =
-        context.getAttachmentEntity().findAnnotation("maxcount.value");
-    Optional<CdsAnnotation<Object>> messageannotation =
-        context.getAttachmentEntity().findAnnotation("message.value");
-    if (annotation.isPresent()) {
-      System.out.println("Attachment Count " + annotation.get());
-      System.out.println(
-          "Attachment Count Val" + annotation.get().getKey() + ":" + annotation.get().getValue());
-      attachmentCount = Long.parseLong(annotation.get().getValue().toString());
+    String errorMessage = "";
+    for (CdsEntity cdsEntity : entities) {
+      if (context.getAttachmentEntity().getQualifiedName().contains(cdsEntity.getQualifiedName())
+          && !context
+              .getAttachmentEntity()
+              .getQualifiedName()
+              .equals(cdsEntity.getQualifiedName())) {
+        List<CdsElement> comp = cdsEntity.compositions().toList();
+        for (CdsElement cdsElement : comp) {
+          for (CdsAnnotation ann : cdsElement.annotations().toList()) {
+            if (ann.getName().equals("SDM.Attachments.maxcount")) {
+              attachmentCount = Long.parseLong(ann.getValue().toString());
+              break;
+            }
+            if(ann.getName().equals("SDM.Attachments.errormessage")){
+              errorMessage = ann.getValue().toString();
+            }
+          }
+        }
+      }
     }
 
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -90,9 +94,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         // check here for the count
         long rowCount = result.rowCount();
         if (rowCount > attachmentCount) {
-          if (messageannotation.isPresent()) {
-            throw new ServiceException(
-                messageannotation.get().getValue().toString() + attachmentCount);
+          if(errorMessage !=""){
+            throw new ServiceException(errorMessage);
           }
           throw new ServiceException("Cannot upload more than " + attachmentCount + " attachments");
         }
