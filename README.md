@@ -20,6 +20,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Setup](#setup)
 - [Deploying and testing the application](#deploying-and-testing-the-application)
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
+- [Support for Multitenancy](#support-for-multitenancy)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -289,6 +290,32 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 9. **Delete a file** by going into Edit mode and selecting the file(s) and by using the **Delete** button on the Attachments table. Then click the **Save** button to have that file deleted from the resource (SAP Document Management Integration Option). We demonstrate this by deleting the previously uploaded TXT file:
 
    <img width="1300" alt="Delete an attachment" style="border-radius:0.5rem;" src="resources/delete.gif">
+
+## Support for Multitenancy
+- This plugin facilitates the onboarding of repositories in a multitenant environment by leveraging the externalId field in SAP Document Management.
+- Application developers can utilize the onboarding API as shown below when developing their CAP (Cloud Application Programming) SaaS applications.
+  
+```sh
+@After(event = DeploymentService.EVENT_SUBSCRIBE)
+public void onSubscribe(SubscribeEventContext context) {
+final SaasRegistrySubscriptionOptions options = Struct
+.access(context.getOptions())
+.as(SaasRegistrySubscriptionOptions.class);
+final String subdomain = options.getSubscribedSubdomain();
+SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+
+Repository repository = new Repository();
+//provide the repository details
+repository.setDescription("Onboarding Repo Demo");
+repository.setDisplayName(" Test Onboarding repo");
+repository.setExternalId(System.getenv("REPOSITORY_ID"));
+String response = sdmAdminService.onboardRepository(repository);
+}
+ ```
+- The necessary fields for the Repository when onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
+- The REPOSITORY_ID from the Multi-Target Application ([MTA](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) should be a readable string instead of a GUID. This identifier is used by the onboarding API to associate a repository with the subscribed tenant.
+ When the application is deployed as a SaaS application using the code above, tenants automatically onboard a repository upon subscription.
+- When the application is deployed as a SaaS application with above code, tenants on subscribing the SaaS application gets onboarded automatically.
 
 ## Known Restrictions
 
