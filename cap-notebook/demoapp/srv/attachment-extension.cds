@@ -2,7 +2,7 @@ using {sap.capire.bookshop.Books} from '../db/schema';
 using {sap.attachments.Attachments, sap.attachments.StatusCode} from`com.sap.cds/sdm`;
 
 extend entity Books with {
-    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 1,maxCountError:'User is not allowed to upload more than 1 attachment.'};
+    attachments : Composition of many Attachments;
 }
 
 entity Statuses @cds.autoexpose @readonly {
