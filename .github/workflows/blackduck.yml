@@ -39,6 +39,7 @@ jobs:
       - name: Run & analyze BlackDuck Scan
         run: |
           bash ./detect9.sh -d \
+          --detect.detector.search.depth=4 \
           --logging.level.com.synopsys.integration=DEBUG  \
           --blackduck.url="https://sap.blackducksoftware.com" \
           --blackduck.api.token=""${{ secrets.BLACKDUCK_TOKEN }}""   \
