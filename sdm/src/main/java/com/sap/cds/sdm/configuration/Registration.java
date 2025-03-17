@@ -6,6 +6,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
+import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
@@ -59,10 +60,12 @@ public class Registration implements CdsRuntimeConfiguration {
     var connectionPool = getConnectionPool(environment);
 
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
+    DocumentUploadService documentService = new DocumentUploadService();
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
-    configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
+    configurer.eventHandler(
+        new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
   }
 
   private AttachmentService buildAttachmentService() {

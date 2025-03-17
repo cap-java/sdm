@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.CacheKey;
 import com.sap.cds.sdm.caching.TokenCacheKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -19,17 +20,30 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OAuth2DestinationBuilder;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf;
 import com.sap.cloud.security.config.ClientCredentials;
+import com.sap.cloud.security.xsuaa.client.OAuth2ServiceException;
+import com.sap.cloud.security.xsuaa.http.HttpHeaders;
+import com.sap.cloud.security.xsuaa.http.MediaType;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONObject;
 
 public class TokenHandler {
 
@@ -138,6 +152,111 @@ public class TokenHandler {
       cachedToken = getUserTokenFromAuthorities(email, subdomain, sdmCredentials);
     }
     return cachedToken;
+  }
+
+  public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
+    System.out.println("jwt token = " + token);
+    JsonObject payloadObj = getTokenFields(token);
+    String email = payloadObj.get("email").getAsString();
+    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+    String subdomain = tenantDetails.get("zdn").getAsString();
+    String tokenexpiry = payloadObj.get("exp").getAsString();
+    CacheKey cacheKey = new CacheKey();
+    cacheKey.setKey(email + "_" + subdomain);
+    cacheKey.setExpiration(tokenexpiry);
+    String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
+    if (cachedToken == null) {
+      cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);
+      System.out.println("cachedToken token = " + cachedToken);
+    }
+    return cachedToken;
+  }
+
+  private static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
+    Map<String, String> parameters = new HashMap<>();
+    // parameters.put("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
+    // parameters.put(CLIENT_ID, sdmEnv.getClientId());
+    // parameters.put(CLIENT_SECRET, sdmEnv.getClientSecret());
+    parameters.put("assertion", token);
+    return parameters;
+  }
+
+  private static String generateDITokenFromTokenExchange(
+      String token, SDMCredentials sdmCredentials, JsonObject payloadObj)
+      throws OAuth2ServiceException {
+    String cachedToken = null;
+    CloseableHttpClient httpClient = null;
+    try {
+      httpClient = HttpClients.createDefault();
+      if (sdmCredentials.getClientId() == null) {
+        throw new IOException("No SDM binding found");
+      }
+      Map<String, String> parameters = fillTokenExchangeBody(token, sdmCredentials);
+      HttpPost httpPost =
+          new HttpPost(
+              sdmCredentials.getBaseTokenUrl()
+                  + "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer");
+      httpPost.setHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON.value());
+      httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED.value());
+      httpPost.setHeader("X-zid", getTokenFields(token).get("zid").getAsString());
+
+      String encoded =
+          java.util.Base64.getEncoder()
+              .encodeToString(
+                  (sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret())
+                      .getBytes());
+      httpPost.setHeader("Authorization", "Basic " + encoded);
+
+      List<BasicNameValuePair> basicNameValuePairs =
+          parameters.entrySet().stream()
+              .map(entry -> new BasicNameValuePair(entry.getKey(), entry.getValue()))
+              .collect(Collectors.toList());
+      httpPost.setEntity(new UrlEncodedFormEntity(basicNameValuePairs));
+
+      HttpResponse response = httpClient.execute(httpPost);
+      String responseBody = extractResponseBodyAsString(response);
+      if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        System.out.println("Error fetching token with JWT bearer : " + responseBody);
+      }
+      Map<String, Object> accessTokenMap = new JSONObject(responseBody).toMap();
+      cachedToken = String.valueOf(accessTokenMap.get("access_token"));
+      String expiryTime = payloadObj.get("exp").getAsString();
+      CacheKey cacheKey = new CacheKey();
+      JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+      String subdomain = tenantDetails.get("zdn").getAsString();
+      cacheKey.setKey(payloadObj.get("email").getAsString() + "_" + subdomain);
+      cacheKey.setExpiration(expiryTime);
+      CacheConfig.getUserTokenCache().put(cacheKey, cachedToken);
+    } catch (UnsupportedEncodingException e) {
+      throw new OAuth2ServiceException("Unexpected error parsing URI: " + e.getMessage());
+    } catch (ClientProtocolException e) {
+      throw new OAuth2ServiceException(
+          "Unexpected error while fetching client protocol: " + e.getMessage());
+    } catch (IOException e) {
+      System.out.println(
+          "Error in POST request while fetching token with JWT bearer " + e.getMessage());
+    } finally {
+      safeClose(httpClient);
+    }
+    return cachedToken;
+  }
+
+  private static void safeClose(CloseableHttpClient httpClient) {
+    if (httpClient != null) {
+      try {
+        httpClient.close();
+      } catch (IOException ex) {
+        System.out.println("Failed to close httpclient " + ex.getMessage());
+      }
+    }
+  }
+
+  private static String extractResponseBodyAsString(HttpResponse response) throws IOException {
+    // Ensure that InputStream and BufferedReader are automatically closed
+    try (InputStream inputStream = response.getEntity().getContent();
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
+      return bufferedReader.lines().collect(Collectors.joining(System.lineSeparator()));
+    }
   }
 
   public static JsonObject getTokenFields(String token) {
