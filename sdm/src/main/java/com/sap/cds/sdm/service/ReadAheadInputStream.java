@@ -162,9 +162,6 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
-    System.out.println(
-        "ReadAheadInputStream.read(byte[], int, int) called by "
-            + Thread.currentThread().getStackTrace()[2]);
     if (position >= currentBufferSize) {
       System.out.println("position = " + position + " >= currentBufferSize = " + currentBufferSize);
       if (lastChunkLoaded) return -1;
