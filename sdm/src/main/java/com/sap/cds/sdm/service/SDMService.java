@@ -55,4 +55,10 @@ public interface SDMService {
 
   public List<String> getSecondaryTypes(
       String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws IOException;
+
+  public List<String> getValidSecondaryProperties(
+      List<String> secondaryTypes,
+      String subdomain,
+      SDMCredentials sdmCredentials,
+      String repositoryId);
 }

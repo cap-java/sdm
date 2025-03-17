@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -136,8 +137,12 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties)
       throws IOException {
+    Map<String, String> updatedMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
+      updatedMap.put(entry.getKey().replace("___", ":"), entry.getValue());
+    }
 
-    System.out.println("Entered rename attachments in sdm service imp");
+    secondaryProperties = updatedMap;
 
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
@@ -147,6 +152,13 @@ public class SDMServiceImpl implements SDMService {
     String fileName = cmisDocument.getFileName();
 
     List<String> secondaryTypes = getSecondaryTypes(repositoryId, jwtToken, sdmCredentials);
+    List<String> validSecondaryProperties =
+        getValidSecondaryProperties(secondaryTypes, subdomain, sdmCredentials, repositoryId);
+    if (validSecondaryProperties.size() != secondaryProperties.size()) {
+      throw new ServiceException(
+          "Unknown secondary property, kindly verify all the secondary properties");
+    }
+    secondaryProperties.keySet().removeIf(key -> !validSecondaryProperties.contains(key));
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
 
@@ -157,12 +169,11 @@ public class SDMServiceImpl implements SDMService {
     updateRequestBody.put("cmisaction", "update");
     updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
 
-    for (int i = 0; i < secondaryTypes.size(); i++) {
-      updateRequestBody.put("propertyValue[0][" + i + "]", secondaryTypes.get(i));
+    for (int index = 0; index < secondaryTypes.size(); index++) {
+      updateRequestBody.put("propertyValue[0][" + index + "]", secondaryTypes.get(index));
     }
 
-    int indexStart =
-        SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
@@ -172,8 +183,6 @@ public class SDMServiceImpl implements SDMService {
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
       HttpEntity responseEntity = response.getEntity();
-      System.out.println("Response entity: " + responseEntity.getContent());
-      System.out.println("Response code: " + response.getStatusLine().getStatusCode());
       if (response.getStatusLine().getStatusCode() == 400
           && EntityUtils.toString(responseEntity).contains("is unknown!")) {
         throw new ServiceException(
@@ -186,6 +195,37 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
     }
+  }
+
+  @Override
+  public List<String> getValidSecondaryProperties(
+      List<String> secondaryTypes,
+      String subdomain,
+      SDMCredentials sdmCredentials,
+      String repositoryId) {
+    List<String> validSecondaryProperties = new ArrayList<>();
+    Iterator<String> iterator = secondaryTypes.iterator();
+    while (iterator.hasNext()) {
+      String value = iterator.next();
+      var httpClient =
+          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      String sdmUrl =
+          sdmCredentials.getUrl()
+              + "browser/"
+              + repositoryId
+              + "?cmisselector=typeDefinition&typeID="
+              + value;
+      HttpGet getTypesRequest = new HttpGet(sdmUrl);
+      try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+        HttpEntity responseEntity = response.getEntity();
+        if (responseEntity != null) {
+          SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
+        }
+      } catch (IOException e) {
+        throw new ServiceException("Could not update the attachment", e);
+      }
+    }
+    return validSecondaryProperties;
   }
 
   @Override

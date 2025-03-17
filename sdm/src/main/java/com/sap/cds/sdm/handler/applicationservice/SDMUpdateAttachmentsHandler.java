@@ -137,18 +137,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String fileNameInDB =
         DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
+    int responseCode =
+        sdmService.renameAttachments(
+            context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+            TokenHandler.getSDMCredentials(),
+            cmisDocument,
+            updatedSecondaryProperties);
     if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
       if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
         fileNameWithRestrictedCharacters.add(filenameInRequest);
         attachment.replace("fileName", fileNameInSDM);
         return;
       }
-      int responseCode =
-          sdmService.renameAttachments(
-              context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
-              TokenHandler.getSDMCredentials(),
-              cmisDocument,
-              updatedSecondaryProperties);
       switch (responseCode) {
         case 403:
           // SDM Roles for user are missing
