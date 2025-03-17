@@ -1,4 +1,5 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -103,12 +104,12 @@
         <artifactId>httpcore5</artifactId>
         <version>5.3.3</version>
     </dependency>
+    <!--dependency>
+    <groupId>org.apache.httpcomponents.client5</groupId>
+    <artifactId>httpmime5</artifactId>
+    <version>5.4.2</version>
+</dependency-->
     
-<dependency>
-    <groupId>org.apache.httpcomponents</groupId>
-    <artifactId>httpmime</artifactId>
-    <version>4.3.1</version>
-</dependency>
 
 <dependency>
     <groupId>org.apache.httpcomponents</groupId>
@@ -122,13 +123,13 @@
     <version>1.2.17</version>
 </dependency>
 
-<dependency>
+<!--dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-web</artifactId>
     <version>3.4.3</version>
-</dependency>
+</dependency-->
 
-<dependency>
+<!--dependency>
     <groupId>org.springframework</groupId>
     <artifactId>spring-web</artifactId>
     <version>6.0.11</version>
@@ -138,7 +139,15 @@
             <artifactId>httpclient</artifactId>
         </exclusion>
     </exclusions>
+</dependency-->
+
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-core -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-core</artifactId>
+    <version>7.0.0-M3</version>
 </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -441,11 +450,11 @@
             <version>4.5.13</version>
         </dependency>
 
-<dependency>
+<!--dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-jpa</artifactId>
     <version>3.0.0</version>
-</dependency>
+</dependency-->
 
     </dependencies>
 

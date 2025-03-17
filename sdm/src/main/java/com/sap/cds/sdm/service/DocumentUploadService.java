@@ -5,6 +5,8 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
+import io.reactivex.BackpressureOverflowStrategy;
+import io.reactivex.Flowable;
 import io.reactivex.Single;
 import java.io.*;
 import java.lang.management.ManagementFactory;
@@ -12,23 +14,25 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.entity.mime.InputStreamBody;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.ParseException;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.json.JSONObject;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.*;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
 public class DocumentUploadService {
 
-  private final RestTemplate restTemplate;
-
+  private final CloseableHttpClient httpClient;
   MemoryMXBean memoryMXBean;
 
   public DocumentUploadService() {
@@ -49,31 +53,12 @@ public class DocumentUploadService {
     connectionManager.setDefaultConnectionConfig(connectionConfig);
 
     // Create a HttpClient using the connection manager
-    CloseableHttpClient httpClient =
+    httpClient =
         HttpClients.custom()
             .setConnectionManager(connectionManager)
             .setDefaultRequestConfig(requestConfig)
             .build();
 
-    // Pass the HttpClient to the request factory
-    // Create the factory with the HttpClient
-    HttpComponentsClientHttpRequestFactory requestFactory =
-        new HttpComponentsClientHttpRequestFactory(httpClient);
-
-    requestFactory.setConnectTimeout(3600000);
-    requestFactory.setConnectionRequestTimeout(3600000);
-
-    // Create the RestTemplate with this request factory
-    restTemplate = new RestTemplate(requestFactory);
-
-    // Add interceptors if needed. May be if for debug logs etc.
-    restTemplate
-        .getInterceptors()
-        .add(
-            (request, body, execution) -> {
-              // Log, modify headers, etc.
-              return execution.execute(request, body);
-            });
     // Getting the handle to Mem management bean to print out heap mem used at required intervals.
     memoryMXBean = ManagementFactory.getMemoryMXBean();
   }
@@ -92,10 +77,9 @@ public class DocumentUploadService {
                     sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
                 //  Set HTTP headers
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                headers.set("Authorization", "Bearer " + accessToken);
-                headers.setConnection("keep-alive");
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + accessToken);
+                headers.put("Connection", "keep-alive");
 
                 long totalSize = cmisDocument.getContentLength();
                 int chunkSize = 100 * 1024 * 1024; // 100MB chunks
@@ -115,93 +99,98 @@ public class DocumentUploadService {
         .subscribeOn(io.reactivex.schedulers.Schedulers.io());
   }
 
+  private CloseableHttpResponse performRequestWithRetry(String sdmUrl, HttpUriRequestBase request)
+      throws IOException {
+    return Flowable.fromCallable(() -> httpClient.execute(request))
+        .onBackpressureBuffer(
+            3, // Keeping a very low buffer as we hardly need it as the consumer (di call to
+            // appendcontent) is fast enough for the producer (sending the rest call) as we are
+            // making synchronous call
+            () ->
+                System.err.println(
+                    "Buffer overflow! Handle appropriately."), // Callback for overflow handling
+            BackpressureOverflowStrategy
+                .ERROR) // Strategy when overflow happens: just emit an error.
+        .retryWhen(RetryUtils.retryLogic(3))
+        .blockingSingle();
+  }
+
   /*
    * CMIS call to appending content stream
    */
   private void appendContentStream(
       CmisDocument cmisDocument,
-      HttpHeaders headers,
+      Map<String, String> headers,
       String sdmUrl,
       byte[] chunkBuffer,
       int bytesRead,
       boolean isLastChunk,
       int chunkIndex)
-      throws IOException {
+      throws IOException, ParseException {
 
-    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-    body.add("cmisaction", "appendContent");
-    body.add("objectId", cmisDocument.getObjectId());
-
-    body.add("propertyId[0]", "cmis:name");
-    body.add("propertyValue[0]", cmisDocument.getFileName());
-    body.add("propertyId[1]", "cmis:objectTypeId");
-    body.add("propertyValue[1]", "cmis:document");
-
-    body.add("isLastChunk", String.valueOf(isLastChunk));
-    body.add("filename", cmisDocument.getFileName());
-    body.add("succinct", "true");
-    InputStreamResource chunkResource =
-        new InputStreamResource(new ByteArrayInputStream(chunkBuffer, 0, bytesRead)) {
-          @Override
-          public long contentLength() {
-            return bytesRead;
-          }
-
-          @Override
-          public String getFilename() {
-            return cmisDocument.getFileName();
-          }
-        };
-
-    body.add(
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    builder.addTextBody("cmisaction", "appendContent");
+    builder.addTextBody("objectId", cmisDocument.getObjectId());
+    builder.addTextBody("propertyId[0]", "cmis:name");
+    builder.addTextBody("propertyValue[0]", cmisDocument.getFileName());
+    builder.addTextBody("propertyId[1]", "cmis:objectTypeId");
+    builder.addTextBody("propertyValue[1]", "cmis:document");
+    builder.addTextBody("isLastChunk", String.valueOf(isLastChunk));
+    builder.addTextBody("filename", cmisDocument.getFileName());
+    builder.addTextBody("succinct", "true");
+    builder.addPart(
         "media",
-        chunkResource); // In multi part chunking directly adding the chunk as body instead of
-    // wrapping each chunk by mimetype HttpHeader
+        new InputStreamBody(
+            new ByteArrayInputStream(chunkBuffer, 0, bytesRead), cmisDocument.getFileName()));
 
-    /*HttpHeaders fileHeaders = new HttpHeaders();
-    fileHeaders.setContentType(
-        MediaType.parseMediaType(cmisDocument.getMimeType())); //  Ensures correct type
-    body.add("media", new HttpEntity<>(chunkResource, fileHeaders)); //  Preserve file metadata
-    */
+    HttpEntity entity = builder.build();
+
+    HttpPost request = new HttpPost(sdmUrl);
+    request.setEntity(entity);
+    headers.forEach(request::addHeader);
 
     long startChunkUploadTime = System.currentTimeMillis();
-    HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-    ResponseEntity<String> response =
-        restTemplate.exchange(sdmUrl, HttpMethod.POST, requestEntity, String.class);
-    long endChunkUploadTime = System.currentTimeMillis();
-
-    System.out.println(
-        " Chunk "
-            + chunkIndex
-            + " Uploaded. Response: "
-            + response.getBody()
-            + " and it took "
-            + ((int) ((endChunkUploadTime - startChunkUploadTime) / 1000))
-            + " seconds");
+    try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
+      long endChunkUploadTime = System.currentTimeMillis();
+      System.out.println(
+          " Chunk "
+              + chunkIndex
+              + " and it took "
+              + ((int) ((endChunkUploadTime - startChunkUploadTime) / 1000))
+              + " seconds");
+    }
   }
 
-  private ResponseEntity<String> createEmptyDocument(
-      CmisDocument cmisDocument, HttpHeaders headers, String sdmUrl) throws IOException {
+  private String createEmptyDocument(
+      CmisDocument cmisDocument, Map<String, String> headers, String sdmUrl)
+      throws IOException, ParseException {
 
-    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-    body.add("cmisaction", "createDocument");
-    body.add("objectId", cmisDocument.getFolderId());
-    body.add("propertyId[0]", "cmis:name");
-    body.add("propertyValue[0]", cmisDocument.getFileName());
-    body.add("propertyId[1]", "cmis:objectTypeId");
-    body.add("propertyValue[1]", "cmis:document");
-    body.add("succinct", "true");
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    builder.addTextBody("cmisaction", "createDocument");
+    builder.addTextBody("objectId", cmisDocument.getFolderId());
+    builder.addTextBody("propertyId[0]", "cmis:name");
+    builder.addTextBody("propertyValue[0]", cmisDocument.getFileName());
+    builder.addTextBody("propertyId[1]", "cmis:objectTypeId");
+    builder.addTextBody("propertyValue[1]", "cmis:document");
+    builder.addTextBody("succinct", "true");
 
-    HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-    ResponseEntity<String> response =
-        restTemplate.exchange(sdmUrl, HttpMethod.POST, requestEntity, String.class);
-    System.out.println(" Empty Document Created: " + response.getBody());
+    HttpEntity entity = builder.build();
 
-    return response;
+    HttpPost request = new HttpPost(sdmUrl);
+    request.setEntity(entity);
+    headers.forEach(request::addHeader);
+
+    try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
+      System.out.println("Empty Document Created: " + response.getCode());
+      if (response.getEntity() == null) {
+        throw new IOException("Response entity is null!");
+      }
+      return EntityUtils.toString(response.getEntity());
+    }
   }
 
   private Single<JSONObject> uploadSingleChunk(
-      CmisDocument cmisDocument, HttpHeaders headers, String sdmUrl) {
+      CmisDocument cmisDocument, Map<String, String> headers, String sdmUrl) {
 
     return Single.defer(
         () -> {
@@ -224,41 +213,53 @@ public class DocumentUploadService {
                     cmisDocument.getContentLength(),
                     cmisDocument.getMimeType());
 
+            /*
+                                InputStreamResource fileResource =
+                                new InputStreamResource(reReadableStream) {
+                                  @Override
+                                  public String getFilename() {
+                                    return cmisDocument.getFileName();
+                                  }
+                                };
+            */
+
             //  Prepare Multipart Request
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("cmisaction", "createDocument");
-            body.add("objectId", cmisDocument.getFolderId());
-            body.add("propertyId[0]", "cmis:name");
-            body.add("propertyValue[0]", cmisDocument.getFileName());
-            body.add("propertyId[1]", "cmis:objectTypeId");
-            body.add("propertyValue[1]", "cmis:document");
-            body.add("succinct", "true");
-
-            HttpHeaders fileHeaders = new HttpHeaders();
-            fileHeaders.setContentType(
-                MediaType.parseMediaType(cmisDocument.getMimeType())); //  Ensures correct type
-
-            // body.add("media", fileResource); //Just keeping media added directly to the body
-            // commented for now
-            body.add(
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+            builder.addTextBody("cmisaction", "createDocument");
+            builder.addTextBody("objectId", cmisDocument.getFolderId());
+            builder.addTextBody("propertyId[0]", "cmis:name");
+            builder.addTextBody("propertyValue[0]", cmisDocument.getFileName());
+            builder.addTextBody("propertyId[1]", "cmis:objectTypeId");
+            builder.addTextBody("propertyValue[1]", "cmis:document");
+            builder.addTextBody("succinct", "true");
+            builder.addPart(
                 "media",
-                new HttpEntity<>(
-                    fileResource,
-                    fileHeaders)); //  To preserve file metadata wrap media content with the
-            // HttpHeader explicitly stating mimetype
+                new InputStreamBody(
+                    cmisDocument.getContent(),
+                    ContentType.create(cmisDocument.getMimeType()),
+                    cmisDocument.getFileName()));
+            HttpEntity entity = builder.build();
 
-            HttpEntity<MultiValueMap<String, Object>> requestEntity =
-                new HttpEntity<>(body, headers);
+            HttpPost request = new HttpPost(sdmUrl);
+            request.setEntity(entity);
+            headers.forEach(request::addHeader);
 
-            //  Send Request
-            ResponseEntity<String> response =
-                restTemplate.exchange(sdmUrl, HttpMethod.POST, requestEntity, String.class);
-            System.out.println(" Upload Response: " + response.getBody());
+            return Single.fromCallable(
+                    () -> {
+                      try (CloseableHttpResponse response =
+                          performRequestWithRetry(sdmUrl, request)) {
+                        String responseBody = EntityUtils.toString(response.getEntity());
+                        System.out.println(" Upload Response: " + responseBody);
 
-            Map<String, String> finalResMap = new HashMap<>();
-            this.formResponse(
-                cmisDocument, finalResMap, response); // Use formResponse to for the custom Response
-            return Single.just(new JSONObject(finalResMap));
+                        Map<String, String> finalResMap = new HashMap<>();
+                        formResponse(cmisDocument, finalResMap, responseBody);
+
+                        return new JSONObject(finalResMap);
+                      }
+                    })
+                .toFlowable()
+                .retryWhen(RetryUtils.retryLogic(3))
+                .singleOrError();
           } catch (Exception e) {
             return Single.error(
                 new IOException(" Error uploading small document: " + e.getMessage(), e));
@@ -267,118 +268,123 @@ public class DocumentUploadService {
   }
 
   private Single<JSONObject> uploadLargeFileInChunks(
-      CmisDocument cmisDocument, HttpHeaders headers, String sdmUrl, int chunkSize) {
+      CmisDocument cmisDocument, Map<String, String> headers, String sdmUrl, int chunkSize) {
 
     return Single.defer(
         () -> {
+          ReadAheadInputStream chunkedStream = null;
           try {
             InputStream originalStream = cmisDocument.getContent();
             if (originalStream == null) {
-              return Single.error(new IOException(" File stream is null!"));
+              return Single.error(new IOException("File stream is null!"));
             }
 
-            try (ReadAheadInputStream chunkedStream =
-                new ReadAheadInputStream(originalStream, cmisDocument.getContentLength())) {
-              //  Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
-              // set in every chunk appendContent
-              ResponseEntity<String> responseEntity =
-                  createEmptyDocument(cmisDocument, headers, sdmUrl);
-              String objectId =
-                  (new JSONObject(responseEntity.getBody()))
-                      .getJSONObject("succinctProperties")
-                      .getString("cmis:objectId");
-              cmisDocument.setObjectId(objectId);
+            chunkedStream =
+                new ReadAheadInputStream(originalStream, cmisDocument.getContentLength());
 
-              //  Step 2: Upload Chunks Sequentially
-              int chunkIndex = 0;
-              byte[] chunkBuffer = new byte[chunkSize];
-              int bytesRead;
-              boolean hasMoreChunks = true;
-              while (hasMoreChunks) {
-                long startChunkUBytesReaddTime = System.currentTimeMillis();
+            // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
+            // set in every chunk appendContent
+            String responseBody = createEmptyDocument(cmisDocument, headers, sdmUrl);
+            System.out.println("Response Body: " + responseBody);
 
-                // Step 3: Read next chunk
-                bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
+            String objectId =
+                (new JSONObject(responseBody))
+                    .getJSONObject("succinctProperties")
+                    .getString("cmis:objectId");
+            cmisDocument.setObjectId(objectId);
+            System.out.println("objectId of empty doc is " + objectId);
 
-                // Step 4: Fetch remaining bytes before checking EOF
-                long remainingBytes = chunkedStream.getRemainingBytes();
+            // Step 2: Upload Chunks Sequentially
+            int chunkIndex = 0;
+            byte[] chunkBuffer = new byte[chunkSize];
+            int bytesRead;
+            boolean hasMoreChunks = true;
+            while (hasMoreChunks) {
+              long startChunkUploadTime = System.currentTimeMillis();
 
-                // Step 5: Check if it's the last chunk
-                boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();
+              // Step 3: Read next chunk
+              bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
+              System.out.println("bytesRead is " + bytesRead);
+              // Step 4: Fetch remaining bytes before checking EOF
+              long remainingBytes = chunkedStream.getRemainingBytes();
+              System.out.println("remainingBytes is " + remainingBytes);
 
-                // Step 6: If no bytes were read AND queue still has data, fetch from queue
-                if (bytesRead == -1 && !chunkedStream.isChunkQueueEmpty()) {
-                  System.out.println(" Premature exit detected. Fetching last chunk from queue...");
-                  byte[] lastChunk = chunkedStream.getLastChunkFromQueue();
-                  bytesRead = lastChunk.length;
-                  System.arraycopy(lastChunk, 0, chunkBuffer, 0, bytesRead);
-                  isLastChunk = true; //  It has to be the last chunk
-                }
+              // Step 5: Check if it's the last chunk
+              boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();
 
-                // 🔹 Log every chunk details
-                System.out.println(
-                    "🔹 Chunk "
-                        + chunkIndex
-                        + " | BytesRead: "
-                        + bytesRead
-                        + " | RemainingBytes: "
-                        + remainingBytes
-                        + " | isLastChunk? "
-                        + isLastChunk);
-
-                // Step 7: Append Chunk. Call cmis api to append content stream
-                if (bytesRead > 0) {
-                  appendContentStream(
-                      cmisDocument,
-                      headers,
-                      sdmUrl,
-                      chunkBuffer,
-                      bytesRead,
-                      isLastChunk,
-                      chunkIndex);
-                }
-
-                long endChunkUBytesReaddTime = System.currentTimeMillis();
-                System.out.println(
-                    " Chunk "
-                        + chunkIndex
-                        + " having "
-                        + bytesRead
-                        + " bytes is read and it took "
-                        + ((int) (endChunkUBytesReaddTime - startChunkUBytesReaddTime) / 1000)
-                        + " seconds");
-
-                chunkIndex++;
-                // Just for debug purpose log the heap consumption details.
-                if (isLastChunk || chunkIndex % 5 == 0) {
-                  System.out.println(
-                      "Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
-                  printMemoryConsumption();
-                }
-
-                if (isLastChunk) {
-
-                  System.out.println(" Last chunk processed, exiting upload.");
-                  break;
-                }
+              // Step 6: If no bytes were read AND queue still has data, fetch from queue
+              if (bytesRead == -1 && !chunkedStream.isChunkQueueEmpty()) {
+                System.out.println("Premature exit detected. Fetching last chunk from queue...");
+                byte[] lastChunk = chunkedStream.getLastChunkFromQueue();
+                bytesRead = lastChunk.length;
+                System.arraycopy(lastChunk, 0, chunkBuffer, 0, bytesRead);
+                isLastChunk = true; // It has to be the last chunk
               }
-              // Step 8: Finally use the custom formResponse to return
-              Map<String, String> finalResMap = new HashMap<>();
-              this.formResponse(cmisDocument, finalResMap, responseEntity);
-              return Single.just(new JSONObject(finalResMap));
-            }
 
+              // 🔹 Log every chunk details
+              System.out.println(
+                  "🔹 Chunk "
+                      + chunkIndex
+                      + " | BytesRead: "
+                      + bytesRead
+                      + " | RemainingBytes: "
+                      + remainingBytes
+                      + " | isLastChunk? "
+                      + isLastChunk);
+
+              // Step 7: Append Chunk. Call cmis api to append content stream
+              if (bytesRead > 0) {
+                appendContentStream(
+                    cmisDocument, headers, sdmUrl, chunkBuffer, bytesRead, isLastChunk, chunkIndex);
+              }
+
+              long endChunkUploadTime = System.currentTimeMillis();
+              System.out.println(
+                  " Chunk "
+                      + chunkIndex
+                      + " having "
+                      + bytesRead
+                      + " bytes is read and it took "
+                      + ((int) (endChunkUploadTime - startChunkUploadTime) / 1000)
+                      + " seconds");
+
+              chunkIndex++;
+              // Just for debug purpose log the heap consumption details.
+              if (isLastChunk || chunkIndex % 5 == 0) {
+                System.out.println(
+                    "Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
+                printMemoryConsumption();
+              }
+
+              if (isLastChunk) {
+                System.out.println("Last chunk processed, exiting upload.");
+                hasMoreChunks = false;
+              }
+            }
+            // Step 8: Finally use the custom formResponse to return
+            Map<String, String> finalResMap = new HashMap<>();
+            this.formResponse(cmisDocument, finalResMap, responseBody);
+            return Single.just(new JSONObject(finalResMap));
           } catch (Exception e) {
+            System.err.println("Exception in uploadLargeFileInChunks: " + e.getMessage());
+            e.printStackTrace();
             return Single.error(
-                new IOException(" Error uploading document in chunks: " + e.getMessage(), e));
+                new IOException("Error uploading document in chunks: " + e.getMessage(), e));
+          } finally {
+            if (chunkedStream != null) {
+              try {
+                chunkedStream.close();
+              } catch (IOException e) {
+                System.err.println("Error closing chunkedStream: " + e.getMessage());
+              }
+            }
           }
         });
   }
 
   private void formResponse(
-      CmisDocument cmisDocument,
-      Map<String, String> finalResponse,
-      ResponseEntity<String> response) {
+      CmisDocument cmisDocument, Map<String, String> finalResponse, String responseBody) {
+    System.out.println("Entering formResponse method");
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
@@ -386,34 +392,22 @@ public class DocumentUploadService {
     String error = "";
 
     try {
-
-      String responseString = response.getBody();
-      JSONObject jsonResponse = new JSONObject(responseString);
-      int responseCode = response.getStatusCode().value();
-      System.out.println("responseString=" + responseString);
-      System.out.println("responseCode=" + responseCode);
-      if (responseCode == 201 || responseCode == 200) {
-        if (jsonResponse.has("succinctProperties")) {
-          JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-          objectId = succinctProperties.getString("cmis:objectId");
-        } else if (jsonResponse.has("properties")
-            && jsonResponse.getJSONObject("properties").has("cmis:objectId"))
-          objectId =
-              jsonResponse
-                  .getJSONObject("properties")
-                  .getJSONObject("cmis:objectId")
-                  .getString("value");
+      System.out.println("Parsing responseBody: " + responseBody);
+      JSONObject jsonResponse = new JSONObject(responseBody);
+      if (jsonResponse.has("succinctProperties")) {
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        objectId = succinctProperties.getString("cmis:objectId");
+      } else if (jsonResponse.has("properties")
+          && jsonResponse.getJSONObject("properties").has("cmis:objectId")) {
+        objectId =
+            jsonResponse
+                .getJSONObject("properties")
+                .getJSONObject("cmis:objectId")
+                .getString("value");
       } else {
         String message = jsonResponse.optString("message", "Unknown error");
-        if (responseCode == 409
-            && "Malware Service Exception: Virus found in the file!".equals(message)) {
-          status = "virus";
-        } else if (responseCode == 409) {
-          status = "duplicate";
-        } else {
-          status = "fail";
-          error = message;
-        }
+        status = "fail";
+        error = message;
       }
 
       finalResponse.put("name", name);
@@ -424,6 +418,7 @@ public class DocumentUploadService {
         finalResponse.put("objectId", objectId);
       }
     } catch (Exception e) {
+      System.out.println("Exception in formResponse: " + e.getMessage());
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }

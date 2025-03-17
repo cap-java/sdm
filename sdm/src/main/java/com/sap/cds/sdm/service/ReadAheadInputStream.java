@@ -9,7 +9,7 @@ import java.util.concurrent.*;
 public class ReadAheadInputStream extends InputStream {
   private final BufferedInputStream originalStream;
   private final long totalSize;
-  private final int chunkSize = 100 * 1024 * 1024; //  100MB Chunk Size
+  private final int chunkSize = 100 * 1024 * 1024; // 100MB Chunk Size
   private long totalBytesRead = 0;
   private boolean lastChunkLoaded = false;
   private byte[] currentBuffer;
@@ -49,7 +49,7 @@ public class ReadAheadInputStream extends InputStream {
               long bytesRead = 0;
               int readAttempt;
 
-              //  Keep reading until full chunk is read until EOF
+              // Keep reading until full chunk is read until EOF
               while (bytesRead < chunkSize
                   && (readAttempt =
                           originalStream.read(buffer, (int) bytesRead, chunkSize - (int) bytesRead))
@@ -57,22 +57,22 @@ public class ReadAheadInputStream extends InputStream {
                 bytesRead += readAttempt;
               }
 
-              //  Ensure any data read is processed
+              // Ensure any data read is processed
               if (bytesRead > 0) {
                 totalBytesRead += bytesRead;
 
-                //  Trim buffer if last chunk is smaller
+                // Trim buffer if last chunk is smaller
                 if (bytesRead < chunkSize) {
                   byte[] trimmedBuffer = new byte[(int) bytesRead];
                   System.arraycopy(buffer, 0, trimmedBuffer, 0, (int) bytesRead);
                   buffer = trimmedBuffer;
                 }
 
-                //  Ensure last chunk is enqueued
+                // Ensure last chunk is enqueued
                 chunkQueue.put(buffer);
                 System.out.println(" Background Loaded Chunk: " + bytesRead + " bytes");
 
-                //  Only mark as last chunk after enqueuing the last chunk
+                // Only mark as last chunk after enqueuing the last chunk
                 if (totalBytesRead >= totalSize) {
                   lastChunkLoaded = true;
                   System.out.println(" Last chunk successfully queued and marked.");
@@ -107,11 +107,17 @@ public class ReadAheadInputStream extends InputStream {
   }
 
   public synchronized boolean isEOFReached() {
-    //  True if the last chunk has been read and no bytes are left
-    return lastChunkLoaded
-        && chunkQueue.isEmpty()
-        && position >= currentBufferSize; // && position >= currentBufferSize && totalBytesRead >=
-    // totalSize;
+    System.out.println(
+        "lastChunkLoaded "
+            + lastChunkLoaded
+            + " chunkQueue.isEmpty():"
+            + chunkQueue.isEmpty()
+            + " position:"
+            + position
+            + " currentBufferSize:"
+            + currentBufferSize);
+    // True if the last chunk has been read and no bytes are left
+    return lastChunkLoaded && chunkQueue.isEmpty() && position >= currentBufferSize;
   }
 
   public synchronized long getRemainingBytes() {
@@ -123,20 +129,15 @@ public class ReadAheadInputStream extends InputStream {
   private synchronized void loadNextChunk() throws IOException {
     try {
       if (chunkQueue.isEmpty() && lastChunkLoaded) {
-        return; //  No more data, return EOF
+        return; // No more data, return EOF
       }
 
-      currentBuffer = chunkQueue.take(); //  Fetch from preloaded queue
+      currentBuffer = chunkQueue.take(); // Fetch from preloaded queue
       currentBufferSize = currentBuffer.length;
       position = 0;
       System.out.println(" Loaded Chunk | Size: " + currentBufferSize);
 
-      // forceGc(); // If the GC is slow, possibly in the busy Read Ahead chunking process it could
-      // be
-      // possible that the dequeued items not yet garbage collected. check the heap size to
-      // do any forceful garbage collection.
-
-      //  Ensure the last chunk is processed
+      // Ensure the last chunk is processed
       if (lastChunkLoaded && chunkQueue.isEmpty()) {
         System.out.println(" Last chunk successfully processed and uploaded.");
       }
@@ -148,8 +149,10 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read() throws IOException {
+    System.out.println(
+        "ReadAheadInputStream.read() called by " + Thread.currentThread().getStackTrace()[2]);
     if (position >= currentBufferSize) {
-      if (lastChunkLoaded) return -1; //  EOF
+      if (lastChunkLoaded) return -1; // EOF
       loadNextChunk();
     }
     return currentBuffer[(int) position++]
@@ -159,6 +162,9 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
+    System.out.println(
+        "ReadAheadInputStream.read(byte[], int, int) called by "
+            + Thread.currentThread().getStackTrace()[2]);
     if (position >= currentBufferSize) {
       System.out.println("position = " + position + " >= currentBufferSize = " + currentBufferSize);
       if (lastChunkLoaded) return -1;
@@ -182,6 +188,8 @@ public class ReadAheadInputStream extends InputStream {
    */
   @Override
   public void close() throws IOException {
+    System.out.println(
+        "ReadAheadInputStream.close() called by " + Thread.currentThread().getStackTrace()[2]);
     try {
       executor.shutdown();
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {

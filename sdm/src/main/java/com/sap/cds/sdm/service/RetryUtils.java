@@ -1,19 +1,21 @@
 package com.sap.cds.sdm.service;
 
+import com.sap.cloud.security.client.HttpClientException;
 import io.reactivex.Flowable;
 import io.reactivex.functions.Function;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import org.apache.hc.client5.http.HttpHostConnectException;
+import org.apache.hc.client5.http.HttpResponseException;
 import org.reactivestreams.Publisher;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 
 public class RetryUtils {
 
   public static Predicate<Throwable> shouldRetry() {
     return throwable ->
-        throwable instanceof HttpClientErrorException
-            || throwable instanceof HttpServerErrorException;
+        throwable instanceof HttpHostConnectException
+            || throwable instanceof HttpResponseException
+            || throwable instanceof HttpClientException;
   }
 
   public static Function<Flowable<Throwable>, Publisher<?>> retryLogic(int maxAttempts) {
