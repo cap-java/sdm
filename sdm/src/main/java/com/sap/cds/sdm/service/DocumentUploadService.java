@@ -203,25 +203,6 @@ public class DocumentUploadService {
 
             ReadAheadInputStream reReadableStream =
                 new ReadAheadInputStream(originalStream, cmisDocument.getContentLength());
-            // Need to wrap known content length InputStreamResource with a custom class because if
-            // not InputStream will be read by InputStreamResource multiple times just to know the
-            // length!
-            ReReadableInputStreamResource fileResource =
-                new ReReadableInputStreamResource(
-                    reReadableStream,
-                    cmisDocument.getFileName(),
-                    cmisDocument.getContentLength(),
-                    cmisDocument.getMimeType());
-
-            /*
-                                InputStreamResource fileResource =
-                                new InputStreamResource(reReadableStream) {
-                                  @Override
-                                  public String getFilename() {
-                                    return cmisDocument.getFileName();
-                                  }
-                                };
-            */
 
             //  Prepare Multipart Request
             MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -232,10 +213,11 @@ public class DocumentUploadService {
             builder.addTextBody("propertyId[1]", "cmis:objectTypeId");
             builder.addTextBody("propertyValue[1]", "cmis:document");
             builder.addTextBody("succinct", "true");
+            // Add media part with file metadata
             builder.addPart(
                 "media",
                 new InputStreamBody(
-                    cmisDocument.getContent(),
+                    reReadableStream,
                     ContentType.create(cmisDocument.getMimeType()),
                     cmisDocument.getFileName()));
             HttpEntity entity = builder.build();
