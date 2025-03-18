@@ -18,6 +18,7 @@ error_exit() {
 
 # Step 3: Verify and Checkout Deploy Branch
 echo "Checking deploy branch..."
+git stash
 git fetch origin || error_exit "Failed to fetch repository"
 
 if git rev-parse --verify origin/develop_deploy; then
