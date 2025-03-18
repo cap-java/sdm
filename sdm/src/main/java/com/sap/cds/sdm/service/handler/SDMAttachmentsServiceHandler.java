@@ -29,6 +29,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +126,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
             logger.info("Upload Finished at: " + System.currentTimeMillis());
           } catch (Exception e) {
-            logger.error("Error in documentServiceRx: " + e.getMessage());
+            logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+            throw new ServiceException(
+                SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
           }
 
           if (createResult.get("status") == "duplicate") {

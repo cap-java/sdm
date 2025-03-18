@@ -2,6 +2,7 @@ package com.sap.cds.sdm.service;
 
 import com.sap.cds.sdm.constants.SDMConstants;
 import java.io.*;
+import java.util.Arrays;
 import java.util.concurrent.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,8 +80,9 @@ public class ReadAheadInputStream extends InputStream {
                 }
               }
             }
-          } catch (Exception e) {
-            logger.error(" Error in background loading: ");
+          } catch (InterruptedException | IOException e) {
+            logger.error(" Error in background loading: \n" + Arrays.toString(e.getStackTrace()));
+            Thread.currentThread().interrupt(); // Re-interrupt the current thread
           }
         });
   }
@@ -100,7 +102,7 @@ public class ReadAheadInputStream extends InputStream {
       throw new IOException("Interrupted while fetching last chunk", e);
     }
 
-    logger.error("⚠️ No last chunk found in queue. Returning empty.");
+    logger.error("No last chunk found in queue. Returning empty.");
     return new byte[0]; // Return empty array if queue is unexpectedly empty
   }
 
@@ -140,7 +142,8 @@ public class ReadAheadInputStream extends InputStream {
         logger.info(" Last chunk successfully processed and uploaded.");
       }
     } catch (InterruptedException e) {
-      throw new IOException(" Interrupted while loading next chunk", e);
+      Thread.currentThread().interrupt();
+      throw new IOException(" Interrupted while loading next chunk ", e);
     }
   }
 
@@ -187,10 +190,11 @@ public class ReadAheadInputStream extends InputStream {
     try {
       executor.shutdown();
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-        logger.error("⚠️ Forcing executor shutdown...");
+        logger.error("Forcing executor shutdown...");
         executor.shutdownNow();
       }
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new IOException(" Error shutting down executor", e);
     }
     originalStream.close();
