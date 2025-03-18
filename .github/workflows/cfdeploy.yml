@@ -12,26 +12,24 @@ on:
 
 permissions:
   pull-requests: read
+  packages: read  # Added permission to read packages
 
 jobs:
   Deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
           ref: develop
 
-      # Set up Java 17
       - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           java-version: 17
           distribution: 'temurin'
 
-      # Verify and Checkout Deploy Branch
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
@@ -42,7 +40,12 @@ jobs:
             exit 1
           fi
 
-      # Set REPOSITORY_ID
+      - name: Deleting the sdm directory for fresh build
+        run: |
+          pwd
+          cd
+          rm -rf .m2/repository/com/sap/cds
+
       - name: Set REPOSITORY_ID
         id: set_repository_id
         run: |
@@ -59,67 +62,56 @@ jobs:
             fi
           fi
 
-      # Set up Maven authentication
-      - name: Set up Maven authentication
+      - name: Set up Maven for GitHub Packages
         run: |
           mkdir -p ~/.m2
-          cat <<EOF > ~/.m2/settings.xml
+          cat >> ~/.m2/settings.xml <<EOL
           <settings>
             <servers>
               <server>
                 <id>github</id>
                 <username>${{ github.actor }}</username>
-                <password>${{ secrets.GIT_TOKEN }}</password>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
               </server>
             </servers>
           </settings>
-          EOF
+          EOL
 
-       # Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16' # You can specify a different version if required
+      - name: Ensure Maven uses GitHub Packages
+        run: |
+          cat >> pom.xml <<EOL
+          <project>
+            <repositories>
+              <repository>
+                <id>github</id>
+                <url>https://maven.pkg.github.com/cap-java/sdm</url>
+              </repository>
+            </repositories>
+          </project>
+          EOL
 
-      # Install MTA Build Tool
-      - name: Install MTA Build Tool
-        run: npm install -g mbt
+      - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
+        run: mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST
+        run: mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           echo "Current Branch......"
           git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp/srv
-          echo "Cuurent directory.."
-          pwd
-          ls -lart
+          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
           
           # Replace placeholder with actual REPOSITORY_ID value
-          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ../mta.yaml
-          mvn clean install
-        #mvn clean install
-
-
-      # # Build the project
-      # - name: Build project
-      #   run: mvn clean install
-
-      # # Prepare and Deploy to Cloud Foundry
-      # - name: Prepare and Deploy to Cloud Foundry
-      #   run: |
-      #     cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           
-      #     # Replace placeholder with actual REPOSITORY_ID value
-      #     sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
-          
-      #     mbt build
+          mbt build
 
-      #     # Install cf CLI plugin
-      #     cf install-plugin multiapps -f
+          # Install cf CLI plugin
+          cf install-plugin multiapps -f
 
-      #     # Login to Cloud Foundry again to ensure session is active
-      #     cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+          # Login to Cloud Foundry again to ensure session is active
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
 
-      #     # Deploy the application
-      #     cf deploy mta_archives/demoappjava_1.0.0.mtar -f
+          # Deploy the application
+          echo "Running cf deploy"
+          cf deploy mta_archives/demoappjava_1.0.0.mtar -f
