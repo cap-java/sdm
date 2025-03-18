@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "gihub_publish1" ]
+    branches: [ "gihub_publish" ]
   workflow_dispatch:
 
 jobs:
