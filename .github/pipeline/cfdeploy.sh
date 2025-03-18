@@ -17,8 +17,10 @@ error_exit() {
 #java -version || error_exit "Java 17 is not set up properly"
 
 # Step 3: Verify and Checkout Deploy Branch
+pwd
+cd sdm
 echo "Checking deploy branch..."
-git stash
+#git stash
 git fetch origin || error_exit "Failed to fetch repository"
 
 if git rev-parse --verify origin/develop_deploy; then
