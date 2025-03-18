@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   Deploy:
-    runs-on: cap-java
+    runs-on: ${{ secrets.node }}
 
     steps:
       - name: Checkout repository
