@@ -6,6 +6,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
@@ -99,11 +100,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
-    Map<String, String> secondaryProperties = new HashMap<>();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
-    Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
 
     List<String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
