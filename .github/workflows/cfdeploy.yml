@@ -62,10 +62,10 @@ jobs:
             fi
           fi
 
-      - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
-        run: |
-          mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
-          mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
+      #   run: |
+      #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
