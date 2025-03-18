@@ -55,7 +55,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     System.out.println(
         "Event Received: "
-            + context.getAttachmentEntity().getKey()
+            + (context.getAttachmentEntity() != null
+                ? context.getAttachmentEntity().getKey()
+                : "null")
             + " at "
             + System.currentTimeMillis());
     System.out.println(
@@ -78,6 +80,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       CdsModel model = context.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(context.getAttachmentEntity() + "_drafts");
+      if (!attachmentDraftEntity.isPresent()) {
+        throw new ServiceException("Attachment draft entity not found");
+      }
       Result result =
           DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
       if (!result.list().isEmpty()) {
@@ -108,10 +113,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setMimeType(mimeType);
           cmisDocument.setContentLength(contentLen);
           SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-          // JSONObject createResult =
-          // sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
-          // JSONObject createResult =
-          //   documentCreator.createDocument(cmisDocument, sdmCredentials, jwtToken);
           JSONObject createResult = null;
           try {
             createResult =

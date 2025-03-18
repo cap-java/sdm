@@ -36,14 +36,13 @@ import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.messages.Message;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import io.reactivex.Single;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Instant;
 import java.util.*;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,6 +107,9 @@ public class SDMAttachmentsServiceHandlerTest {
     Messages mockMessages = mock(Messages.class);
     MediaData mockMediaData = mock(MediaData.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
 
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn("Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
@@ -118,6 +120,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
+
     // Use assertThrows to expect a ServiceException and validate the message
     ServiceException thrown =
         assertThrows(
@@ -146,6 +151,14 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
+    byte[] byteArray = "Example content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
+    JSONObject mockCreateResult = new JSONObject();
+    mockCreateResult.put("status", "duplicate");
+    mockCreateResult.put("name", "sample.pdf");
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockContext.getTarget()).thenReturn(targetMock);
@@ -159,18 +172,30 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
     doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(documentService.createDocumentRx(any(), any(), any()))
+        .thenReturn(Single.just(mockCreateResult));
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class)) {
+    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class)) {
       when(mockRow.get("columnName")).thenReturn("mockDataValue");
       when(mockResult.list()).thenReturn(nonEmptyRowList);
       DBQueryMockedStatic.when(
               () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
           .thenReturn(mockResult);
-      when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-      when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-      when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
+
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -179,8 +204,9 @@ public class SDMAttachmentsServiceHandlerTest {
                 handlerSpy.createAttachment(mockContext);
               });
 
-      // Verify the exception message
       assertEquals("sample.pdf already exists.", thrown.getMessage());
+
+      // Add any additional verifications if needed
     }
   }
 
@@ -237,182 +263,22 @@ public class SDMAttachmentsServiceHandlerTest {
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
-    MediaData mockMediaData =
-        new MediaData() {
-          @Override
-          public InputStream getContent() {
-            return null;
-          }
-
-          @Override
-          public void setContent(InputStream inputStream) {}
-
-          @Override
-          public String getMimeType() {
-            return null;
-          }
-
-          @Override
-          public void setMimeType(String s) {}
-
-          @Override
-          public String getFileName() {
-            return "sample.pdf";
-          }
-
-          @Override
-          public void setFileName(String s) {}
-
-          @Override
-          public String getContentId() {
-            return null;
-          }
-
-          @Override
-          public void setContentId(String s) {}
-
-          @Override
-          public String getStatus() {
-            return null;
-          }
-
-          @Override
-          public void setStatus(String s) {}
-
-          @Override
-          public Instant getScannedAt() {
-            return null;
-          }
-
-          @Override
-          public void setScannedAt(Instant instant) {}
-
-          @Override
-          public Object get(Object o) {
-            return null;
-          }
-
-          @Override
-          public <T> T getPath(String s) {
-            return null;
-          }
-
-          @Override
-          public <T> T getPathOrDefault(String s, T t) {
-            return null;
-          }
-
-          @Override
-          public <T> T putPath(String s, T t) {
-            return null;
-          }
-
-          @Override
-          public <T> T putPathIfAbsent(String s, T t) {
-            return null;
-          }
-
-          @Override
-          public boolean containsPath(String s) {
-            return false;
-          }
-
-          @Override
-          public <T> T removePath(String s) {
-            return null;
-          }
-
-          @Override
-          public <T extends CdsData> T forRemoval(boolean b) {
-            return null;
-          }
-
-          @Override
-          public boolean isForRemoval() {
-            return false;
-          }
-
-          @Override
-          public <T> T getMetadata(String s) {
-            return null;
-          }
-
-          @Override
-          public <T> T putMetadata(String s, T t) {
-            return null;
-          }
-
-          @Override
-          public String toJson() {
-            return null;
-          }
-
-          @Override
-          public int size() {
-            return 0;
-          }
-
-          @Override
-          public boolean isEmpty() {
-            return false;
-          }
-
-          @Override
-          public boolean containsKey(Object key) {
-            return false;
-          }
-
-          @Override
-          public boolean containsValue(Object value) {
-            return false;
-          }
-
-          @Nullable
-          @Override
-          public Object put(String key, Object value) {
-            return null;
-          }
-
-          @Override
-          public Object remove(Object key) {
-            return null;
-          }
-
-          @Override
-          public void putAll(@NotNull Map<? extends String, ?> m) {}
-
-          @Override
-          public void clear() {}
-
-          @NotNull
-          @Override
-          public Set<String> keySet() {
-            return null;
-          }
-
-          @NotNull
-          @Override
-          public Collection<Object> values() {
-            return null;
-          }
-
-          @NotNull
-          @Override
-          public Set<Entry<String, Object>> entrySet() {
-            return null;
-          }
-        };
+    MediaData mockMediaData = mock(MediaData.class);
     Messages mockMessages = mock(Messages.class);
     CdsEntity targetMock = mock(CdsEntity.class);
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
     mockCreateResult.put("status", "duplicate");
     mockCreateResult.put("name", "sample.pdf");
-    // when(mockMediaData.getContent()).thenReturn(contentStream);
+
+    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockContext.getTarget()).thenReturn(targetMock);
     when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
     when(mockContext.getModel()).thenReturn(mockModel);
@@ -420,18 +286,20 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(Optional.of(mockEntity));
     when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
         .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
-        .thenReturn("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
+    doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentService.createDocumentRx(any(), any(), any()))
+        .thenReturn(Single.just(mockCreateResult));
 
     try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
@@ -491,6 +359,9 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
@@ -510,13 +381,16 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentService.createDocumentRx(any(), any(), any()))
+        .thenReturn(Single.just(mockCreateResult));
 
     try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
@@ -561,6 +435,9 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
@@ -581,13 +458,16 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentService.createDocumentRx(any(), any(), any()))
+        .thenReturn(Single.just(mockCreateResult));
 
     try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
@@ -610,13 +490,15 @@ public class SDMAttachmentsServiceHandlerTest {
                 handlerSpy.createAttachment(mockContext);
               });
 
-      // Verify the exception message
       assertEquals("Failed due to a DI error", thrown.getMessage());
+
+      // Add any additional verifications if needed
     }
   }
 
   @Test
   public void testCreateNonVersionedDISuccess() throws IOException {
+    // Initialization of mocks and setup
     Map<String, Object> mockattachmentIds = new HashMap<>();
     mockattachmentIds.put("up__ID", "upid");
     mockattachmentIds.put("ID", "id");
@@ -628,6 +510,9 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
+    ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
+    Map<String, String> mockHeaders = new HashMap<>();
+    mockHeaders.put("content-length", "12345");
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
@@ -648,6 +533,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
     when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);

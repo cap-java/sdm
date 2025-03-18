@@ -28,8 +28,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -172,7 +172,7 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  private static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
+  public static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
     Map<String, String> parameters = new HashMap<>();
     // parameters.put("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
     // parameters.put(CLIENT_ID, sdmEnv.getClientId());
@@ -181,7 +181,7 @@ public class TokenHandler {
     return parameters;
   }
 
-  private static String generateDITokenFromTokenExchange(
+  public static String generateDITokenFromTokenExchange(
       String token, SDMCredentials sdmCredentials, JsonObject payloadObj)
       throws OAuth2ServiceException {
     String cachedToken = null;
@@ -251,7 +251,7 @@ public class TokenHandler {
     }
   }
 
-  private static String extractResponseBodyAsString(HttpResponse response) throws IOException {
+  public static String extractResponseBodyAsString(HttpResponse response) throws IOException {
     // Ensure that InputStream and BufferedReader are automatically closed
     try (InputStream inputStream = response.getEntity().getContent();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
