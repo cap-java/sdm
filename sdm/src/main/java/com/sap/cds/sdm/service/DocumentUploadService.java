@@ -334,13 +334,11 @@ public class DocumentUploadService {
                       + " seconds");
 
               chunkIndex++;
-              // Just for debug purpose log the heap consumption details.
-              if (isLastChunk || chunkIndex % 5 == 0) {
-                logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
-                printMemoryConsumption();
-              }
 
               if (isLastChunk) {
+                // Just for debug purpose log the heap consumption details.
+                logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
+                printMemoryConsumption();
                 logger.info("Last chunk processed, exiting upload.");
                 hasMoreChunks = false;
               }
@@ -358,7 +356,8 @@ public class DocumentUploadService {
               try {
                 chunkedStream.close();
               } catch (IOException e) {
-                logger.error("Error closing chunkedStream: " + e.getMessage());
+                logger.error(
+                    "Error closing chunkedStream: \n" + Arrays.toString(e.getStackTrace()));
               }
             }
           }

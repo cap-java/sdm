@@ -29,6 +29,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +45,11 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TokenHandler {
+  private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
 
   private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -155,7 +159,6 @@ public class TokenHandler {
   }
 
   public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
-    System.out.println("jwt token = " + token);
     JsonObject payloadObj = getTokenFields(token);
     String email = payloadObj.get("email").getAsString();
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
@@ -167,16 +170,12 @@ public class TokenHandler {
     String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
     if (cachedToken == null) {
       cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);
-      System.out.println("cachedToken token = " + cachedToken);
     }
     return cachedToken;
   }
 
   public static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
     Map<String, String> parameters = new HashMap<>();
-    // parameters.put("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
-    // parameters.put(CLIENT_ID, sdmEnv.getClientId());
-    // parameters.put(CLIENT_SECRET, sdmEnv.getClientSecret());
     parameters.put("assertion", token);
     return parameters;
   }
@@ -216,7 +215,7 @@ public class TokenHandler {
       HttpResponse response = httpClient.execute(httpPost);
       String responseBody = extractResponseBodyAsString(response);
       if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-        System.out.println("Error fetching token with JWT bearer : " + responseBody);
+        logger.error("Error fetching token with JWT bearer : " + responseBody);
       }
       Map<String, Object> accessTokenMap = new JSONObject(responseBody).toMap();
       cachedToken = String.valueOf(accessTokenMap.get("access_token"));
@@ -233,8 +232,9 @@ public class TokenHandler {
       throw new OAuth2ServiceException(
           "Unexpected error while fetching client protocol: " + e.getMessage());
     } catch (IOException e) {
-      System.out.println(
-          "Error in POST request while fetching token with JWT bearer " + e.getMessage());
+      logger.error(
+          "Error in POST request while fetching token with JWT bearer \n"
+              + Arrays.toString(e.getStackTrace()));
     } finally {
       safeClose(httpClient);
     }
@@ -246,7 +246,7 @@ public class TokenHandler {
       try {
         httpClient.close();
       } catch (IOException ex) {
-        System.out.println("Failed to close httpclient " + ex.getMessage());
+        logger.error("Failed to close httpclient \n" + Arrays.toString(ex.getStackTrace()));
       }
     }
   }

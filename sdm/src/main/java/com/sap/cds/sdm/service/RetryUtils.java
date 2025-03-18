@@ -11,6 +11,10 @@ import org.reactivestreams.Publisher;
 
 public class RetryUtils {
 
+  private RetryUtils() {
+    // Doesn't do anything
+  }
+
   public static Predicate<Throwable> shouldRetry() {
     return throwable ->
         throwable instanceof HttpHostConnectException
