@@ -133,7 +133,8 @@ public class SDMUtils {
         "cmis:rm_destructionRetention",
         "sap:createLink",
         "sap:restoreVersion",
-        "sap:createFavorite");
+        "sap:createFavorite",
+        "cmis:rm_hold");
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 

@@ -89,6 +89,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList)
       throws IOException {
     System.out.println("Entered correct flow");
+    String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
+    Optional<CdsEntity> attachmentEntity =
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
+    String fileNameInDB =
+        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -124,6 +129,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
+      if (fileNameInDB != filenameInRequest) {
+        if (filenameInRequest != null) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        } else {
+          throw new ServiceException("Filename cannot be empty");
+        }
+      }
       int responseCode =
           sdmService.renameAttachments(
               jwtToken, sdmCredentials, cmisDocument, updatedSecondaryProperties);
