@@ -40,6 +40,9 @@ escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
 clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
 [ -z "$clientID" ] || [ "$clientID" == "null" ] && error_exit "Error: clientID is not set or is null"
 
+cd /root/workspace/CAP_JAVA_INTEGRATION_TEST/sdm
+pwd
+
 # Step 7: Run integration tests
 echo "Running integration tests..."
 PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -54,10 +57,5 @@ clientSecret=$escapedClientSecret
 username=$CF_USER
 password=$CF_PASSWORD
 EOL
-
-cd
-pwd
-
-cd sdm
 
 mvn clean verify -P integration-tests -DskipUnitTests || error_exit "Maven tests failed"
