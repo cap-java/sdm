@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "GitHub_publish1" ]
   workflow_dispatch:
 
 jobs:
@@ -96,8 +96,7 @@ jobs:
       - name: Deploy snapshot
         if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true deploy
+          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/cap-java/sdm deploy
         env:
-          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
-          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         shell: bash
