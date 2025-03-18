@@ -1,9 +1,12 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMConstants;
 import java.io.*;
 import java.util.Arrays;
 import java.util.concurrent.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,11 +14,13 @@ public class ReadAheadInputStream extends InputStream {
   private final BufferedInputStream originalStream;
   private final long totalSize;
   private final int chunkSize = SDMConstants.CHUNK_SIZE;
+  private final int chunkSize = SDMConstants.CHUNK_SIZE;
   private long totalBytesRead = 0;
   private boolean lastChunkLoaded = false;
   private byte[] currentBuffer;
   private long currentBufferSize = 0;
   private long position = 0;
+  private static final Logger logger = LoggerFactory.getLogger(ReadAheadInputStream.class);
   private static final Logger logger = LoggerFactory.getLogger(ReadAheadInputStream.class);
   private final ExecutorService executor =
       Executors.newCachedThreadPool(); // Thread pool to Read next chunk
@@ -31,6 +36,7 @@ public class ReadAheadInputStream extends InputStream {
     this.totalSize = totalSize;
     this.currentBuffer = new byte[chunkSize];
 
+    logger.info(" Initializing ReadAheadInputStream..."); // Once per one file upload
     logger.info(" Initializing ReadAheadInputStream..."); // Once per one file upload
     preloadChunks(); // preload one chunk
     loadNextChunk(); // Ensure first chunk is available

@@ -31,6 +31,8 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DocumentUploadService {
 
@@ -334,11 +336,14 @@ public class DocumentUploadService {
                       + " seconds");
 
               chunkIndex++;
-
-              if (isLastChunk) {
-                // Just for debug purpose log the heap consumption details.
+              // Just for debug purpose log the heap consumption details.
+              if (isLastChunk || chunkIndex % 5 == 0) {
                 logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
                 printMemoryConsumption();
+              }
+
+              if (isLastChunk) {
+                logger.info("Last chunk processed, exiting upload.");
                 logger.info("Last chunk processed, exiting upload.");
                 hasMoreChunks = false;
               }

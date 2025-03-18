@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
