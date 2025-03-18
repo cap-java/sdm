@@ -1,22 +1,21 @@
 package com.sap.cds.sdm.service;
 
+import com.sap.cds.sdm.constants.SDMConstants;
 import java.io.*;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 import java.util.concurrent.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ReadAheadInputStream extends InputStream {
   private final BufferedInputStream originalStream;
   private final long totalSize;
-  private final int chunkSize = 100 * 1024 * 1024; // 100MB Chunk Size
+  private final int chunkSize = SDMConstants.CHUNK_SIZE;
   private long totalBytesRead = 0;
   private boolean lastChunkLoaded = false;
   private byte[] currentBuffer;
   private long currentBufferSize = 0;
   private long position = 0;
-  private MemoryMXBean memoryMXBean;
-
+  private static final Logger logger = LoggerFactory.getLogger(ReadAheadInputStream.class);
   private final ExecutorService executor =
       Executors.newCachedThreadPool(); // Thread pool to Read next chunk
   private final BlockingQueue<byte[]> chunkQueue =
@@ -31,7 +30,7 @@ public class ReadAheadInputStream extends InputStream {
     this.totalSize = totalSize;
     this.currentBuffer = new byte[chunkSize];
 
-    System.out.println(" Initializing ReadAheadInputStream..."); // Once per one file upload
+    logger.info(" Initializing ReadAheadInputStream..."); // Once per one file upload
     preloadChunks(); // preload one chunk
     loadNextChunk(); // Ensure first chunk is available
   }
@@ -70,19 +69,18 @@ public class ReadAheadInputStream extends InputStream {
 
                 // Ensure last chunk is enqueued
                 chunkQueue.put(buffer);
-                System.out.println(" Background Loaded Chunk: " + bytesRead + " bytes");
+                logger.info(" Background Loaded Chunk: " + bytesRead + " bytes");
 
                 // Only mark as last chunk after enqueuing the last chunk
                 if (totalBytesRead >= totalSize) {
                   lastChunkLoaded = true;
-                  System.out.println(" Last chunk successfully queued and marked.");
+                  logger.info(" Last chunk successfully queued and marked.");
                   break;
                 }
               }
             }
           } catch (Exception e) {
-            System.err.println(" Error in background loading: ");
-            e.printStackTrace();
+            logger.error(" Error in background loading: ");
           }
         });
   }
@@ -92,22 +90,22 @@ public class ReadAheadInputStream extends InputStream {
       if (!chunkQueue.isEmpty()) {
         byte[] lastChunk = chunkQueue.poll(2, TimeUnit.SECONDS); // Wait briefly if needed
         if (lastChunk != null) {
-          System.out.println(" Fetching last chunk from queue: " + lastChunk.length + " bytes");
+          logger.info(" Fetching last chunk from queue: " + lastChunk.length + " bytes");
           return lastChunk;
         }
       }
     } catch (InterruptedException e) {
-      System.err.println(" Interrupted while fetching last chunk from queue");
+      logger.error(" Interrupted while fetching last chunk from queue");
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted while fetching last chunk", e);
     }
 
-    System.err.println("⚠️ No last chunk found in queue. Returning empty.");
+    logger.error("⚠️ No last chunk found in queue. Returning empty.");
     return new byte[0]; // Return empty array if queue is unexpectedly empty
   }
 
   public synchronized boolean isEOFReached() {
-    System.out.println(
+    logger.info(
         "lastChunkLoaded "
             + lastChunkLoaded
             + " chunkQueue.isEmpty():"
@@ -122,7 +120,7 @@ public class ReadAheadInputStream extends InputStream {
 
   public synchronized long getRemainingBytes() {
     long remaining = totalSize - totalBytesRead;
-    System.out.println(" Remaining Bytes: " + remaining);
+    logger.info(" Remaining Bytes: " + remaining);
     return remaining > 0 ? remaining : 0;
   }
 
@@ -135,21 +133,20 @@ public class ReadAheadInputStream extends InputStream {
       currentBuffer = chunkQueue.take(); // Fetch from preloaded queue
       currentBufferSize = currentBuffer.length;
       position = 0;
-      System.out.println(" Loaded Chunk | Size: " + currentBufferSize);
+      logger.info(" Loaded Chunk | Size: " + currentBufferSize);
 
       // Ensure the last chunk is processed
       if (lastChunkLoaded && chunkQueue.isEmpty()) {
-        System.out.println(" Last chunk successfully processed and uploaded.");
+        logger.info(" Last chunk successfully processed and uploaded.");
       }
     } catch (InterruptedException e) {
-      e.printStackTrace();
       throw new IOException(" Interrupted while loading next chunk", e);
     }
   }
 
   @Override
   public synchronized int read() throws IOException {
-    System.out.println(
+    logger.info(
         "ReadAheadInputStream.read() called by " + Thread.currentThread().getStackTrace()[2]);
     if (position >= currentBufferSize) {
       if (lastChunkLoaded) return -1; // EOF
@@ -163,7 +160,7 @@ public class ReadAheadInputStream extends InputStream {
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     if (position >= currentBufferSize) {
-      System.out.println("position = " + position + " >= currentBufferSize = " + currentBufferSize);
+      logger.info("position = " + position + " >= currentBufferSize = " + currentBufferSize);
       if (lastChunkLoaded) return -1;
       loadNextChunk();
     }
@@ -185,12 +182,12 @@ public class ReadAheadInputStream extends InputStream {
    */
   @Override
   public void close() throws IOException {
-    System.out.println(
+    logger.info(
         "ReadAheadInputStream.close() called by " + Thread.currentThread().getStackTrace()[2]);
     try {
       executor.shutdown();
       if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-        System.err.println("⚠️ Forcing executor shutdown...");
+        logger.error("⚠️ Forcing executor shutdown...");
         executor.shutdownNow();
       }
     } catch (InterruptedException e) {
@@ -204,17 +201,6 @@ public class ReadAheadInputStream extends InputStream {
     totalBytesRead = 0;
     lastChunkLoaded = false;
     position = 0;
-    System.out.println(" Stream Reset!");
-  }
-
-  private void forceGc() {
-    if (this.memoryMXBean == null) this.memoryMXBean = ManagementFactory.getMemoryMXBean();
-    MemoryUsage heapMemoryUsage = this.memoryMXBean.getHeapMemoryUsage();
-    // If the heap has still 1G and above in used section, better to call forceful garbage
-    // collection. Ideally shouldnt have happened.
-    if (heapMemoryUsage.getUsed() >= 1073741824) {
-      System.gc();
-      System.out.println("Forceful garbage collection called from ReadAheadInputStream");
-    }
+    logger.info(" Stream Reset!");
   }
 }

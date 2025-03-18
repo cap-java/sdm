@@ -29,14 +29,17 @@ import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DocumentUploadService {
 
   private final CloseableHttpClient httpClient;
   MemoryMXBean memoryMXBean;
+  private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
 
   public DocumentUploadService() {
-    System.out.println("DocumentUploadService is instantiated");
+    logger.info("DocumentUploadService is instantiated");
     PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(20);
     connectionManager.setDefaultMaxPerRoute(5);
@@ -82,7 +85,7 @@ public class DocumentUploadService {
                 headers.put("Connection", "keep-alive");
 
                 long totalSize = cmisDocument.getContentLength();
-                int chunkSize = 100 * 1024 * 1024; // 100MB chunks
+                int chunkSize = SDMConstants.CHUNK_SIZE;
 
                 if (totalSize <= chunkSize) {
                   //  Upload directly if file is ≤ 100MB
@@ -107,7 +110,7 @@ public class DocumentUploadService {
             // appendcontent) is fast enough for the producer (sending the rest call) as we are
             // making synchronous call
             () ->
-                System.err.println(
+                logger.error(
                     "Buffer overflow! Handle appropriately."), // Callback for overflow handling
             BackpressureOverflowStrategy
                 .ERROR) // Strategy when overflow happens: just emit an error.
@@ -152,10 +155,10 @@ public class DocumentUploadService {
     long startChunkUploadTime = System.currentTimeMillis();
     try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
       long endChunkUploadTime = System.currentTimeMillis();
-      System.out.println(
+      logger.info(
           " Chunk "
               + chunkIndex
-              + " and it took "
+              + " appendContent completed and it took "
               + ((int) ((endChunkUploadTime - startChunkUploadTime) / 1000))
               + " seconds");
     }
@@ -181,7 +184,7 @@ public class DocumentUploadService {
     headers.forEach(request::addHeader);
 
     try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
-      System.out.println("Empty Document Created: " + response.getCode());
+      logger.info("Empty Document Created: " + response.getCode());
       if (response.getEntity() == null) {
         throw new IOException("Response entity is null!");
       }
@@ -231,7 +234,7 @@ public class DocumentUploadService {
                       try (CloseableHttpResponse response =
                           performRequestWithRetry(sdmUrl, request)) {
                         String responseBody = EntityUtils.toString(response.getEntity());
-                        System.out.println(" Upload Response: " + responseBody);
+                        logger.info(" Upload Response: " + responseBody);
 
                         Map<String, String> finalResMap = new HashMap<>();
                         formResponse(cmisDocument, finalResMap, responseBody);
@@ -267,14 +270,14 @@ public class DocumentUploadService {
             // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
             // set in every chunk appendContent
             String responseBody = createEmptyDocument(cmisDocument, headers, sdmUrl);
-            System.out.println("Response Body: " + responseBody);
+            logger.info("Response Body: " + responseBody);
 
             String objectId =
                 (new JSONObject(responseBody))
                     .getJSONObject("succinctProperties")
                     .getString("cmis:objectId");
             cmisDocument.setObjectId(objectId);
-            System.out.println("objectId of empty doc is " + objectId);
+            logger.info("objectId of empty doc is " + objectId);
 
             // Step 2: Upload Chunks Sequentially
             int chunkIndex = 0;
@@ -286,26 +289,26 @@ public class DocumentUploadService {
 
               // Step 3: Read next chunk
               bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
-              System.out.println("bytesRead is " + bytesRead);
+              logger.info("bytesRead is " + bytesRead);
               // Step 4: Fetch remaining bytes before checking EOF
               long remainingBytes = chunkedStream.getRemainingBytes();
-              System.out.println("remainingBytes is " + remainingBytes);
+              logger.info("remainingBytes is " + remainingBytes);
 
               // Step 5: Check if it's the last chunk
               boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();
 
               // Step 6: If no bytes were read AND queue still has data, fetch from queue
               if (bytesRead == -1 && !chunkedStream.isChunkQueueEmpty()) {
-                System.out.println("Premature exit detected. Fetching last chunk from queue...");
+                logger.info("Premature exit detected. Fetching last chunk from queue...");
                 byte[] lastChunk = chunkedStream.getLastChunkFromQueue();
                 bytesRead = lastChunk.length;
                 System.arraycopy(lastChunk, 0, chunkBuffer, 0, bytesRead);
                 isLastChunk = true; // It has to be the last chunk
               }
 
-              // 🔹 Log every chunk details
-              System.out.println(
-                  "🔹 Chunk "
+              // Log every chunk details
+              logger.info(
+                  "Chunk "
                       + chunkIndex
                       + " | BytesRead: "
                       + bytesRead
@@ -321,7 +324,7 @@ public class DocumentUploadService {
               }
 
               long endChunkUploadTime = System.currentTimeMillis();
-              System.out.println(
+              logger.info(
                   " Chunk "
                       + chunkIndex
                       + " having "
@@ -333,13 +336,12 @@ public class DocumentUploadService {
               chunkIndex++;
               // Just for debug purpose log the heap consumption details.
               if (isLastChunk || chunkIndex % 5 == 0) {
-                System.out.println(
-                    "Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
+                logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
                 printMemoryConsumption();
               }
 
               if (isLastChunk) {
-                System.out.println("Last chunk processed, exiting upload.");
+                logger.info("Last chunk processed, exiting upload.");
                 hasMoreChunks = false;
               }
             }
@@ -348,8 +350,7 @@ public class DocumentUploadService {
             this.formResponse(cmisDocument, finalResMap, responseBody);
             return Single.just(new JSONObject(finalResMap));
           } catch (Exception e) {
-            System.err.println("Exception in uploadLargeFileInChunks: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Exception in uploadLargeFileInChunks: " + e.getMessage());
             return Single.error(
                 new IOException("Error uploading document in chunks: " + e.getMessage(), e));
           } finally {
@@ -357,7 +358,7 @@ public class DocumentUploadService {
               try {
                 chunkedStream.close();
               } catch (IOException e) {
-                System.err.println("Error closing chunkedStream: " + e.getMessage());
+                logger.error("Error closing chunkedStream: " + e.getMessage());
               }
             }
           }
@@ -366,7 +367,7 @@ public class DocumentUploadService {
 
   private void formResponse(
       CmisDocument cmisDocument, Map<String, String> finalResponse, String responseBody) {
-    System.out.println("Entering formResponse method");
+    logger.info("Entering formResponse method");
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
@@ -374,7 +375,7 @@ public class DocumentUploadService {
     String error = "";
 
     try {
-      System.out.println("Parsing responseBody: " + responseBody);
+      logger.info("Parsing responseBody: " + responseBody);
       JSONObject jsonResponse = new JSONObject(responseBody);
       if (jsonResponse.has("succinctProperties")) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
@@ -400,7 +401,7 @@ public class DocumentUploadService {
         finalResponse.put("objectId", objectId);
       }
     } catch (Exception e) {
-      System.out.println("Exception in formResponse: " + e.getMessage());
+      logger.error("Exception in formResponse: " + e.getMessage());
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }
@@ -416,10 +417,10 @@ public class DocumentUploadService {
   private void printMemoryConsumption() {
     MemoryUsage heapMemoryUsage = this.memoryMXBean.getHeapMemoryUsage();
     // Print the heap memory usage details
-    System.out.printf("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
-    System.out.printf("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
-    System.out.printf("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
-    System.out.printf("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
-    System.out.println("--------------------------------------------------------------------");
+    logger.info("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
+    logger.info("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
+    logger.info("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
+    logger.info("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
+    logger.info("--------------------------------------------------------------------");
   }
 }

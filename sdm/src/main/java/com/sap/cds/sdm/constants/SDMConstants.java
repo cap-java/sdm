@@ -37,6 +37,7 @@ public class SDMConstants {
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
+  public static final int CHUNK_SIZE = 100 * 1024 * 1024; // 100MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
   public static final String ONBOARD_REPO__ERROR_MESSAGE =

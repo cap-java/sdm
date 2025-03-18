@@ -35,12 +35,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final DocumentUploadService documentService;
+  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
 
   public SDMAttachmentsServiceHandler(
       PersistenceService persistenceService,
@@ -53,18 +56,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
-    System.out.println(
+    logger.info(
         "Event Received: "
             + (context.getAttachmentEntity() != null
                 ? context.getAttachmentEntity().getKey()
                 : "null")
             + " at "
             + System.currentTimeMillis());
-    System.out.println(
+    logger.info(
         "content-length is " + context.getParameterInfo().getHeaders().get("content-length"));
     String len = context.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
-    System.out.println("contentLen = " + contentLen);
+    logger.info("contentLen = " + contentLen);
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -119,11 +122,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
                 documentService
                     .createDocumentRx(cmisDocument, sdmCredentials, jwtToken)
                     .blockingGet();
-            System.out.println(
-                "Synchronous Response from documentServiceRx: " + createResult.toString());
-            System.out.println("✅ Upload Finished at: " + System.currentTimeMillis());
+            logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+            logger.info("Upload Finished at: " + System.currentTimeMillis());
           } catch (Exception e) {
-            System.err.println("Error in documentServiceRx: " + e.getMessage());
+            logger.error("Error in documentServiceRx: " + e.getMessage());
           }
 
           if (createResult.get("status") == "duplicate") {
