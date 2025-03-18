@@ -81,10 +81,12 @@ public class SDMUtils {
       Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
+    System.out.println("Secondary properties final check: " + secondaryProperties);
     int index = 1;
-    if (iterator.hasNext()) {
+    while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
-      if ("fileName".equals(entry.getKey())) {
+      System.out.println("Check final entries: " + entry.getKey() + " : " + entry.getValue());
+      if ("filename".equals(entry.getKey())) {
         requestBody.put("propertyId[" + index + "]", "cmis:name");
         requestBody.put("propertyValue[" + index + "]", entry.getValue());
       } else {

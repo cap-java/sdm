@@ -138,6 +138,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     cmisDocument.setObjectId(objectId);
     String fileNameInDB =
         DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+        if (fileNameInDB != filenameInRequest) {
+          if (filenameInRequest != null) {
+            updatedSecondaryProperties.put("filename", filenameInRequest);
+          } else {
+            throw new ServiceException("Filename cannot be empty");
+          }
+        }
     // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
     // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
     // if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {

@@ -158,7 +158,9 @@ public class SDMServiceImpl implements SDMService {
         getValidSecondaryProperties(secondaryTypes, subdomain, sdmCredentials, repositoryId);
     System.out.println("Valid Secondary Properties: " + validSecondaryProperties);
     System.out.println("Secondary Properties: " + secondaryProperties);
-    secondaryProperties.keySet().removeIf(key -> !validSecondaryProperties.contains(key));
+    secondaryProperties
+        .keySet()
+        .removeIf(key -> !key.equals("filename") && !validSecondaryProperties.contains(key));
     System.out.println("Valid Secondary Properties after removing: " + secondaryProperties);
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
