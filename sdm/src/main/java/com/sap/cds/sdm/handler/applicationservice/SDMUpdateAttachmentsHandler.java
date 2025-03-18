@@ -109,6 +109,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
+    System.out.println("Inside SDMUpdateAttachmentsHandler.processAttachment");
     // Get list of secondary type properties
     List<String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
@@ -126,6 +127,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
+    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
 
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
@@ -136,38 +138,38 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     cmisDocument.setObjectId(objectId);
     String fileNameInDB =
         DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-    String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
+    // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
+    // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
+    // if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+    //   fileNameWithRestrictedCharacters.add(filenameInRequest);
+    //   attachment.replace("fileName", fileNameInSDM);
+    //   return;
+    // }
     int responseCode =
         sdmService.renameAttachments(
             context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
             TokenHandler.getSDMCredentials(),
             cmisDocument,
             updatedSecondaryProperties);
-    if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-      if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
-        fileNameWithRestrictedCharacters.add(filenameInRequest);
-        attachment.replace("fileName", fileNameInSDM);
-        return;
-      }
-      switch (responseCode) {
-        case 403:
-          // SDM Roles for user are missing
-          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+    switch (responseCode) {
+      case 403:
+        // SDM Roles for user are missing
+        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
 
-        case 409:
-          duplicateFileNameList.add(filenameInRequest);
-          attachment.replace("fileName", fileNameInSDM);
-          break;
+      case 409:
+        duplicateFileNameList.add(filenameInRequest);
+        // attachment.replace("fileName", fileNameInSDM);
+        break;
 
-        case 200:
-        case 201:
-          // Success cases, do nothing
-          break;
+      case 200:
+      case 201:
+        // Success cases, do nothing
+        break;
 
-        default:
-          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-      }
+      default:
+        throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
     }
+    // }
   }
 
   private String getFileNameInSDM(

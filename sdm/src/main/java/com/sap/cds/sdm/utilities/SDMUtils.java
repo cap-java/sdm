@@ -6,6 +6,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,8 +18,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -74,36 +77,39 @@ public class SDMUtils {
     return matcher.find();
   }
 
-  public static int prepareSecondaryProperties(
+  public static void prepareSecondaryProperties(
       Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
-    int index = 1;
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
+    int index = 1;
     if (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
       if ("fileName".equals(entry.getKey())) {
-        requestBody.put("propertyId[1]", "cmis:name");
-        requestBody.put("propertyValue[1]", entry.getValue());
-        index++;
+        requestBody.put("propertyId[" + index + "]", "cmis:name");
+        requestBody.put("propertyValue[" + index + "]", entry.getValue());
       } else {
-        requestBody.put("propertyId[1]", "cmis:name");
-        requestBody.put("propertyValue[1]", fileName);
+        requestBody.put("propertyId[" + index + "]", entry.getKey());
+        requestBody.put("propertyValue[" + index + "]", entry.getValue());
       }
+      index++;
+    }
+  }
 
-      while (iterator.hasNext()) {
-        entry = iterator.next();
-        String updatedKey = "propertyId[" + index + "]";
-        String updatedValue = entry.getKey().replace("___", ":");
-        requestBody.put(updatedKey, updatedValue);
-
-        // if (!"cmis___rm_holdIds".equals(entry.getKey()) || entry.getValue() != null) {
-        //   String valueKey = "propertyValue[" + index + "]";
-        //   requestBody.put(valueKey, entry.getValue());
-        // }
-        // index++;
+  public static void checkMCM(HttpEntity responseEntity, List<String> secondaryPropertyIds)
+      throws IOException {
+    String responseString = EntityUtils.toString(responseEntity, "UTF-8");
+    JSONObject jsonObject = new JSONObject(responseString);
+    JSONObject propertyDefinitions = jsonObject.getJSONObject("propertyDefinitions");
+    for (String key : propertyDefinitions.keySet()) {
+      JSONObject property = propertyDefinitions.getJSONObject(key);
+      if (property.has("mcm:miscellaneous")) {
+        JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
+        if (miscellaneous.has("isPartOfTable")
+            && miscellaneous.getString("isPartOfTable").equals("true")) {
+          secondaryPropertyIds.add(key);
+        }
       }
     }
-    return index;
   }
 
   public static void assembleRequestBodySecondaryTypes(
@@ -137,7 +143,7 @@ public class SDMUtils {
         if (excludedSecondaryTypes.contains(secondaryType)) {
           continue; // Skip the current iteration
         }
-        result.add(jsonObject.getJSONObject("type").getString("id"));
+        result.add(secondaryType);
       }
 
       // If this object has children, recursively process them
@@ -161,14 +167,17 @@ public class SDMUtils {
         CdsElement element = entity.getElement(key);
         if (element != null) {
           // Check if secondary property is present
+          System.out.println("Element found: " + element);
           Optional<CdsAnnotation<Object>> annotation =
-              element.findAnnotation("@AdditionalProperty");
+              element.findAnnotation("@SDM.Attachments.AdditionalProperty");
           if (annotation.isPresent()) {
+            System.out.println("Annotation found: " + annotation);
             secondaryTypeProperties.add(element.getName());
           }
         }
       }
     }
+    System.out.println("Secondary type properties found: " + secondaryTypeProperties);
     return secondaryTypeProperties;
   }
 
@@ -191,8 +200,13 @@ public class SDMUtils {
         DBQuery.getpropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     for (String property : secondaryTypeProperties) {
-      String valueInDB = propertiesInDB.get(secondaryTypeProperties.indexOf(property));
-      Object valueInMap = propertiesMap.get(property);
+      String valueInDB =
+          (propertiesInDB != null
+                  && secondaryTypeProperties != null
+                  && secondaryTypeProperties.indexOf(property) >= 0)
+              ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
+              : null;
+      Object valueInMap = (propertiesMap != null) ? propertiesMap.get(property) : null;
       if (valueInMap != valueInDB) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());

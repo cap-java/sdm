@@ -35,6 +35,12 @@ public class SDMConstants {
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
+  public static final Integer MAX_CONNECTIONS = 100;
+  public static final int CONNECTION_TIMEOUT = 1200;
+  public static final String ONBOARD_REPO_MESSAGE =
+      "Repository with name %s  and id %s onboarded successfully";
+  public static final String ONBOARD_REPO__ERROR_MESSAGE =
+      "Error in onboarding repository with name %s";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

@@ -226,4 +226,36 @@ public class TokenHandlerTest {
     // Asserting the expected result
     assertEquals("tenant", result);
   }
+
+  @Test
+  public void testGetHttpClientForOnboardFlow() {
+    ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
+    try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
+        Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
+      accessorMockedStatic
+          .when(DefaultServiceBindingAccessor::getInstance)
+          .thenReturn(mockAccessor);
+
+      ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
+
+      Map<String, Object> mockCredentials = new HashMap<>();
+      Map<String, Object> mockUaa = new HashMap<>();
+      mockUaa.put("url", "https://mock.uaa.url");
+      mockUaa.put("clientid", "mockClientId");
+      mockUaa.put("clientsecret", "mockClientSecret");
+      mockCredentials.put("uaa", mockUaa);
+      mockCredentials.put("uri", "https://mock.service.url");
+
+      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
+
+      List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
+      Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
+
+      HttpClient client =
+          TokenHandler.getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
+
+      assertNotNull(client);
+    }
+  }
 }
