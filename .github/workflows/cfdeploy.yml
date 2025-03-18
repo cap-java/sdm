@@ -33,10 +33,10 @@ jobs:
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
-          if git rev-parse --verify origin/testing_develop_deploy; then
-            git checkout testing_develop_deploy
+          if git rev-parse --verify origin/Testing1_develop_deploy; then
+            git checkout Testing1_develop_deploy
           else
-            echo "Branch 'testing_develop_deploy' not found. Please verify the branch name."
+            echo "Branch 'Testing1_develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
 
