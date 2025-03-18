@@ -57,16 +57,16 @@ cd /root/workspace/CAP_JAVA_DEPLOY/sdm/cap-notebook/demoapp || error_exit "Faile
 # Replace placeholder with actual REPOSITORY_ID value
 sed -i "s|__REPOSITORY_ID__|${REPOSITORY_ID}|g" ./mta.yaml || error_exit "Failed to replace REPOSITORY_ID in mta.yaml"
 
-# mbt build || error_exit "Failed to build using mbt"
+mbt build || error_exit "Failed to build using mbt"
 
-# # Install cf CLI plugin
-# cf install-plugin multiapps -f || error_exit "Failed to install multiapps plugin"
+# Install cf CLI plugin
+cf install-plugin multiapps -f || error_exit "Failed to install multiapps plugin"
 
-# # Login to Cloud Foundry
+# Login to Cloud Foundry
 
 
-# cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" || error_exit "Failed to login to Cloud Foundry"
+cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" || error_exit "Failed to login to Cloud Foundry"
 
-# # Deploy the application
-# echo "Running cf deploy..."
-# cf deploy mta_archives/demoappjava_1.0.0.mtar -f || error_exit "Failed to deploy application"
+# Deploy the application
+echo "Running cf deploy..."
+cf deploy mta_archives/demoappjava_1.0.0.mtar -f || error_exit "Failed to deploy application"
