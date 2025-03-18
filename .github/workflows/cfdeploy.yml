@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   Deploy:
-    runs-on: ${{ secrets.node }}
+    runs-on: ${{ secrets.NODE }}
 
     steps:
       - name: Checkout repository
