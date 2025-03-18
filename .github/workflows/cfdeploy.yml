@@ -12,7 +12,7 @@ on:
 
 permissions:
   pull-requests: read
-  packages: read  # Added permission to read packages
+  packages: read  # Ensure permission to read packages
 
 jobs:
   Deploy:
@@ -66,7 +66,9 @@ jobs:
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml <<EOL
-<settings>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <servers>
     <server>
       <id>github</id>
@@ -77,23 +79,10 @@ jobs:
 </settings>
 EOL
 
-      - name: Ensure Maven uses GitHub Packages
-        run: |
-          cat >> pom.xml <<EOL
-<project>
-  <repositories>
-    <repository>
-      <id>github</id>
-      <url>https://maven.pkg.github.com/cap-java/sdm</url>
-    </repository>
-  </repositories>
-</project>
-EOL
-
       - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
         run: |
-          mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST
-          mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST
+          mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+          mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
