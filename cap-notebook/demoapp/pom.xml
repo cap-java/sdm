@@ -50,7 +50,7 @@
     <repositories>
         <repository>
             <id>github-cap-java</id>
-            <url>https://maven.pkg.github.com/cap-java</url>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
