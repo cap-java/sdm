@@ -55,4 +55,9 @@ username=$CF_USER
 password=$CF_PASSWORD
 EOL
 
+cd
+pwd
+
+cd sdm
+
 mvn clean verify -P integration-tests -DskipUnitTests || error_exit "Maven tests failed"
