@@ -7,9 +7,9 @@ error_exit() {
 }
 
 # Step 1: Checkout repository
-echo "Checking out repository..."
-git clone -b ${BRANCH} https://github.com/cap-java/sdm.git || error_exit "Failed to clone repository"
-cd sdm || error_exit "Failed to change directory"
+#echo "Checking out repository..."
+#git clone -b ${BRANCH} https://github.com/cap-java/sdm.git || error_exit "Failed to clone repository"
+#cd sdm || error_exit "Failed to change directory"
 
 # Step 2: Set up Java 17
 # This step assumes Java 17 is already installed. Verify version.
