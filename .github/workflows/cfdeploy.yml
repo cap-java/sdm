@@ -61,6 +61,23 @@ jobs:
               echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
             fi
           fi
+
+      - name: Configure Maven for GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github-snapshot</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
