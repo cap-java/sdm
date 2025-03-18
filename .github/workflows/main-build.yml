@@ -58,7 +58,7 @@ jobs:
         shell: bash
 
       - name: Check and Update Version
-        if: github.ref == 'refs/heads/gihub_publish'
+        if: github.ref == 'refs/heads/GitHub_publish'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
@@ -79,7 +79,7 @@ jobs:
             git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            git push origin HEAD:gihub_publish
+            git push origin HEAD:GitHub_publish
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
