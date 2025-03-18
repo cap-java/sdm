@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -158,9 +159,14 @@ public class SDMServiceImpl implements SDMService {
         getValidSecondaryProperties(secondaryTypes, subdomain, sdmCredentials, repositoryId);
     System.out.println("Valid Secondary Properties: " + validSecondaryProperties);
     System.out.println("Secondary Properties: " + secondaryProperties);
-    secondaryProperties
-        .keySet()
-        .removeIf(key -> !key.equals("filename") && !validSecondaryProperties.contains(key));
+    Set<String> keysToRemove =
+        secondaryProperties.keySet().stream()
+            .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
+            .collect(Collectors.toSet());
+
+    if (!keysToRemove.isEmpty()) {
+      throw new IllegalArgumentException("Invalid secondary properties found: " + keysToRemove);
+    }
     System.out.println("Valid Secondary Properties after removing: " + secondaryProperties);
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
