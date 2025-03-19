@@ -1,10 +1,10 @@
-name: UnitTestsWithCodeCoverage
+name: UnitTestsWithCodeCoverage_Test
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "GitHub_publish" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "GitHub_publish" ]
     types: [opened, synchronize, reopened, auto_merge_enabled]
   workflow_dispatch: 
 permissions:
