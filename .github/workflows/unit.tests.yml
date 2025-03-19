@@ -2,7 +2,7 @@ name: UnitTestsWithCodeCoverage
 
 on:
   push:
-    branches: [ "GitHub_publish" ]
+    branches: [ "develop" ]
   pull_request:
     branches: [ "develop" ]
     types: [opened, synchronize, reopened, auto_merge_enabled]
