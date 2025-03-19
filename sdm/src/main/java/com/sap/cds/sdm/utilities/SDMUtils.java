@@ -8,7 +8,6 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -97,21 +96,47 @@ public class SDMUtils {
     }
   }
 
-  public static void checkMCM(HttpEntity responseEntity, List<String> secondaryPropertyIds)
+  public static Boolean checkMCM(HttpEntity responseEntity, List<String> secondaryPropertyIds)
       throws IOException {
+    Boolean flag = false;
     String responseString = EntityUtils.toString(responseEntity, "UTF-8");
+
+    if (responseString == null || responseString.isEmpty()) {
+      return flag;
+    }
+
     JSONObject jsonObject = new JSONObject(responseString);
+
+    if (!jsonObject.has("propertyDefinitions")) {
+      return flag;
+    }
+
     JSONObject propertyDefinitions = jsonObject.getJSONObject("propertyDefinitions");
+
+    if (propertyDefinitions == null) {
+      return flag;
+    }
+
     for (String key : propertyDefinitions.keySet()) {
       JSONObject property = propertyDefinitions.getJSONObject(key);
-      if (property.has("mcm:miscellaneous")) {
-        JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
-        if (miscellaneous.has("isPartOfTable")
-            && miscellaneous.getString("isPartOfTable").equals("true")) {
-          secondaryPropertyIds.add(key);
-        }
+
+      if (property == null || !property.has("mcm:miscellaneous")) {
+        continue;
+      }
+
+      JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
+
+      if (miscellaneous == null) {
+        continue;
+      }
+
+      if (miscellaneous.has("isPartOfTable")
+          && "true".equals(miscellaneous.getString("isPartOfTable"))) {
+        secondaryPropertyIds.add(key);
+        flag = true;
       }
     }
+    return flag;
   }
 
   public static void assembleRequestBodySecondaryTypes(
@@ -127,14 +152,6 @@ public class SDMUtils {
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
     String secondaryType = new String();
     List<String> excludedSecondaryTypes = new ArrayList<>();
-    Collections.addAll(
-        excludedSecondaryTypes,
-        "cmis:rm_clientMgtRetention",
-        "cmis:rm_destructionRetention",
-        "sap:createLink",
-        "sap:restoreVersion",
-        "sap:createFavorite",
-        "cmis:rm_hold");
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
@@ -142,10 +159,10 @@ public class SDMUtils {
       if (jsonObject.has("type") && jsonObject.getJSONObject("type").has("id")) {
         secondaryType = jsonObject.getJSONObject("type").getString("id");
 
-        // Check if the secondaryType is in the excludedSecondaryTypes list
-        if (excludedSecondaryTypes.contains(secondaryType)) {
-          continue; // Skip the current iteration
-        }
+        // // Check if the secondaryType is in the excludedSecondaryTypes list
+        // if (excludedSecondaryTypes.contains(secondaryType)) {
+        //   continue; // Skip the current iteration
+        // }
         result.add(secondaryType);
       }
 

@@ -502,6 +502,7 @@ public class SDMServiceImpl implements SDMService {
       String repositoryId) {
     List<String> validSecondaryProperties = new ArrayList<>();
     Iterator<String> iterator = secondaryTypes.iterator();
+    Boolean isTypeValid = false;
     while (iterator.hasNext()) {
       String value = iterator.next();
       var httpClient =
@@ -517,9 +518,11 @@ public class SDMServiceImpl implements SDMService {
       try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
         HttpEntity responseEntity = response.getEntity();
         if (responseEntity != null) {
-          SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
+          isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
         }
-
+        if (!isTypeValid) {
+          iterator.remove();
+        }
       } catch (IOException e) {
         throw new ServiceException("Could not update the attachment", e);
       }
