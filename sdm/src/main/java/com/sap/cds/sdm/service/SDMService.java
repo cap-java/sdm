@@ -43,7 +43,7 @@ public interface SDMService {
       AttachmentReadEventContext context)
       throws IOException;
 
-  public int renameAttachments(
+  public int updateAttachments(
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,

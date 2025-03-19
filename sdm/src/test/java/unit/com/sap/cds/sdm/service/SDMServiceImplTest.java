@@ -1171,7 +1171,7 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       int responseCode =
-          sdmServiceImpl.renameAttachments(
+          sdmServiceImpl.updateAttachments(
               jwtToken, mockSdmCredentials, cmisDocument, secondaryTypes);
 
       // Verify the response code

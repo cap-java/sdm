@@ -132,7 +132,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int renameAttachments(
+  public int updateAttachments(
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,

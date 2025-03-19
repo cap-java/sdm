@@ -135,7 +135,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
       int responseCode =
-          sdmService.renameAttachments(
+          sdmService.updateAttachments(
               jwtToken, sdmCredentials, cmisDocument, updatedSecondaryProperties);
       switch (responseCode) {
         case 403:
