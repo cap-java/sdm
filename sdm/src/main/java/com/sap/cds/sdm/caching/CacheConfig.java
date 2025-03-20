@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.caching;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
@@ -16,6 +17,8 @@ public class CacheConfig {
   private static Cache<CacheKey, String> clientCredentialsTokenCache;
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<RepoKey, String> versionedRepoCache;
+  private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
+  private static Cache<SecondaryTypePropertiesKey, List<String>> secondaryTypePropertiesCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
   private static final int ACCESS_TOKEN_EXPIRY = 660;
@@ -63,6 +66,28 @@ public class CacheConfig {
                 .withExpiry(
                     Expirations.timeToLiveExpiration(
                         new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+
+    secondaryTypesCache =
+        cacheManager.createCache(
+            "secondaryTypes",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    SecondaryTypesKey.class,
+                    (Class<List<String>>) (Class<?>) List.class,
+                    ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(
+                    Expirations.timeToLiveExpiration(
+                        new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+
+    secondaryTypePropertiesCache =
+        cacheManager.createCache(
+            "secondaryTypeProperties",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    SecondaryTypePropertiesKey.class,
+                    (Class<List<String>>) (Class<?>) List.class,
+                    ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(
+                    Expirations.timeToLiveExpiration(
+                        new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {
@@ -79,5 +104,13 @@ public class CacheConfig {
 
   public static Cache<RepoKey, String> getVersionedRepoCache() {
     return versionedRepoCache;
+  }
+
+  public static Cache<SecondaryTypesKey, List<String>> getSecondaryTypesCache() {
+    return secondaryTypesCache;
+  }
+
+  public static Cache<SecondaryTypePropertiesKey, List<String>> getSecondaryTypePropertiesCache() {
+    return secondaryTypePropertiesCache;
   }
 }

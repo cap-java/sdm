@@ -132,6 +132,7 @@ public class SDMUtils {
 
       if (miscellaneous.has("isPartOfTable")
           && "true".equals(miscellaneous.getString("isPartOfTable"))) {
+        System.out.println("Secondary property variable: " + secondaryPropertyIds);
         secondaryPropertyIds.add(key);
         flag = true;
       }
@@ -158,11 +159,6 @@ public class SDMUtils {
       // Extract and store the type ID if it exists
       if (jsonObject.has("type") && jsonObject.getJSONObject("type").has("id")) {
         secondaryType = jsonObject.getJSONObject("type").getString("id");
-
-        // // Check if the secondaryType is in the excludedSecondaryTypes list
-        // if (excludedSecondaryTypes.contains(secondaryType)) {
-        //   continue; // Skip the current iteration
-        // }
         result.add(secondaryType);
       }
 

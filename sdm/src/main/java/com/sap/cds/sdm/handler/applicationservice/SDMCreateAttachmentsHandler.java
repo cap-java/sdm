@@ -89,7 +89,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> duplicateFileNameList)
       throws IOException {
-    System.out.println("Entered correct flow");
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     Optional<CdsEntity> attachmentEntity =
         context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
