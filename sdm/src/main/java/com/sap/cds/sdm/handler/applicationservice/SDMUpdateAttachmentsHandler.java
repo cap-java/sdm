@@ -111,8 +111,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     System.out.println("Inside SDMUpdateAttachmentsHandler.processAttachment");
     // Get list of secondary type properties
+    List<String> dateTypeProperties = new ArrayList<>();
     List<String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment, dateTypeProperties);
+    System.out.println("dateTypeProperties : " + dateTypeProperties);
     Map<String, Object> propertiesMap = new HashMap<>();
     // For each property get the value
     if (!secondaryTypeProperties.isEmpty()) {
@@ -145,19 +147,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Filename cannot be empty");
       }
     }
-    // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
-    // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-    // if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
-    //   fileNameWithRestrictedCharacters.add(filenameInRequest);
-    //   attachment.replace("fileName", fileNameInSDM);
-    //   return;
-    // }
+    
     int responseCode =
         sdmService.updateAttachments(
             context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
             TokenHandler.getSDMCredentials(),
             cmisDocument,
-            updatedSecondaryProperties);
+            updatedSecondaryProperties,
+            dateTypeProperties);
     switch (responseCode) {
       case 403:
         // SDM Roles for user are missing

@@ -18,12 +18,16 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -137,7 +141,8 @@ public class SDMServiceImpl implements SDMService {
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
-      Map<String, String> secondaryProperties)
+      Map<String, String> secondaryProperties,
+      List<String> dateTypeProperties)
       throws IOException {
 
     Map<String, String> updatedMap = new HashMap<>();
@@ -172,7 +177,45 @@ public class SDMServiceImpl implements SDMService {
     if (!keysToRemove.isEmpty()) {
       throw new IllegalArgumentException("Invalid secondary properties found: " + keysToRemove);
     }
-    System.out.println("Valid Secondary Properties after removing: " + secondaryProperties);
+
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    // Use the system's default timezone explicitly
+    sdf.setTimeZone(TimeZone.getDefault());
+
+    for (String key : secondaryProperties.keySet()) {
+      if (dateTypeProperties.contains(key)) {
+        Object value = secondaryProperties.get(key);
+        try {
+          // Log the timezone being used
+          System.out.println(
+              "System timezone: "
+                  + TimeZone.getDefault().getID()
+                  + ", offset: "
+                  + TimeZone.getDefault().getRawOffset() / 3600000
+                  + " hours");
+
+          Date date = sdf.parse((String) value);
+          long milliseconds = date.getTime();
+          secondaryProperties.put(key, String.valueOf(milliseconds));
+
+          // Output the parsed date details
+          System.out.println("Original string: " + value);
+          System.out.println("Parsed date: " + date);
+          System.out.println("Milliseconds: " + milliseconds);
+
+          // Verify conversion by converting back to a human-readable date
+          SimpleDateFormat verificationFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
+          verificationFormat.setTimeZone(TimeZone.getDefault());
+          System.out.println(
+              "Converted back: " + verificationFormat.format(new Date(milliseconds)));
+        } catch (ParseException e) {
+          System.out.println("Failed to parse date for key: " + key + ", value: " + value);
+        }
+      }
+    }
+
+    System.out.println("Valid Secondary Properties after removing + date: " + secondaryProperties);
+
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
 
@@ -201,7 +244,8 @@ public class SDMServiceImpl implements SDMService {
 
       // Print the response entity content
       String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
-      
+
+      // Check for specific status and message
       if (response.getStatusLine().getStatusCode() == 400
           && responseContent.contains("is unknown!")) {
         System.out.println(

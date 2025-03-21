@@ -47,7 +47,8 @@ public interface SDMService {
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
-      Map<String, String> secondaryProperties)
+      Map<String, String> secondaryProperties,
+      List<String> dateTypeProperties)
       throws IOException;
 
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
