@@ -201,12 +201,7 @@ public class SDMServiceImpl implements SDMService {
 
       // Print the response entity content
       String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
-      System.out.println("Response entity content: " + responseContent);
-
-      // Print the response code
-      System.out.println("Check 123 Response code: " + response.getStatusLine().getStatusCode());
-
-      // Check for specific status and message
+      
       if (response.getStatusLine().getStatusCode() == 400
           && responseContent.contains("is unknown!")) {
         System.out.println(
@@ -214,16 +209,8 @@ public class SDMServiceImpl implements SDMService {
         throw new ServiceException(
             "Unknown secondary property, kindly verify all the secondary properties");
       }
-
-      // if (responseEntity != null) {
-      //   System.out.println("Response entity is not null");
-      //   // We can just print out the content here if you need it elsewhere
-      //   EntityUtils.toString(responseEntity, "UTF-8");
-      // }
-      System.out.println("About to return response code");
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      System.out.println("Exception on rename : " + e.getMessage() + e.getCause());
       throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
     }
   }
