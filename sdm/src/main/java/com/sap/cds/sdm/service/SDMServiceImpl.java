@@ -204,15 +204,17 @@ public class SDMServiceImpl implements SDMService {
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
       HttpEntity responseEntity = response.getEntity();
-      System.out.println("Response entity: " + responseEntity.getContent());
-      System.out.println("Response code: " + response.getStatusLine().getStatusCode());
+
+      // Print the response entity content
+      String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
+
+      // Check for specific status and message
       if (response.getStatusLine().getStatusCode() == 400
-          && EntityUtils.toString(responseEntity).contains("is unknown!")) {
+          && responseContent.contains("is unknown!")) {
+        System.out.println(
+            "Unknown secondary property, kindly verify all the secondary properties");
         throw new ServiceException(
             "Unknown secondary property, kindly verify all the secondary properties");
-      }
-      if (responseEntity != null) {
-        EntityUtils.toString(responseEntity, "UTF-8");
       }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
