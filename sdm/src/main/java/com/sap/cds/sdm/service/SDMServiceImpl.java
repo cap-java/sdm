@@ -5,7 +5,6 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
-import com.sap.cds.sdm.caching.SecondaryTypePropertiesKey;
 import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -163,11 +162,6 @@ public class SDMServiceImpl implements SDMService {
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache().put(secondaryTypesKey, secondaryTypes);
-    SecondaryTypePropertiesKey secondaryTypePropertiesKey = new SecondaryTypePropertiesKey();
-    secondaryTypePropertiesKey.setRepositoryId(repositoryId);
-    System.out.println("Putting properties in cache : " + validSecondaryProperties);
-    CacheConfig.getSecondaryTypePropertiesCache()
-        .put(secondaryTypePropertiesKey, validSecondaryProperties);
     System.out.println("Valid Secondary Properties: " + validSecondaryProperties);
     System.out.println("Secondary Properties: " + secondaryProperties);
     Set<String> keysToRemove =
@@ -207,6 +201,10 @@ public class SDMServiceImpl implements SDMService {
 
       // Print the response entity content
       String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
+      System.out.println("Response entity content: " + responseContent);
+
+      // Print the response code
+      System.out.println("Check 123 Response code: " + response.getStatusLine().getStatusCode());
 
       // Check for specific status and message
       if (response.getStatusLine().getStatusCode() == 400
@@ -216,8 +214,16 @@ public class SDMServiceImpl implements SDMService {
         throw new ServiceException(
             "Unknown secondary property, kindly verify all the secondary properties");
       }
+
+      // if (responseEntity != null) {
+      //   System.out.println("Response entity is not null");
+      //   // We can just print out the content here if you need it elsewhere
+      //   EntityUtils.toString(responseEntity, "UTF-8");
+      // }
+      System.out.println("About to return response code");
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
+      System.out.println("Exception on rename : " + e.getMessage() + e.getCause());
       throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
     }
   }
@@ -523,41 +529,33 @@ public class SDMServiceImpl implements SDMService {
       SDMCredentials sdmCredentials,
       String repositoryId) {
     List<String> validSecondaryProperties = new ArrayList<>();
-    SecondaryTypePropertiesKey secondaryTypePropertiesKey = new SecondaryTypePropertiesKey();
-    secondaryTypePropertiesKey.setRepositoryId(repositoryId);
-    validSecondaryProperties =
-        CacheConfig.getSecondaryTypePropertiesCache().get(secondaryTypePropertiesKey);
-    if (validSecondaryProperties == null) {
-      validSecondaryProperties = new ArrayList<>();
-      Iterator<String> iterator = secondaryTypes.iterator();
-      Boolean isTypeValid = false;
-      while (iterator.hasNext()) {
-        String value = iterator.next();
-        var httpClient =
-            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-        String sdmUrl =
-            sdmCredentials.getUrl()
-                + "browser/"
-                + repositoryId
-                + "?cmisselector=typeDefinition&typeID="
-                + value;
-        System.out.println("SDM URL: " + sdmUrl);
-        HttpGet getTypesRequest = new HttpGet(sdmUrl);
-        try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
-          HttpEntity responseEntity = response.getEntity();
-          if (responseEntity != null) {
-            isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
-          }
-          if (!isTypeValid) {
-            iterator.remove();
-          }
-        } catch (IOException e) {
-          throw new ServiceException("Could not update the attachment", e);
+    Iterator<String> iterator = secondaryTypes.iterator();
+    Boolean isTypeValid = false;
+    while (iterator.hasNext()) {
+      String value = iterator.next();
+      var httpClient =
+          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      String sdmUrl =
+          sdmCredentials.getUrl()
+              + "browser/"
+              + repositoryId
+              + "?cmisselector=typeDefinition&typeID="
+              + value;
+      System.out.println("SDM URL: " + sdmUrl);
+      HttpGet getTypesRequest = new HttpGet(sdmUrl);
+      try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+        HttpEntity responseEntity = response.getEntity();
+        if (responseEntity != null) {
+          isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
         }
+        if (!isTypeValid) {
+          iterator.remove();
+        }
+      } catch (IOException e) {
+        throw new ServiceException("Could not update the attachment", e);
       }
-    } else {
-      System.out.println("Found valid secondary properties in cache : " + validSecondaryProperties);
     }
+
     return validSecondaryProperties;
   }
 }
