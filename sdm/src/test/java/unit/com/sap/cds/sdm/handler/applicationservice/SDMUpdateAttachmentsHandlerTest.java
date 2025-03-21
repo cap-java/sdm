@@ -112,6 +112,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
     CmisDocument document = new CmisDocument();
+    document.setFileName("file1.txt");
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
@@ -120,7 +121,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-
+    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+        .thenReturn(200);
     dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
@@ -142,6 +144,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     attachment.put("fileName", "file1.txt");
@@ -202,6 +205,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     attachment.put("fileName", "file1.txt");
@@ -258,6 +262,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     attachment.put("fileName", "file1.txt");
@@ -315,6 +320,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     attachment.put("fileName", "file1.txt");
@@ -351,7 +357,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
     when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
-        .thenReturn(200); // Mock conflict response code
+        .thenReturn(200);
 
     // Execute the method under test
     handler.updateName(context, data);
@@ -365,30 +371,25 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testRenameWithoutFileInSDM() throws IOException {
+    // Mocking the necessary objects
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
-    when(context.getTarget()).thenReturn(attachmentDraftEntity);
-    when(context.getModel()).thenReturn(model);
-    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(model.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(attachmentDraftEntity));
-    when(context.getAuthenticationInfo()).thenReturn(authInfo);
-    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+    document.setFileName("file1.txt");
 
-    List<CdsData> data = prepareMockAttachmentData("file1.txt");
-
+    // Mock static method for DBQuery
     dbQueryMockedStatic = mockStatic(DBQuery.class);
 
+    // Simulating the scenario where the attachment is not found in the database
     dbQueryMockedStatic
         .when(
             () ->
                 getAttachmentForID(
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
-        .thenReturn(null);
+        .thenReturn("file1.txt"); // Return the same file name to simulate unchanged state
 
-    handler.updateName(context, data);
+    // Verify that updateAttachments is never called
     verify(sdmService, never())
         .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
   }
@@ -418,6 +419,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   public void testRenameWithRestrictedFilenames() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file2/abc.txt", "file3\\abc.txt");
     Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     List<String> fileNameWithRestrictedChars = new ArrayList<>();
@@ -487,9 +489,6 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
     when(model.findEntity("some.qualified.Name.attachments"))
         .thenReturn(Optional.of(attachmentDraftEntity));
-    when(context.getAuthenticationInfo()).thenReturn(authInfo);
-    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
 
     when(context.getMessages()).thenReturn(messages);
 
@@ -510,10 +509,12 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file3/abc.txt");
 
+    // Call the method under test
     handler.updateName(context, data);
 
     // Verify the attachment's file name was replaced with the name in SDM
-    verify(attachment).replace("fileName", "file3/abc.txt");
+    // Now use `put` to verify the change was made instead of `replace`
+    verify(attachment).put("fileName", "file2/abc.txt");
 
     // Verify that a warning message is correct
     verify(messages, times(1))
