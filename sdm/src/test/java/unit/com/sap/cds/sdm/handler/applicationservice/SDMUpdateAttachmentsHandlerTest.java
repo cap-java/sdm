@@ -111,6 +111,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = prepareMockAttachmentData("file1.txt");
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
@@ -121,7 +122,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(200);
     dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
@@ -133,7 +135,8 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     handler.updateName(context, data);
     verify(sdmService, never())
-        .updateAttachments("token", mockCredentials, document, secondaryProperties);
+        .updateAttachments(
+            "token", mockCredentials, document, secondaryProperties, dateTypeProperties);
   }
 
   @Test
@@ -142,6 +145,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
@@ -180,7 +184,8 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(409); // Mock conflict response code
 
     // Mock the returned messages
@@ -203,6 +208,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
@@ -241,7 +247,8 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(403); // Mock conflict response code
 
     ServiceException exception =
@@ -260,6 +267,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
@@ -298,7 +306,8 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(500); // Mock conflict response code
 
     ServiceException exception =
@@ -318,6 +327,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
@@ -356,7 +366,8 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(200);
 
     // Execute the method under test
@@ -377,6 +388,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
+    List<String> dateTypeProperties = new ArrayList<>();
 
     // Mock static method for DBQuery
     dbQueryMockedStatic = mockStatic(DBQuery.class);
@@ -391,7 +403,8 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     // Verify that updateAttachments is never called
     verify(sdmService, never())
-        .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
+        .updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties);
   }
 
   @Test
@@ -399,6 +412,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
+    List<String> dateTypeProperties = new ArrayList<>();
     CmisDocument document = new CmisDocument();
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
@@ -412,12 +426,14 @@ public class SDMUpdateAttachmentsHandlerTest {
     handler.updateName(context, data);
 
     verify(sdmService, never())
-        .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
+        .updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties);
   }
 
   @Test
   public void testRenameWithRestrictedFilenames() throws IOException {
     List<CdsData> data = prepareMockAttachmentData("file1.txt", "file2/abc.txt", "file3\\abc.txt");
+    List<String> dateTypeProperties = new ArrayList<>();
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
@@ -447,7 +463,8 @@ public class SDMUpdateAttachmentsHandlerTest {
               return filename.contains("/") || filename.contains("\\");
             });
 
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+    when(sdmService.updateAttachments(
+            "jwtToken", mockCredentials, document, secondaryProperties, dateTypeProperties))
         .thenReturn(409); // Mock conflict response code
 
     dbQueryMockedStatic = mockStatic(DBQuery.class);
