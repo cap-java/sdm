@@ -4,7 +4,6 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
-import com.sap.cds.reflect.CdsType;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
@@ -154,25 +153,12 @@ public class SDMUtils {
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
     String secondaryType = new String();
     List<String> excludedSecondaryTypes = new ArrayList<>();
-    // Collections.addAll(
-    //     excludedSecondaryTypes,
-    //     "cmis:rm_clientMgtRetention",
-    //     "cmis:rm_destructionRetention",
-    //     "sap:createLink",
-    //     "sap:restoreVersion",
-    //     "sap:createFavorite",
-    //     "cmis:rm_hold");
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
       // Extract and store the type ID if it exists
       if (jsonObject.has("type") && jsonObject.getJSONObject("type").has("id")) {
         secondaryType = jsonObject.getJSONObject("type").getString("id");
-
-        // // Check if the secondaryType is in the excludedSecondaryTypes list
-        // if (excludedSecondaryTypes.contains(secondaryType)) {
-        //   continue; // Skip the current iteration
-        // }
         result.add(secondaryType);
       }
 
@@ -185,9 +171,7 @@ public class SDMUtils {
   }
 
   public static List<String> getSecondaryTypeProperties(
-      Optional<CdsEntity> attachmentEntity,
-      Map<String, Object> attachment,
-      List<String> dateTypeProperties) {
+      Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
     List<String> secondaryTypeProperties = new ArrayList<>();
     if (attachmentEntity.isPresent()) {
@@ -200,15 +184,6 @@ public class SDMUtils {
         if (element != null) {
           // Check if secondary property is present
           System.out.println("Element found: " + element);
-          CdsType type = element.getType();
-          if (type != null && type.getName().equals("Date")) {
-            System.out.println("Date type found: ");
-            String elementName = element.getName();
-            if (elementName.contains("___")) {
-              elementName = elementName.replace("___", ":");
-            }
-            dateTypeProperties.add(elementName);
-          }
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation("@SDM.Attachments.AdditionalProperty");
           if (annotation.isPresent()) {

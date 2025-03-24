@@ -102,10 +102,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
 
-    List<String> dateTypeProperties = new ArrayList<>();
     List<String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment, dateTypeProperties);
-    System.out.println("dateTypeProperties : " + dateTypeProperties);
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     Map<String, Object> propertiesMap = new HashMap<>();
     // For each property get the value
     if (!secondaryTypeProperties.isEmpty()) {
@@ -137,11 +135,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       }
       int responseCode =
           sdmService.updateAttachments(
-              jwtToken,
-              sdmCredentials,
-              cmisDocument,
-              updatedSecondaryProperties,
-              dateTypeProperties);
+              jwtToken, sdmCredentials, cmisDocument, updatedSecondaryProperties);
       switch (responseCode) {
         case 403:
           // SDM Roles for user are missing
