@@ -4,6 +4,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
@@ -185,7 +186,7 @@ public class SDMUtils {
           // Check if secondary property is present
           System.out.println("Element found: " + element);
           Optional<CdsAnnotation<Object>> annotation =
-              element.findAnnotation("@SDM.Attachments.AdditionalProperty");
+              element.findAnnotation(SDMConstants.SDM_ANNOTATION);
           if (annotation.isPresent()) {
             System.out.println("Annotation found: " + annotation);
             secondaryTypeProperties.add(element.getName());

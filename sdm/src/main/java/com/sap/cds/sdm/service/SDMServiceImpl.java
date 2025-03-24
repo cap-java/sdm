@@ -201,7 +201,7 @@ public class SDMServiceImpl implements SDMService {
 
       // Print the response entity content
       String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
-      
+
       if (response.getStatusLine().getStatusCode() == 400
           && responseContent.contains("is unknown!")) {
         System.out.println(

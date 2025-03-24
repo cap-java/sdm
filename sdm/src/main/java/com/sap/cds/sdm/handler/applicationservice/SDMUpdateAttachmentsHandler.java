@@ -7,12 +7,10 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
-import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
@@ -27,7 +25,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -145,50 +142,31 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Filename cannot be empty");
       }
     }
-    // String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
-    // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-    // if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
-    //   fileNameWithRestrictedCharacters.add(filenameInRequest);
-    //   attachment.replace("fileName", fileNameInSDM);
-    //   return;
-    // }
-    int responseCode =
-        sdmService.updateAttachments(
-            context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
-            TokenHandler.getSDMCredentials(),
-            cmisDocument,
-            updatedSecondaryProperties);
-    switch (responseCode) {
-      case 403:
-        // SDM Roles for user are missing
-        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+    if (!updatedSecondaryProperties.isEmpty()) {
+      int responseCode =
+          sdmService.updateAttachments(
+              context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+              TokenHandler.getSDMCredentials(),
+              cmisDocument,
+              updatedSecondaryProperties);
+      switch (responseCode) {
+        case 403:
+          // SDM Roles for user are missing
+          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
 
-      case 409:
-        duplicateFileNameList.add(filenameInRequest);
-        // attachment.replace("fileName", fileNameInSDM);
-        break;
+        case 409:
+          duplicateFileNameList.add(filenameInRequest);
+          // attachment.replace("fileName", fileNameInSDM);
+          break;
 
-      case 200:
-      case 201:
-        // Success cases, do nothing
-        break;
+        case 200:
+        case 201:
+          // Success cases, do nothing
+          break;
 
-      default:
-        throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-    }
-    // }
-  }
-
-  private String getFileNameInSDM(
-      CdsUpdateEventContext context, String fileNameInDB, String objectId) throws IOException {
-    AuthenticationInfo authInfo = context.getAuthenticationInfo();
-    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    if (Objects.isNull(fileNameInDB)) {
-      return sdmService.getObject(jwtToken, objectId, sdmCredentials);
-    } else {
-      return fileNameInDB;
+        default:
+          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
+      }
     }
   }
 
