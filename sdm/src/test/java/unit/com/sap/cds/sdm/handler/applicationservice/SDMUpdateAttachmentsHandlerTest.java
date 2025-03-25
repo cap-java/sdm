@@ -118,11 +118,6 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
     when(model.findEntity("some.qualified.Name.attachments"))
         .thenReturn(Optional.of(attachmentDraftEntity));
-    when(context.getAuthenticationInfo()).thenReturn(authInfo);
-    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
-        .thenReturn(200);
     dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
