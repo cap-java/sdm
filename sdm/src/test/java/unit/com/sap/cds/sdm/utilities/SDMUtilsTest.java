@@ -5,12 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -38,14 +44,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class SDMUtilsTest {
 
-  @Mock private CdsEntity mockEntity;
-
   @Mock private PersistenceService mockPersistenceService;
-
   @Mock private MockedStatic<DBQuery> mockedDbQuery;
+  @Mock private CdsEntity mockEntity;
+  @Mock private CdsElement mockElement;
+  @Mock private CdsAnnotation<Object> mockAnnotation;
+  @Mock private JsonObject jsonObjectMock;
+  @Mock private HttpEntity responseEntity;
 
   private void setUp() {
     mockedDbQuery = mockStatic(DBQuery.class);
+    mockEntity = mock(CdsEntity.class);
+    mockElement = mock(CdsElement.class);
+    mockAnnotation = mock(CdsAnnotation.class);
+    jsonObjectMock = mock(JsonObject.class);
+    responseEntity = mock(HttpEntity.class);
   }
 
   @Test
@@ -301,7 +314,6 @@ public class SDMUtilsTest {
   @Test
   public void testGetUpdatedSecondaryProperties_withNoChanges() {
     // Mock the necessary components
-    CdsEntity mockEntity = mock(CdsEntity.class);
     PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
     // Prepare attachment and secondaryTypeProperties
@@ -328,5 +340,76 @@ public class SDMUtilsTest {
 
     // Validate results
     assertTrue(result.isEmpty());
+  }
+
+  @Test
+  public void getSecondaryTypeProperties_whenAnnotationIsPresent() {
+    Optional<CdsEntity> attachmentEntity = Optional.of(mockEntity);
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("VALID_PROPERTY", new Object());
+    when(mockEntity.getElement("VALID_PROPERTY")).thenReturn(mockElement);
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION))
+        .thenReturn(Optional.of(mockAnnotation));
+    when(mockElement.getName()).thenReturn("VALID_PROPERTY");
+
+    // Act: calling the method under test
+    List<String> result = SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+
+    // Assert: we expect "VALID_PROPERTY" to be in the result
+    assertEquals(Collections.singletonList("VALID_PROPERTY"), result);
+  }
+
+  @Test
+  public void testPropertyNullOrMissingMiscellaneous() throws IOException {
+    // Arrange
+    HttpEntity mockResponseEntity = mock(HttpEntity.class);
+    List<String> secondaryPropertyIds = new ArrayList<>();
+
+    // Simulate response string with "propertyDefinitions" but no "mcm:miscellaneous"
+    String responseString = "{\"propertyDefinitions\": {\"key1\": {}}}";
+    when(mockResponseEntity.getContent())
+        .thenReturn(new java.io.ByteArrayInputStream(responseString.getBytes()));
+
+    // Act
+    Boolean result = SDMUtils.checkMCM(mockResponseEntity, secondaryPropertyIds);
+
+    // Assert
+    assertFalse(result);
+    assertTrue(secondaryPropertyIds.isEmpty()); // No property ID should be added
+  }
+
+  @Test
+  public void testPropertyValueIsNullInMapAndNotNullInDB() {
+    // Arrange
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "12345"); // Sample ID
+
+    // Simulating that "property1" has a null value in attachment map
+    attachment.put("property1", null);
+
+    // Secondary type properties to check
+    List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+
+    // Simulate the database response where "property1" has a value in the DB
+    List<String> propertiesInDB = Arrays.asList("DBValueForProperty1", "DBValueForProperty2");
+
+    // Mocking the DBQuery call to return propertiesInDB for "property1"
+    when(DBQuery.getpropertiesForID(
+            any(), eq(mockPersistenceService), eq("12345"), eq(secondaryTypeProperties)))
+        .thenReturn(propertiesInDB);
+
+    Optional<CdsEntity> attachmentEntity = Optional.of(mock(CdsEntity.class));
+
+    // Act
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity, attachment, mockPersistenceService, secondaryTypeProperties);
+
+    // Assert
+    assertTrue(result.containsKey("property1"));
+    assertNull(
+        result.get(
+            "property1")); // Since property1 is null in attachment and non-null in DB, it should be
+    // set to null
   }
 }
