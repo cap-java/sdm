@@ -116,7 +116,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
-    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
 
     // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {

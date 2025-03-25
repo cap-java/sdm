@@ -80,12 +80,9 @@ public class SDMUtils {
   public static void prepareSecondaryProperties(
       Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
-
-    System.out.println("Secondary properties final check: " + secondaryProperties);
     int index = 1;
     while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
-      System.out.println("Check final entries: " + entry.getKey() + " : " + entry.getValue());
       if ("filename".equals(entry.getKey())) {
         requestBody.put("propertyId[" + index + "]", "cmis:name");
         requestBody.put("propertyValue[" + index + "]", entry.getValue());
@@ -133,7 +130,6 @@ public class SDMUtils {
 
       if (miscellaneous.has("isPartOfTable")
           && "true".equals(miscellaneous.getString("isPartOfTable"))) {
-        System.out.println("Secondary property variable: " + secondaryPropertyIds);
         secondaryPropertyIds.add(key);
         flag = true;
       }
@@ -184,17 +180,14 @@ public class SDMUtils {
         CdsElement element = entity.getElement(key);
         if (element != null) {
           // Check if secondary property is present
-          System.out.println("Element found: " + element);
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION);
           if (annotation.isPresent()) {
-            System.out.println("Annotation found: " + annotation);
             secondaryTypeProperties.add(element.getName());
           }
         }
       }
     }
-    System.out.println("Secondary type properties found: " + secondaryTypeProperties);
     return secondaryTypeProperties;
   }
 

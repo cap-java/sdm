@@ -155,15 +155,11 @@ public class SDMServiceImpl implements SDMService {
     String fileName = cmisDocument.getFileName();
 
     List<String> secondaryTypes = getSecondaryTypes(repositoryId, jwtToken, sdmCredentials);
-    System.out.println("Secondary Types before: " + secondaryTypes);
     List<String> validSecondaryProperties =
         getValidSecondaryProperties(secondaryTypes, subdomain, sdmCredentials, repositoryId);
-    System.out.println("Secondary Types after (adding to cache): " + secondaryTypes);
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache().put(secondaryTypesKey, secondaryTypes);
-    System.out.println("Valid Secondary Properties: " + validSecondaryProperties);
-    System.out.println("Secondary Properties: " + secondaryProperties);
     Set<String> keysToRemove =
         secondaryProperties.keySet().stream()
             .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
@@ -172,7 +168,6 @@ public class SDMServiceImpl implements SDMService {
     if (!keysToRemove.isEmpty()) {
       throw new IllegalArgumentException("Invalid secondary properties found: " + keysToRemove);
     }
-    System.out.println("Valid Secondary Properties after removing: " + secondaryProperties);
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
 
@@ -188,8 +183,6 @@ public class SDMServiceImpl implements SDMService {
     }
 
     SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
-    System.out.println("Update Request Body: " + updateRequestBody);
-
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
 
@@ -204,8 +197,6 @@ public class SDMServiceImpl implements SDMService {
 
       if (response.getStatusLine().getStatusCode() == 400
           && responseContent.contains("is unknown!")) {
-        System.out.println(
-            "Unknown secondary property, kindly verify all the secondary properties");
         throw new ServiceException(
             "Unknown secondary property, kindly verify all the secondary properties");
       }
@@ -483,7 +474,6 @@ public class SDMServiceImpl implements SDMService {
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
       try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
-        System.out.println("Response Status: " + response.getStatusLine());
         HttpEntity responseEntity = response.getEntity();
         List<String> result = new ArrayList<>();
         if (responseEntity != null) {
@@ -503,8 +493,6 @@ public class SDMServiceImpl implements SDMService {
       } catch (IOException e) {
         throw new ServiceException("Could not update the attachment", e);
       }
-    } else {
-      System.out.println("Found secondary types in cache : " + secondaryTypes);
     }
     return secondaryTypes;
   }
@@ -528,7 +516,6 @@ public class SDMServiceImpl implements SDMService {
               + repositoryId
               + "?cmisselector=typeDefinition&typeID="
               + value;
-      System.out.println("SDM URL: " + sdmUrl);
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
       try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
         HttpEntity responseEntity = response.getEntity();

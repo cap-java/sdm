@@ -106,7 +106,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-    System.out.println("Inside SDMUpdateAttachmentsHandler.processAttachment");
     // Get list of secondary type properties
     List<String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
@@ -124,8 +123,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
-    System.out.println("Updated Secondary Properties : " + updatedSecondaryProperties);
-
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
       return;
