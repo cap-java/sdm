@@ -624,6 +624,23 @@ public class SDMUtilsTest {
   }
 
   @Test
+  void testElementWithAnnotation() {
+    CdsEntity entity = mock(CdsEntity.class);
+    CdsElement element = mock(CdsElement.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
+
+    when(entity.getElement("key1")).thenReturn(element);
+    when(element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(annotation));
+    when(element.getName()).thenReturn("key1");
+
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    assertEquals(List.of("key1"), result);
+  }
+
+  @Test
   void testMultipleKeysWithMixedAnnotations() {
     CdsEntity entity = mock(CdsEntity.class);
     CdsElement element1 = mock(CdsElement.class);
@@ -649,23 +666,6 @@ public class SDMUtilsTest {
 
     Map<String, Object> attachment = Map.of("key1", "value1", "key2", "value2", "key3", "value3");
     List<String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), attachment);
-    assertEquals(List.of("key3", "key1"), result);
-  }
-
-  @Test
-  void testElementWithAnnotation() {
-    CdsEntity entity = mock(CdsEntity.class);
-    CdsElement element = mock(CdsElement.class);
-    @SuppressWarnings("unchecked")
-    CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
-
-    when(entity.getElement("key1")).thenReturn(element);
-    when(element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
-        .thenReturn(Optional.of(annotation));
-    when(element.getName()).thenReturn("key1");
-
-    List<String> result =
-        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
-    assertEquals(List.of("key1"), result);
+    assertEquals(List.of("key1", "key3"), result);
   }
 }
