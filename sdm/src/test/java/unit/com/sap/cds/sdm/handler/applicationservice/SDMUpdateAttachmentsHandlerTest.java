@@ -4,9 +4,11 @@ import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -50,7 +52,8 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Mock private CdsEntity cdsEntity;
   @Mock private CdsModel model;
   private SDMService sdmService;
-  @Mock private SDMUtils sdmUtils;
+  @Mock private SDMUtils sdmUtilsMock;
+  @Mock private DBQuery dbQueryMock;
 
   private SDMUpdateAttachmentsHandler handler;
 
@@ -65,7 +68,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
     tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockCredentials);
     handler = spy(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
-    sdmUtils = mock(SDMUtils.class);
+    sdmUtilsMock = mock(SDMUtils.class);
   }
 
   @AfterEach
@@ -516,6 +519,152 @@ public class SDMUpdateAttachmentsHandlerTest {
         .warn(
             String.format(
                 SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename")));
+  }
+
+  @Test
+  public void testProcessAttachment_PopulateSecondaryTypeProperties() throws IOException {
+    // Arrange
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    // Create a spy for the attachment map
+    Map<String, Object> attachment = spy(new HashMap<>());
+
+    // Prepare attachment with test data
+    attachment.put("ID", "test-id");
+    attachment.put("fileName", "test-file.txt");
+    attachment.put("objectId", "test-object-id");
+
+    // Add secondary type properties
+    attachment.put("category", "document");
+    attachment.put("description", "Test document");
+
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+
+    // Mock necessary dependencies
+    CdsData mockCdsData = mock(CdsData.class);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+
+    // Prepare lists for restricted characters and duplicate files
+    List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
+    List<String> duplicateFileNameList = new ArrayList<>();
+
+    // Mock static methods
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<DBQuery> dbQueryMockedStatic = mockStatic(DBQuery.class)) {
+
+      // Setup mocking for secondary type properties
+
+      when(sdmUtilsMock.getSecondaryTypeProperties(
+              eq(Optional.of(attachmentDraftEntity)), eq(attachment)))
+          .thenReturn(Arrays.asList("category", "description"));
+
+      // Setup mocking for updated secondary properties
+      when(sdmUtilsMock.getUpdatedSecondaryProperties(
+              eq(Optional.of(attachmentDraftEntity)),
+              eq(attachment),
+              eq(persistenceService),
+              eq(Arrays.asList("category", "description"))))
+          .thenReturn(new HashMap<>());
+
+      // Mock restricted characters check
+      when(sdmUtilsMock.isRestrictedCharactersInName(anyString())).thenReturn(false);
+
+      // Mock DB query for attachment
+
+      when(dbQueryMock.getAttachmentForID(
+              eq(attachmentDraftEntity), eq(persistenceService), eq("test-id")))
+          .thenReturn("test-file.txt");
+
+      handler.processAttachment(
+          Optional.of(attachmentDraftEntity),
+          context,
+          attachment,
+          duplicateFileNameList,
+          fileNameWithRestrictedCharacters);
+
+      // Assert
+      verify(attachment).get("category");
+      verify(attachment).get("description");
+    }
+  }
+
+  @Test
+  public void testProcessAttachment_EmptyFilename_ThrowsServiceException() {
+    // Arrange
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    // Create a spy for the attachment map
+    Map<String, Object> attachment = spy(new HashMap<>());
+
+    // Prepare attachment with test data - set filename to null
+    attachment.put("ID", "test-id");
+    attachment.put("fileName", null);
+    attachment.put("objectId", "test-object-id");
+
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+
+    // Mock necessary dependencies
+    CdsData mockCdsData = mock(CdsData.class);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+
+    // Prepare lists for restricted characters and duplicate files
+    List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
+    List<String> duplicateFileNameList = new ArrayList<>();
+
+    // Mock static methods
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<DBQuery> dbQueryMockedStatic = mockStatic(DBQuery.class)) {
+
+      // Setup mocking for secondary type properties
+      when(sdmUtilsMock.getSecondaryTypeProperties(
+              eq(Optional.of(attachmentDraftEntity)), eq(attachment)))
+          .thenReturn(Collections.emptyList());
+
+      // Setup mocking for updated secondary properties
+      when(sdmUtilsMock.getUpdatedSecondaryProperties(
+              eq(Optional.of(attachmentDraftEntity)),
+              eq(attachment),
+              eq(persistenceService),
+              eq(Collections.emptyList())))
+          .thenReturn(new HashMap<>());
+      // Mock restricted characters check
+      when(sdmUtilsMock.isRestrictedCharactersInName(anyString())).thenReturn(false);
+
+      // Mock DB query for attachment
+      when(dbQueryMock.getAttachmentForID(
+              eq(attachmentDraftEntity), eq(persistenceService), eq("test-id")))
+          .thenReturn("existing-filename.txt");
+      // Act & Assert
+      ServiceException thrown =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                handler.processAttachment(
+                    Optional.of(attachmentDraftEntity),
+                    context,
+                    attachment,
+                    duplicateFileNameList,
+                    fileNameWithRestrictedCharacters);
+              });
+
+      // Verify the exception message
+      assertEquals("Filename cannot be empty", thrown.getMessage());
+
+      // Verify interactions
+      verify(attachment).get("fileName");
+      assertTrue(fileNameWithRestrictedCharacters.isEmpty());
+      assertTrue(duplicateFileNameList.isEmpty());
+    }
   }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {
