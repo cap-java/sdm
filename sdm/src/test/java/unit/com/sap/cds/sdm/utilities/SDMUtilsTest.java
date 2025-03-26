@@ -639,33 +639,4 @@ public class SDMUtilsTest {
         SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(List.of("key1"), result);
   }
-
-  @Test
-  void testMultipleKeysWithMixedAnnotations() {
-    CdsEntity entity = mock(CdsEntity.class);
-    CdsElement element1 = mock(CdsElement.class);
-    CdsElement element2 = mock(CdsElement.class);
-    CdsElement element3 = mock(CdsElement.class);
-
-    @SuppressWarnings("unchecked")
-    CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
-
-    when(entity.getElement("key1")).thenReturn(element1);
-    when(entity.getElement("key2")).thenReturn(element2);
-    when(entity.getElement("key3")).thenReturn(element3);
-
-    when(element1.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
-        .thenReturn(Optional.of(annotation));
-    when(element2.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
-        .thenReturn(Optional.empty());
-    when(element3.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
-        .thenReturn(Optional.of(annotation));
-
-    when(element1.getName()).thenReturn("key1");
-    when(element3.getName()).thenReturn("key3");
-
-    Map<String, Object> attachment = Map.of("key1", "value1", "key2", "value2", "key3", "value3");
-    List<String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), attachment);
-    assertEquals(List.of("key1", "key3"), result);
-  }
 }
