@@ -91,6 +91,19 @@ public class SDMUtilsTest {
   public void testIsFileNameContainsRestrictedCharaters() {
     List<CdsData> data = new ArrayList<>();
     CdsData mockCdsData = mock(CdsData.class);
+
+    when(mockCdsData.get("attachments")).thenReturn(null); // Correctly mock get method
+    data.add(mockCdsData);
+
+    List<String> restrictedFilenames = SDMUtils.isFileNameContainsRestrictedCharaters(data);
+
+    assertEquals(0, restrictedFilenames.size());
+  }
+
+  @Test
+  public void testIsFileNameContainsRestrictedCharatersNoData() {
+    List<CdsData> data = new ArrayList<>();
+    CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
 
@@ -210,6 +223,22 @@ public class SDMUtilsTest {
   }
 
   @Test
+  public void testCheckMCM_withPropertyDefinitionNull() throws IOException {
+    // Create a mock response entity with valid propertyDefinitions but not part of the table
+    String jsonResponse = "{\"propertyDefinitions\": null}";
+    HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
+
+    List<String> secondaryPropertyIds = new ArrayList<>();
+
+    // Call the method to test
+    Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
+
+    // Assertions
+    assertFalse(result);
+    assertTrue(secondaryPropertyIds.isEmpty());
+  }
+
+  @Test
   public void testCheckMCM_withPropertyDefinitionsNotPartOfTable() throws IOException {
     // Create a mock response entity with valid propertyDefinitions but not part of the table
     String jsonResponse =
@@ -217,6 +246,25 @@ public class SDMUtilsTest {
             + "\"propertyA\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
             + "}}";
 
+    HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
+
+    List<String> secondaryPropertyIds = new ArrayList<>();
+
+    // Call the method to test
+    Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
+
+    // Assertions
+    assertFalse(result);
+    assertTrue(secondaryPropertyIds.isEmpty());
+  }
+
+  @Test
+  public void testCheckMCM_withMCMMiscellanousNotPartOfTable() throws IOException {
+    // Create a mock response entity with valid propertyDefinitions but not part of the table
+    String jsonResponse =
+        "{\"propertyDefinitions\": {"
+            + "\"propertyA\": {\"mcm:miscellaneous\": {\"isQueryableInUi\": \"false\"}}"
+            + "}}";
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
     List<String> secondaryPropertyIds = new ArrayList<>();
@@ -273,6 +321,32 @@ public class SDMUtilsTest {
   }
 
   @Test
+  public void testExtractSecondaryTypeIds_withOnlyTypeJSONArray() {
+    JSONArray jsonArray = new JSONArray();
+
+    JSONObject jsonObject1 = new JSONObject();
+    jsonObject1.put("type", new JSONObject().put("notid", "typeId1"));
+    jsonArray.put(jsonObject1);
+
+    JSONObject jsonObject2 = new JSONObject();
+    jsonObject2.put("type", new JSONObject().put("notid", "typeId2"));
+    jsonObject2.put(
+        "children",
+        new JSONArray(
+            Collections.singletonList(
+                new JSONObject().put("type", new JSONObject().put("notid", "childTypeId1")))));
+    jsonArray.put(jsonObject2);
+
+    List<String> result = new ArrayList<>();
+    SDMUtils.extractSecondaryTypeIds(jsonArray, result);
+
+    assertEquals(0, result.size());
+    assertFalse(result.contains("typeId1"));
+    assertFalse(result.contains("typeId2"));
+    assertFalse(result.contains("childTypeId1"));
+  }
+
+  @Test
   public void testExtractSecondaryTypeIds_withEmptyJSONArray() {
     JSONArray jsonArray = new JSONArray();
 
@@ -312,6 +386,100 @@ public class SDMUtilsTest {
     assertEquals(1, result.size());
     assertEquals("newValue1", result.get("property1"));
     assertNull(result.get("property2"));
+  }
+
+  @Test
+  public void testGetUpdatedSecondaryProperties_withSecondaryTypePropertiesNull() {
+    // Mock the necessary components
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    // Prepare attachment and secondaryTypeProperties
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "123");
+    attachment.put("property1", "newValue1");
+    attachment.put("property2", "newValue2");
+
+    List<String> secondaryTypeProperties = new ArrayList<>();
+
+    // Mock DBQuery class behavior
+    List<String> propertiesInDB = new ArrayList<>();
+    mockedDbQuery
+        .when(
+            () ->
+                DBQuery.getpropertiesForID(
+                    mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+        .thenReturn(propertiesInDB);
+
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity), attachment, mockPersistenceService, secondaryTypeProperties);
+
+    assertEquals(0, result.size());
+    assertEquals(null, result.get("property1"));
+    assertEquals(null, result.get("property2"));
+  }
+
+  @Test
+  public void testGetUpdatedSecondaryProperties_withPropertiesMapNull() {
+    // Mock the necessary components
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    // Prepare attachment and secondaryTypeProperties
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "123");
+
+    List<String> secondaryTypeProperties = new ArrayList<>();
+
+    // Mock DBQuery class behavior
+    List<String> propertiesInDB = new ArrayList<>();
+    mockedDbQuery
+        .when(
+            () ->
+                DBQuery.getpropertiesForID(
+                    mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+        .thenReturn(propertiesInDB);
+
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity), attachment, mockPersistenceService, secondaryTypeProperties);
+
+    assertEquals(0, result.size());
+    assertEquals(null, result.get("property1"));
+    assertEquals(null, result.get("property2"));
+  }
+
+  @Test
+  public void testGetUpdatedSecondaryProperties_DBPropertiesNull() {
+    // Mock the necessary components
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    // Prepare attachment and secondaryTypeProperties
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "123");
+    attachment.put("property1", "newValue1");
+    attachment.put("property2", "newValue2");
+
+    List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+
+    // Mock DBQuery class behavior
+    List<String> propertiesInDB = null;
+    mockedDbQuery
+        .when(
+            () ->
+                DBQuery.getpropertiesForID(
+                    mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+        .thenReturn(propertiesInDB);
+
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity), attachment, mockPersistenceService, secondaryTypeProperties);
+
+    assertEquals(2, result.size());
+    assertEquals("newValue1", result.get("property1"));
+    assertEquals("newValue2", result.get("property2"));
   }
 
   @Test

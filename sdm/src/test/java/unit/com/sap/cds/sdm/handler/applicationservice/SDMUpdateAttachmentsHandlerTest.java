@@ -312,7 +312,6 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Test
   public void testRenameWith200ResponseCode() throws IOException {
     // Mock the data structure to simulate the attachments
-    System.out.println("testRenameWithConflictResponseCode");
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();

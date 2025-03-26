@@ -1,7 +1,6 @@
 package unit.com.sap.cds.sdm.service.handler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -689,7 +688,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(result.listOf(Map.class)).thenReturn((List) resultList);
 
     boolean isDuplicate = SDMAttachmentsServiceHandler.duplicateCheck(filename, fileid, result);
-    assertFalse(isDuplicate, "Expected no duplicates");
+    assertEquals(isDuplicate, false);
   }
 
   @Test
@@ -722,7 +721,7 @@ public class SDMAttachmentsServiceHandlerTest {
     boolean isDuplicate = SDMAttachmentsServiceHandler.duplicateCheck(filename, fileid, result);
 
     // Assert that a duplicate is found
-    assertTrue(isDuplicate, "Expected to find a duplicate");
+    assertEquals(isDuplicate, true);
   }
 
   @Test

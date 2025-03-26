@@ -107,7 +107,6 @@ public class DBQuery {
             .columns(properties.toArray(new String[0]))
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
-    System.out.println("DB query result: " + result);
     if (result.rowCount() == 0) {
       return null;
     }

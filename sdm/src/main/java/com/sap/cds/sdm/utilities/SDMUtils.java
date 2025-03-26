@@ -99,21 +99,17 @@ public class SDMUtils {
     Boolean flag = false;
     String responseString = EntityUtils.toString(responseEntity, "UTF-8");
 
-    if (responseString == null || responseString.isEmpty()) {
+    if (responseString.isEmpty()) {
       return flag;
     }
 
     JSONObject jsonObject = new JSONObject(responseString);
 
-    if (!jsonObject.has("propertyDefinitions")) {
+    if (!jsonObject.has("propertyDefinitions") || jsonObject.isNull("propertyDefinitions")) {
       return flag;
     }
 
     JSONObject propertyDefinitions = jsonObject.getJSONObject("propertyDefinitions");
-
-    if (propertyDefinitions == null) {
-      return flag;
-    }
 
     for (String key : propertyDefinitions.keySet()) {
       JSONObject property = propertyDefinitions.getJSONObject(key);
@@ -123,10 +119,6 @@ public class SDMUtils {
       }
 
       JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
-
-      if (miscellaneous == null) {
-        continue;
-      }
 
       if (miscellaneous.has("isPartOfTable")
           && "true".equals(miscellaneous.getString("isPartOfTable"))) {
@@ -210,12 +202,10 @@ public class SDMUtils {
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     for (String property : secondaryTypeProperties) {
       String valueInDB =
-          (propertiesInDB != null
-                  && secondaryTypeProperties != null
-                  && secondaryTypeProperties.indexOf(property) >= 0)
+          (propertiesInDB != null)
               ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
               : null;
-      Object valueInMap = (propertiesMap != null) ? propertiesMap.get(property) : null;
+      Object valueInMap = propertiesMap.get(property);
       if (valueInMap != valueInDB) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());
