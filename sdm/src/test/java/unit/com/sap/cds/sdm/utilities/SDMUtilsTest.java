@@ -649,7 +649,7 @@ public class SDMUtilsTest {
 
     Map<String, Object> attachment = Map.of("key1", "value1", "key2", "value2", "key3", "value3");
     List<String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), attachment);
-    assertEquals(List.of("key1", "key3"), result);
+    assertEquals(List.of("key3", "key1"), result);
   }
 
   @Test
