@@ -1508,10 +1508,13 @@ public class SDMServiceImplTest {
                     jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
               });
 
+      String actualMessage = exception.getMessage().replaceAll("\\s+", " ").trim();
+
+      assertTrue(actualMessage.contains("The following secondary properties are not supported."));
       assertTrue(
-          exception
-              .getMessage()
-              .contains("Invalid secondary properties found: [property2, property1]"));
+          actualMessage.contains(
+              "Please contact your administrator for assistance with any necessary adjustments."));
+      assertTrue(actualMessage.contains("property1") && actualMessage.contains("property2"));
     }
   }
 

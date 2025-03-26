@@ -64,6 +64,22 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
+  public static String secondaryPropertiesError(List<String> invalidSecondaryProperties) {
+    // Create the base message
+    String prefixMessage = "The following secondary properties are not supported.\n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : invalidSecondaryProperties) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append(
+        "\nPlease contact your administrator for assistance with any necessary adjustments.");
+    return bulletPoints.toString();
+  }
+
   public static String getDuplicateFilesError(String filename) {
     return String.format(DUPLICATE_FILES_ERROR, filename);
   }

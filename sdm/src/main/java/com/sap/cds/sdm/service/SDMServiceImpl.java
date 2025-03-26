@@ -166,7 +166,7 @@ public class SDMServiceImpl implements SDMService {
             .collect(Collectors.toSet());
 
     if (!keysToRemove.isEmpty()) {
-      throw new IOException("Invalid secondary properties found: " + keysToRemove);
+      throw new IOException(SDMConstants.secondaryPropertiesError(new ArrayList<>(keysToRemove)));
     }
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
@@ -198,7 +198,7 @@ public class SDMServiceImpl implements SDMService {
       if (response.getStatusLine().getStatusCode() == 400
           && responseContent.contains("is unknown!")) {
         throw new ServiceException(
-            "Unknown secondary property, kindly verify all the secondary properties");
+            "The secondary properties you are attempting to modify do not exist. Kindly contact the administrator.");
       }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
