@@ -6,9 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.gson.JsonObject;
@@ -411,5 +414,90 @@ public class SDMUtilsTest {
         result.get(
             "property1")); // Since property1 is null in attachment and non-null in DB, it should be
     // set to null
+  }
+
+  @Test
+  void testAttachmentEntityNotPresent() {
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
+    assertEquals(Collections.emptyList(), result);
+  }
+
+  @Test
+  void testAttachmentEntityPresentNoMatchingKeys() {
+    CdsEntity entity = mock(CdsEntity.class);
+    when(entity.getElement(anyString())).thenReturn(null);
+
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    assertEquals(Collections.emptyList(), result);
+  }
+
+  @Test
+  void testDraftReadonlyContextSkipped() {
+    CdsEntity entity = mock(CdsEntity.class);
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(
+            Optional.of(entity), Map.of("DRAFT_READONLY_CONTEXT", "value"));
+    assertEquals(Collections.emptyList(), result);
+    verify(entity, never()).getElement(anyString());
+  }
+
+  @Test
+  void testElementWithoutAnnotation() {
+    CdsEntity entity = mock(CdsEntity.class);
+    CdsElement element = mock(CdsElement.class);
+    when(entity.getElement("key1")).thenReturn(element);
+    when(element.findAnnotation(anyString())).thenReturn(Optional.empty());
+
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    assertEquals(Collections.emptyList(), result);
+  }
+
+  @Test
+  void testElementWithAnnotation() {
+    CdsEntity entity = mock(CdsEntity.class);
+    CdsElement element = mock(CdsElement.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
+
+    when(entity.getElement("key1")).thenReturn(element);
+    when(element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(annotation));
+    when(element.getName()).thenReturn("key1");
+
+    List<String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    assertEquals(List.of("key1"), result);
+  }
+
+  @Test
+  void testMultipleKeysWithMixedAnnotations() {
+    CdsEntity entity = mock(CdsEntity.class);
+    CdsElement element1 = mock(CdsElement.class);
+    CdsElement element2 = mock(CdsElement.class);
+    CdsElement element3 = mock(CdsElement.class);
+
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
+
+    when(entity.getElement("key1")).thenReturn(element1);
+    when(entity.getElement("key2")).thenReturn(element2);
+    when(entity.getElement("key3")).thenReturn(element3);
+
+    when(element1.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(annotation));
+    when(element2.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.empty());
+    when(element3.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(annotation));
+
+    when(element1.getName()).thenReturn("key1");
+    when(element3.getName()).thenReturn("key3");
+
+    Map<String, Object> attachment = Map.of("key1", "value1", "key2", "value2", "key3", "value3");
+    List<String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), attachment);
+    assertEquals(List.of("key1", "key3"), result);
   }
 }
