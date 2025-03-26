@@ -149,7 +149,6 @@ public class SDMUtils {
 
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
     String secondaryType = new String();
-    List<String> excludedSecondaryTypes = new ArrayList<>();
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
@@ -181,7 +180,7 @@ public class SDMUtils {
         if (element != null) {
           // Check if secondary property is present
           Optional<CdsAnnotation<Object>> annotation =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION);
+              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
           if (annotation.isPresent()) {
             secondaryTypeProperties.add(element.getName());
           }

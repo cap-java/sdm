@@ -166,7 +166,7 @@ public class SDMServiceImpl implements SDMService {
             .collect(Collectors.toSet());
 
     if (!keysToRemove.isEmpty()) {
-      throw new IllegalArgumentException("Invalid secondary properties found: " + keysToRemove);
+      throw new IOException("Invalid secondary properties found: " + keysToRemove);
     }
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;

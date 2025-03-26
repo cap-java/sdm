@@ -348,7 +348,7 @@ public class SDMUtilsTest {
     Map<String, Object> attachment = new HashMap<>();
     attachment.put("VALID_PROPERTY", new Object());
     when(mockEntity.getElement("VALID_PROPERTY")).thenReturn(mockElement);
-    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION))
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
         .thenReturn(Optional.of(mockAnnotation));
     when(mockElement.getName()).thenReturn("VALID_PROPERTY");
 
