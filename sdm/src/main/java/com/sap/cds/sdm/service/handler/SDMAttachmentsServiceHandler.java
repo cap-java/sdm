@@ -60,7 +60,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     } else {
       Map<String, Object> attachmentIds = context.getAttachmentIds();
-      String upID = "";
+      String upID = "up__ID";
       CdsModel model = context.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(context.getAttachmentEntity() + "_drafts");
