@@ -526,7 +526,7 @@ public class SDMServiceImpl implements SDMService {
           iterator.remove();
         }
       } catch (IOException e) {
-        throw new ServiceException("Could not update the attachment", e);
+        throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
       }
     }
 

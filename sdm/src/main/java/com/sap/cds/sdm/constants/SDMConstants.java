@@ -43,6 +43,7 @@ public class SDMConstants {
       "Repository with name %s  and id %s onboarded successfully";
   public static final String ONBOARD_REPO__ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
+  public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
