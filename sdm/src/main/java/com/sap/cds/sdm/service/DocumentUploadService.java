@@ -416,10 +416,11 @@ public class DocumentUploadService {
   private void printMemoryConsumption() {
     MemoryUsage heapMemoryUsage = this.memoryMXBean.getHeapMemoryUsage();
     // Print the heap memory usage details
-    logger.info("Init: %d MB\n", bytesToMegabytes(heapMemoryUsage.getInit()));
-    logger.info("Used: %d MB\n", bytesToMegabytes(heapMemoryUsage.getUsed()));
-    logger.info("Committed: %d MB\n", bytesToMegabytes(heapMemoryUsage.getCommitted()));
-    logger.info("Max: %d MB\n", bytesToMegabytes(heapMemoryUsage.getMax()));
-    logger.info("--------------------------------------------------------------------");
+    logger.info(
+        "Init: {} MB, \t\t|Used: {} MB \t\t|Committed: {} MB  \t\t|Max: {} MB",
+        bytesToMegabytes(heapMemoryUsage.getInit()),
+        bytesToMegabytes(heapMemoryUsage.getUsed()),
+        bytesToMegabytes(heapMemoryUsage.getCommitted()),
+        bytesToMegabytes(heapMemoryUsage.getMax()));
   }
 }
