@@ -188,13 +188,11 @@ public class TokenHandler {
     try {
       httpClient = HttpClients.createDefault();
       if (sdmCredentials.getClientId() == null) {
-        throw new IOException("No SDM binding found");
+        throw new IOException(SDMConstants.NO_SDM_BINDING);
       }
       Map<String, String> parameters = fillTokenExchangeBody(token, sdmCredentials);
       HttpPost httpPost =
-          new HttpPost(
-              sdmCredentials.getBaseTokenUrl()
-                  + "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer");
+          new HttpPost(sdmCredentials.getBaseTokenUrl() + SDMConstants.DI_TOKEN_EXCHANGE_PARAMS);
       httpPost.setHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON.value());
       httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED.value());
       httpPost.setHeader("X-zid", getTokenFields(token).get("zid").getAsString());
@@ -216,6 +214,8 @@ public class TokenHandler {
       String responseBody = extractResponseBodyAsString(response);
       if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
         logger.error("Error fetching token with JWT bearer : " + responseBody);
+        throw new OAuth2ServiceException(
+            String.format(SDMConstants.DI_TOKEN_EXCHANGE_ERROR, responseBody));
       }
       Map<String, Object> accessTokenMap = new JSONObject(responseBody).toMap();
       cachedToken = String.valueOf(accessTokenMap.get("access_token"));
@@ -235,6 +235,8 @@ public class TokenHandler {
       logger.error(
           "Error in POST request while fetching token with JWT bearer \n"
               + Arrays.toString(e.getStackTrace()));
+      throw new OAuth2ServiceException(
+          "Error in POST request while fetching token with JWT bearer: " + e.getMessage());
     } finally {
       safeClose(httpClient);
     }

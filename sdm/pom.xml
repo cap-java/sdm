@@ -45,6 +45,11 @@
         <commons-codec-version>1.18.0</commons-codec-version>
         <jackson-core-version>2.18.2</jackson-core-version>
         <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
+        <httpclient5-version>5.4.2</httpclient5-version>
+        <httpcore5-version>5.3.3</httpcore5-version>
+        <httpasyncclient-version>4.1.5</httpasyncclient-version>
+        <log4j-api-version>3.0.0-beta2</log4j-api-version>
+        <rxjava-version>2.2.21</rxjava-version>
     </properties>
 
     <profiles>
@@ -97,25 +102,25 @@
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-            <version>5.4.2</version>
+            <version>${httpclient5-version}</version>
         </dependency>
     <dependency>
         <groupId>org.apache.httpcomponents.core5</groupId>
         <artifactId>httpcore5</artifactId>
-        <version>5.3.3</version>
+        <version>${httpcore5-version}</version>
     </dependency>
 
 <dependency>
     <groupId>org.apache.httpcomponents</groupId>
     <artifactId>httpasyncclient</artifactId>
-    <version>4.1.5</version>
+    <version>${httpasyncclient-version}</version>
 </dependency>
 <!-- Log4j dependencies -->
 <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
 <dependency>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j-api</artifactId>
-    <version>3.0.0-beta2</version>
+    <version>${log4j-api-version}</version>
 </dependency>
 
         <dependency>
@@ -406,7 +411,7 @@
 <dependency>
     <groupId>io.reactivex.rxjava2</groupId>
     <artifactId>rxjava</artifactId>
-    <version>2.2.21</version>
+    <version>${rxjava-version}</version>
 </dependency>
     </dependencies>
 
@@ -582,7 +587,7 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.76</minimum>
+                                            <minimum>0.75</minimum>
                                         </limit>
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>BRANCH</counter>

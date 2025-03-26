@@ -42,6 +42,10 @@ public class SDMConstants {
       "Repository with name %s  and id %s onboarded successfully";
   public static final String ONBOARD_REPO__ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
+  public static final String NO_SDM_BINDING = "No SDM binding found";
+  public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
+  public static final String DI_TOKEN_EXCHANGE_PARAMS =
+      "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
