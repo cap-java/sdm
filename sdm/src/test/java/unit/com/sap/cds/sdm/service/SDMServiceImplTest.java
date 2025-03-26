@@ -1601,4 +1601,36 @@ public class SDMServiceImplTest {
       assertTrue(exception.getCause() instanceof IOException);
     }
   }
+
+  @Test
+  public void createDocument_ExceptionTest() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName("sample.pdf");
+      cmisDocument.setAttachmentId("attachmentId");
+      String content = "sample.pdf content";
+      InputStream contentStream =
+          new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+      cmisDocument.setContent(contentStream);
+      cmisDocument.setParentId("parentId");
+      cmisDocument.setRepositoryId("repositoryId");
+      cmisDocument.setFolderId("folderId");
+      cmisDocument.setMimeType("application/pdf");
+
+      String jwtToken = "jwtToken";
+      SDMCredentials sdmCredentials = new SDMCredentials();
+
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Error"));
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      assertThrows(
+          ServiceException.class,
+          () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
+    }
+  }
 }
