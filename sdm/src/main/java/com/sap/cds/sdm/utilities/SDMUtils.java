@@ -140,7 +140,7 @@ public class SDMUtils {
   }
 
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
-    String secondaryType = new String();
+    String secondaryType;
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
@@ -189,7 +189,7 @@ public class SDMUtils {
       List<String> secondaryTypeProperties) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     String id = (String) attachment.get("ID");
-    List<String> propertiesInDB = new ArrayList<>();
+    List<String> propertiesInDB;
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {

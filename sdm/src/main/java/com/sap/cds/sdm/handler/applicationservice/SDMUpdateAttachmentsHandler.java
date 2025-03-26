@@ -132,7 +132,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     cmisDocument.setObjectId(objectId);
     String fileNameInDB =
         DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-    if (fileNameInDB != filenameInRequest) {
+    if (!fileNameInDB.equals(filenameInRequest)) {
       if (filenameInRequest != null) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       } else {

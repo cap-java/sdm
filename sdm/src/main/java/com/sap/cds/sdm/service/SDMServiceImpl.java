@@ -522,7 +522,7 @@ public class SDMServiceImpl implements SDMService {
         if (responseEntity != null) {
           isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
         }
-        if (!isTypeValid) {
+        if (Boolean.FALSE.equals(isTypeValid)) {
           iterator.remove();
         }
       } catch (IOException e) {

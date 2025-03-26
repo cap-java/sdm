@@ -11,6 +11,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +109,7 @@ public class DBQuery {
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     if (result.rowCount() == 0) {
-      return null;
+      return Collections.emptyList();
     }
     List<String> values = new ArrayList<>();
     for (String property : properties) {

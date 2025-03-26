@@ -117,7 +117,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
 
-    // if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
       attachment.replace("fileName", fileNameInSDM);
@@ -125,7 +124,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
-      if (fileNameInDB != filenameInRequest) {
+      if (!fileNameInDB.equals(filenameInRequest)) {
         if (filenameInRequest != null) {
           updatedSecondaryProperties.put("filename", filenameInRequest);
         } else {
@@ -154,7 +153,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
       }
     }
-    // }
   }
 
   private void handleWarnings(
