@@ -21,6 +21,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Deploying and testing the application](#deploying-and-testing-the-application)
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
 - [Support for Multitenancy](#support-for-multitenancy)
+- [Support for Secondary Type Properties](#support-for-secondary-type-properties)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -316,6 +317,28 @@ String response = sdmAdminService.onboardRepository(repository);
 - The REPOSITORY_ID from the Multi-Target Application ([MTA](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) should be a readable string instead of a GUID. This identifier is used by the onboarding API to associate a repository with the subscribed tenant.
  When the application is deployed as a SaaS application using the code above, tenants automatically onboard a repository upon subscription.
 - When the application is deployed as a SaaS application with above code, tenants on subscribing the SaaS application gets onboarded automatically.
+
+## Support for Secondary Type Properties
+
+- This plugin supports the usage of CMIS secondary type properties. 
+- Application developers can utilize the [Create Secondary Type API](https://api.sap.com/api/CreateSecondaryTypeApi/overview) to attach secondary type definitions to the repository which will be used in the application. Given below are the steps and rules to add secondary properties to the plugin, followed by an example.
+
+1. Using the create secondary type API, attach some secondary types to the repository. Make sure in the mcm:miscellanous section of the property definition, the value of the `isPartOfTable` field is `true`, otherwise the plugin will not allow the user to update that property.
+
+2. Extend the attachments aspect with those properties in the CDS file of the leading application 
+
+3. If the property has a `:` separating the namespace and property, replace the `:` with a triple underscore `___` while adding it to the cds file. 
+
+4. Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty` so that the plugin can differentiate between secondary properties from SDM and any other properties you may wish to add.
+
+5. Only datatypes supported by SDM can be used in the plugin.
+
+```cds
+      extend Attachments with {
+         secondaryProperty___1 : String @SDM.Attachments.AdditionalProperty @(title: '{i18n>property1}');
+         secondaryProperty___2 : Integer @SDM.Attachments.AdditionalProperty @(title: '{i18n>property2}');
+      }
+```
 
 ## Known Restrictions
 
