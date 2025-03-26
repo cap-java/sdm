@@ -153,7 +153,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
         case 409:
           duplicateFileNameList.add(filenameInRequest);
-          // attachment.replace("fileName", fileNameInSDM);
           break;
 
         case 200:
