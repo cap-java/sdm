@@ -21,11 +21,14 @@ public class DBQuery {
   }
 
   public static Result getAttachmentsForUPID(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
-            .where(doc -> doc.get("up__ID").eq(upID));
+            .where(doc -> doc.get(upIdKey).eq(upID));
     return persistenceService.run(q);
   }
 
@@ -56,25 +59,6 @@ public class DBQuery {
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
-  }
-
-  public static String getFolderIdForActiveEntity(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
-    String res = null;
-    CqnSelect query =
-        Select.from(attachmentEntity)
-            .columns("folderId")
-            .where(doc -> doc.get("up__ID").eq(upID).and(doc.get("IsActiveEntity").eq(true)));
-    Result result = persistenceService.run(query);
-
-    for (Map<String, Object> row : result.listOf(Map.class)) {
-      Object folderIdObj = row.get("folderId");
-      if (folderIdObj != null) {
-        res = folderIdObj.toString();
-        break; // Exit the loop after finding the first non-null folderId
-      }
-    }
-    return res;
   }
 
   public static List<CmisDocument> getAttachmentsForFolder(

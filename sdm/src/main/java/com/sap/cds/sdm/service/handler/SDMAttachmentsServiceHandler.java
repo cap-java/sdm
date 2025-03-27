@@ -9,6 +9,8 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -58,12 +60,25 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     } else {
       Map<String, Object> attachmentIds = context.getAttachmentIds();
-      String upID = (String) attachmentIds.get("up__ID");
+      String upIdKey = "";
+      String upID = "";
       CdsModel model = context.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(context.getAttachmentEntity() + "_drafts");
+      Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+      // if association is found, try to get foreign key to parent entity
+      if (upAssociation.isPresent()) {
+        CdsElement association = upAssociation.get();
+        // get association type
+        CdsAssociationType assocType = association.getType();
+        // get the refs of the association
+        List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+        upIdKey = fkElements.get(0);
+        upID = (String) attachmentIds.get(upIdKey);
+      }
       Result result =
-          DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
+          DBQuery.getAttachmentsForUPID(
+              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       if (!result.list().isEmpty()) {
         MediaData data = context.getData();
 
@@ -86,7 +101,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setAttachmentId(fileid);
           InputStream contentStream = (InputStream) data.get("content");
           cmisDocument.setContent(contentStream);
-          cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
+          cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
           cmisDocument.setRepositoryId(repositoryId);
           cmisDocument.setFolderId(folderId);
           cmisDocument.setMimeType(mimeType);
