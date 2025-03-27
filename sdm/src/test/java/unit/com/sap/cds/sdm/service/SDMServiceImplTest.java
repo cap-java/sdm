@@ -1274,7 +1274,8 @@ public class SDMServiceImplTest {
   //             + "\"children\": ["
   //             + "{\"type\": {\"id\": \"Type:1\"}},"
   //             + "{\"type\": {\"id\": \"Type:2\"}},"
-  //             + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\": \"Type:3child\"}}]}"
+  //             + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":
+  // \"Type:3child\"}}]}"
   //             + "]}]";
 
   //     String jsonResponseProperties =
