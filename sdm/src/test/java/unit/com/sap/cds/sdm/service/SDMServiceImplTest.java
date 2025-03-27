@@ -1444,7 +1444,8 @@ public class SDMServiceImplTest {
 
   @Test
   public void testValidSecondaryPropertiesFailEmptyResponse() throws IOException {
-    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       String jwtToken = "jwt_token";
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("newFileName");
@@ -1452,6 +1453,13 @@ public class SDMServiceImplTest {
       Map<String, String> secondaryProperties = new HashMap<>();
       secondaryProperties.put("property1", "value1");
       secondaryProperties.put("property2", "value2");
+
+      List<String> secondaryTypesCached = new ArrayList<>();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      Cache mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
+      when(mockCache.get(any())).thenReturn(secondaryTypesCached);
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       tokenHandlerMockedStatic
@@ -1497,8 +1505,6 @@ public class SDMServiceImplTest {
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(null);
       when(entity.getContent()).thenReturn(inputStream, inputStream2);
-
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       IOException exception =
           assertThrows(

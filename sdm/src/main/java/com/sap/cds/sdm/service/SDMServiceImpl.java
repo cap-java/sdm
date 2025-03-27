@@ -164,7 +164,6 @@ public class SDMServiceImpl implements SDMService {
         secondaryProperties.keySet().stream()
             .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
             .collect(Collectors.toSet());
-
     if (!keysToRemove.isEmpty()) {
       throw new IOException(SDMConstants.secondaryPropertiesError(new ArrayList<>(keysToRemove)));
     }
