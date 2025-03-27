@@ -124,12 +124,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
-      if (fileNameInDB == null && filenameInRequest != null) {
-        updatedSecondaryProperties.put("filename", filenameInRequest);
-      } else if (!fileNameInDB.equals(filenameInRequest) && filenameInRequest != null) {
-        updatedSecondaryProperties.put("filename", filenameInRequest);
-      } else if (filenameInRequest == null) {
-        throw new ServiceException("Filename cannot be empty");
+      if (fileNameInDB == null) {
+        if (filenameInRequest != null) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        } else {
+          throw new ServiceException("Filename cannot be empty");
+        }
+      } else {
+        if (filenameInRequest == null) {
+          throw new ServiceException("Filename cannot be empty");
+        } else if (!fileNameInDB.equals(filenameInRequest)) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        }
       }
       int responseCode =
           sdmService.updateAttachments(
