@@ -122,16 +122,17 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
     String filenameInRequest = (String) attachment.get("fileName");
+    String fileNameInDB =
+        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
+      attachment.replace("fileName", fileNameInDB);
       return;
     }
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
-    String fileNameInDB =
-        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     if (fileNameInDB != filenameInRequest) {
       if (filenameInRequest != null) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
