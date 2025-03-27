@@ -122,8 +122,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
     String filenameInRequest = (String) attachment.get("fileName");
-    String fileNameInDB =
-        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String fileNameInDB;
+    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);

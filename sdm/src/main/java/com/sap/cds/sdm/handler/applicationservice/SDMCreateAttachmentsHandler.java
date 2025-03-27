@@ -92,8 +92,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     Optional<CdsEntity> attachmentEntity =
         context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
-    String fileNameInDB =
-        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String fileNameInDB;
+    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String filenameInRequest = (String) attachment.get("fileName");
     String objectId = (String) attachment.get("objectId");
     AuthenticationInfo authInfo = context.getAuthenticationInfo();

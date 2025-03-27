@@ -117,20 +117,12 @@ public class SDMUtils {
     }
 
     for (String key : propertyDefinitions.keySet()) {
-      JSONObject property = propertyDefinitions.getJSONObject(key);
+      JSONObject property = propertyDefinitions.optJSONObject(key);
+      JSONObject miscellaneous =
+          (property != null) ? property.optJSONObject("mcm:miscellaneous") : null;
 
-      if (property == null || !property.has("mcm:miscellaneous")) {
-        continue;
-      }
-
-      JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
-
-      if (miscellaneous == null) {
-        continue;
-      }
-
-      if (miscellaneous.has("isPartOfTable")
-          && "true".equals(miscellaneous.getString("isPartOfTable"))) {
+      if (miscellaneous != null
+          && "true".equals(miscellaneous.optString("isPartOfTable", "false"))) {
         secondaryPropertyIds.add(key);
         flag = true;
       }
@@ -149,7 +141,7 @@ public class SDMUtils {
   }
 
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
-    String secondaryType = new String();
+    String secondaryType;
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
@@ -198,7 +190,7 @@ public class SDMUtils {
       List<String> secondaryTypeProperties) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     String id = (String) attachment.get("ID");
-    List<String> propertiesInDB = new ArrayList<>();
+    List<String> propertiesInDB;
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {
@@ -216,7 +208,7 @@ public class SDMUtils {
                   && secondaryTypeProperties.indexOf(property) >= 0)
               ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
               : null;
-      Object valueInMap = (propertiesMap != null) ? propertiesMap.get(property) : null;
+      Object valueInMap = propertiesMap.isEmpty() ? null : propertiesMap.get(property);
       if (valueInMap != valueInDB) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());
