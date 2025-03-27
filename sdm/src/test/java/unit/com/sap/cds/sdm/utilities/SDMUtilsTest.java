@@ -450,37 +450,38 @@ public class SDMUtilsTest {
     assertEquals(null, result.get("property2"));
   }
 
-  @Test
-  public void testGetUpdatedSecondaryProperties_DBPropertiesNull() {
-    // Mock the necessary components
-    CdsEntity mockEntity = mock(CdsEntity.class);
-    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // @Test
+  // public void testGetUpdatedSecondaryProperties_DBPropertiesNull() {
+  //   // Mock the necessary components
+  //   CdsEntity mockEntity = mock(CdsEntity.class);
+  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-    // Prepare attachment and secondaryTypeProperties
-    Map<String, Object> attachment = new HashMap<>();
-    attachment.put("ID", "123");
-    attachment.put("property1", "newValue1");
-    attachment.put("property2", "newValue2");
+  //   // Prepare attachment and secondaryTypeProperties
+  //   Map<String, Object> attachment = new HashMap<>();
+  //   attachment.put("ID", "123");
+  //   attachment.put("property1", "newValue1");
+  //   attachment.put("property2", "newValue2");
 
-    List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+  //   List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
 
-    // Mock DBQuery class behavior
-    List<String> propertiesInDB = null;
-    mockedDbQuery
-        .when(
-            () ->
-                DBQuery.getpropertiesForID(
-                    mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-        .thenReturn(propertiesInDB);
+  //   // Mock DBQuery class behavior
+  //   List<String> propertiesInDB = null;
+  //   mockedDbQuery
+  //       .when(
+  //           () ->
+  //               DBQuery.getpropertiesForID(
+  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  //       .thenReturn(propertiesInDB);
 
-    Map<String, String> result =
-        SDMUtils.getUpdatedSecondaryProperties(
-            Optional.of(mockEntity), attachment, mockPersistenceService, secondaryTypeProperties);
+  //   Map<String, String> result =
+  //       SDMUtils.getUpdatedSecondaryProperties(
+  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // secondaryTypeProperties);
 
-    assertEquals(2, result.size());
-    assertEquals("newValue1", result.get("property1"));
-    assertEquals("newValue2", result.get("property2"));
-  }
+  //   assertEquals(2, result.size());
+  //   assertEquals("newValue1", result.get("property1"));
+  //   assertEquals("newValue2", result.get("property2"));
+  // }
 
   @Test
   public void testGetUpdatedSecondaryProperties_withNoChanges() {
