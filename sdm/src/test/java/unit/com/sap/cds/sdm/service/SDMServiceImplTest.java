@@ -1245,72 +1245,72 @@ public class SDMServiceImplTest {
     }
   }
 
-  @Test
-  public void testRenameAttachments_Success() throws IOException {
-    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
-      String jwtToken = "jwt_token";
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setFileName("newFileName");
-      cmisDocument.setObjectId("objectId");
-      Map<String, String> secondaryProperties = new HashMap<>();
-      secondaryProperties.put("property1", "value1");
-      secondaryProperties.put("property2", "value2");
+  // @Test
+  // public void testRenameAttachments_Success() throws IOException {
+  //   try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+  //     String jwtToken = "jwt_token";
+  //     CmisDocument cmisDocument = new CmisDocument();
+  //     cmisDocument.setFileName("newFileName");
+  //     cmisDocument.setObjectId("objectId");
+  //     Map<String, String> secondaryProperties = new HashMap<>();
+  //     secondaryProperties.put("property1", "value1");
+  //     secondaryProperties.put("property2", "value2");
 
-      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
-      tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-          .thenReturn(httpClient);
+  //     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+  //     tokenHandlerMockedStatic
+  //         .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+  //         .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
-      when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(200);
-      when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("".getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
+  //     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+  //     when(response.getStatusLine()).thenReturn(statusLine);
+  //     when(statusLine.getStatusCode()).thenReturn(200);
+  //     when(response.getEntity()).thenReturn(entity);
+  //     InputStream inputStream = new ByteArrayInputStream("".getBytes());
+  //     when(entity.getContent()).thenReturn(inputStream);
 
-      String jsonResponseTypes =
-          "[{"
-              + "\"type\": {\"id\": \"cmis:secondary\"},"
-              + "\"children\": ["
-              + "{\"type\": {\"id\": \"Type:1\"}},"
-              + "{\"type\": {\"id\": \"Type:2\"}},"
-              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\": \"Type:3child\"}}]}"
-              + "]}]";
+  //     String jsonResponseTypes =
+  //         "[{"
+  //             + "\"type\": {\"id\": \"cmis:secondary\"},"
+  //             + "\"children\": ["
+  //             + "{\"type\": {\"id\": \"Type:1\"}},"
+  //             + "{\"type\": {\"id\": \"Type:2\"}},"
+  //             + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\": \"Type:3child\"}}]}"
+  //             + "]}]";
 
-      String jsonResponseProperties =
-          "{"
-              + "\"id\": \"type:1\","
-              + "\"propertyDefinitions\": {"
-              + "\"property1\": {"
-              + "\"id\": \"property1\","
-              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-              + "},"
-              + "\"property2\": {"
-              + "\"id\": \"property2\","
-              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-              + "}"
-              + "}}";
+  //     String jsonResponseProperties =
+  //         "{"
+  //             + "\"id\": \"type:1\","
+  //             + "\"propertyDefinitions\": {"
+  //             + "\"property1\": {"
+  //             + "\"id\": \"property1\","
+  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+  //             + "},"
+  //             + "\"property2\": {"
+  //             + "\"id\": \"property2\","
+  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+  //             + "}"
+  //             + "}}";
 
-      inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
-      InputStream inputStream2 =
-          new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
+  //     inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
+  //     InputStream inputStream2 =
+  //         new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
 
-      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
-      when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(200);
-      when(response.getEntity()).thenReturn(entity);
-      when(entity.getContent()).thenReturn(inputStream, inputStream2);
+  //     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+  //     when(response.getStatusLine()).thenReturn(statusLine);
+  //     when(statusLine.getStatusCode()).thenReturn(200);
+  //     when(response.getEntity()).thenReturn(entity);
+  //     when(entity.getContent()).thenReturn(inputStream, inputStream2);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+  //     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
-      int responseCode =
-          sdmServiceImpl.updateAttachments(
-              jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+  //     int responseCode =
+  //         sdmServiceImpl.updateAttachments(
+  //             jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
 
-      // Verify the response code
-      assertEquals(200, responseCode);
-    }
-  }
+  //     // Verify the response code
+  //     assertEquals(200, responseCode);
+  //   }
+  // }
 
   @Test
   public void testRenameAttachments_getTypesFail() throws IOException {

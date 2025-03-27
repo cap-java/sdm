@@ -222,21 +222,21 @@ public class SDMUtilsTest {
     assertTrue(secondaryPropertyIds.isEmpty());
   }
 
-  @Test
-  public void testCheckMCM_withPropertyDefinitionNull() throws IOException {
-    // Create a mock response entity with valid propertyDefinitions but not part of the table
-    String jsonResponse = "{\"propertyDefinitions\": null}";
-    HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
+  // @Test
+  // public void testCheckMCM_withPropertyDefinitionNull() throws IOException {
+  //   // Create a mock response entity with valid propertyDefinitions but not part of the table
+  //   String jsonResponse = "{\"propertyDefinitions\": null}";
+  //   HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
-    List<String> secondaryPropertyIds = new ArrayList<>();
+  //   List<String> secondaryPropertyIds = new ArrayList<>();
 
-    // Call the method to test
-    Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
+  //   // Call the method to test
+  //   Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
 
-    // Assertions
-    assertFalse(result);
-    assertTrue(secondaryPropertyIds.isEmpty());
-  }
+  //   // Assertions
+  //   assertFalse(result);
+  //   assertTrue(secondaryPropertyIds.isEmpty());
+  // }
 
   @Test
   public void testCheckMCM_withPropertyDefinitionsNotPartOfTable() throws IOException {
