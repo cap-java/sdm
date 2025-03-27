@@ -124,7 +124,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
-      if (!fileNameInDB.equals(filenameInRequest)) {
+      if (fileNameInDB != filenameInRequest) {
         if (filenameInRequest != null) {
           updatedSecondaryProperties.put("filename", filenameInRequest);
         } else {

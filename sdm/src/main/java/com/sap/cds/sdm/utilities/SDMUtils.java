@@ -80,6 +80,7 @@ public class SDMUtils {
   public static void prepareSecondaryProperties(
       Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
+
     int index = 1;
     while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
@@ -99,17 +100,21 @@ public class SDMUtils {
     Boolean flag = false;
     String responseString = EntityUtils.toString(responseEntity, "UTF-8");
 
-    if (responseString.isEmpty()) {
+    if (responseString == null || responseString.isEmpty()) {
       return flag;
     }
 
     JSONObject jsonObject = new JSONObject(responseString);
 
-    if (!jsonObject.has("propertyDefinitions") || jsonObject.isNull("propertyDefinitions")) {
+    if (!jsonObject.has("propertyDefinitions")) {
       return flag;
     }
 
     JSONObject propertyDefinitions = jsonObject.getJSONObject("propertyDefinitions");
+
+    if (propertyDefinitions == null) {
+      return flag;
+    }
 
     for (String key : propertyDefinitions.keySet()) {
       JSONObject property = propertyDefinitions.getJSONObject(key);
@@ -119,6 +124,10 @@ public class SDMUtils {
       }
 
       JSONObject miscellaneous = property.getJSONObject("mcm:miscellaneous");
+
+      if (miscellaneous == null) {
+        continue;
+      }
 
       if (miscellaneous.has("isPartOfTable")
           && "true".equals(miscellaneous.getString("isPartOfTable"))) {
@@ -140,7 +149,7 @@ public class SDMUtils {
   }
 
   public static void extractSecondaryTypeIds(JSONArray jsonArray, List<String> result) {
-    String secondaryType;
+    String secondaryType = new String();
     for (int i = 0; i < jsonArray.length(); i++) {
       JSONObject jsonObject = jsonArray.getJSONObject(i);
 
@@ -189,7 +198,7 @@ public class SDMUtils {
       List<String> secondaryTypeProperties) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     String id = (String) attachment.get("ID");
-    List<String> propertiesInDB;
+    List<String> propertiesInDB = new ArrayList<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {
@@ -202,10 +211,12 @@ public class SDMUtils {
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     for (String property : secondaryTypeProperties) {
       String valueInDB =
-          (propertiesInDB != null)
+          (propertiesInDB != null
+                  && secondaryTypeProperties != null
+                  && secondaryTypeProperties.indexOf(property) >= 0)
               ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
               : null;
-      Object valueInMap = propertiesMap.get(property);
+      Object valueInMap = (propertiesMap != null) ? propertiesMap.get(property) : null;
       if (valueInMap != valueInDB) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());
