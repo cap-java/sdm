@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.1.0
+
+### Fixed
+
+- Allow any name in the primary key for the entity. 
+- Duplicate filename check with multiple repository switch.
+- Error message for special characters in filename.
+
+### Added
+
+- Support repository onboarding for multitenant use case.
+
 ## Version 1.0.2
 
 ### Added
