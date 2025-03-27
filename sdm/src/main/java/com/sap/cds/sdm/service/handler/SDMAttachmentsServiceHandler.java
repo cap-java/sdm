@@ -60,7 +60,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     } else {
       Map<String, Object> attachmentIds = context.getAttachmentIds();
-      String upID = "up__ID";
+      String upIdKey = "";
+      String upID = "";
       CdsModel model = context.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(context.getAttachmentEntity() + "_drafts");
@@ -72,10 +73,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         CdsAssociationType assocType = association.getType();
         // get the refs of the association
         List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-        upID = (String) attachmentIds.get(fkElements.get(0));
+        upIdKey = fkElements.get(0);
+        upID = (String) attachmentIds.get(upIdKey);
       }
       Result result =
-          DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
+          DBQuery.getAttachmentsForUPID(
+              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       if (!result.list().isEmpty()) {
         MediaData data = context.getData();
 
@@ -98,7 +101,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setAttachmentId(fileid);
           InputStream contentStream = (InputStream) data.get("content");
           cmisDocument.setContent(contentStream);
-          cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
+          cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
           cmisDocument.setRepositoryId(repositoryId);
           cmisDocument.setFolderId(folderId);
           cmisDocument.setMimeType(mimeType);
