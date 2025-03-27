@@ -73,9 +73,7 @@ public class CacheConfig {
                     SecondaryTypesKey.class,
                     (Class<List<String>>) (Class<?>) List.class,
                     ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(
-                    Expirations.timeToLiveExpiration(
-                        new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+                .withExpiry(Expirations.noExpiration()));
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {
