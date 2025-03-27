@@ -203,7 +203,7 @@ public class SDMUtils {
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     for (String property : secondaryTypeProperties) {
       String valueInDB =
-          (propertiesInDB != null
+          (!propertiesInDB.isEmpty()
                   && secondaryTypeProperties != null
                   && secondaryTypeProperties.indexOf(property) >= 0)
               ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
