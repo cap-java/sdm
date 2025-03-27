@@ -19,6 +19,9 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.ql.cqn.CqnElementRef;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -29,6 +32,7 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
@@ -41,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
@@ -64,6 +69,11 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private CdsEntity cdsEntity;
 
   @Mock private UserInfo userInfo;
+
+  @Mock private CdsElement cdsElement;
+  @Mock private CdsAssociationType cdsAssociationType;
+  @Mock private CqnElementRef cqnElementRef;
+  @Mock private Messages mockMessages;
 
   String objectId = "objectId";
   String folderId = "folderId";
@@ -128,44 +138,40 @@ public class SDMAttachmentsServiceHandlerTest {
   @Test
   public void testCreateNonVersionedDuplicate() throws IOException {
     // Initialization of mocks and setup
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    mockattachmentIds.put("repositoryId", "repo1");
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
     MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
     CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class)) {
-      when(mockRow.get("columnName")).thenReturn("mockDataValue");
-      when(mockResult.list()).thenReturn(nonEmptyRowList);
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class)) {
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
-      when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
-      when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -175,63 +181,22 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals("sample.pdf already exists.", thrown.getMessage());
-    }
-  }
-
-  @Test
-  public void testDocumentDeletion() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId1");
-      cmisDocuments.add(cmisDocument);
-      cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId2");
-      cmisDocuments.add(cmisDocument);
-      mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
-          .thenReturn(cmisDocuments);
-
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
-    }
-  }
-
-  @Test
-  public void testDocumentDeletionForObjectPresent() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId");
-      cmisDocuments.add(cmisDocument);
-      cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId2");
-      cmisDocuments.add(cmisDocument);
-      mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
-          .thenReturn(cmisDocuments);
-
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      assertEquals(SDMConstants.getDuplicateFilesError("sample.pdf"), thrown.getMessage());
     }
   }
 
   @Test
   public void testCreateNonVersionedDIDuplicate() throws IOException {
-    // Initialization of mocks and setup
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    mockattachmentIds.put("repositoryId", "repo1");
+    // Initialize mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
+
     MediaData mockMediaData =
         new MediaData() {
           @Override
@@ -397,51 +362,46 @@ public class SDMAttachmentsServiceHandlerTest {
             return null;
           }
         };
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
-    CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     CdsModel mockModel = mock(CdsModel.class);
-    byte[] byteArray = "Example content".getBytes();
-    InputStream contentStream = new ByteArrayInputStream(byteArray);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
     JSONObject mockCreateResult = new JSONObject();
     mockCreateResult.put("status", "duplicate");
     mockCreateResult.put("name", "sample.pdf");
-    // when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
+
+    // Mock return values and method calls
     when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
-    when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
-        .thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
+    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
     when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class)) {
-      when(mockRow.get("columnName")).thenReturn("mockDataValue");
-      when(mockResult.list()).thenReturn(nonEmptyRowList);
+    try (MockedStatic<DBQuery> DBQueryMockedStatic = mockStatic(DBQuery.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+
       DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
+              () ->
+                  DBQuery.getAttachmentsForUPID(
+                      mockDraftEntity, persistenceService, "upid", "up__ID"))
           .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
 
-      // Use assertThrows to expect a ServiceException and validate the message
+      // Validate ServiceException for duplicate detection
       ServiceException thrown =
           assertThrows(
               ServiceException.class,
@@ -449,43 +409,26 @@ public class SDMAttachmentsServiceHandlerTest {
                 handlerSpy.createAttachment(mockContext);
               });
 
-      assertEquals("sample.pdf already exists.", thrown.getMessage());
-
-      // Add any additional verifications if needed
-    }
-  }
-
-  @Test
-  public void testFolderDeletion() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
-          .thenReturn(cmisDocuments);
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
+      assertEquals(SDMConstants.getDuplicateFilesError("sample.pdf"), thrown.getMessage());
     }
   }
 
   @Test
   public void testCreateNonVersionedDIVirus() throws IOException {
     // Initialization of mocks and setup
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    mockattachmentIds.put("repositoryId", "repo1");
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
     MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
@@ -494,37 +437,31 @@ public class SDMAttachmentsServiceHandlerTest {
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class)) {
-      when(mockRow.get("columnName")).thenReturn("mockDataValue");
-      when(mockResult.list()).thenReturn(nonEmptyRowList);
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
 
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -535,67 +472,59 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(
-          "sample.pdf contains potential malware and cannot be uploaded.", thrown.getMessage());
+      assertEquals(SDMConstants.getVirusFilesError("sample.pdf"), thrown.getMessage());
     }
   }
 
   @Test
   public void testCreateNonVersionedDIOther() throws IOException {
     // Initialization of mocks and setup
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    mockattachmentIds.put("repositoryId", "repo1");
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+    MediaData mockMediaData = mock(MediaData.class);
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
-    MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
     CdsEntity mockEntity = mock(CdsEntity.class);
-    CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
+    // CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
     mockCreateResult.put("status", "fail");
     mockCreateResult.put("message", "Failed due to a DI error");
-    mockCreateResult.put("name", "sample.pdf");
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class)) {
-      when(mockRow.get("columnName")).thenReturn("mockDataValue");
-      when(mockResult.list()).thenReturn(nonEmptyRowList);
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-      Mockito.when(TokenHandler.getTokenFields(anyString())).thenReturn(mockPayload);
 
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -612,56 +541,279 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @Test
   public void testCreateNonVersionedDISuccess() throws IOException {
-    Map<String, Object> mockattachmentIds = new HashMap<>();
-    mockattachmentIds.put("up__ID", "upid");
-    mockattachmentIds.put("ID", "id");
-    mockattachmentIds.put("repositoryId", "repo1");
-    Result mockResult = mock(Result.class);
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
     MediaData mockMediaData = mock(MediaData.class);
-    Messages mockMessages = mock(Messages.class);
-    CdsEntity targetMock = mock(CdsEntity.class);
+    Result mockResult = mock(Result.class);
+    Row mockRow = mock(Row.class);
+    List<Row> nonEmptyRowList = List.of(mockRow);
     CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
-    CdsModel mockModel = mock(CdsModel.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
     JSONObject mockCreateResult = new JSONObject();
     mockCreateResult.put("status", "success");
     mockCreateResult.put("url", "url");
     mockCreateResult.put("name", "sample.pdf");
+    mockCreateResult.put("objectId", "objectId");
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
-    when(mockContext.getTarget()).thenReturn(targetMock);
-    when(targetMock.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(mockContext.getModel()).thenReturn(mockModel);
-    when(mockModel.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(mockEntity));
-    when(mockModel.findEntity("some.qualified.Name.attachments_drafts"))
-        .thenReturn(Optional.of(mockDraftEntity));
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
-    when(mockContext.getMessages()).thenReturn(mockMessages);
-    when(mockContext.getAttachmentIds()).thenReturn(mockattachmentIds);
-    when(mockContext.getData()).thenReturn(mockMediaData);
-    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockEntity));
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class)) {
-      DBQueryMockedStatic.when(
-              () -> DBQuery.getAttachmentsForUPID(mockEntity, persistenceService, "upid"))
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
+    }
+  }
+
+  @Test
+  public void testCreateNonVersionedNoUpAssociation() throws IOException {
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+    MediaData mockMediaData = mock(MediaData.class);
+    Result mockResult = mock(Result.class);
+    Row mockRow = mock(Row.class);
+    List<Row> nonEmptyRowList = List.of(mockRow);
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    byte[] byteArray = "Example content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
+    JSONObject mockCreateResult = new JSONObject();
+    mockCreateResult.put("status", "success");
+    mockCreateResult.put("url", "url");
+    mockCreateResult.put("name", "sample.pdf");
+    mockCreateResult.put("objectId", "objectId");
+
+    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
+    when(mockMediaData.getContent()).thenReturn(contentStream);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.empty());
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class)) {
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+
+      handlerSpy.createAttachment(mockContext);
+      verifyNoInteractions(mockMessages);
+    }
+  }
+
+  @Test
+  public void testCreateNonVersionedEmptyResultList() throws IOException {
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+    MediaData mockMediaData = mock(MediaData.class);
+    Result mockResult = mock(Result.class);
+    List<Row> emptyRowList = Collections.emptyList();
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+    byte[] byteArray = "Example content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
+
+    when(mockMediaData.getFileName()).thenReturn("sample.pdf");
+    when(mockMediaData.getContent()).thenReturn(contentStream);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    when(mockResult.list()).thenReturn(emptyRowList);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class)) {
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+
+      handlerSpy.createAttachment(mockContext);
+      verifyNoInteractions(mockMessages);
+    }
+  }
+
+  @Test
+  public void testCreateNonVersionedNameConstraint() throws IOException {
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+    MediaData mockMediaData = mock(MediaData.class);
+    Result mockResult = mock(Result.class);
+    Row mockRow = mock(Row.class);
+    List<Row> nonEmptyRowList = List.of(mockRow);
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+    byte[] byteArray = "Example content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
+
+    when(mockMediaData.getFileName()).thenReturn("sample@.pdf");
+    when(mockMediaData.getContent()).thenReturn(contentStream);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+
+    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class);
+        MockedStatic<SDMUtils> sdmUtilsMockedStatic = Mockito.mockStatic(SDMUtils.class)) {
+      dbQueryMockedStatic
+          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .thenReturn(true);
+
+      // Use assertThrows to expect a ServiceException and validate the message
+      ServiceException thrown =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                handlerSpy.createAttachment(mockContext);
+              });
+
+      // Verify the exception message
+      assertEquals(
+          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf"), "Upload"),
+          thrown.getMessage());
+    }
+  }
+
+  @Test
+  public void testDocumentDeletion() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId1");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
+    }
+  }
+
+  @Test
+  public void testDocumentDeletionForObjectPresent() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId");
+      cmisDocuments.add(cmisDocument);
+      cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId("objectId2");
+      cmisDocuments.add(cmisDocument);
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+    }
+  }
+
+  @Test
+  public void testFolderDeletion() throws IOException {
+    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
+
+      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+      List<CmisDocument> cmisDocuments = new ArrayList<>();
+      mockedDBQuery
+          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .thenReturn(cmisDocuments);
+      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+      verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
     }
   }
 
