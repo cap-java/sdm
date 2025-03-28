@@ -11,6 +11,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,5 +80,26 @@ public class DBQuery {
       cmisDocuments.add(cmisDocument);
     }
     return cmisDocuments;
+  }
+
+  public static List<String> getpropertiesForID(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String id,
+      List<String> properties) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(properties.toArray(new String[0]))
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    if (result.rowCount() == 0) {
+      return Collections.emptyList();
+    }
+    List<String> values = new ArrayList<>();
+    for (String property : properties) {
+      Object value = result.list().get(0).get(property);
+      values.add(value != null ? value.toString() : null);
+    }
+    return values;
   }
 }
