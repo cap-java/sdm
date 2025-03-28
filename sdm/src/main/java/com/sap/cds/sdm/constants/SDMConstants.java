@@ -41,7 +41,7 @@ public class SDMConstants {
   public static final int CONNECTION_TIMEOUT = 1200;
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
-  public static final String ONBOARD_REPO__ERROR_MESSAGE =
+  public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
 

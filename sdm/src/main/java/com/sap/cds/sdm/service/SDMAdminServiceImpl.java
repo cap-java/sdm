@@ -43,7 +43,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
           SDMConstants.ONBOARD_REPO_MESSAGE, repository.getDisplayName(), repositoryId);
     } catch (IOException e) {
       throw new ServiceException(
-          String.format(SDMConstants.ONBOARD_REPO__ERROR_MESSAGE, repository.getDisplayName()),
+          String.format(SDMConstants.ONBOARD_REPO_ERROR_MESSAGE, repository.getDisplayName()),
           e.getMessage());
     }
   }
