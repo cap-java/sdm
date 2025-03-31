@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
-import org.ehcache.config.builders.*;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expirations;
 import org.slf4j.Logger;
@@ -18,6 +20,7 @@ public class CacheConfig {
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<RepoKey, String> versionedRepoCache;
   private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
+  private static Cache<String, String> maxCountCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
   private static final int ACCESS_TOKEN_EXPIRY = 660;
@@ -74,6 +77,13 @@ public class CacheConfig {
                     (Class<List<String>>) (Class<?>) List.class,
                     ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(Expirations.noExpiration()));
+
+    maxCountCache =
+        cacheManager.createCache(
+            "maxCountCache",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(Expirations.noExpiration()));
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {
@@ -90,6 +100,10 @@ public class CacheConfig {
 
   public static Cache<RepoKey, String> getVersionedRepoCache() {
     return versionedRepoCache;
+  }
+
+  public static Cache<String, String> getMaxCountCache() {
+    return maxCountCache;
   }
 
   public static Cache<SecondaryTypesKey, List<String>> getSecondaryTypesCache() {

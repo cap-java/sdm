@@ -22,6 +22,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
+- [Restriction on uploading n Attachments](#restriction-on-uploading-n-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -370,6 +371,7 @@ Custom properties are supported via the usage of CMIS secondary type properties.
    >
    > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
+## Restriction on uploading n Attachments
 
 ## Known Restrictions
 

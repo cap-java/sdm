@@ -9,10 +9,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
-import com.sap.cds.reflect.CdsAssociationType;
-import com.sap.cds.reflect.CdsElement;
-import com.sap.cds.reflect.CdsEntity;
-import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -51,6 +48,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
+    List<CdsEntity> entities = context.getModel().entities().toList();
+
+    String errorMessageCount =
+        SDMUtils.getAttachmentCountAndMessage(entities, context.getAttachmentEntity());
+
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
@@ -80,6 +82,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           DBQuery.getAttachmentsForUPID(
               attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       if (!result.list().isEmpty()) {
+
+        long rowCount = result.rowCount();
+        String[] maxCountArr = errorMessageCount.split("__");
+        long maxCount = Long.parseLong(maxCountArr[0]);
+        if (maxCount > 0 && rowCount > maxCount) {
+          if (maxCountArr[1] != null && !maxCountArr[1].equalsIgnoreCase("null")) {
+            throw new ServiceException(maxCountArr[1]);
+          }
+          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+        }
         MediaData data = context.getData();
 
         String filename = data.getFileName();
@@ -147,9 +159,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String entity = contextValues[2];
       String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
-      Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity);
+
       List<CmisDocument> cmisDocuments =
-          DBQuery.getAttachmentsForFolder(attachmentEntity.get(), persistenceService, folderId);
+          DBQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);

@@ -44,6 +44,10 @@ public class SDMConstants {
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
+  public static final String ATTACHMENT_MAXCOUNT = "SDM.Attachments.maxCount";
+  public static final String ATTACHMENT_MAXCOUNT_ERROR_MSG = "SDM.Attachments.maxCountError";
+  public static final String MAX_COUNT_ERROR_MESSAGE =
+      "Cannot upload more than %s attachments as set up by the application";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

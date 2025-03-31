@@ -4,6 +4,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -219,5 +220,40 @@ public class SDMUtils {
     }
 
     return updatedSecondaryProperties;
+  }
+
+  public static String getAttachmentCountAndMessage(
+      List<CdsEntity> entities, CdsEntity attachmentEntity) {
+    // cache the element with count and error message if not present iterate otherwise use from
+    // cache
+    String maxCount = CacheConfig.getMaxCountCache().get(attachmentEntity.getQualifiedName());
+    if (maxCount == null) {
+      long attachmentCount = 0;
+      String errorMessage = null;
+      for (CdsEntity cdsEntity : entities) {
+        if (attachmentEntity.getQualifiedName().contains(cdsEntity.getQualifiedName())
+            && !attachmentEntity.getQualifiedName().equals(cdsEntity.getQualifiedName())) {
+          List<CdsElement> comp = cdsEntity.compositions().toList();
+          for (CdsElement cdsElement : comp) {
+            if (cdsElement != null) {
+              Optional<CdsAnnotation<Object>> maxcountAnnotation =
+                  cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
+              if (maxcountAnnotation.isPresent()) {
+                attachmentCount = Long.parseLong(maxcountAnnotation.get().getValue().toString());
+              }
+              Optional<CdsAnnotation<Object>> errormsgAnnotation =
+                  cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+              if (errormsgAnnotation.isPresent()) {
+                errorMessage = errormsgAnnotation.get().getValue().toString();
+              }
+            }
+          }
+        }
+      }
+      CacheConfig.getMaxCountCache()
+          .put(attachmentEntity.getQualifiedName(), attachmentCount + "__" + errorMessage);
+      maxCount = attachmentCount + "__" + errorMessage;
+    }
+    return maxCount;
   }
 }
