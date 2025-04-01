@@ -18,6 +18,7 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
@@ -27,28 +28,47 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final DocumentUploadService documentService;
+  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
 
   public SDMAttachmentsServiceHandler(
-      PersistenceService persistenceService, SDMService sdmService) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      DocumentUploadService documentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.documentService = documentService;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    logger.info(
+        "CREATE_ATTACHMENT Event Received with content length "
+            + context.getParameterInfo().getHeaders().get("content-length")
+            + " At "
+            + System.currentTimeMillis());
+    String len = context.getParameterInfo().getHeaders().get("content-length");
+    long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -58,7 +78,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     CmisDocument cmisDocument = new CmisDocument();
     if ("Versioned".equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-    } else {
+    } 
       Map<String, Object> attachmentIds = context.getAttachmentIds();
       String upIdKey = "";
       String upID = "";
@@ -94,7 +114,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         Boolean duplicate = duplicateCheck(filename, fileid, result);
         if (Boolean.TRUE.equals(duplicate)) {
           throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
-        } else {
+        } 
           subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
           String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
           cmisDocument.setFileName(filename);
@@ -105,9 +125,19 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           cmisDocument.setRepositoryId(repositoryId);
           cmisDocument.setFolderId(folderId);
           cmisDocument.setMimeType(mimeType);
+          cmisDocument.setContentLength(contentLen);
           SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-          JSONObject createResult =
-              sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+          JSONObject createResult = null;
+          try {
+            createResult =
+                documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
+            logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+            logger.info("Upload Finished at: " + System.currentTimeMillis());
+          } catch (Exception e) {
+            logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+            throw new ServiceException(
+                SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+          };
 
           if (createResult.get("status") == "duplicate") {
             throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
@@ -120,9 +150,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             cmisDocument.setObjectId(createResult.get("objectId").toString());
             addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
           }
-        }
-      }
+        
+      
     }
+
     context.setContentId(
         cmisDocument.getObjectId()
             + ":"

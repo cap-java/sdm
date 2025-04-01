@@ -1,4 +1,5 @@
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -45,7 +46,6 @@
     <artifactId>sdm-root</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
-
     <name>CDS Feature for SAP Document Management Service - Root</name>
     <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
     <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
