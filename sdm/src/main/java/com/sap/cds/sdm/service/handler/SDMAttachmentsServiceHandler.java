@@ -18,6 +18,7 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
@@ -27,28 +28,44 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final DocumentUploadService documentService;
+  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
 
   public SDMAttachmentsServiceHandler(
-      PersistenceService persistenceService, SDMService sdmService) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      DocumentUploadService documentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.documentService = documentService;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    logger.info(
+        "CREATE_ATTACHMENT Event Received with content length "
+            + context.getParameterInfo().getHeaders().get("content-length")
+            + " At "
+            + System.currentTimeMillis());
+    String len = context.getParameterInfo().getHeaders().get("content-length");
+    long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -58,71 +75,80 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     CmisDocument cmisDocument = new CmisDocument();
     if ("Versioned".equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-    } else {
-      Map<String, Object> attachmentIds = context.getAttachmentIds();
-      String upIdKey = "";
-      String upID = "";
-      CdsModel model = context.getModel();
-      Optional<CdsEntity> attachmentDraftEntity =
-          model.findEntity(context.getAttachmentEntity() + "_drafts");
-      Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
-      // if association is found, try to get foreign key to parent entity
-      if (upAssociation.isPresent()) {
-        CdsElement association = upAssociation.get();
-        // get association type
-        CdsAssociationType assocType = association.getType();
-        // get the refs of the association
-        List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-        upIdKey = fkElements.get(0);
-        upID = (String) attachmentIds.get(upIdKey);
+    }
+    Map<String, Object> attachmentIds = context.getAttachmentIds();
+    String upIdKey = "";
+    String upID = "";
+    CdsModel model = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(context.getAttachmentEntity() + "_drafts");
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+    // if association is found, try to get foreign key to parent entity
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      // get association type
+      CdsAssociationType assocType = association.getType();
+      // get the refs of the association
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      upIdKey = fkElements.get(0);
+      upID = (String) attachmentIds.get(upIdKey);
+    }
+    Result result =
+        DBQuery.getAttachmentsForUPID(
+            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+    if (!result.list().isEmpty()) {
+      MediaData data = context.getData();
+
+      String filename = data.getFileName();
+      String fileid = (String) attachmentIds.get("ID");
+      String mimeType = (String) data.get("mimeType");
+      String errorMessageDI = "";
+      boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
+      if (nameConstraint) {
+        throw new ServiceException(
+            SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
       }
-      Result result =
-          DBQuery.getAttachmentsForUPID(
-              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-      if (!result.list().isEmpty()) {
-        MediaData data = context.getData();
+      Boolean duplicate = duplicateCheck(filename, fileid, result);
+      if (Boolean.TRUE.equals(duplicate)) {
+        throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+      }
+      subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+      String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
+      cmisDocument.setFileName(filename);
+      cmisDocument.setAttachmentId(fileid);
+      InputStream contentStream = (InputStream) data.get("content");
+      cmisDocument.setContent(contentStream);
+      cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
+      cmisDocument.setRepositoryId(repositoryId);
+      cmisDocument.setFolderId(folderId);
+      cmisDocument.setMimeType(mimeType);
+      cmisDocument.setContentLength(contentLen);
+      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      JSONObject createResult = null;
+      try {
+        createResult =
+            documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
+        logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+        logger.info("Upload Finished at: " + System.currentTimeMillis());
+      } catch (Exception e) {
+        logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+        throw new ServiceException(
+            SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+      }
 
-        String filename = data.getFileName();
-        String fileid = (String) attachmentIds.get("ID");
-        String mimeType = (String) data.get("mimeType");
-        String errorMessageDI = "";
-        boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
-        if (nameConstraint) {
-          throw new ServiceException(
-              SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
-        }
-        Boolean duplicate = duplicateCheck(filename, fileid, result);
-        if (Boolean.TRUE.equals(duplicate)) {
-          throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
-        } else {
-          subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-          String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
-          cmisDocument.setFileName(filename);
-          cmisDocument.setAttachmentId(fileid);
-          InputStream contentStream = (InputStream) data.get("content");
-          cmisDocument.setContent(contentStream);
-          cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
-          cmisDocument.setRepositoryId(repositoryId);
-          cmisDocument.setFolderId(folderId);
-          cmisDocument.setMimeType(mimeType);
-          SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-          JSONObject createResult =
-              sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
-
-          if (createResult.get("status") == "duplicate") {
-            throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
-          } else if (createResult.get("status") == "virus") {
-            throw new ServiceException(SDMConstants.getVirusFilesError(filename));
-          } else if (createResult.get("status") == "fail") {
-            errorMessageDI = createResult.get("message").toString();
-            throw new ServiceException(errorMessageDI);
-          } else {
-            cmisDocument.setObjectId(createResult.get("objectId").toString());
-            addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
-          }
-        }
+      if (createResult.get("status") == "duplicate") {
+        throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+      } else if (createResult.get("status") == "virus") {
+        throw new ServiceException(SDMConstants.getVirusFilesError(filename));
+      } else if (createResult.get("status") == "fail") {
+        errorMessageDI = createResult.get("message").toString();
+        throw new ServiceException(errorMessageDI);
+      } else {
+        cmisDocument.setObjectId(createResult.get("objectId").toString());
+        addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
       }
     }
+
     context.setContentId(
         cmisDocument.getObjectId()
             + ":"
