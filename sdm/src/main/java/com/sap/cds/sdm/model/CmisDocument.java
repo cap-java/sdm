@@ -22,4 +22,5 @@ public class CmisDocument {
   private String repositoryId;
   private String status;
   private String mimeType;
+  private String subdomain;
 }

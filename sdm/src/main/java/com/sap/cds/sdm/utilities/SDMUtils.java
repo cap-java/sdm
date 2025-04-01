@@ -6,6 +6,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.model.AttachmentInfo;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
@@ -224,36 +225,52 @@ public class SDMUtils {
 
   public static String getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
-    // cache the element with count and error message if not present iterate otherwise use from
-    // cache
     String maxCount = CacheConfig.getMaxCountCache().get(attachmentEntity.getQualifiedName());
+
     if (maxCount == null) {
-      long attachmentCount = 0;
-      String errorMessage = null;
-      for (CdsEntity cdsEntity : entities) {
-        if (attachmentEntity.getQualifiedName().contains(cdsEntity.getQualifiedName())
-            && !attachmentEntity.getQualifiedName().equals(cdsEntity.getQualifiedName())) {
-          List<CdsElement> comp = cdsEntity.compositions().toList();
-          for (CdsElement cdsElement : comp) {
-            if (cdsElement != null) {
-              Optional<CdsAnnotation<Object>> maxcountAnnotation =
-                  cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
-              if (maxcountAnnotation.isPresent()) {
-                attachmentCount = Long.parseLong(maxcountAnnotation.get().getValue().toString());
-              }
-              Optional<CdsAnnotation<Object>> errormsgAnnotation =
-                  cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
-              if (errormsgAnnotation.isPresent()) {
-                errorMessage = errormsgAnnotation.get().getValue().toString();
-              }
-            }
-          }
-        }
-      }
-      CacheConfig.getMaxCountCache()
-          .put(attachmentEntity.getQualifiedName(), attachmentCount + "__" + errorMessage);
-      maxCount = attachmentCount + "__" + errorMessage;
+      AttachmentInfo attachmentInfo = new AttachmentInfo();
+      determineAttachmentDetails(attachmentEntity, entities, attachmentInfo);
+      maxCount = attachmentInfo.getAttachmentCount() + "__" + attachmentInfo.getErrorMessage();
     }
     return maxCount;
+  }
+
+  private static void determineAttachmentDetails(
+      CdsEntity attachmentEntity, List<CdsEntity> entities, AttachmentInfo attachmentInfo) {
+
+    for (CdsEntity cdsEntity : entities) {
+      if (isRelatedEntity(attachmentEntity, cdsEntity)) {
+        processCompositions(cdsEntity, attachmentInfo);
+      }
+    }
+  }
+
+  private static boolean isRelatedEntity(CdsEntity attachmentEntity, CdsEntity cdsEntity) {
+    String attachmentQualifiedName = attachmentEntity.getQualifiedName();
+    return attachmentQualifiedName.contains(cdsEntity.getQualifiedName())
+        && !attachmentQualifiedName.equals(cdsEntity.getQualifiedName());
+  }
+
+  private static void processCompositions(CdsEntity cdsEntity, AttachmentInfo attachmentInfo) {
+    List<CdsElement> compositions = cdsEntity.compositions().toList();
+
+    for (CdsElement cdsElement : compositions) {
+      if (cdsElement != null) {
+        retrieveAnnotations(cdsElement, attachmentInfo);
+      }
+    }
+  }
+
+  private static void retrieveAnnotations(CdsElement cdsElement, AttachmentInfo attachmentInfo) {
+    Optional<CdsAnnotation<Object>> maxcountAnnotation =
+        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
+    maxcountAnnotation.ifPresent(
+        annotation ->
+            attachmentInfo.setAttachmentCount(Long.parseLong(annotation.getValue().toString())));
+
+    Optional<CdsAnnotation<Object>> errormsgAnnotation =
+        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+    errormsgAnnotation.ifPresent(
+        annotation -> attachmentInfo.setErrorMessage(annotation.getValue().toString()));
   }
 }
