@@ -225,7 +225,8 @@ public class SDMUtils {
 
   public static String getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
-    String maxCount = CacheConfig.getMaxCountCache().get(attachmentEntity.getQualifiedName());
+    String maxCount =
+        CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
 
     if (maxCount == null) {
       AttachmentInfo attachmentInfo = new AttachmentInfo();

@@ -20,7 +20,7 @@ public class CacheConfig {
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<RepoKey, String> versionedRepoCache;
   private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
-  private static Cache<String, String> maxCountCache;
+  private static Cache<String, String> maxAllowedAttachmentsCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
   private static final int ACCESS_TOKEN_EXPIRY = 660;
@@ -78,7 +78,7 @@ public class CacheConfig {
                     ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(Expirations.noExpiration()));
 
-    maxCountCache =
+    maxAllowedAttachmentsCache =
         cacheManager.createCache(
             "maxCountCache",
             CacheConfigurationBuilder.newCacheConfigurationBuilder(
@@ -102,8 +102,8 @@ public class CacheConfig {
     return versionedRepoCache;
   }
 
-  public static Cache<String, String> getMaxCountCache() {
-    return maxCountCache;
+  public static Cache<String, String> getMaxAllowedAttachmentsCache() {
+    return maxAllowedAttachmentsCache;
   }
 
   public static Cache<SecondaryTypesKey, List<String>> getSecondaryTypesCache() {

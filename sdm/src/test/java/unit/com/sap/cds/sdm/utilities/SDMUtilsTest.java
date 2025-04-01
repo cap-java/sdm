@@ -648,7 +648,9 @@ public class SDMUtilsTest {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
       String errorMessageCount = "1__Only one attachment allowed";
-      cacheConfigMockedStatic.when(CacheConfig::getMaxCountCache).thenReturn(mockCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getMaxAllowedAttachmentsCache)
+          .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(errorMessageCount);
       // Invoke the method
       String result = getAttachmentCountAndMessage(entities, attachmentEntity);
@@ -662,7 +664,9 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_NoAnnotations() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      cacheConfigMockedStatic.when(CacheConfig::getMaxCountCache).thenReturn(mockCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getMaxAllowedAttachmentsCache)
+          .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
       CdsElement cdsElement = mock(CdsElement.class);
 
@@ -689,7 +693,9 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_AnnotationsPresent() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      cacheConfigMockedStatic.when(CacheConfig::getMaxCountCache).thenReturn(mockCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getMaxAllowedAttachmentsCache)
+          .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
       CdsEntity mainEntity =
           new CdsEntity() {
@@ -833,7 +839,9 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_CountAnnotationsPresent() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      cacheConfigMockedStatic.when(CacheConfig::getMaxCountCache).thenReturn(mockCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getMaxAllowedAttachmentsCache)
+          .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
       CdsEntity mainEntity =
           new CdsEntity() {
@@ -973,7 +981,9 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_NoAnnotationsPresent() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      cacheConfigMockedStatic.when(CacheConfig::getMaxCountCache).thenReturn(mockCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getMaxAllowedAttachmentsCache)
+          .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
       CdsEntity mainEntity =
           new CdsEntity() {
