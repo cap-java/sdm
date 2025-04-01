@@ -1,6 +1,9 @@
 package com.sap.cds.sdm.constants;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class SDMConstants {
   private SDMConstants() {
@@ -14,7 +17,7 @@ public class SDMConstants {
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
       "The following files could not be renamed as they already exist:\n%s\n";
-  public static final String COULD_NOT_RENAME_THE_ATTACHMENT = "Could not rename the attachment";
+  public static final String COULD_NOT_UPDATE_THE_ATTACHMENT = "Could not update the attachment";
   public static final String ATTACHMENT_NOT_FOUND = "Attachment not found";
   public static final String DUPLICATE_FILES_ERROR = "%s already exists.";
   public static final String GENERIC_ERROR = "Could not %s the document.";
@@ -65,7 +68,36 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String secondaryPropertiesError(List<String> invalidSecondaryProperties) {
+  public static String updateNotFoundMessage(List<String> fileNameNotFound) {
+    // Create the base message
+    String prefixMessage =
+        "Update unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : fileNameNotFound) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nPlease try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String unsupportedPropertiesMessage(List<String> invalidSecondaryProperties) {
+    Set<String> uniqueValues = new HashSet<>();
+    for (String str : invalidSecondaryProperties) {
+      String[] values = str.split(",");
+      for (String value : values) {
+        uniqueValues.add(value.trim());
+      }
+    }
+
+    // Convert the set to a list
+    List<String> propertiesList = new ArrayList<>(uniqueValues);
     // Create the base message
     String prefixMessage = "The following secondary properties are not supported.\n\n";
 
@@ -73,7 +105,7 @@ public class SDMConstants {
     StringBuilder bulletPoints = new StringBuilder(prefixMessage);
 
     // Append each unsupported file name to the StringBuilder
-    for (String file : invalidSecondaryProperties) {
+    for (String file : propertiesList) {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append(
