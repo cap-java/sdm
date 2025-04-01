@@ -75,15 +75,15 @@ public class CacheConfig {
                     (Class<List<String>>) (Class<?>) List.class,
                     ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(Expirations.noExpiration()));
-    
+
     secondaryPropertiesCache =
-    cacheManager.createCache(
-        "secondaryProperties",
-        CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                SecondaryPropertiesKey.class,
-                (Class<List<String>>) (Class<?>) List.class,
-                ResourcePoolsBuilder.heap(HEAP_SIZE))
-            .withExpiry(Expirations.noExpiration()));
+        cacheManager.createCache(
+            "secondaryProperties",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    SecondaryPropertiesKey.class,
+                    (Class<List<String>>) (Class<?>) List.class,
+                    ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(Expirations.noExpiration()));
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {

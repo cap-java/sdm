@@ -66,6 +66,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
+    List<String> badRequest = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
       if (attachments != null) {
@@ -76,7 +77,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             duplicateFileNameList,
             fileNameWithRestrictedCharacters,
             filesNotFound,
-            filesWithUnsupportedProperties);
+            filesWithUnsupportedProperties,
+            badRequest);
       }
     }
     handleWarnings(
@@ -84,7 +86,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         duplicateFileNameList,
         fileNameWithRestrictedCharacters,
         filesNotFound,
-        filesWithUnsupportedProperties);
+        filesWithUnsupportedProperties,
+        badRequest);
   }
 
   private void processAttachments(
@@ -94,7 +97,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
-      List<String> filesWithUnsupportedProperties)
+      List<String> filesWithUnsupportedProperties,
+      List<String> badRequest)
       throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
@@ -106,7 +110,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           duplicateFileNameList,
           fileNameWithRestrictedCharacters,
           filesNotFound,
-          filesWithUnsupportedProperties);
+          filesWithUnsupportedProperties,
+          badRequest);
     }
   }
 
@@ -117,7 +122,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
-      List<String> filesWithUnsupportedProperties)
+      List<String> filesWithUnsupportedProperties,
+      List<String> badRequest)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     // Get list of secondary type properties
@@ -180,7 +186,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           case 404:
             filesNotFound.add(fileNameInDB);
             replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
-            attachment.replace("fileName", fileNameInDB);
+            break;
+          case 400:
+            badRequest.add(fileNameInDB);
+            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+            break;
           case 200:
           case 201:
             // Success cases, do nothing
@@ -214,7 +224,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
-      List<String> filesWithUnsupportedProperties) {
+      List<String> filesWithUnsupportedProperties,
+      List<String> badRequest) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -235,6 +246,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       context
           .getMessages()
           .warn(SDMConstants.unsupportedPropertiesMessage(filesWithUnsupportedProperties));
+    }
+    if (!badRequest.isEmpty()) {
+      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
     }
   }
 }

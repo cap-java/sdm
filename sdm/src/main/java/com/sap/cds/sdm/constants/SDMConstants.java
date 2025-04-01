@@ -71,7 +71,7 @@ public class SDMConstants {
   public static String updateNotFoundMessage(List<String> fileNameNotFound) {
     // Create the base message
     String prefixMessage =
-        "Update unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
+        "Update unsuccessful. The following filename(s) could not be updated as they do not exist. \n\n";
 
     // Create the formatted prefix message
     String formattedPrefixMessage = String.format(prefixMessage);
@@ -81,6 +81,25 @@ public class SDMConstants {
 
     // Append each unsupported file name to the StringBuilder
     for (String file : fileNameNotFound) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nDelete and upload the files again.");
+    return bulletPoints.toString();
+  }
+
+  public static String badRequestMessage(List<String> badRequest) {
+    // Create the base message
+    String prefixMessage =
+        "Update unsuccessful. The following filename(s) could not be updated due to incorrect configuration. \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : badRequest) {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append("\nPlease try again.");

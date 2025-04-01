@@ -497,37 +497,38 @@ public class SDMServiceImpl implements SDMService {
       String subdomain,
       SDMCredentials sdmCredentials,
       String repositoryId) {
-        SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(repositoryId);
-        List<String> validSecondaryProperties = CacheConfig.getSecondaryPropertiesCache().get(secondaryPropertiesKey);
-        if (validSecondaryProperties == null) {
-    Iterator<String> iterator = secondaryTypes.iterator();
-    Boolean isTypeValid = false;
-    while (iterator.hasNext()) {
-      String value = iterator.next();
-      var httpClient =
-          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-      String sdmUrl =
-          sdmCredentials.getUrl()
-              + "browser/"
-              + repositoryId
-              + "?cmisselector=typeDefinition&typeID="
-              + value;
-      HttpGet getTypesRequest = new HttpGet(sdmUrl);
-      try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) {
-          isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
+    List<String> validSecondaryProperties =
+        CacheConfig.getSecondaryPropertiesCache().get(secondaryPropertiesKey);
+    if (validSecondaryProperties == null) {
+      validSecondaryProperties = new ArrayList<>();
+      Iterator<String> iterator = secondaryTypes.iterator();
+      Boolean isTypeValid = false;
+      while (iterator.hasNext()) {
+        String value = iterator.next();
+        var httpClient =
+            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        String sdmUrl =
+            sdmCredentials.getUrl()
+                + "browser/"
+                + repositoryId
+                + "?cmisselector=typeDefinition&typeID="
+                + value;
+        HttpGet getTypesRequest = new HttpGet(sdmUrl);
+        try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          HttpEntity responseEntity = response.getEntity();
+          if (responseEntity != null) {
+            isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
+          }
+          if (Boolean.FALSE.equals(isTypeValid)) {
+            iterator.remove();
+          }
+        } catch (IOException e) {
+          throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
         }
-        if (Boolean.FALSE.equals(isTypeValid)) {
-          iterator.remove();
-        }
-      } catch (IOException e) {
-        throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
       }
     }
-
-  }
 
     return validSecondaryProperties;
   }
