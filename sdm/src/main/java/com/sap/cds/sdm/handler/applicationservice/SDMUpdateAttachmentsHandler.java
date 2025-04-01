@@ -7,12 +7,10 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
-import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
@@ -23,10 +21,10 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -108,25 +106,53 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-    String filenameInRequest = (String) attachment.get("fileName");
-    String objectId = (String) attachment.get("objectId");
-    String fileNameInDB =
-        DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-    String fileNameInSDM = getFileNameInSDM(context, fileNameInDB, objectId);
-    if (fileNameInSDM != null && !fileNameInSDM.equals(filenameInRequest)) {
-      if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
-        fileNameWithRestrictedCharacters.add(filenameInRequest);
-        attachment.replace("fileName", fileNameInSDM);
-        return;
+    // Get list of secondary type properties
+    List<String> secondaryTypeProperties =
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+    Map<String, Object> propertiesMap = new HashMap<>();
+    // For each property get the value
+    if (!secondaryTypeProperties.isEmpty()) {
+      for (String property : secondaryTypeProperties) {
+        Object value = attachment.get(property);
+        propertiesMap.put(property, value);
       }
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setFileName(filenameInRequest);
-      cmisDocument.setObjectId(objectId);
+    }
+    // Get the updated secondary properties
+    Map<String, String> updatedSecondaryProperties =
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity, attachment, persistenceService, secondaryTypeProperties);
+    String filenameInRequest = (String) attachment.get("fileName");
+    String fileNameInDB;
+    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String objectId = (String) attachment.get("objectId");
+    if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+      fileNameWithRestrictedCharacters.add(filenameInRequest);
+      attachment.replace("fileName", fileNameInDB);
+      return;
+    }
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setFileName(filenameInRequest);
+    cmisDocument.setObjectId(objectId);
+    if (fileNameInDB == null) {
+      if (filenameInRequest != null) {
+        updatedSecondaryProperties.put("filename", filenameInRequest);
+      } else {
+        throw new ServiceException("Filename cannot be empty");
+      }
+    } else {
+      if (filenameInRequest == null) {
+        throw new ServiceException("Filename cannot be empty");
+      } else if (!fileNameInDB.equals(filenameInRequest)) {
+        updatedSecondaryProperties.put("filename", filenameInRequest);
+      }
+    }
+    if (!updatedSecondaryProperties.isEmpty()) {
       int responseCode =
-          sdmService.renameAttachments(
+          sdmService.updateAttachments(
               context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
               TokenHandler.getSDMCredentials(),
-              cmisDocument);
+              cmisDocument,
+              updatedSecondaryProperties);
       switch (responseCode) {
         case 403:
           // SDM Roles for user are missing
@@ -134,7 +160,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
         case 409:
           duplicateFileNameList.add(filenameInRequest);
-          attachment.replace("fileName", fileNameInSDM);
           break;
 
         case 200:
@@ -145,19 +170,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         default:
           throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
       }
-    }
-  }
-
-  private String getFileNameInSDM(
-      CdsUpdateEventContext context, String fileNameInDB, String objectId) throws IOException {
-    AuthenticationInfo authInfo = context.getAuthenticationInfo();
-    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    if (Objects.isNull(fileNameInDB)) {
-      return sdmService.getObject(jwtToken, objectId, sdmCredentials);
-    } else {
-      return fileNameInDB;
     }
   }
 

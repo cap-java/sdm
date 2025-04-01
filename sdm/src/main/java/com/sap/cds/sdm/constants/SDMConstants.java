@@ -8,6 +8,8 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
+      "@SDM.Attachments.AdditionalProperty";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
@@ -40,12 +42,13 @@ public class SDMConstants {
   public static final int CHUNK_SIZE = 100 * 1024 * 1024; // 100MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
-  public static final String ONBOARD_REPO__ERROR_MESSAGE =
+  public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String NO_SDM_BINDING = "No SDM binding found";
   public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
   public static final String DI_TOKEN_EXCHANGE_PARAMS =
       "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
+  public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
@@ -64,6 +67,22 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append("\nRename the files and try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String secondaryPropertiesError(List<String> invalidSecondaryProperties) {
+    // Create the base message
+    String prefixMessage = "The following secondary properties are not supported.\n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : invalidSecondaryProperties) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append(
+        "\nPlease contact your administrator for assistance with any necessary adjustments.");
     return bulletPoints.toString();
   }
 

@@ -9,6 +9,8 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -76,68 +78,80 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     CmisDocument cmisDocument = new CmisDocument();
     if ("Versioned".equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-    }
-    Map<String, Object> attachmentIds = context.getAttachmentIds();
-    String upID = (String) attachmentIds.get("up__ID");
-    CdsModel model = context.getModel();
-    Optional<CdsEntity> attachmentDraftEntity =
-        model.findEntity(context.getAttachmentEntity() + "_drafts");
-    if (!attachmentDraftEntity.isPresent()) {
-      throw new ServiceException("Attachment draft entity not found");
-    }
-    Result result =
-        DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
-    if (!result.list().isEmpty()) {
-      MediaData data = context.getData();
+    } 
+      Map<String, Object> attachmentIds = context.getAttachmentIds();
+      String upIdKey = "";
+      String upID = "";
+      CdsModel model = context.getModel();
+      Optional<CdsEntity> attachmentDraftEntity =
+          model.findEntity(context.getAttachmentEntity() + "_drafts");
+      Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+      // if association is found, try to get foreign key to parent entity
+      if (upAssociation.isPresent()) {
+        CdsElement association = upAssociation.get();
+        // get association type
+        CdsAssociationType assocType = association.getType();
+        // get the refs of the association
+        List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+        upIdKey = fkElements.get(0);
+        upID = (String) attachmentIds.get(upIdKey);
+      }
+      Result result =
+          DBQuery.getAttachmentsForUPID(
+              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+      if (!result.list().isEmpty()) {
+        MediaData data = context.getData();
 
-      String filename = data.getFileName();
-      String fileid = (String) attachmentIds.get("ID");
-      String mimeType = (String) data.get("mimeType");
-      String errorMessageDI = "";
-      boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
-      if (nameConstraint) {
-        throw new ServiceException(
-            SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
-      }
-      Boolean duplicate = duplicateCheck(filename, fileid, result);
-      if (Boolean.TRUE.equals(duplicate)) {
-        throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
-      }
-      subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-      String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
-      cmisDocument.setFileName(filename);
-      cmisDocument.setAttachmentId(fileid);
-      InputStream contentStream = (InputStream) data.get("content");
-      cmisDocument.setContent(contentStream);
-      cmisDocument.setParentId((String) attachmentIds.get("up__ID"));
-      cmisDocument.setRepositoryId(repositoryId);
-      cmisDocument.setFolderId(folderId);
-      cmisDocument.setMimeType(mimeType);
-      cmisDocument.setContentLength(contentLen);
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      JSONObject createResult = null;
-      try {
-        createResult =
-            documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
-        logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
-        logger.info("Upload Finished at: " + System.currentTimeMillis());
-      } catch (Exception e) {
-        logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
-        throw new ServiceException(
-            SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
-      }
+        String filename = data.getFileName();
+        String fileid = (String) attachmentIds.get("ID");
+        String mimeType = (String) data.get("mimeType");
+        String errorMessageDI = "";
+        boolean nameConstraint = SDMUtils.isRestrictedCharactersInName(filename);
+        if (nameConstraint) {
+          throw new ServiceException(
+              SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
+        }
+        Boolean duplicate = duplicateCheck(filename, fileid, result);
+        if (Boolean.TRUE.equals(duplicate)) {
+          throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+        } 
+          subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+          String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
+          cmisDocument.setFileName(filename);
+          cmisDocument.setAttachmentId(fileid);
+          InputStream contentStream = (InputStream) data.get("content");
+          cmisDocument.setContent(contentStream);
+          cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
+          cmisDocument.setRepositoryId(repositoryId);
+          cmisDocument.setFolderId(folderId);
+          cmisDocument.setMimeType(mimeType);
+          cmisDocument.setContentLength(contentLen);
+          SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+          JSONObject createResult = null;
+          try {
+            createResult =
+                documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
+            logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+            logger.info("Upload Finished at: " + System.currentTimeMillis());
+          } catch (Exception e) {
+            logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+            throw new ServiceException(
+                SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+          };
 
-      if (createResult.get("status") == "duplicate") {
-        throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
-      } else if (createResult.get("status") == "virus") {
-        throw new ServiceException(SDMConstants.getVirusFilesError(filename));
-      } else if (createResult.get("status") == "fail") {
-        errorMessageDI = createResult.get("message").toString();
-        throw new ServiceException(errorMessageDI);
-      } else {
-        cmisDocument.setObjectId(createResult.get("objectId").toString());
-        addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
-      }
+          if (createResult.get("status") == "duplicate") {
+            throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+          } else if (createResult.get("status") == "virus") {
+            throw new ServiceException(SDMConstants.getVirusFilesError(filename));
+          } else if (createResult.get("status") == "fail") {
+            errorMessageDI = createResult.get("message").toString();
+            throw new ServiceException(errorMessageDI);
+          } else {
+            cmisDocument.setObjectId(createResult.get("objectId").toString());
+            addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
+          }
+        
+      
     }
 
     context.setContentId(
