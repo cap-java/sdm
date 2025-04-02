@@ -55,7 +55,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList = new ArrayList<>();
       List<String> filesNotFound = new ArrayList<>();
       List<String> filesWithUnsupportedProperties = new ArrayList<>();
-      List<String> badRequest = new ArrayList<>();
+      Map<String, String> badRequest = new HashMap<>();
       for (Map<String, Object> entity : data) {
         processEntity(
             context,
@@ -93,7 +93,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest)
+      Map<String, String> badRequest)
       throws IOException {
     List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
     if (attachments != null) {
@@ -121,7 +121,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest)
+      Map<String, String> badRequest)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     Optional<CdsEntity> attachmentEntity =
@@ -196,10 +196,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound.add(filenameInRequest);
             replacePropertiesInAttachment(attachment, filenameInRequest, propertiesInDB);
             break;
-          case 400:
-            badRequest.add(fileNameInSDM);
-            replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
-            break;
           case 200:
           case 201:
             // Success cases, do nothing
@@ -214,6 +210,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               e.getMessage().substring("Unsupported properties".length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
           replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
+        } else {
+          badRequest.put(filenameInRequest, e.getMessage());
+          replacePropertiesInAttachment(attachment, filenameInRequest, propertiesInDB);
         }
       }
     }
@@ -236,7 +235,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest) {
+      Map<String, String> badRequest) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()

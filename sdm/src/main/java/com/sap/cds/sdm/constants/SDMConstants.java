@@ -3,6 +3,7 @@ package com.sap.cds.sdm.constants;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class SDMConstants {
@@ -87,20 +88,16 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String badRequestMessage(List<String> badRequest) {
+  public static String badRequestMessage(Map<String, String> badRequest) {
     // Create the base message
-    String prefixMessage =
-        "Update unsuccessful. The following filename(s) could not be updated due to incorrect configuration. \n\n";
-
-    // Create the formatted prefix message
-    String formattedPrefixMessage = String.format(prefixMessage);
+    String prefixMessage = "Could not update the following files. \n\n";
 
     // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
 
-    // Append each unsupported file name to the StringBuilder
-    for (String file : badRequest) {
-      bulletPoints.append(String.format("\t• %s%n", file));
+    // Append each file name and its error message to the StringBuilder
+    for (Map.Entry<String, String> entry : badRequest.entrySet()) {
+      bulletPoints.append(String.format("\t• %s : %s%n", entry.getKey(), entry.getValue()));
     }
     bulletPoints.append("\nPlease try again.");
     return bulletPoints.toString();

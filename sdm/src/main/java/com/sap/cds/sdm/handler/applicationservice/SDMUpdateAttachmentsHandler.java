@@ -4,6 +4,8 @@ import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -21,6 +23,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +69,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
-    List<String> badRequest = new ArrayList<>();
+    Map<String, String> badRequest = new HashMap<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
       if (attachments != null) {
@@ -98,7 +101,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest)
+      Map<String, String> badRequest)
       throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
@@ -113,6 +116,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filesWithUnsupportedProperties,
           badRequest);
     }
+    SecondaryPropertiesKey secondaryPropertiesKey =
+        new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
+    secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
+    CacheConfig.getSecondaryPropertiesCache().remove(secondaryPropertiesKey);
   }
 
   public void processAttachment(
@@ -123,7 +130,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest)
+      Map<String, String> badRequest)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     // Get list of secondary type properties
@@ -187,10 +194,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             filesNotFound.add(fileNameInDB);
             replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
             break;
-          case 400:
-            badRequest.add(fileNameInDB);
-            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
-            break;
           case 200:
           case 201:
             // Success cases, do nothing
@@ -204,6 +207,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           String unsupportedDetails =
               e.getMessage().substring("Unsupported properties".length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
+          replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+        } else {
+          badRequest.put(fileNameInDB, e.getMessage());
           replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
         }
       }
@@ -225,7 +231,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> badRequest) {
+      Map<String, String> badRequest) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()

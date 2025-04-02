@@ -194,6 +194,12 @@ public class SDMServiceImpl implements SDMService {
     updateRequest.setEntity(builder.build());
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
+      if (response.getStatusLine().getStatusCode() == 400) {
+        String responseString = EntityUtils.toString(response.getEntity());
+        JSONObject jsonResponse = new JSONObject(responseString);
+        String message = jsonResponse.getString("message");
+        throw new ServiceException(message);
+      }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
