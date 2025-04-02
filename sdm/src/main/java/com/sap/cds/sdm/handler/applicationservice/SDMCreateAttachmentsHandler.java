@@ -205,9 +205,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
         }
       } catch (ServiceException e) {
-        if (e.getMessage().startsWith("Unsupported properties")) {
+        if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
           String unsupportedDetails =
-              e.getMessage().substring("Unsupported properties".length()).trim();
+              e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
           replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
         } else {
@@ -220,11 +220,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private void replacePropertiesInAttachment(
       Map<String, Object> attachment, String fileName, Map<String, String> propertiesInDB) {
-    System.out.println("Replacing properties in attachment : " + propertiesInDB);
-    for (String key : propertiesInDB.keySet()) {
-      Object value = propertiesInDB.get(key);
-      System.out.println("Replacing key: " + key + " with value: " + value);
-      attachment.replace(key, value);
+    if (propertiesInDB != null) {
+      for (String key : propertiesInDB.keySet()) {
+        Object value = propertiesInDB.get(key);
+        attachment.replace(key, value);
+      }
     }
     attachment.replace("fileName", fileName);
   }
@@ -250,7 +250,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                   String.join(", ", duplicateFileNameList)));
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.updateNotFoundMessage(filesNotFound));
+      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       context

@@ -48,6 +48,7 @@ public class SDMConstants {
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
+  public static final String UNSUPPORTED_PROPERTIES = "Unsupported properties";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
@@ -69,7 +70,7 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String updateNotFoundMessage(List<String> fileNameNotFound) {
+  public static String fileNotFound(List<String> fileNameNotFound) {
     // Create the base message
     String prefixMessage =
         "Update unsuccessful. The following filename(s) could not be updated as they do not exist. \n\n";

@@ -170,7 +170,7 @@ public class SDMServiceImpl implements SDMService {
             .collect(Collectors.toSet());
     if (!keysToRemove.isEmpty()) {
       String errorMessage = String.join(", ", keysToRemove);
-      throw new ServiceException("Unsupported properties " + errorMessage);
+      throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
     }
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
@@ -510,24 +510,20 @@ public class SDMServiceImpl implements SDMService {
     if (validSecondaryProperties == null) {
       validSecondaryProperties = new ArrayList<>();
       Iterator<String> iterator = secondaryTypes.iterator();
-      Boolean isTypeValid = false;
+      var httpClient =
+          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
       while (iterator.hasNext()) {
         String value = iterator.next();
-        var httpClient =
-            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
         String sdmUrl =
-            sdmCredentials.getUrl()
-                + "browser/"
-                + repositoryId
-                + "?cmisselector=typeDefinition&typeID="
-                + value;
+            String.format(
+                "%sbrowser/%s?cmisselector=typeDefinition&typeID=%s",
+                sdmCredentials.getUrl(), repositoryId, value);
         HttpGet getTypesRequest = new HttpGet(sdmUrl);
         try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
           HttpEntity responseEntity = response.getEntity();
-          if (responseEntity != null) {
-            isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
-          }
-          if (Boolean.FALSE.equals(isTypeValid)) {
+          if (responseEntity != null
+              && Boolean.FALSE.equals(
+                  SDMUtils.checkMCM(responseEntity, validSecondaryProperties))) {
             iterator.remove();
           }
         } catch (IOException e) {

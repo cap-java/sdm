@@ -189,7 +189,6 @@ public class SDMUtils {
       List<String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
-    String id = (String) attachment.get("ID");
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {
