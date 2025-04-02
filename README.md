@@ -21,6 +21,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Deploying and testing the application](#deploying-and-testing-the-application)
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
 - [Support for Multitenancy](#support-for-multitenancy)
+- [Support for Custom Properties](#support-for-custom-properties)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -317,10 +318,64 @@ String response = sdmAdminService.onboardRepository(repository);
  When the application is deployed as a SaaS application using the code above, tenants automatically onboard a repository upon subscription.
 - When the application is deployed as a SaaS application with above code, tenants on subscribing the SaaS application gets onboarded automatically.
 
+## Support for Custom Properties
+
+Custom properties are supported via the usage of CMIS secondary type properties. Follow the below steps to add and use custom properties.
+
+1. If the repository does not contain secondary types and properties, create CMIS secondary types and properties using the [Create Secondary Type API](https://api.sap.com/api/CreateSecondaryTypeApi/overview). The property definition must contain the following section for the CAP plugin to process the property.
+
+   ```json
+   "mcm:miscellaneous": {        
+      "isPartOfTable": "true"  
+   } 
+   ```
+
+   With this, the secondary type and properties definition will be as per the sample given below
+
+      ```json
+      {
+         "id": "Working:DocumentInfo",
+         "displayName": "Document Info",
+         "baseId": "cmis:secondary",
+         "parentId": "cmis:secondary",
+         ...
+         },
+         "propertyDefinitions": {
+            "Working:DocumentInfoRecord": {
+                  "id": "Working:DocumentInfoRecord",
+                  "displayName": "Document Info Record",
+                  ...
+                  "mcm:miscellaneous": {     <-- Required section in the property definition
+                     "isPartOfTable": "true"
+                  }
+            }
+         }
+      }
+      ```
+
+2. Using secondary properties in CAP Application.
+   - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file. 
+   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty`. 
+   - If the property id contains a `:`, replace it with a triple underscore `___`. 
+   
+   Refer the following example from a sample Bookshop app:
+
+      ```cds
+      extend Attachments with {
+         Working___DocumentInfoRecord : String @SDM.Attachments.AdditionalProperty @(title: '{i18n>property1}');
+      }
+      ```
+
+   > **Note**
+   >
+   > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
+
+
 ## Known Restrictions
 
 - Repository : This plugin does not support the use of versioned repositories.
 - File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
+- Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support, Feedback, Contributing
 
