@@ -234,7 +234,7 @@ public class DocumentUploadService {
                       try (CloseableHttpResponse response =
                           performRequestWithRetry(sdmUrl, request)) {
                         String responseBody = EntityUtils.toString(response.getEntity());
-                        logger.info(" Upload Response: " + responseBody);
+                        logger.debug(" Upload Response: " + responseBody);
 
                         Map<String, String> finalResMap = new HashMap<>();
                         formResponse(cmisDocument, finalResMap, responseBody);
@@ -270,7 +270,7 @@ public class DocumentUploadService {
             // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
             // set in every chunk appendContent
             String responseBody = createEmptyDocument(cmisDocument, headers, sdmUrl);
-            logger.info("Response Body: " + responseBody);
+            logger.debug("Response Body: " + responseBody);
 
             String objectId =
                 (new JSONObject(responseBody))
@@ -375,7 +375,7 @@ public class DocumentUploadService {
     String error = "";
 
     try {
-      logger.info("Parsing responseBody: " + responseBody);
+      logger.debug("Parsing responseBody: " + responseBody);
       JSONObject jsonResponse = new JSONObject(responseBody);
       if (jsonResponse.has("succinctProperties")) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
