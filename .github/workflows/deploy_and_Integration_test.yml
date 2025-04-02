@@ -9,12 +9,13 @@ on:
 
 permissions:
   pull-requests: read
+  packages: read  # Added permission to read packages
 
 jobs:
   deploy:
     if: github.event.pull_request.merged == true
-    runs-on: cap-java
-    
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -36,28 +37,79 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
       - name: Deleting the sdm directory for fresh build
         run: |
           pwd
           cd
           rm -rf .m2/repository/com/sap/cds
+
+      - name: Set REPOSITORY_ID
+        id: set_repository_id
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
+            echo "Using REPOSITORY_ID from secrets"
+            echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
+          else
+            if [ -z "${{ github.event.inputs.repository_id }}" ]; then
+              echo "REPOSITORY_ID must be provided for non-developcap spaces"
+              exit 1
+            else
+              echo "Using provided REPOSITORY_ID"
+              echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
+            fi
+          fi
+
+      - name: Configure Maven for GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>github-snapshot</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
+      #   run: |
+      #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           echo "Current Branch......"
           git branch
           pwd
-          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
           
-          #Replace placeholder with actual REPOSITORY_ID value
-          sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
+          # Replace placeholder with actual REPOSITORY_ID value
+          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           
-          mbt build
+          wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+          sudo mv mbt /usr/local/bin/
 
+          mbt build
+          
+          # Install cf & login 
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
+          echo "deb https://packages.cloudfoundry.org/debian stable main" \
+          | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt update
+          sudo apt install cf-cli
+          
           # Install cf CLI plugin
           cf install-plugin multiapps -f
-          
+
           # Login to Cloud Foundry again to ensure session is active
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
 
           # Deploy the application
           echo "Running cf deploy"
