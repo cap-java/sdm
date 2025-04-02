@@ -51,6 +51,19 @@
 		</dependencies>
 	</dependencyManagement>
 
+	<repositories>
+            <repository>
+                <id>github-snapshot</id>
+                <url>https://maven.pkg.github.com/cap-java/sdm</url>
+                <releases>
+                    <enabled>true</enabled>
+                </releases>
+                <snapshots>
+                    <enabled>true</enabled>
+                </snapshots>
+             </repository>
+        </repositories>
+
 	<build>
 		<plugins>
 			<!-- JAVA VERSION -->
