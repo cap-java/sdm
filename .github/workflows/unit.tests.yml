@@ -6,13 +6,13 @@ on:
   pull_request:
     branches: [ "develop" ]
     types: [opened, synchronize, reopened, auto_merge_enabled]
-    
+  workflow_dispatch: 
 permissions:
   pull-requests: read
 
 jobs:
   unitTests:
-    runs-on: cap-java
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         java-version: [17]
