@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
-import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
 import com.sap.cds.feature.attachments.service.model.service.CreateAttachmentInput;
 import com.sap.cds.feature.attachments.service.model.service.MarkAsDeletedInput;
@@ -18,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SDMAttachmentsService extends ServiceDelegator
-    implements AttachmentService, RegisterService {
+    implements SDMCustomService, RegisterService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsService.class);
 
   public SDMAttachmentsService() {

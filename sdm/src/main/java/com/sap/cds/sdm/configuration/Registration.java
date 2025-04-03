@@ -9,9 +9,10 @@ import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
+import com.sap.cds.sdm.service.handler.DraftAttachmentsHandler;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
-import com.sap.cds.services.Service;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -51,6 +52,7 @@ public class Registration implements CdsRuntimeConfiguration {
             .getCdsRuntime()
             .getServiceCatalog()
             .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
+
     List<ServiceBinding> bindings =
         environment
             .getServiceBindings()
@@ -62,11 +64,33 @@ public class Registration implements CdsRuntimeConfiguration {
     var connectionPool = getConnectionPool(environment);
 
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
+    boolean hasDraftServices =
+        configurer
+            .getCdsRuntime()
+            .getServiceCatalog()
+            .getServices(DraftService.class)
+            .findFirst()
+            .isPresent();
+    System.out.println("Draft Service Available " + hasDraftServices);
+    if (hasDraftServices) {
+      configurer.eventHandler(new DraftAttachmentsHandler(persistenceService));
+    } else {
+      logger.debug("No draft service is available. Draft event handlers will not be registered.");
+    }
+    var draftService =
+        configurer
+            .getCdsRuntime()
+            .getServiceCatalog()
+            .getServices(DraftService.class)
+            .findFirst()
+            .get();
+    System.out.println("DRaft " + draftService);
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMAttachmentsServiceHandler(persistenceService, sdmService));
-    configurer.eventHandler(new SDMServiceGenericHandler(persistenceService, sdmService));
+    configurer.eventHandler(
+        new SDMServiceGenericHandler(persistenceService, sdmService, draftService));
     // configurer.eventHandler(new SDMDraftPatchHandler(persistenceService));
   }
 

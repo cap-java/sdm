@@ -1,9 +1,8 @@
 package com.sap.cds.sdm.service.handler;
 
-import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.handler.common.ApplicationHandlerHelper;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Insert;
-import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsEntity;
@@ -12,6 +11,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.service.SDMCustomService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.authentication.AuthenticationInfo;
@@ -31,13 +31,15 @@ import org.json.JSONObject;
 // Ensures this handler is registered for all services
 @ServiceName({"*"})
 public class SDMServiceGenericHandler implements EventHandler {
-  DraftService draftService;
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final DraftService draftService;
 
-  public SDMServiceGenericHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMServiceGenericHandler(
+      PersistenceService persistenceService, SDMService sdmService, DraftService draftService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.draftService = draftService;
   }
 
   @On(event = "editLink")
@@ -58,7 +60,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  @On(event = "createLink")
+  @On(event = SDMCustomService.EVENT_CREATE_LINK)
   public void create(EventContext context) throws IOException {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
@@ -110,8 +112,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
     String up__ID = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
     System.out.println("Keys " + cqnAnalyzer.analyze(select).rootKeys().get("ID") + ":" + up__ID);
+    System.out.println(context.getTarget());
     Optional<CdsEntity> attachmentDraftEntity =
-        cdsModel.findEntity(context.getTarget() + "_drafts");
+        cdsModel.findEntity(context.getTarget().getQualifiedName());
     cmisDocument.setParentId(up__ID);
 
     Map<String, Object> updatedFields = new HashMap<>();
@@ -130,15 +133,25 @@ public class SDMServiceGenericHandler implements EventHandler {
     var insert =
         Insert.into(CQL.to(ref.segments()).to(attachmentDraftEntity.get().getQualifiedName()))
             .entry(updatedFields);
-    persistenceService.run(insert);
-    // DBQuery.addLinkToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
-    CqnSelect q = Select.from(attachmentDraftEntity.get());
-    Result result = persistenceService.run(q);
-    long count = result.rowCount();
-    System.out.println("Count " + count);
-    if (count != 0) {
-      System.out.println("Result " + result.list().get(0));
-    }
+    System.out.println(ApplicationHandlerHelper.isMediaEntity(context.getTarget()));
+    var test = draftService.newDraft(insert);
+    // set values
+    //    draftService.patchDraft(
+    //
+    // Update.entity(CQL.to(ref.segments()).to(attachmentDraftEntity.get().getQualifiedName()))
+    //            .data(updatedFields));
+    // patch draft
+    //    adminService.patchDraft(Update.entity(ORDERS).data(order)
+    //            .where(o -> o.ID().eq(order.getId()).and(o.IsActiveEntity().eq(false))));
+    //    persistenceService.run(insert);
+    //    // DBQuery.addLinkToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
+    //    CqnSelect q = Select.from(attachmentDraftEntity.get());
+    //    Result result = persistenceService.run(q);
+    //    long count = result.rowCount();
+    //    System.out.println("Count " + count);
+    //    if (count != 0) {
+    //      System.out.println("Result " + result.list().get(0));
+    //    }
 
     context.setCompleted();
   }
