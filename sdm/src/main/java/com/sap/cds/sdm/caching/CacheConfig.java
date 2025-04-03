@@ -80,7 +80,7 @@ public class CacheConfig {
 
     maxAllowedAttachmentsCache =
         cacheManager.createCache(
-            "maxCountCache",
+            "maxAllowedAttachmentsCache",
             CacheConfigurationBuilder.newCacheConfigurationBuilder(
                     String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(Expirations.noExpiration()));

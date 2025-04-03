@@ -241,7 +241,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String upIdKey) {
     cmisDocument.setFileName(data.getFileName());
     cmisDocument.setAttachmentId((String) attachmentIds.get("ID"));
-    cmisDocument.setContent((InputStream) data.get("Content"));
+    cmisDocument.setContent((InputStream) data.get("content"));
     cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setFolderId(folderId);

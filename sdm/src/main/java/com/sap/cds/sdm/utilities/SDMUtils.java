@@ -232,6 +232,8 @@ public class SDMUtils {
       AttachmentInfo attachmentInfo = new AttachmentInfo();
       determineAttachmentDetails(attachmentEntity, entities, attachmentInfo);
       maxCount = attachmentInfo.getAttachmentCount() + "__" + attachmentInfo.getErrorMessage();
+      CacheConfig.getMaxAllowedAttachmentsCache()
+          .put(attachmentEntity.getQualifiedName(), maxCount);
     }
     return maxCount;
   }
@@ -241,7 +243,7 @@ public class SDMUtils {
 
     for (CdsEntity cdsEntity : entities) {
       if (isRelatedEntity(attachmentEntity, cdsEntity)) {
-        processCompositions(cdsEntity, attachmentInfo);
+        processCompositions(cdsEntity, attachmentInfo, attachmentEntity);
       }
     }
   }
@@ -252,17 +254,22 @@ public class SDMUtils {
         && !attachmentQualifiedName.equals(cdsEntity.getQualifiedName());
   }
 
-  private static void processCompositions(CdsEntity cdsEntity, AttachmentInfo attachmentInfo) {
+  private static void processCompositions(
+      CdsEntity cdsEntity, AttachmentInfo attachmentInfo, CdsEntity attachmentEntity) {
     List<CdsElement> compositions = cdsEntity.compositions().toList();
 
     for (CdsElement cdsElement : compositions) {
       if (cdsElement != null) {
-        retrieveAnnotations(cdsElement, attachmentInfo);
+        String elementName = cdsElement.getQualifiedName().replaceAll(":", ".");
+        if (elementName.equalsIgnoreCase(attachmentEntity.getQualifiedName())) {
+          retrieveAnnotations(cdsElement, attachmentInfo);
+        }
       }
     }
   }
 
   private static void retrieveAnnotations(CdsElement cdsElement, AttachmentInfo attachmentInfo) {
+
     Optional<CdsAnnotation<Object>> maxcountAnnotation =
         cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
     maxcountAnnotation.ifPresent(

@@ -583,7 +583,7 @@ public class SDMUtilsTest {
     assertTrue(result.containsKey("property1"));
     assertNull(
         result.get(
-            "property1")); // Since property1 is null in attachment and non-null in DB, it should be
+            "property1")); // Since property1 is null in attachment and non-null in DB, it should
     // set to null
   }
 
@@ -812,6 +812,8 @@ public class SDMUtilsTest {
             public Stream<CdsElement> compositions() {
               CdsElement element1 = mock(CdsElement.class);
               CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
               when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
                   .thenReturn(Optional.of(maxcountAnnotation));
               when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
@@ -958,6 +960,8 @@ public class SDMUtilsTest {
             public Stream<CdsElement> compositions() {
               CdsElement element1 = mock(CdsElement.class);
               CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
               when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
                   .thenReturn(Optional.of(maxcountAnnotation));
 
@@ -1100,6 +1104,8 @@ public class SDMUtilsTest {
             public Stream<CdsElement> compositions() {
               CdsElement element1 = mock(CdsElement.class);
               CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
               List<CdsElement> compositions = List.of(element1, element2);
               return compositions.stream();
             }
