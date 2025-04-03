@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -86,6 +87,8 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @Mock private SDMCredentials sdmCredentials;
   @Mock private DeletionUserInfo deletionUserInfo;
+  Map<String, String> headers = new HashMap<>();
+  @Mock ParameterInfo parameterInfo;
 
   @BeforeEach
   public void setUp() {
@@ -105,6 +108,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(deletionUserInfo.getName()).thenReturn(userEmail);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn(userEmail);
+
+    headers.put("content-length", "100000");
+
     handlerSpy =
         spy(
             new SDMAttachmentsServiceHandler(
@@ -131,6 +137,8 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
       when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
       when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+      when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -537,10 +545,9 @@ public class SDMAttachmentsServiceHandlerTest {
     mockAttachmentIds.put("ID", "id");
     mockAttachmentIds.put("repositoryId", "repo1");
     MediaData mockMediaData = mock(MediaData.class);
-    Result mockResult = mock(Result.class);
+
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
-    CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
     byte[] byteArray = "Example content".getBytes();
     InputStream contentStream = new ByteArrayInputStream(byteArray);
@@ -549,7 +556,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("url", "url");
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
-
+    Result mockResult = mock(Result.class);
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getModel()).thenReturn(cdsModel);
@@ -574,12 +581,14 @@ public class SDMAttachmentsServiceHandlerTest {
     try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class)) {
+      when(mockResult.rowCount()).thenReturn(2L);
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+      when(parameterInfo.getHeaders()).thenReturn(headers);
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
     }
@@ -628,7 +637,10 @@ public class SDMAttachmentsServiceHandlerTest {
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class)) {
       dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPID(
+                      cdsEntity, persistenceService, anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
@@ -970,7 +982,8 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+      when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -1022,7 +1035,8 @@ public class SDMAttachmentsServiceHandlerTest {
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(parameterInfo.getHeaders()).thenReturn(headers);
     try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
@@ -1061,6 +1075,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(parameterInfo.getHeaders()).thenReturn(headers);
     when(cdsModel.findEntity(anyString()))
         .thenThrow(new ServiceException("Attachment draft entity not found"));
     ServiceException thrown =
