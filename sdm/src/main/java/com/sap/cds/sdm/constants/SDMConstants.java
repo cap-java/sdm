@@ -39,6 +39,7 @@ public class SDMConstants {
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
+  public static final int CHUNK_SIZE = 100 * 1024 * 1024; // 100MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
@@ -48,6 +49,10 @@ public class SDMConstants {
   public static final String ATTACHMENT_MAXCOUNT_ERROR_MSG = "SDM.Attachments.maxCountError";
   public static final String MAX_COUNT_ERROR_MESSAGE =
       "Cannot upload more than %s attachments as set up by the application";
+  public static final String NO_SDM_BINDING = "No SDM binding found";
+  public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
+  public static final String DI_TOKEN_EXCHANGE_PARAMS =
+      "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

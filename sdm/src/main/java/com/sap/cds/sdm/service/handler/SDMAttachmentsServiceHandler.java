@@ -15,6 +15,7 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
@@ -24,6 +25,7 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
@@ -32,20 +34,32 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = AttachmentService.class)
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final DocumentUploadService documentService;
+  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
 
   public SDMAttachmentsServiceHandler(
-      PersistenceService persistenceService, SDMService sdmService) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      DocumentUploadService documentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.documentService = documentService;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    logger.info(
+        "CREATE_ATTACHMENT Event Received with content length "
+            + context.getParameterInfo().getHeaders().get("content-length")
+            + " At "
+            + System.currentTimeMillis());
     validateRepository(context);
     processEntities(context);
   }
@@ -218,17 +232,21 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String upIdKey,
       String upID)
       throws ServiceException, IOException {
+
     CmisDocument cmisDocument = new CmisDocument();
     String jwtToken =
         eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
-
-    setCmisDocumentProperties(cmisDocument, data, attachmentIds, folderId, repositoryId, upIdKey);
+    String len = eventContext.getParameterInfo().getHeaders().get("content-length");
+    long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
+    setCmisDocumentProperties(
+        cmisDocument, data, attachmentIds, folderId, repositoryId, upIdKey, contentLen);
 
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     JSONObject createResult = sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
-
+    logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+    logger.info("Upload Finished at: " + System.currentTimeMillis());
     handleCreateDocumentResult(cmisDocument, createResult, eventContext);
   }
 
@@ -238,7 +256,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       Map<String, Object> attachmentIds,
       String folderId,
       String repositoryId,
-      String upIdKey) {
+      String upIdKey,
+      long contentlen) {
     cmisDocument.setFileName(data.getFileName());
     cmisDocument.setAttachmentId((String) attachmentIds.get("ID"));
     cmisDocument.setContent((InputStream) data.get("content"));
@@ -246,6 +265,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setFolderId(folderId);
     cmisDocument.setMimeType((String) data.get("mimeType"));
+    cmisDocument.setContentLength(contentlen);
   }
 
   private void handleCreateDocumentResult(
