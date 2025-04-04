@@ -225,7 +225,6 @@ public class DocumentUploadService {
             HttpPost request = new HttpPost(sdmUrl);
             request.setEntity(entity);
             headers.forEach(request::addHeader);
-            // printMemoryConsumption();
             return Single.fromCallable(
                     () -> {
                       try (CloseableHttpResponse response =
