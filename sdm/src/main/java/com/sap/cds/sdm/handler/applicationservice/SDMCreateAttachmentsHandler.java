@@ -24,6 +24,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -253,9 +254,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
+      Set<String> uniqueValues = new HashSet<>();
+    for (String str : filesWithUnsupportedProperties) {
+      String[] values = str.split(",");
+      for (String value : values) {
+        uniqueValues.add(value.trim());
+      }
+    }
+    List<String> propertiesList = new ArrayList<>(uniqueValues);
       context
           .getMessages()
-          .warn(SDMConstants.unsupportedPropertiesMessage(filesWithUnsupportedProperties));
+          .warn(SDMConstants.unsupportedPropertiesMessage(propertiesList));
     }
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));

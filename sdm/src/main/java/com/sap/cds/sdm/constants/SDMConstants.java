@@ -104,17 +104,7 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String unsupportedPropertiesMessage(List<String> invalidSecondaryProperties) {
-    Set<String> uniqueValues = new HashSet<>();
-    for (String str : invalidSecondaryProperties) {
-      String[] values = str.split(",");
-      for (String value : values) {
-        uniqueValues.add(value.trim());
-      }
-    }
-
-    // Convert the set to a list
-    List<String> propertiesList = new ArrayList<>(uniqueValues);
+  public static String unsupportedPropertiesMessage(List<String> propertiesList) {
     // Create the base message
     String prefixMessage = "The following secondary properties are not supported.\n\n";
 
