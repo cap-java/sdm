@@ -2,10 +2,7 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -95,13 +92,15 @@ public class SDMCreateAttachmentsHandlerTest {
   @Test
   public void testProcessBefore() throws IOException {
     List<CdsData> data = new ArrayList<>();
-    doNothing().when(handler).updateName(any(CdsCreateEventContext.class), anyList());
+    doNothing()
+        .when(handler)
+        .updateName(any(CdsCreateEventContext.class), anyList(), "attachments");
 
     // Act
     handler.processBefore(context, data);
 
     // Assert
-    verify(handler, times(1)).updateName(context, data);
+    verify(handler, times(1)).updateName(context, data, "attachments");
   }
 
   @Test
@@ -110,11 +109,11 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "attachments"))
         .thenReturn(duplicateFilenames);
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(messages, times(1))
@@ -127,11 +126,11 @@ public class SDMCreateAttachmentsHandlerTest {
     // Arrange
     List<CdsData> data = new ArrayList<>();
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "attachments"))
         .thenReturn(Collections.emptySet());
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(messages, never()).error(anyString());
@@ -154,11 +153,11 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock utility methods
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "attachments"))
         .thenReturn(Collections.emptySet());
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert that no updateAttachments calls were made, as there are no attachments
     verify(sdmService, never()).updateAttachments(anyString(), any(), any(), any());
@@ -174,7 +173,7 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = createTestData();
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -196,7 +195,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.getObject(anyString(), anyString(), any())).thenReturn("fileInSDM.txt");
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(messages, times(1)).warn(anyString());
@@ -210,7 +209,7 @@ public class SDMCreateAttachmentsHandlerTest {
         ((List<Map<String, Object>>) ((Map<String, Object>) data.get(0)).get("attachments")).get(0);
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -233,7 +232,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.updateAttachments(anyString(), any(), any(), any())).thenReturn(409);
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(attachment).replace(eq("fileName"), eq("fileInSDM.txt"));
@@ -246,7 +245,7 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = createTestData();
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -270,7 +269,8 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Act & Assert
     ServiceException exception =
-        assertThrows(ServiceException.class, () -> handler.updateName(context, data));
+        assertThrows(
+            ServiceException.class, () -> handler.updateName(context, data, "attachments"));
     assertEquals(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, exception.getMessage());
   }
 
@@ -280,7 +280,7 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = createTestData();
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -304,7 +304,8 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Act & Assert
     ServiceException exception =
-        assertThrows(ServiceException.class, () -> handler.updateName(context, data));
+        assertThrows(
+            ServiceException.class, () -> handler.updateName(context, data, "attachments"));
     assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
   }
 
@@ -314,7 +315,7 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = createTestData();
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -337,7 +338,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.updateAttachments(anyString(), any(), any(), any())).thenReturn(200);
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(messages, never()).error(anyString());
@@ -350,7 +351,7 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = createTestData();
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic
@@ -373,7 +374,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(sdmService.updateAttachments(anyString(), any(), any(), any())).thenReturn(200);
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     verify(messages, never()).error(anyString());
@@ -399,7 +400,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock utility methods
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     sdmUtilsMockedStatic.when(() -> SDMUtils.isRestrictedCharactersInName(null)).thenReturn(false);
@@ -420,7 +421,8 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Act & Assert
     ServiceException exception =
-        assertThrows(ServiceException.class, () -> handler.updateName(context, data));
+        assertThrows(
+            ServiceException.class, () -> handler.updateName(context, data, "attachments"));
 
     // Assert that the correct exception message is returned
     assertEquals("Filename cannot be empty", exception.getMessage());
@@ -461,7 +463,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock utility methods
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList()))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), "attachments"))
         .thenReturn(Collections.emptySet());
 
     // Mock restricted character checks
@@ -513,7 +515,7 @@ public class SDMCreateAttachmentsHandlerTest {
             });
 
     // Act
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Assert
     // Check restricted character warning

@@ -6,8 +6,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="sdm" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="sdm" target="17" />
+      <module name="sdm-root" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>

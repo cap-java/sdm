@@ -87,9 +87,11 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Test
   public void testProcessBeforeCallsRename() throws IOException {
     List<CdsData> data = new ArrayList<>();
-    doNothing().when(handler).updateName(any(CdsUpdateEventContext.class), anyList());
+    doNothing()
+        .when(handler)
+        .updateName(any(CdsUpdateEventContext.class), anyList(), "attachments");
     handler.processBefore(context, data);
-    verify(handler, times(1)).updateName(context, data);
+    verify(handler, times(1)).updateName(context, data, "attachments");
   }
 
   @Test
@@ -99,10 +101,10 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getMessages()).thenReturn(messages);
     sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
-        .when(() -> isFileNameDuplicateInDrafts(data))
+        .when(() -> isFileNameDuplicateInDrafts(data, "attachments"))
         .thenReturn(duplicateFilenames);
 
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     verify(messages, times(1))
         .error(
@@ -129,7 +131,7 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file1.txt");
 
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
     verify(sdmService, never())
         .updateAttachments("token", mockCredentials, document, secondaryProperties);
   }
@@ -185,7 +187,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getMessages()).thenReturn(messages);
 
     // Execute the method under test
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Verify the attachment's file name was attempted to be replaced with "file-sdm.txt"
     verify(attachment).put("fileName", "file1.txt");
@@ -246,7 +248,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         assertThrows(
             ServiceException.class,
             () -> {
-              handler.updateName(context, data);
+              handler.updateName(context, data, "attachments");
             });
 
     assertEquals(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, exception.getMessage());
@@ -303,7 +305,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         assertThrows(
             ServiceException.class,
             () -> {
-              handler.updateName(context, data);
+              handler.updateName(context, data, "attachments");
             });
 
     assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
@@ -357,7 +359,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn(200);
 
     // Execute the method under test
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     verify(attachment, never()).replace("fileName", "file-sdm.txt");
 
@@ -406,7 +408,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(mockCdsData.get("attachments")).thenReturn(null);
     data.add(mockCdsData);
 
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     verify(sdmService, never())
         .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
@@ -455,7 +457,7 @@ public class SDMUpdateAttachmentsHandlerTest {
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
         .thenReturn("file-in-sdm.txt");
 
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     verify(messages, times(1))
         .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedChars, "Rename"));
@@ -507,7 +509,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file3/abc.txt");
 
     // Call the method under test
-    handler.updateName(context, data);
+    handler.updateName(context, data, "attachments");
 
     // Verify the attachment's file name was replaced with the name in SDM
     // Now use `put` to verify the change was made instead of `replace`

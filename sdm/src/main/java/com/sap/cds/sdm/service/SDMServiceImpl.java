@@ -274,7 +274,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String token) {
+      Result result, PersistenceService persistenceService, String folderName, String token) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
@@ -299,9 +299,9 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {
-      folderId = getFolderIdByPath(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
       if (folderId == null) {
-        folderId = createFolder(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");

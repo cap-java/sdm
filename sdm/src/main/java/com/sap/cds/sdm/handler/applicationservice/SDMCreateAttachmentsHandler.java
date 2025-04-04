@@ -1,6 +1,8 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -20,12 +22,7 @@ import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMCreateAttachmentsHandler implements EventHandler {
@@ -41,18 +38,41 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    updateName(context, data);
+    List<String> attachmentCompositions = getEntityCompositions(context);
+    for (String composition : attachmentCompositions) {
+      updateName(context, data, composition);
+    }
   }
 
-  public void updateName(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+  private List<String> getEntityCompositions(CdsCreateEventContext context) {
+    List<CdsElement> compositions = context.getTarget().compositions().toList();
+    List<String> attachmentsCompositionList = new ArrayList<>();
+    for (CdsElement cdsElement : compositions) {
+      if (cdsElement != null) {
+        CdsAssociationType cdsAssociationType = cdsElement.getType();
+        String targetAspect =
+            cdsAssociationType.getTargetAspect().isPresent()
+                ? cdsAssociationType.getTargetAspect().get().getQualifiedName()
+                : null;
+        if (targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
+          attachmentsCompositionList.add(cdsElement.getName());
+        }
+      }
+    }
+    return attachmentsCompositionList;
+  }
+
+  public void updateName(CdsCreateEventContext context, List<CdsData> data, String composition)
+      throws IOException {
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
     } else {
       List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       for (Map<String, Object> entity : data) {
-        processEntity(context, entity, fileNameWithRestrictedCharacters, duplicateFileNameList);
+        processEntity(
+            context, entity, fileNameWithRestrictedCharacters, duplicateFileNameList, composition);
       }
       handleWarnings(context, fileNameWithRestrictedCharacters, duplicateFileNameList);
     }
@@ -72,13 +92,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CdsCreateEventContext context,
       Map<String, Object> entity,
       List<String> fileNameWithRestrictedCharacters,
-      List<String> duplicateFileNameList)
+      List<String> duplicateFileNameList,
+      String composition)
       throws IOException {
-    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
-            context, attachment, fileNameWithRestrictedCharacters, duplicateFileNameList);
+            context,
+            attachment,
+            fileNameWithRestrictedCharacters,
+            duplicateFileNameList,
+            composition);
       }
     }
   }
@@ -87,11 +112,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CdsCreateEventContext context,
       Map<String, Object> attachment,
       List<String> fileNameWithRestrictedCharacters,
-      List<String> duplicateFileNameList)
+      List<String> duplicateFileNameList,
+      String composition)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + "." + composition);
     String fileNameInDB;
     fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String filenameInRequest = (String) attachment.get("fileName");

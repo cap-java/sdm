@@ -19,7 +19,7 @@ public interface SDMService {
       throws IOException;
 
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String jwtToken)
+      Result result, PersistenceService persistenceService, String folderName, String jwtToken)
       throws IOException;
 
   public String getFolderIdByPath(
