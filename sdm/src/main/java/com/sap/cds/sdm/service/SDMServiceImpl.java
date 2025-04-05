@@ -139,7 +139,7 @@ public class SDMServiceImpl implements SDMService {
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties)
-      throws ServiceException {
+      throws ServiceException, IOException {
 
     Map<String, String> updatedMap = new HashMap<>();
     for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
@@ -170,7 +170,7 @@ public class SDMServiceImpl implements SDMService {
             .collect(Collectors.toSet());
     if (!keysToRemove.isEmpty()) {
       String errorMessage = String.join(", ", keysToRemove);
-      throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
+      throw new IOException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
     }
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
