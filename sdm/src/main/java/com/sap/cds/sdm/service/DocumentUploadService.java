@@ -204,9 +204,6 @@ public class DocumentUploadService {
               return Single.error(new IOException(" File stream is null!"));
             }
 
-            ReadAheadInputStream reReadableStream =
-                new ReadAheadInputStream(originalStream, cmisDocument.getContentLength());
-
             //  Prepare Multipart Request
             MultipartEntityBuilder builder = MultipartEntityBuilder.create();
             builder.addTextBody("cmisaction", "createDocument");
@@ -217,18 +214,17 @@ public class DocumentUploadService {
             builder.addTextBody("propertyValue[1]", "cmis:document");
             builder.addTextBody("succinct", "true");
             // Add media part with file metadata
-            builder.addPart(
-                "media",
-                new InputStreamBody(
-                    reReadableStream,
-                    ContentType.create(cmisDocument.getMimeType()),
-                    cmisDocument.getFileName()));
+
+            builder.addBinaryBody(
+                "filename",
+                cmisDocument.getContent(),
+                ContentType.create(cmisDocument.getMimeType()),
+                cmisDocument.getFileName());
             HttpEntity entity = builder.build();
 
             HttpPost request = new HttpPost(sdmUrl);
             request.setEntity(entity);
             headers.forEach(request::addHeader);
-
             return Single.fromCallable(
                     () -> {
                       try (CloseableHttpResponse response =
