@@ -115,4 +115,3 @@ jobs:
 
           # Deploy the application
           echo "Running cf deploy"
-          cf deploy mta_archives/demoappjava_1.0.0.mtar -f
