@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SecondaryPropertiesKey {
-  String repositoryId;
+  private String repositoryId;
 }
