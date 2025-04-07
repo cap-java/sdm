@@ -70,7 +70,7 @@ jobs:
               -Dsonar.junit.reportPaths=sdm/target/surefire-reports \
               -Dsonar.coverage.jacoco.xmlReportPaths=sdm/target/site/jacoco/jacoco.xml \
               -Dsonar.inclusions=**/*.java \
-              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/**,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/RepoKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/TokenCacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryTypesKey.java, sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryPropertiesKey \
+              -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,cap-notebook/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/**,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/RepoKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/TokenCacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryTypesKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryPropertiesKey \
               -Dsonar.java.file.suffixes=.java \
               -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
               -Dsonar.login=${{ secrets.SONAR_TOKEN }}
