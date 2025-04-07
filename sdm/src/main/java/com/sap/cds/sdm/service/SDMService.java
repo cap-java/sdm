@@ -49,7 +49,7 @@ public interface SDMService {
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties)
-      throws ServiceException, IOException;
+      throws ServiceException;
 
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException;

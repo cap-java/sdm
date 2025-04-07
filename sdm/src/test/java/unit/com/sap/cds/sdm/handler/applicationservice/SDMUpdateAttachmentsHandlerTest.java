@@ -12,10 +12,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.Result;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.sdm.caching.CacheConfig;
-import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
@@ -33,7 +32,6 @@ import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
-import org.ehcache.Cache;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -50,15 +48,18 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Mock private JwtTokenAuthenticationInfo jwtTokenInfo;
   @Mock private SDMCredentials mockCredentials;
   @Mock private Messages messages;
+  @Mock private Result result;
   @Mock private CdsEntity cdsEntity;
   @Mock private CdsModel model;
   private SDMService sdmService;
+  @Mock private SDMUtils sdmUtilsMock;
+  @Mock private DBQuery dbQueryMock;
+
   private SDMUpdateAttachmentsHandler handler;
 
   private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<DBQuery> dbQueryMockedStatic;
   private MockedStatic<SDMUtils> sdmUtilsMockedStatic;
-  private MockedStatic<CacheConfig> cacheConfigMockedStatic;
 
   @BeforeEach
   public void setUp() {
@@ -67,9 +68,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
     tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockCredentials);
     handler = spy(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
-    cacheConfigMockedStatic = mockStatic(CacheConfig.class);
-    dbQueryMockedStatic = mockStatic(DBQuery.class);
-    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    sdmUtilsMock = mock(SDMUtils.class);
   }
 
   @AfterEach
@@ -82,9 +81,6 @@ public class SDMUpdateAttachmentsHandlerTest {
     }
     if (sdmUtilsMockedStatic != null) {
       sdmUtilsMockedStatic.close();
-    }
-    if (cacheConfigMockedStatic != null) {
-      cacheConfigMockedStatic.close();
     }
   }
 
@@ -101,6 +97,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
     when(context.getMessages()).thenReturn(messages);
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
         .when(() -> isFileNameDuplicateInDrafts(data))
         .thenReturn(duplicateFilenames);
@@ -124,14 +121,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
     when(model.findEntity("some.qualified.Name.attachments"))
         .thenReturn(Optional.of(attachmentDraftEntity));
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -179,15 +169,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mock the static TokenHandler
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
-
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -203,6 +186,7 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     // Execute the method under test
     handler.updateName(context, data);
+
     // Verify the attachment's file name was attempted to be replaced with "file-sdm.txt"
     verify(attachment).put("fileName", "file1.txt");
 
@@ -246,6 +230,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mock the static TokenHandler
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -268,19 +254,23 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testRenameWith500Error() throws IOException {
-    List<CdsData> data = prepareMockAttachmentData("file1");
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment = spy(new HashMap<>());
-    attachment.put("id", "id");
-    attachment.put("fileName", "file1");
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
+    Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
+    CmisDocument document = new CmisDocument();
+    document.setFileName("file1.txt");
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(attachments);
+    data.add(mockCdsData);
 
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
@@ -297,49 +287,17 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mock the static TokenHandler
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-    // Mock duplicate filename check
-    sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
-        .thenReturn(new HashSet<>());
-
-    // Mock secondary properties
-    List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
-    sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getSecondaryTypeProperties(Optional.of(cdsEntity), attachment))
-        .thenReturn(secondaryTypeProperties);
-    // Mock properties in DB
-    Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("property1", "value1");
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
-                DBQuery.getPropertiesForID(
-                    cdsEntity, persistenceService, "id", secondaryTypeProperties))
-        .thenReturn(propertiesInDB);
-    // Mock updateSecondaryProperties
-    Map<String, String> updatedSecondaryProperties = new HashMap<>();
-    updatedSecondaryProperties.put("filename", "file1");
-    sdmUtilsMockedStatic
-        .when(
-            () ->
-                SDMUtils.getUpdatedSecondaryProperties(
-                    entity, secondaryTypeProperties, propertiesInDB))
-        .thenReturn(updatedSecondaryProperties);
-    String fileNameInDb = "fileNameInDb";
-    dbQueryMockedStatic
-        .when(() -> DBQuery.getAttachmentForID(cdsEntity, persistenceService, "id"))
-        .thenReturn(fileNameInDb);
-    // Mock restricted character in name
-    sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isRestrictedCharactersInName("file1"))
-        .thenReturn(false);
+                getAttachmentForID(
+                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-    CmisDocument cmisDocument = new CmisDocument();
-    cmisDocument.setFileName("file1");
-    // Mock response code
-    when(sdmService.updateAttachments(
-            "jwtToken", mockCredentials, cmisDocument, updatedSecondaryProperties))
-        .thenReturn(500);
+    when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
+        .thenReturn(500); // Mock conflict response code
 
     ServiceException exception =
         assertThrows(
@@ -347,6 +305,7 @@ public class SDMUpdateAttachmentsHandlerTest {
             () -> {
               handler.updateName(context, data);
             });
+
     assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
   }
 
@@ -385,15 +344,8 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mock the static TokenHandler
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
-
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -422,6 +374,9 @@ public class SDMUpdateAttachmentsHandlerTest {
     secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
+
+    // Mock static method for DBQuery
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
 
     // Simulating the scenario where the attachment is not found in the database
     dbQueryMockedStatic
@@ -480,6 +435,7 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     when(context.getMessages()).thenReturn(messages);
 
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
         .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
         .thenAnswer(
@@ -488,18 +444,10 @@ public class SDMUpdateAttachmentsHandlerTest {
               return filename.contains("/") || filename.contains("\\");
             });
 
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
-
     when(sdmService.updateAttachments("jwtToken", mockCredentials, document, secondaryProperties))
         .thenReturn(409); // Mock conflict response code
 
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -541,6 +489,7 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     when(context.getMessages()).thenReturn(messages);
 
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
         .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
         .thenAnswer(
@@ -549,15 +498,7 @@ public class SDMUpdateAttachmentsHandlerTest {
               return filename.contains("/") || filename.contains("\\");
             });
 
-    // Mock cache
-    Cache mockCache = mock(Cache.class);
-    SecondaryPropertiesKey mockSecondaryPropertiesKey = mock(SecondaryPropertiesKey.class);
-    cacheConfigMockedStatic
-        .when(() -> CacheConfig.getSecondaryPropertiesCache())
-        .thenReturn(mockCache);
-    mockSecondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    mockCache.remove(mockSecondaryPropertiesKey); // Simulating the cache removal
-
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
@@ -580,13 +521,83 @@ public class SDMUpdateAttachmentsHandlerTest {
   }
 
   @Test
+  public void testProcessAttachment_PopulateSecondaryTypeProperties() throws IOException {
+    // Arrange
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    // Create a spy for the attachment map
+    Map<String, Object> attachment = spy(new HashMap<>());
+
+    // Prepare attachment with test data
+    attachment.put("ID", "test-id");
+    attachment.put("fileName", "test-file.txt");
+    attachment.put("objectId", "test-object-id");
+
+    // Add secondary type properties
+    attachment.put("category", "document");
+    attachment.put("description", "Test document");
+
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+
+    // Mock necessary dependencies
+    CdsData mockCdsData = mock(CdsData.class);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+
+    // Prepare lists for restricted characters and duplicate files
+    List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
+    List<String> duplicateFileNameList = new ArrayList<>();
+
+    // Mock static methods
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<DBQuery> dbQueryMockedStatic = mockStatic(DBQuery.class)) {
+
+      // Setup mocking for secondary type properties
+
+      when(sdmUtilsMock.getSecondaryTypeProperties(
+              eq(Optional.of(attachmentDraftEntity)), eq(attachment)))
+          .thenReturn(Arrays.asList("category", "description"));
+
+      // Setup mocking for updated secondary properties
+      when(sdmUtilsMock.getUpdatedSecondaryProperties(
+              eq(Optional.of(attachmentDraftEntity)),
+              eq(attachment),
+              eq(persistenceService),
+              eq(Arrays.asList("category", "description"))))
+          .thenReturn(new HashMap<>());
+
+      // Mock restricted characters check
+      when(sdmUtilsMock.isRestrictedCharactersInName(anyString())).thenReturn(false);
+
+      // Mock DB query for attachment
+
+      when(dbQueryMock.getAttachmentForID(
+              eq(attachmentDraftEntity), eq(persistenceService), eq("test-id")))
+          .thenReturn("test-file.txt");
+
+      handler.processAttachment(
+          Optional.of(attachmentDraftEntity),
+          context,
+          attachment,
+          duplicateFileNameList,
+          fileNameWithRestrictedCharacters);
+
+      // Assert
+      verify(attachment).get("category");
+      verify(attachment).get("description");
+    }
+  }
+
+  @Test
   public void testProcessAttachment_EmptyFilename_ThrowsServiceException() {
     // Arrange
     List<CdsData> data = new ArrayList<>();
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
-    Map<String, String> propertiesInDB = spy(new HashMap<>());
-    List<String> secondaryTypeProperties = new ArrayList<>();
 
     // Create a spy for the attachment map
     Map<String, Object> attachment = spy(new HashMap<>());
@@ -608,57 +619,51 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Prepare lists for restricted characters and duplicate files
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> duplicateFileNameList = new ArrayList<>();
-    List<String> filesNotFound = new ArrayList<>();
-    List<String> filesWithUnsupportedProperties = new ArrayList<>();
-    Map<String, String> badRequest = new HashMap<>();
 
-    // Setup mocking for secondary type properties
-    sdmUtilsMockedStatic
-        .when(
-            () ->
-                SDMUtils.getSecondaryTypeProperties(
-                    eq(Optional.of(attachmentDraftEntity)), eq(attachment)))
-        .thenReturn(Collections.emptyList());
+    // Mock static methods
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<DBQuery> dbQueryMockedStatic = mockStatic(DBQuery.class)) {
 
-    // Setup mocking for updated secondary properties
-    sdmUtilsMockedStatic
-        .when(
-            () ->
-                SDMUtils.getUpdatedSecondaryProperties(
-                    attachment, secondaryTypeProperties, propertiesInDB))
-        .thenReturn(new HashMap<>());
-    // Mock restricted characters check
-    sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
-        .thenReturn(false);
-    // Mock DB query for attachment
-    dbQueryMockedStatic
-        .when(
-            () -> DBQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
-        .thenReturn("existing-filename.txt");
-    // Act & Assert
-    ServiceException thrown =
-        assertThrows(
-            ServiceException.class,
-            () -> {
-              handler.processAttachment(
-                  Optional.of(attachmentDraftEntity),
-                  context,
-                  attachment,
-                  duplicateFileNameList,
-                  fileNameWithRestrictedCharacters,
-                  filesNotFound,
-                  filesWithUnsupportedProperties,
-                  badRequest);
-            });
+      // Setup mocking for secondary type properties
+      when(sdmUtilsMock.getSecondaryTypeProperties(
+              eq(Optional.of(attachmentDraftEntity)), eq(attachment)))
+          .thenReturn(Collections.emptyList());
 
-    // Verify the exception message
-    assertEquals("Filename cannot be empty", thrown.getMessage());
+      // Setup mocking for updated secondary properties
+      when(sdmUtilsMock.getUpdatedSecondaryProperties(
+              eq(Optional.of(attachmentDraftEntity)),
+              eq(attachment),
+              eq(persistenceService),
+              eq(Collections.emptyList())))
+          .thenReturn(new HashMap<>());
+      // Mock restricted characters check
+      when(sdmUtilsMock.isRestrictedCharactersInName(anyString())).thenReturn(false);
 
-    // Verify interactions
-    verify(attachment).get("fileName");
-    assertTrue(fileNameWithRestrictedCharacters.isEmpty());
-    assertTrue(duplicateFileNameList.isEmpty());
+      // Mock DB query for attachment
+      when(dbQueryMock.getAttachmentForID(
+              eq(attachmentDraftEntity), eq(persistenceService), eq("test-id")))
+          .thenReturn("existing-filename.txt");
+      // Act & Assert
+      ServiceException thrown =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                handler.processAttachment(
+                    Optional.of(attachmentDraftEntity),
+                    context,
+                    attachment,
+                    duplicateFileNameList,
+                    fileNameWithRestrictedCharacters);
+              });
+
+      // Verify the exception message
+      assertEquals("Filename cannot be empty", thrown.getMessage());
+
+      // Verify interactions
+      verify(attachment).get("fileName");
+      assertTrue(fileNameWithRestrictedCharacters.isEmpty());
+      assertTrue(duplicateFileNameList.isEmpty());
+    }
   }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {

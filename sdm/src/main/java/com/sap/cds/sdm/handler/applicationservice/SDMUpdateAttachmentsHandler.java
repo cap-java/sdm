@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
+import static com.sap.cds.sdm.persistence.DBQuery.*;
+
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -140,7 +142,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         DBQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     Map<String, String> updatedSecondaryProperties =
-        SDMUtils.getUpdatedSecondaryProperties(attachment, secondaryTypeProperties, propertiesInDB);
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity,
+            attachment,
+            persistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
     String filenameInRequest = (String) attachment.get("fileName");
     String fileNameInDB;
     fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
@@ -195,7 +202,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           default:
             throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
         }
-      } catch (IOException e) {
+      } catch (ServiceException e) {
         if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
           String unsupportedDetails =
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();

@@ -153,7 +153,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
     // Get the updated secondary properties
     Map<String, String> updatedSecondaryProperties =
-        SDMUtils.getUpdatedSecondaryProperties(attachment, secondaryTypeProperties, propertiesInDB);
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity,
+            attachment,
+            persistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
 
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
@@ -250,14 +255,16 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       Set<String> uniqueValues = new HashSet<>();
-      for (String str : filesWithUnsupportedProperties) {
-        String[] values = str.split(",");
-        for (String value : values) {
-          uniqueValues.add(value.trim());
-        }
+    for (String str : filesWithUnsupportedProperties) {
+      String[] values = str.split(",");
+      for (String value : values) {
+        uniqueValues.add(value.trim());
       }
-      List<String> propertiesList = new ArrayList<>(uniqueValues);
-      context.getMessages().warn(SDMConstants.unsupportedPropertiesMessage(propertiesList));
+    }
+    List<String> propertiesList = new ArrayList<>(uniqueValues);
+      context
+          .getMessages()
+          .warn(SDMConstants.unsupportedPropertiesMessage(propertiesList));
     }
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));

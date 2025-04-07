@@ -222,7 +222,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -258,7 +258,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -292,7 +292,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -326,7 +326,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -362,7 +362,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Arrays.asList("property1", "property2", "property3"));
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -409,7 +409,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     dbQueryMockedStatic
@@ -480,7 +480,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptyList());
 
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any()))
+        .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any()))
         .thenReturn(new HashMap<>());
 
     // Mock DB query responses

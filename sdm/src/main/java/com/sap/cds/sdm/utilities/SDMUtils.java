@@ -5,6 +5,7 @@ import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -182,7 +183,9 @@ public class SDMUtils {
   }
 
   public static Map<String, String> getUpdatedSecondaryProperties(
+      Optional<CdsEntity> attachmentEntity,
       Map<String, Object> attachment,
+      PersistenceService persistenceService,
       List<String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
