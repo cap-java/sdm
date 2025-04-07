@@ -1,0 +1,84 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      cf_space:
+        description: 'Specify the Cloud Foundry space to deploy to'
+        required: true
+      repository_id:
+        description: 'Specify the Repository ID (leave blank if deploying to developcap)'
+        required: false
+
+permissions:
+  pull-requests: read
+
+jobs:
+  Deploy:
+    runs-on: cap-java
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: develop
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Verify and Checkout Deploy Branch
+        run: |
+          git fetch origin
+          if git rev-parse --verify origin/develop_deploy; then
+            git checkout develop_deploy
+          else
+            echo "Branch 'develop_deploy' not found. Please verify the branch name."
+            exit 1
+          fi
+
+      - name: Deleting the sdm directory for fresh build
+        run: |
+          pwd
+          cd
+          rm -rf .m2/repository/com/sap/cds
+
+      - name: Set REPOSITORY_ID
+        id: set_repository_id
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
+            echo "Using REPOSITORY_ID from secrets"
+            echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
+          else
+            if [ -z "${{ github.event.inputs.repository_id }}" ]; then
+              echo "REPOSITORY_ID must be provided for non-developcap spaces"
+              exit 1
+            else
+              echo "Using provided REPOSITORY_ID"
+              echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
+            fi
+          fi
+
+      - name: Prepare and Deploy to Cloud Foundry
+        run: |
+          echo "Current Branch......"
+          git branch
+          pwd
+          cd /sapmnt/home/I355238/actions-runner/_work/sdm/sdm/cap-notebook/demoapp
+          
+          # Replace placeholder with actual REPOSITORY_ID value
+          sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
+          
+          mbt build
+
+          # Install cf CLI plugin
+          cf install-plugin multiapps -f
+
+          # Login to Cloud Foundry again to ensure session is active
+          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+
+          # Deploy the application
+          echo "Running cf deploy"
+          cf deploy mta_archives/demoappjava_1.0.0.mtar -f

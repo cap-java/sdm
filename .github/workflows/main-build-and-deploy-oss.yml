@@ -1,0 +1,109 @@
+name: Deploy to OSS
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.6.3'
+
+on:
+  release:
+    types: [ "released" ]
+
+jobs:
+
+  update-version:
+    runs-on: ubuntu-latest
+    #needs: blackduck
+    steps:
+
+      - name: Show Branch and Working Directory Info
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          echo "Working Directory: $(pwd)"
+          echo "Contents of Working Directory:"
+          ls -lart
+        shell: bash
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Update version
+        uses: ./.github/actions/newrelease
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Upload Changed Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-new-version
+          path: .
+          include-hidden-files: true
+          retention-days: 1
+
+  build:
+    runs-on: ubuntu-latest
+    needs: update-version
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: root-new-version
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Validate Artifacts
+        run: |
+          echo "Current directory..."
+          pwd
+          cd sdm
+          echo "Current directory..."
+          echo "Validating generated artifacts..."
+          echo "Listing contents of the target directory:"
+          ls -al target/
+          if [[ ! -f "target/sdm.jar" ]]; then
+            echo "Error: sdm.jar not found!"
+            exit 1
+          fi
+          if [[ ! -f "target/sdm-sources.jar" ]]; then
+            echo "Error: sdm-sources.jar not found!"
+            exit 1
+          fi
+          
+
+      - name: Upload Changed Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-build
+          include-hidden-files: true
+          path: .
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Maven Central
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: root-build
+
+      - name: Deploy
+        uses: ./.github/actions/deploy-release
+        with:
+          user: ${{ secrets.OSSRH_SONATYPE_ORG_API_USER }}
+          password: ${{ secrets.OSSRH_SONATYPE_ORG_API_PASSWD }}
+          profile: ${{ secrets.OSSRH_SONATYPE_ORG_PROFILE_ID }}
+          pgp-pub-key: ${{ secrets.PGP_PUBKEY_ID }}
+          pgp-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
+          pgp-passphrase: ${{ secrets.PGP_PASSPHRASE }}
+          revision: ${{ github.event.release.tag_name }}
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Echo Status
+        run: echo "The job status is ${{ job.status }}"
