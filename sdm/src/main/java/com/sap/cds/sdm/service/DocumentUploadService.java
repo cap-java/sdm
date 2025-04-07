@@ -87,8 +87,8 @@ public class DocumentUploadService {
                 long totalSize = cmisDocument.getContentLength();
                 int chunkSize = SDMConstants.CHUNK_SIZE;
 
-                if (totalSize <= chunkSize) {
-                  //  Upload directly if file is ≤ 100MB
+                if (totalSize <= 200 * 1024 * 1024) {
+                  //  Upload directly if file is ≤ 200MB
                   return uploadSingleChunk(cmisDocument, headers, sdmUrl);
                 } else {
                   //  Upload in chunks if file is > 100MB
@@ -288,7 +288,7 @@ public class DocumentUploadService {
               logger.info("bytesRead is " + bytesRead);
               // Step 4: Fetch remaining bytes before checking EOF
               long remainingBytes = chunkedStream.getRemainingBytes();
-              logger.info("remainingBytes is " + remainingBytes);
+              logger.debug("remainingBytes is " + remainingBytes);
 
               // Step 5: Check if it's the last chunk
               boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();

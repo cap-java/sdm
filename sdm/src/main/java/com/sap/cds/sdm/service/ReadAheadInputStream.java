@@ -18,9 +18,9 @@ public class ReadAheadInputStream extends InputStream {
   private long position = 0;
   private static final Logger logger = LoggerFactory.getLogger(ReadAheadInputStream.class);
   private final ExecutorService executor =
-      Executors.newCachedThreadPool(); // Thread pool to Read next chunk
+      Executors.newFixedThreadPool(2); // Thread pool to Read next chunk
   private final BlockingQueue<byte[]> chunkQueue =
-      new LinkedBlockingQueue<>(3); // Next chunk is read to a queue
+      new LinkedBlockingQueue<>(5); // Next chunk is read to a queue
 
   public ReadAheadInputStream(InputStream inputStream, long totalSize) throws IOException {
     if (inputStream == null) {
@@ -122,7 +122,6 @@ public class ReadAheadInputStream extends InputStream {
 
   public synchronized long getRemainingBytes() {
     long remaining = totalSize - totalBytesRead;
-    logger.info(" Remaining Bytes: " + remaining);
     return remaining > 0 ? remaining : 0;
   }
 
