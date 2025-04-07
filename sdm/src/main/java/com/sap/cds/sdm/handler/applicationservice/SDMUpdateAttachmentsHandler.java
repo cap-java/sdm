@@ -219,8 +219,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   private void replacePropertiesInAttachment(
       Map<String, Object> attachment, String fileName, Map<String, String> propertiesInDB) {
     if (propertiesInDB != null) {
-      for (String key : propertiesInDB.keySet()) {
-        Object value = propertiesInDB.get(key);
+      for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
+        String key = entry.getKey();
+        String value = entry.getValue();
         attachment.replace(key, value);
       }
     }
