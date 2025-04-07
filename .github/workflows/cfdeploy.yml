@@ -112,5 +112,3 @@ jobs:
 
           # Login to Cloud Foundry again to ensure session is active
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
-
-          # Deploy the application
