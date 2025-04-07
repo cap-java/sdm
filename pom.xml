@@ -84,13 +84,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        <dependency>
-            <groupId>com.sap.cloud.sdk</groupId>
-            <artifactId>sdk-bom</artifactId>
-            <version>${sdk-bom-version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
+            <dependency>
+                <groupId>com.sap.cloud.sdk</groupId>
+                <artifactId>sdk-bom</artifactId>
+                <version>${sdk-bom-version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
 
     </dependencyManagement>
@@ -178,11 +178,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
-                <configuration> 
+                <configuration>
                     <environmentVariables>
                         <REPOSITORY_ID>repoid</REPOSITORY_ID>
                     </environmentVariables>
-                </configuration> 
+                </configuration>
             </plugin>
 
             <plugin>
@@ -273,18 +273,29 @@
         </plugins>
     </build>
     <distributionManagement>
-        <snapshotRepository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </snapshotRepository>
+        <!--         <snapshotRepository>
+                    <id>artifactory</id>
+                    <name>Artifactory_DMZ-snapshots</name>
+                    <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+                </snapshotRepository>
+                <repository>
+                    <id>artifactory</id>
+                    <name>Artifactory_DMZ</name>
+                    <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+                </repository> -->
+        <!-- GitHub Packages Repositories -->
         <repository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+            <id>github-release</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
         </repository>
+        <snapshotRepository>
+            <id>github-snapshot</id>
+            <name>GitHub Packages Snapshots</name>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
+        </snapshotRepository>
     </distributionManagement>
-         
+
     <scm>
         <url>https://github.com/cap-java/sdm</url>
         <connection>scm:git:git@github.com:cap-java/sdm.git</connection>
