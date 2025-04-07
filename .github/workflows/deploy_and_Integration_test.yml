@@ -44,22 +44,6 @@ jobs:
           cd
           rm -rf .m2/repository/com/sap/cds
 
-      - name: Set REPOSITORY_ID
-        id: set_repository_id
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
-            echo "Using REPOSITORY_ID from secrets"
-            echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
-          else
-            if [ -z "${{ github.event.inputs.repository_id }}" ]; then
-              echo "REPOSITORY_ID must be provided for non-developcap spaces"
-              exit 1
-            else
-              echo "Using provided REPOSITORY_ID"
-              echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
-            fi
-          fi
-
       - name: Configure Maven for GitHub Packages
         run: |
           mkdir -p ~/.m2
