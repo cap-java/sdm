@@ -177,7 +177,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     Optional<CdsEntity> attachmentDraftEntity =
         model.findEntity(eventContext.getAttachmentEntity() + "_drafts");
     return attachmentDraftEntity.orElseThrow(
-        () -> new ServiceException("Attachment draft entity not found"));
+        () -> new ServiceException(SDMConstants.DRAFT_NOT_FOUND));
   }
 
   private String getUpIdKey(CdsEntity attachmentDraftEntity) {

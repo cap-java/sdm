@@ -53,6 +53,7 @@ public class SDMConstants {
   public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
   public static final String DI_TOKEN_EXCHANGE_PARAMS =
       "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
+  public static final String DRAFT_NOT_FOUND = "Attachment draft entity not found";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
