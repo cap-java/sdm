@@ -520,13 +520,14 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("ExpectedFolderId".getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
 
+      InputStream inputStream = new ByteArrayInputStream(expectedResponse.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      // when(EntityUtils.toString(entity)).thenReturn(expectedResponse);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       String actualResponse =
@@ -548,7 +549,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(500);
       when(response.getEntity()).thenReturn(entity);
@@ -581,7 +582,7 @@ public class SDMServiceImplTest {
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
       // Simulate IOException during HTTP call
-      when(mockHttpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
+      when(mockHttpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
@@ -619,7 +620,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
