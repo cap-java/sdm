@@ -9,7 +9,6 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
-import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -51,15 +50,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     long attachmentCount = 0;
-
-    Optional<CdsAnnotation<Object>> annotation =
-        context.getAttachmentEntity().findAnnotation("attachmentcount.Value");
-    if (annotation.isPresent()) {
-      System.out.println("Attachment Count " + annotation.get());
-      System.out.println(
-          "Attachment Count Val" + annotation.get().getKey() + ":" + annotation.get().getValue());
-      attachmentCount = Long.parseLong(annotation.get().getValue().toString());
-    }
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
@@ -76,12 +66,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       Result result =
           DBQuery.getAttachmentsForUPID(attachmentDraftEntity.get(), persistenceService, upID);
       if (!result.list().isEmpty()) {
-        // check here for the count
-        long rowCount = result.rowCount();
-        System.out.println("Row count " + rowCount);
-        if (rowCount > attachmentCount) {
-          throw new ServiceException("Cannot upload more than " + attachmentCount + " attachments");
-        }
         MediaData data = context.getData();
 
         String filename = data.getFileName();

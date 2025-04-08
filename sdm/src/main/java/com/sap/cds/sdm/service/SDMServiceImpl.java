@@ -69,7 +69,7 @@ public class SDMServiceImpl implements SDMService {
     } else {
       // Add additional form fields
       builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
-
+      builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
       builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
       builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
       builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
