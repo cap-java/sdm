@@ -8,7 +8,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "MY_REPO";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
       "@SDM.Attachments.AdditionalProperty";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
