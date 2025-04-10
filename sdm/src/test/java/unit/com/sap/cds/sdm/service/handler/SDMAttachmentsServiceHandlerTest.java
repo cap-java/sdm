@@ -675,8 +675,9 @@ public class SDMAttachmentsServiceHandlerTest {
       cmisDocument = new CmisDocument();
       cmisDocument.setObjectId("objectId2");
       cmisDocuments.add(cmisDocument);
+
       mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .when(() -> DBQuery.getAttachmentsForFolder(any(), any(), any(), any()))
           .thenReturn(cmisDocuments);
 
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
@@ -691,14 +692,16 @@ public class SDMAttachmentsServiceHandlerTest {
       when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
       when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
       List<CmisDocument> cmisDocuments = new ArrayList<>();
+      String entity = "Books.attachments";
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setObjectId("objectId");
       cmisDocuments.add(cmisDocument);
       cmisDocument = new CmisDocument();
       cmisDocument.setObjectId("objectId2");
       cmisDocuments.add(cmisDocument);
+
       mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .when(() -> DBQuery.getAttachmentsForFolder(any(), any(), any(), any()))
           .thenReturn(cmisDocuments);
 
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
@@ -712,8 +715,12 @@ public class SDMAttachmentsServiceHandlerTest {
       when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
       when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
       List<CmisDocument> cmisDocuments = new ArrayList<>();
+      String entity = "Books.attachments";
       mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(cdsEntity, persistenceService, folderId))
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForFolder(
+                      entity, persistenceService, folderId, attachmentMarkAsDeletedEventContext))
           .thenReturn(cmisDocuments);
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
       verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);

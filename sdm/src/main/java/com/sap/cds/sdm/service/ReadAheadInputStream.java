@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 public class ReadAheadInputStream extends InputStream {
   private final BufferedInputStream originalStream;
   private final long totalSize;
-  private final int chunkSize = SDMConstants.CHUNK_SIZE;
+  private static final int chunkSize = SDMConstants.CHUNK_SIZE;
   private long totalBytesRead = 0;
   private boolean lastChunkLoaded = false;
   private byte[] currentBuffer;

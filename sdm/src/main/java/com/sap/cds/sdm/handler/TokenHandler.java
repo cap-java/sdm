@@ -310,7 +310,7 @@ public class TokenHandler {
     DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
         DefaultHttpClientFactory.builder();
     if (connectionPoolConfig == null) {
-      Duration timeout = Duration.ofSeconds((long) SDMConstants.CONNECTION_TIMEOUT);
+      Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
       builder.timeoutMilliseconds((int) timeout.toMillis());
       builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS);
       builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS);
