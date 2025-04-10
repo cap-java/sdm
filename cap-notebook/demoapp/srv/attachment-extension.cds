@@ -26,7 +26,6 @@ annotate Books.attachments with {
             $value: ![statusText.text],
             ![@UI.TextArrangement]: #TextOnly
         },
-        ValueList: {entity:'Statuses'},
-        sap.value.list: 'fixed-values'
+        ValueList: {entity:'Statuses'}
     );
 }
