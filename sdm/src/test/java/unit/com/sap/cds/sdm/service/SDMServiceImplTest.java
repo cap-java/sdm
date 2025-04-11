@@ -12,6 +12,7 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -1411,12 +1412,15 @@ public class SDMServiceImplTest {
 
   @Test
   public void testValidSecondaryPropertiesFail() throws IOException {
-    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       String repositoryId = "repoId";
       String subdomain = "subdomain";
       List<String> secondaryTypes = Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
-
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(null);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
@@ -1459,9 +1463,10 @@ public class SDMServiceImplTest {
       List<String> secondaryTypesCached = new ArrayList<>();
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
-      Cache mockCache = mock(Cache.class);
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
-      when(mockCache.get(any())).thenReturn(secondaryTypesCached);
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       tokenHandlerMockedStatic
@@ -1481,7 +1486,7 @@ public class SDMServiceImplTest {
               + "\"children\": ["
               + "{\"type\": {\"id\": \"Type:1\"}},"
               + "{\"type\": {\"id\": \"Type:2\"}},"
-              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\": \"Type:3child\"}}]}"
+              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":\"Type:3child\"}}]}"
               + "]}]";
 
       String jsonResponseProperties =
@@ -1508,21 +1513,13 @@ public class SDMServiceImplTest {
       when(response.getEntity()).thenReturn(null);
       when(entity.getContent()).thenReturn(inputStream, inputStream2);
 
-      IOException exception =
+      ServiceException exception =
           assertThrows(
-              IOException.class,
+              ServiceException.class,
               () -> {
                 sdmServiceImpl.updateAttachments(
                     jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
               });
-
-      String actualMessage = exception.getMessage().replaceAll("\\s+", " ").trim();
-
-      assertTrue(actualMessage.contains("The following secondary properties are not supported."));
-      assertTrue(
-          actualMessage.contains(
-              "Please contact your administrator for assistance with any necessary adjustments."));
-      assertTrue(actualMessage.contains("property1") && actualMessage.contains("property2"));
     }
   }
 

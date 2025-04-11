@@ -75,7 +75,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String entity = contextValues[2];
       String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
-
       List<CmisDocument> cmisDocuments =
           DBQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
@@ -151,7 +150,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String jwtToken = jwtTokenInfo.getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
-    if ("Versioned".equals(repocheck)) {
+    if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
   }

@@ -7,7 +7,6 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.AttachmentInfo;
-import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -189,10 +188,9 @@ public class SDMUtils {
       Optional<CdsEntity> attachmentEntity,
       Map<String, Object> attachment,
       PersistenceService persistenceService,
-      List<String> secondaryTypeProperties) {
+      List<String> secondaryTypeProperties,
+      Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
-    String id = (String) attachment.get("ID");
-    List<String> propertiesInDB;
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
     for (String property : secondaryTypeProperties) {
@@ -200,18 +198,12 @@ public class SDMUtils {
       propertiesMap.put(property, value);
     }
     // Check the value of secondary properties in DB
-    propertiesInDB =
-        DBQuery.getpropertiesForID(
-            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
     for (String property : secondaryTypeProperties) {
-      String valueInDB =
-          (!propertiesInDB.isEmpty()
-                  && secondaryTypeProperties != null
-                  && secondaryTypeProperties.indexOf(property) >= 0)
-              ? propertiesInDB.get(secondaryTypeProperties.indexOf(property))
-              : null;
-      Object valueInMap = propertiesMap.isEmpty() ? null : propertiesMap.get(property);
-      if (valueInMap != valueInDB) {
+      String valueInDB = propertiesInDB.get(property);
+      Object valueInMap = propertiesMap.get(property);
+
+      if ((valueInMap == null && valueInDB != null)
+          || (valueInMap != null && !valueInMap.equals(valueInDB))) {
         if (valueInMap != null) {
           updatedSecondaryProperties.put(property, valueInMap.toString());
         } else {
@@ -259,11 +251,9 @@ public class SDMUtils {
     List<CdsElement> compositions = cdsEntity.compositions().toList();
 
     for (CdsElement cdsElement : compositions) {
-      if (cdsElement != null) {
-        String elementName = cdsElement.getQualifiedName().replaceAll(":", ".");
-        if (elementName.equalsIgnoreCase(attachmentEntity.getQualifiedName())) {
-          retrieveAnnotations(cdsElement, attachmentInfo);
-        }
+      String elementName = cdsElement.getQualifiedName().replaceAll(":", ".");
+      if (elementName.equalsIgnoreCase(attachmentEntity.getQualifiedName())) {
+        retrieveAnnotations(cdsElement, attachmentInfo);
       }
     }
   }

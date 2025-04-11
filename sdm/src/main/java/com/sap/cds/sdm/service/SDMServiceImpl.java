@@ -5,6 +5,7 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -138,7 +139,7 @@ public class SDMServiceImpl implements SDMService {
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties)
-      throws IOException {
+      throws ServiceException {
 
     Map<String, String> updatedMap = new HashMap<>();
     for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
@@ -160,12 +161,16 @@ public class SDMServiceImpl implements SDMService {
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache().put(secondaryTypesKey, secondaryTypes);
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    secondaryPropertiesKey.setRepositoryId(repositoryId);
+    CacheConfig.getSecondaryPropertiesCache().put(secondaryPropertiesKey, validSecondaryProperties);
     Set<String> keysToRemove =
         secondaryProperties.keySet().stream()
             .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
             .collect(Collectors.toSet());
     if (!keysToRemove.isEmpty()) {
-      throw new IOException(SDMConstants.secondaryPropertiesError(new ArrayList<>(keysToRemove)));
+      String errorMessage = String.join(", ", keysToRemove);
+      throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
     }
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
@@ -189,19 +194,15 @@ public class SDMServiceImpl implements SDMService {
     updateRequest.setEntity(builder.build());
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
-      HttpEntity responseEntity = response.getEntity();
-
-      // Print the response entity content
-      String responseContent = EntityUtils.toString(responseEntity, "UTF-8");
-
-      if (response.getStatusLine().getStatusCode() == 400
-          && responseContent.contains("is unknown!")) {
-        throw new ServiceException(
-            "The secondary properties you are attempting to modify do not exist. Kindly contact the administrator.");
+      if (response.getStatusLine().getStatusCode() == 400) {
+        String responseString = EntityUtils.toString(response.getEntity());
+        JSONObject jsonResponse = new JSONObject(responseString);
+        String message = jsonResponse.getString("message");
+        throw new ServiceException(message);
       }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
+      throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
     }
   }
 
@@ -466,7 +467,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public List<String> getSecondaryTypes(
-      String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws IOException {
+      String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws ServiceException {
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     List<String> secondaryTypes = new ArrayList<>();
@@ -508,30 +509,32 @@ public class SDMServiceImpl implements SDMService {
       String subdomain,
       SDMCredentials sdmCredentials,
       String repositoryId) {
-    List<String> validSecondaryProperties = new ArrayList<>();
-    Iterator<String> iterator = secondaryTypes.iterator();
-    Boolean isTypeValid = false;
-    while (iterator.hasNext()) {
-      String value = iterator.next();
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    secondaryPropertiesKey.setRepositoryId(repositoryId);
+    List<String> validSecondaryProperties =
+        CacheConfig.getSecondaryPropertiesCache().get(secondaryPropertiesKey);
+    if (validSecondaryProperties == null) {
+      validSecondaryProperties = new ArrayList<>();
+      Iterator<String> iterator = secondaryTypes.iterator();
       var httpClient =
           TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-      String sdmUrl =
-          sdmCredentials.getUrl()
-              + "browser/"
-              + repositoryId
-              + "?cmisselector=typeDefinition&typeID="
-              + value;
-      HttpGet getTypesRequest = new HttpGet(sdmUrl);
-      try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
-        HttpEntity responseEntity = response.getEntity();
-        if (responseEntity != null) {
-          isTypeValid = SDMUtils.checkMCM(responseEntity, validSecondaryProperties);
+      while (iterator.hasNext()) {
+        String value = iterator.next();
+        String sdmUrl =
+            String.format(
+                "%sbrowser/%s?cmisselector=typeDefinition&typeID=%s",
+                sdmCredentials.getUrl(), repositoryId, value);
+        HttpGet getTypesRequest = new HttpGet(sdmUrl);
+        try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          HttpEntity responseEntity = response.getEntity();
+          if (responseEntity != null
+              && Boolean.FALSE.equals(
+                  SDMUtils.checkMCM(responseEntity, validSecondaryProperties))) {
+            iterator.remove();
+          }
+        } catch (IOException e) {
+          throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
         }
-        if (Boolean.FALSE.equals(isTypeValid)) {
-          iterator.remove();
-        }
-      } catch (IOException e) {
-        throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
       }
     }
 

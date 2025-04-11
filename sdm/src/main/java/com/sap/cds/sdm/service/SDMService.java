@@ -4,6 +4,7 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.List;
@@ -48,7 +49,7 @@ public interface SDMService {
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties)
-      throws IOException;
+      throws ServiceException;
 
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException;
