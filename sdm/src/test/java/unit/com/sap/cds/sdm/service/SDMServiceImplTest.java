@@ -12,6 +12,7 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -520,7 +521,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(entity);
@@ -548,7 +549,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(500);
       when(response.getEntity()).thenReturn(entity);
@@ -581,7 +582,7 @@ public class SDMServiceImplTest {
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
       // Simulate IOException during HTTP call
-      when(mockHttpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
+      when(mockHttpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
@@ -619,7 +620,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
@@ -1410,12 +1411,15 @@ public class SDMServiceImplTest {
 
   @Test
   public void testValidSecondaryPropertiesFail() throws IOException {
-    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       String repositoryId = "repoId";
       String subdomain = "subdomain";
       List<String> secondaryTypes = Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
-
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(null);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
@@ -1443,90 +1447,80 @@ public class SDMServiceImplTest {
     }
   }
 
-  // @Test
-  // public void testValidSecondaryPropertiesFailEmptyResponse() throws IOException {
-  //   try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
-  //       MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
-  //     String jwtToken = "jwt_token";
-  //     CmisDocument cmisDocument = new CmisDocument();
-  //     cmisDocument.setFileName("newFileName");
-  //     cmisDocument.setObjectId("objectId");
-  //     Map<String, String> secondaryProperties = new HashMap<>();
-  //     secondaryProperties.put("property1", "value1");
-  //     secondaryProperties.put("property2", "value2");
+  @Test
+  public void testValidSecondaryPropertiesFailEmptyResponse() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      String jwtToken = "jwt_token";
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName("newFileName");
+      cmisDocument.setObjectId("objectId");
+      Map<String, String> secondaryProperties = new HashMap<>();
+      secondaryProperties.put("property1", "value1");
+      secondaryProperties.put("property2", "value2");
 
-  //     List<String> secondaryTypesCached = new ArrayList<>();
-  //     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+      List<String> secondaryTypesCached = new ArrayList<>();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
-  //     Cache mockCache = mock(Cache.class);
-  //     cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
-  //     when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
 
-  //     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
-  //     tokenHandlerMockedStatic
-  //         .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-  //         .thenReturn(httpClient);
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
 
-  //     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
-  //     when(response.getStatusLine()).thenReturn(statusLine);
-  //     when(statusLine.getStatusCode()).thenReturn(200);
-  //     when(response.getEntity()).thenReturn(entity);
-  //     InputStream inputStream = new ByteArrayInputStream("".getBytes());
-  //     when(entity.getContent()).thenReturn(inputStream);
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
 
-  //     String jsonResponseTypes =
-  //         "[{"
-  //             + "\"type\": {\"id\": \"cmis:secondary\"},"
-  //             + "\"children\": ["
-  //             + "{\"type\": {\"id\": \"Type:1\"}},"
-  //             + "{\"type\": {\"id\": \"Type:2\"}},"
-  //             + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":
-  // \"Type:3child\"}}]}"
-  //             + "]}]";
+      String jsonResponseTypes =
+          "[{"
+              + "\"type\": {\"id\": \"cmis:secondary\"},"
+              + "\"children\": ["
+              + "{\"type\": {\"id\": \"Type:1\"}},"
+              + "{\"type\": {\"id\": \"Type:2\"}},"
+              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":\"Type:3child\"}}]}"
+              + "]}]";
 
-  //     String jsonResponseProperties =
-  //         "{"
-  //             + "\"id\": \"type:1\","
-  //             + "\"propertyDefinitions\": {"
-  //             + "\"property1\": {"
-  //             + "\"id\": \"property1\","
-  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-  //             + "},"
-  //             + "\"property2\": {"
-  //             + "\"id\": \"property2\","
-  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-  //             + "}"
-  //             + "}}";
+      String jsonResponseProperties =
+          "{"
+              + "\"id\": \"type:1\","
+              + "\"propertyDefinitions\": {"
+              + "\"property1\": {"
+              + "\"id\": \"property1\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "},"
+              + "\"property2\": {"
+              + "\"id\": \"property2\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "}"
+              + "}}";
 
-  //     inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
-  //     InputStream inputStream2 =
-  //         new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
+      inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
+      InputStream inputStream2 =
+          new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
 
-  //     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
-  //     when(response.getStatusLine()).thenReturn(statusLine);
-  //     when(statusLine.getStatusCode()).thenReturn(200);
-  //     when(response.getEntity()).thenReturn(null);
-  //     when(entity.getContent()).thenReturn(inputStream, inputStream2);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(null);
+      when(entity.getContent()).thenReturn(inputStream, inputStream2);
 
-  //     IOException exception =
-  //         assertThrows(
-  //             IOException.class,
-  //             () -> {
-  //               sdmServiceImpl.updateAttachments(
-  //                   jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
-  //             });
-
-  //     String actualMessage = exception.getMessage().replaceAll("\\s+", " ").trim();
-
-  //     assertTrue(actualMessage.contains("The following secondary properties are not
-  // supported."));
-  //     assertTrue(
-  //         actualMessage.contains(
-  //             "Please contact your administrator for assistance with any necessary
-  // adjustments."));
-  //     assertTrue(actualMessage.contains("property1") && actualMessage.contains("property2"));
-  //   }
-  // }
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.updateAttachments(
+                    jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+              });
+    }
+  }
 
   @Test
   public void testGetObject_Success() throws IOException {

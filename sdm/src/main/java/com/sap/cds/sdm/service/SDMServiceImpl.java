@@ -324,7 +324,7 @@ public class SDMServiceImpl implements SDMService {
             + "/root/"
             + parentId
             + "?cmisselector=object";
-    HttpPost getFolderRequest = new HttpPost(sdmUrl);
+    HttpGet getFolderRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 200) {
