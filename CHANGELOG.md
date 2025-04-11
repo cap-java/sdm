@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Added
 
-- Support secondary properties in attachments.
+- Support custom properties in attachments.
 - Support large file uploads.
 
 ## Version 1.1.0
