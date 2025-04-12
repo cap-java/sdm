@@ -51,33 +51,7 @@ public class ReadAheadInputStream extends InputStream {
               AtomicReference<byte[]> bufferRef = new AtomicReference<>(new byte[chunkSize]);
               AtomicLong bytesReadAtomic = new AtomicLong(0);
 
-              while (bytesReadAtomic.get() < chunkSize) {
-                int readAttempt =
-                    Flowable.fromCallable(
-                            () -> {
-                              byte[] buffer = bufferRef.get();
-                              // Read from stream and update bytesReadAtomic
-                              int result =
-                                  originalStream.read(
-                                      buffer,
-                                      (int) bytesReadAtomic.get(),
-                                      chunkSize - (int) bytesReadAtomic.get());
-                              if (result > 0) {
-                                bytesReadAtomic.addAndGet(result);
-                              }
-                              return result;
-                            })
-                        .retryWhen(RetryUtils.retryLogic(5))
-                        .blockingFirst(); // Blocking call to wait for the read attempt
-
-                if (readAttempt == -1) {
-                  logger.info("EOF reached while reading the stream.");
-                  break;
-                } else if (readAttempt == 0) {
-                  logger.warn("No bytes read from stream. Retrying...");
-                  break;
-                }
-              }
+              readChunk(bufferRef, bytesReadAtomic);
 
               long bytesRead = bytesReadAtomic.get();
               if (bytesRead > 0) {
@@ -92,7 +66,6 @@ public class ReadAheadInputStream extends InputStream {
 
                 // Ensure last chunk is enqueued
                 chunkQueue.put(bufferRef.get());
-                logger.info("Background Loaded Chunk: " + bytesRead + " bytes");
 
                 // Only mark as last chunk after enqueuing the last chunk
                 if (totalBytesRead.get() >= totalSize) {
@@ -112,6 +85,37 @@ public class ReadAheadInputStream extends InputStream {
             logger.error("Unexpected exception during background loading", e);
           }
         });
+  }
+
+  private void readChunk(AtomicReference<byte[]> bufferRef, AtomicLong bytesReadAtomic)
+      throws IOException {
+    while (bytesReadAtomic.get() < chunkSize) {
+      int readAttempt =
+          Flowable.fromCallable(
+                  () -> {
+                    byte[] buffer = bufferRef.get();
+                    // Read from stream and update bytesReadAtomic
+                    int result =
+                        originalStream.read(
+                            buffer,
+                            (int) bytesReadAtomic.get(),
+                            chunkSize - (int) bytesReadAtomic.get());
+                    if (result > 0) {
+                      bytesReadAtomic.addAndGet(result);
+                    }
+                    return result;
+                  })
+              .retryWhen(RetryUtils.retryLogic(5))
+              .blockingFirst(); // Blocking call to wait for the read attempt
+
+      if (readAttempt == -1) {
+        logger.info("EOF reached while reading the stream.");
+        break;
+      } else if (readAttempt == 0) {
+        logger.warn("No bytes read from stream. Retrying...");
+        break;
+      }
+    }
   }
 
   public synchronized byte[] getLastChunkFromQueue() throws IOException {
@@ -134,7 +138,7 @@ public class ReadAheadInputStream extends InputStream {
   }
 
   public synchronized boolean isEOFReached() {
-    logger.info(
+    logger.debug(
         "lastChunkLoaded "
             + lastChunkLoaded.get()
             + " chunkQueue.isEmpty():"
@@ -161,7 +165,6 @@ public class ReadAheadInputStream extends InputStream {
       currentBuffer = chunkQueue.take(); // Fetch from preloaded queue
       currentBufferSize = currentBuffer.length;
       position.set(0);
-      logger.info(" Loaded Chunk | Size: " + currentBufferSize);
 
       // Ensure the last chunk is processed
       if (lastChunkLoaded.get() && chunkQueue.isEmpty()) {
@@ -189,7 +192,6 @@ public class ReadAheadInputStream extends InputStream {
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     if (position.get() >= currentBufferSize) {
-      logger.info("position = " + position.get() + " >= currentBufferSize = " + currentBufferSize);
       if (lastChunkLoaded.get()) return -1;
       loadNextChunk();
     }
