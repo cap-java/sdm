@@ -1,4 +1,4 @@
-{   "xsappname": "demoappjava-sdmgoogleworkspacedev-develop",
+{   "xsappname": "demoappjava-${org}-${space}",
 	"tenant-mode": "dedicated",
 	"scopes": [
 		{
