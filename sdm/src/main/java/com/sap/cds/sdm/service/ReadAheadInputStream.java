@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 public class ReadAheadInputStream extends InputStream {
   private final BufferedInputStream originalStream;
   private final long totalSize;
-  private final int chunkSize = SDMConstants.CHUNK_SIZE;
+  private static final int CHUNK_SIZE = SDMConstants.CHUNK_SIZE;
   private AtomicLong totalBytesRead = new AtomicLong(0);
   private AtomicBoolean lastChunkLoaded = new AtomicBoolean(false);
   private byte[] currentBuffer;
@@ -30,9 +30,9 @@ public class ReadAheadInputStream extends InputStream {
       throw new IllegalArgumentException(" InputStream cannot be null");
     }
 
-    this.originalStream = new BufferedInputStream(inputStream, chunkSize);
+    this.originalStream = new BufferedInputStream(inputStream, CHUNK_SIZE);
     this.totalSize = totalSize;
-    this.currentBuffer = new byte[chunkSize];
+    this.currentBuffer = new byte[CHUNK_SIZE];
 
     logger.info(" Initializing ReadAheadInputStream..."); // Once per one file upload
     preloadChunks(); // preload one chunk
@@ -48,7 +48,7 @@ public class ReadAheadInputStream extends InputStream {
         () -> {
           try {
             while (totalBytesRead.get() < totalSize) {
-              AtomicReference<byte[]> bufferRef = new AtomicReference<>(new byte[chunkSize]);
+              AtomicReference<byte[]> bufferRef = new AtomicReference<>(new byte[CHUNK_SIZE]);
               AtomicLong bytesReadAtomic = new AtomicLong(0);
 
               readChunk(bufferRef, bytesReadAtomic);
@@ -58,7 +58,7 @@ public class ReadAheadInputStream extends InputStream {
                 totalBytesRead.addAndGet(bytesRead);
 
                 // Trim buffer if last chunk is smaller
-                if (bytesRead < chunkSize) {
+                if (bytesRead < CHUNK_SIZE) {
                   byte[] trimmedBuffer = new byte[(int) bytesRead];
                   System.arraycopy(bufferRef.get(), 0, trimmedBuffer, 0, (int) bytesRead);
                   bufferRef.set(trimmedBuffer);
@@ -89,7 +89,7 @@ public class ReadAheadInputStream extends InputStream {
 
   private void readChunk(AtomicReference<byte[]> bufferRef, AtomicLong bytesReadAtomic)
       throws IOException {
-    while (bytesReadAtomic.get() < chunkSize) {
+    while (bytesReadAtomic.get() < CHUNK_SIZE) {
       int readAttempt =
           Flowable.fromCallable(
                   () -> {
@@ -99,7 +99,7 @@ public class ReadAheadInputStream extends InputStream {
                         originalStream.read(
                             buffer,
                             (int) bytesReadAtomic.get(),
-                            chunkSize - (int) bytesReadAtomic.get());
+                            CHUNK_SIZE - (int) bytesReadAtomic.get());
                     if (result > 0) {
                       bytesReadAtomic.addAndGet(result);
                     }
