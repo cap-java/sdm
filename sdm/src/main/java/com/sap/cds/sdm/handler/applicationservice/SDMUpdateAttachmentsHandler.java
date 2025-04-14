@@ -21,6 +21,8 @@ import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -175,12 +177,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!updatedSecondaryProperties.isEmpty()) {
       try {
-        int responseCode =
+       JSONObject finalResponse =
             sdmService.updateAttachments(
                 context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
                 TokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties);
+       int responseCode = finalResponse.getInt("status");
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
@@ -196,7 +199,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             break;
           case 200:
           case 201:
-            // Success cases, do nothing
+            // Success cases, update the objectId in database table
+            DBQuery.updateObjectId(attachmentEntity.get(),persistenceService,finalResponse.get("objectId").toString(),id);
+
             break;
 
           default:

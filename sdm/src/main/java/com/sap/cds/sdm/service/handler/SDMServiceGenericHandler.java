@@ -130,4 +130,28 @@ public class SDMServiceGenericHandler implements EventHandler {
             + ":"
             + context.get("name").toString());
   }
+
+  @On(event = "checkIn")
+  public void CheckIn(EventContext context) throws IOException {
+    // Check the action name and handle accordingly
+    String eventName = context.getEvent();
+    System.out.println(
+            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+    createLink(context);
+  }
+
+  @On(event = "checkOut")
+  public void CheckOut(EventContext context) throws IOException {
+    // Check the action name and handle accordingly
+    String eventName = context.getEvent();
+    System.out.println(
+            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+  }
+  @On(event = "cancelCheckOut")
+  public void CancelCheckOut(EventContext context) throws IOException {
+    // Check the action name and handle accordingly
+    String eventName = context.getEvent();
+    System.out.println(
+            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+  }
 }

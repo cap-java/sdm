@@ -148,7 +148,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int updateAttachments(
+  public JSONObject updateAttachments(
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
@@ -208,13 +208,21 @@ public class SDMServiceImpl implements SDMService {
     updateRequest.setEntity(builder.build());
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
-      if (response.getStatusLine().getStatusCode() == 400) {
-        String responseString = EntityUtils.toString(response.getEntity());
-        JSONObject jsonResponse = new JSONObject(responseString);
+      String responseString = EntityUtils.toString(response.getEntity());
+      JSONObject jsonResponse = new JSONObject(responseString);
+      int responseCode = response.getStatusLine().getStatusCode();
+      if ( responseCode== 400) {
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
-      return response.getStatusLine().getStatusCode();
+      JSONObject finalResponse =  new JSONObject();
+      finalResponse.put("status", responseCode);
+      if (responseCode == 200) {
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        objectId = succinctProperties.getString("cmis:objectId");
+        finalResponse.put("objectId", objectId);
+      }
+      return finalResponse;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
     }

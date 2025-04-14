@@ -61,6 +61,20 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
+  public static void updateObjectId(
+          CdsEntity attachmentEntity,
+          PersistenceService persistenceService,String objectId,String attachmentId) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", objectId);
+
+    CqnUpdate updateQuery =
+            Update.entity(attachmentEntity)
+                    .data(updatedFields)
+                    .where(doc -> doc.get("ID").eq(attachmentId));
+    persistenceService.run(updateQuery);
+  }
+
   public static List<CmisDocument> getAttachmentsForFolder(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
     List<CmisDocument> cmisDocuments = new ArrayList<>();
