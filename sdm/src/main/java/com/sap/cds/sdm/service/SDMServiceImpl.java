@@ -275,13 +275,12 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String token) {
+      Result result, PersistenceService persistenceService, String folderName, String token) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
             .collect(Collectors.toList());
-
     String folderId = null;
     String repositoryId = null;
     String repoId = SDMConstants.REPOSITORY_ID;
@@ -292,6 +291,7 @@ public class SDMServiceImpl implements SDMService {
         // continue
         if (repoId.equalsIgnoreCase(repositoryId)) {
           folderId = attachment.get("folderId").toString();
+          System.out.println("folderId in first if: " + folderId);
           break;
         }
       }
@@ -300,9 +300,9 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {
-      folderId = getFolderIdByPath(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
       if (folderId == null) {
-        folderId = createFolder(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");
@@ -347,6 +347,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken) {
+    System.out.println("Entered in create folder");
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");

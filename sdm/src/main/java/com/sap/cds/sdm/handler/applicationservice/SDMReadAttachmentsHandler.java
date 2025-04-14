@@ -11,7 +11,6 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import java.util.*;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMReadAttachmentsHandler implements EventHandler {
