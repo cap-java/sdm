@@ -21,8 +21,6 @@ import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
@@ -177,13 +176,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!updatedSecondaryProperties.isEmpty()) {
       try {
-       JSONObject finalResponse =
+        JSONObject finalResponse =
             sdmService.updateAttachments(
                 context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
                 TokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties);
-       int responseCode = finalResponse.getInt("status");
+        int responseCode = finalResponse.getInt("status");
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
@@ -200,7 +199,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           case 200:
           case 201:
             // Success cases, update the objectId in database table
-            DBQuery.updateObjectId(attachmentEntity.get(),persistenceService,finalResponse.get("objectId").toString(),id);
+            DBQuery.updateObjectId(
+                attachmentEntity.get(),
+                persistenceService,
+                finalResponse.get("objectId").toString(),
+                id);
 
             break;
 

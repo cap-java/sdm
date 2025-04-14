@@ -62,16 +62,35 @@ public class DBQuery {
   }
 
   public static void updateObjectId(
-          CdsEntity attachmentEntity,
-          PersistenceService persistenceService,String objectId,String attachmentId) {
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String attachmentId) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
     updatedFields.put("objectId", objectId);
 
     CqnUpdate updateQuery =
-            Update.entity(attachmentEntity)
-                    .data(updatedFields)
-                    .where(doc -> doc.get("ID").eq(attachmentId));
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(attachmentId));
+    persistenceService.run(updateQuery);
+  }
+
+  public static void updatePWCObjectId(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String attachmentId) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", objectId);
+    updatedFields.put("PWC_objectId", objectId);
+
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(attachmentId));
     persistenceService.run(updateQuery);
   }
 

@@ -211,11 +211,11 @@ public class SDMServiceImpl implements SDMService {
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
-      if ( responseCode== 400) {
+      if (responseCode == 400) {
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
-      JSONObject finalResponse =  new JSONObject();
+      JSONObject finalResponse = new JSONObject();
       finalResponse.put("status", responseCode);
       if (responseCode == 200) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");

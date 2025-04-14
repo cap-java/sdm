@@ -15,6 +15,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.service.VersioningService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
@@ -36,12 +37,17 @@ public class SDMServiceGenericHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final DraftService draftService;
+  private final VersioningService versioningService;
 
   public SDMServiceGenericHandler(
-      PersistenceService persistenceService, SDMService sdmService, DraftService draftService) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      DraftService draftService,
+      VersioningService versioningService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.draftService = draftService;
+    this.versioningService = versioningService;
   }
 
   @On(event = "createLink")
@@ -136,8 +142,33 @@ public class SDMServiceGenericHandler implements EventHandler {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
     System.out.println(
-            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
-    createLink(context);
+        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    System.out.println("Context Cehck in " + context.getParameterInfo().getQueryParams());
+    CqnSelect select = (CqnSelect) context.get("cqn");
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId(repositoryId);
+    cmisDocument.setObjectId(context.get("").toString());
+    //    InputStream contentStream = (InputStream) data.get("content");
+    //    cmisDocument.setContent(contentStream);
+    //    cmisDocument.setMimeType(mimeType);
+    int resCode = versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
+    if (resCode == 200) {
+      String objectId =
+          versioningService.checkOutDocument(
+              repositoryId, sdmCredentials, jwtToken, context.get("").toString());
+
+      String attachmentId = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
+      DBQuery.updateObjectId(context.getTarget(), persistenceService, objectId, attachmentId);
+    }
   }
 
   @On(event = "checkOut")
@@ -145,13 +176,30 @@ public class SDMServiceGenericHandler implements EventHandler {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
     System.out.println(
-            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+    System.out.println("Context " + context.getParameterInfo().getQueryParams());
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    String objectId =
+        versioningService.checkOutDocument(
+            repositoryId, sdmCredentials, jwtToken, context.get("").toString());
+    CqnSelect select = (CqnSelect) context.get("cqn");
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
+    String attachmentId = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
+    DBQuery.updateObjectId(context.getTarget(), persistenceService, objectId, attachmentId);
   }
+
   @On(event = "cancelCheckOut")
   public void CancelCheckOut(EventContext context) throws IOException {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
     System.out.println(
-            "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
   }
 }

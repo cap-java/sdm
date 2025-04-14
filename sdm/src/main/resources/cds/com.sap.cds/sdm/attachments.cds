@@ -7,12 +7,12 @@ extend aspect Attachments with {
     objectId : String ;
     versionSeriesId: String;
     PWC_objectId:String;
-    isLatestVersion :String;
+    isLatestVersion :String default 'true';
 }
 extend aspect Attachments with actions{
 action createLink(in:many $self,name:String,url:String);
 action editLink(url:String);
-action checkIn(FileUploadParameter : ComplexTypeName not null);
+action checkIn(FileUploadParameter : ComplexTypeName not null,isMajorVersion @(title: 'Update Major Version (Default: Minor)') : Boolean,checkInComment @(title: 'Comment(Default: Minor)') : String);
 action checkOut();
 action cancelCheckOut();
 };

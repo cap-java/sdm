@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMCreateAttachmentsHandler implements EventHandler {
@@ -181,9 +182,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
       try {
-        int responseCode =
+        JSONObject finalResponse =
             sdmService.updateAttachments(
-                jwtToken, sdmCredentials, cmisDocument, updatedSecondaryProperties);
+                context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+                TokenHandler.getSDMCredentials(),
+                cmisDocument,
+                updatedSecondaryProperties);
+        int responseCode = finalResponse.getInt("status");
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
@@ -200,6 +205,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           case 200:
           case 201:
             // Success cases, do nothing
+            DBQuery.updateObjectId(
+                attachmentEntity.get(),
+                persistenceService,
+                finalResponse.get("objectId").toString(),
+                id);
             break;
 
           default:

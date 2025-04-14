@@ -6,10 +6,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
-import com.sap.cds.sdm.service.DocumentUploadService;
-import com.sap.cds.sdm.service.SDMAttachmentsService;
-import com.sap.cds.sdm.service.SDMService;
-import com.sap.cds.sdm.service.SDMServiceImpl;
+import com.sap.cds.sdm.service.*;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
 import com.sap.cds.services.draft.DraftService;
@@ -63,6 +60,7 @@ public class Registration implements CdsRuntimeConfiguration {
     List<DraftService> draftServiceList =
         configurer.getCdsRuntime().getServiceCatalog().getServices(DraftService.class).toList();
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
+    VersioningService versioningService = new VersioningServiceImpl(binding, connectionPool);
     DocumentUploadService documentService = new DocumentUploadService();
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
@@ -70,7 +68,8 @@ public class Registration implements CdsRuntimeConfiguration {
     configurer.eventHandler(
         new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
     configurer.eventHandler(
-        new SDMServiceGenericHandler(persistenceService, sdmService, draftServiceList.get(0)));
+        new SDMServiceGenericHandler(
+            persistenceService, sdmService, draftServiceList.get(0), versioningService));
   }
 
   private AttachmentService buildAttachmentService() {
