@@ -28,10 +28,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -243,7 +240,17 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         cmisDocument, data, attachmentIds, folderId, repositoryId, upIdKey, contentLen);
 
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    JSONObject createResult = sdmService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+    JSONObject createResult = null;
+    try {
+      createResult =
+          documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
+      logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
+      logger.info("Upload Finished at: " + System.currentTimeMillis());
+    } catch (Exception e) {
+      logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+      throw new ServiceException(
+          SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+    }
     logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
     logger.info("Upload Finished at: " + System.currentTimeMillis());
     handleCreateDocumentResult(cmisDocument, createResult, eventContext);
