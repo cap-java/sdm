@@ -46,11 +46,17 @@ public class SDMConstants {
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
+  public static final String ATTACHMENT_MAXCOUNT = "SDM.Attachments.maxCount";
+  public static final String ATTACHMENT_MAXCOUNT_ERROR_MSG = "SDM.Attachments.maxCountError";
+  public static final String MAX_COUNT_ERROR_MESSAGE =
+      "Cannot upload more than %s attachments as set up by the application";
   public static final String NO_SDM_BINDING = "No SDM binding found";
   public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
   public static final String DI_TOKEN_EXCHANGE_PARAMS =
       "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
+  public static final String DRAFT_NOT_FOUND = "Attachment draft entity not found";
   public static final String UNSUPPORTED_PROPERTIES = "Unsupported properties";
+  public static final String REPOSITORY_VERSIONED = "Versioned";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
