@@ -1,10 +1,11 @@
 name: Deploy and Integration Test
 
 on:
-  pull_request:
-    types: [closed]
+  #pull_request:
+    #types: [closed]
+  push:
     branches:
-      - develop
+      - wait_time
   workflow_dispatch:
 
 permissions:
@@ -17,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Wait for 5 minutes # to get new snapshot deploy to artifactory
+        run: sleep 300
+        
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
