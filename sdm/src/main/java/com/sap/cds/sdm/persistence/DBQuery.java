@@ -64,7 +64,7 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
-
+    updatedFields.put("versionSeriesId", cmisDocument.getVersionSeriesId());
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)

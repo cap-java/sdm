@@ -145,6 +145,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(errorMessageDI);
       } else {
         cmisDocument.setObjectId(createResult.get("objectId").toString());
+        cmisDocument.setVersionSeriesId(createResult.get("versionSeriesId").toString());
         addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
       }
     }

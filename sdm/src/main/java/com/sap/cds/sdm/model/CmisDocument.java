@@ -24,4 +24,5 @@ public class CmisDocument {
   private String mimeType;
   private long contentLength;
   private String url;
+  private String versionSeriesId;
 }

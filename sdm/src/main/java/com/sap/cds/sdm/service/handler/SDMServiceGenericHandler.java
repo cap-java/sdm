@@ -199,16 +199,15 @@ public class SDMServiceGenericHandler implements EventHandler {
       upIdKey = fkElements.get(0);
     }
     System.out.println("UP ID KEY" + upIdKey);
-    String up__ID = cqnAnalyzer.analyze(select).rootKeys().get(upIdKey).toString();
+    String up__ID = targetKeys.get(upIdKey);
     System.out.println("UP ID VALUE" + up__ID);
-    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     // get the objectId against the Id
-    String ID = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
+    String ID = targetKeys.get("ID");
     System.out.println("ID of " + ID);
     String objectIdForAttachment =
         DBQuery.getObjectIdForAttachmentID(context.getTarget(), persistenceService, ID);
