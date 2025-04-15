@@ -78,6 +78,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     CqnSelect select = (CqnSelect) context.get("cqn");
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
     String up__ID = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
     String upIdKey = "";
     CdsModel model = context.getModel();
@@ -180,7 +181,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     CqnSelect select = (CqnSelect) context.get("cqn");
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    System.out.println("Target Keys " + targetKeys);
     String upIdKey = "";
     CdsModel model = context.getModel();
     Optional<CdsEntity> attachmentDraftEntity =
