@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    
+      - name: Wait for 5 minutes # Added a 5-minute delay to ensure the snapshot is deployed successfully before initiating the deployment job.
+        run: sleep 300
+        
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
