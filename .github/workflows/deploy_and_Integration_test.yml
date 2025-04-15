@@ -5,7 +5,7 @@ on:
     #types: [closed]
   push:
     branches:
-      - wait_time
+      - wait_time1
   workflow_dispatch:
 
 permissions:
