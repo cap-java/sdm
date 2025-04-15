@@ -315,6 +315,7 @@ public class SDMServiceImpl implements SDMService {
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String token) {
     String subdomain = TokenHandler.getSubdomainFromToken(token);
+    String folderId = null;
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     String sdmUrl =
@@ -328,11 +329,16 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 200) {
-        return EntityUtils.toString(response.getEntity());
+        JSONObject jsonObject = new JSONObject(EntityUtils.toString(response.getEntity()));
+        folderId =
+            jsonObject
+                .getJSONObject("properties")
+                .getJSONObject("cmis:objectId")
+                .getString("value");
       } else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       }
-      return null;
+      return folderId;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }

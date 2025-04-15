@@ -4,7 +4,9 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.model.AttachmentInfo;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -211,5 +213,62 @@ public class SDMUtils {
     }
 
     return updatedSecondaryProperties;
+  }
+
+  public static String getAttachmentCountAndMessage(
+      List<CdsEntity> entities, CdsEntity attachmentEntity) {
+    String maxCount =
+        CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
+
+    if (maxCount == null) {
+      AttachmentInfo attachmentInfo = new AttachmentInfo();
+      determineAttachmentDetails(attachmentEntity, entities, attachmentInfo);
+      maxCount = attachmentInfo.getAttachmentCount() + "__" + attachmentInfo.getErrorMessage();
+      CacheConfig.getMaxAllowedAttachmentsCache()
+          .put(attachmentEntity.getQualifiedName(), maxCount);
+    }
+    return maxCount;
+  }
+
+  private static void determineAttachmentDetails(
+      CdsEntity attachmentEntity, List<CdsEntity> entities, AttachmentInfo attachmentInfo) {
+
+    for (CdsEntity cdsEntity : entities) {
+      if (isRelatedEntity(attachmentEntity, cdsEntity)) {
+        processCompositions(cdsEntity, attachmentInfo, attachmentEntity);
+      }
+    }
+  }
+
+  private static boolean isRelatedEntity(CdsEntity attachmentEntity, CdsEntity cdsEntity) {
+    String attachmentQualifiedName = attachmentEntity.getQualifiedName();
+    return attachmentQualifiedName.contains(cdsEntity.getQualifiedName())
+        && !attachmentQualifiedName.equals(cdsEntity.getQualifiedName());
+  }
+
+  private static void processCompositions(
+      CdsEntity cdsEntity, AttachmentInfo attachmentInfo, CdsEntity attachmentEntity) {
+    List<CdsElement> compositions = cdsEntity.compositions().toList();
+
+    for (CdsElement cdsElement : compositions) {
+      String elementName = cdsElement.getQualifiedName().replaceAll(":", ".");
+      if (elementName.equalsIgnoreCase(attachmentEntity.getQualifiedName())) {
+        retrieveAnnotations(cdsElement, attachmentInfo);
+      }
+    }
+  }
+
+  private static void retrieveAnnotations(CdsElement cdsElement, AttachmentInfo attachmentInfo) {
+
+    Optional<CdsAnnotation<Object>> maxcountAnnotation =
+        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
+    maxcountAnnotation.ifPresent(
+        annotation ->
+            attachmentInfo.setAttachmentCount(Long.parseLong(annotation.getValue().toString())));
+
+    Optional<CdsAnnotation<Object>> errormsgAnnotation =
+        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+    errormsgAnnotation.ifPresent(
+        annotation -> attachmentInfo.setErrorMessage(annotation.getValue().toString()));
   }
 }
