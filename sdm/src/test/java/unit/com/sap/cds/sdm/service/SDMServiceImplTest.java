@@ -525,9 +525,10 @@ public class SDMServiceImplTest {
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("ExpectedFolderId".getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
 
+      InputStream inputStream = new ByteArrayInputStream(expectedResponse.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      // when(EntityUtils.toString(entity)).thenReturn(expectedResponse);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       String actualResponse =
