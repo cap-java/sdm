@@ -43,6 +43,17 @@ public class DBQuery {
     return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
   }
 
+  public static String getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity).columns("objectId").where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    if (result.rowCount() == 0) {
+      return null;
+    }
+    return result.rowCount() == 0 ? null : result.list().get(0).get("objectId").toString();
+  }
+
   public static void addAttachmentToDraft(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,

@@ -177,20 +177,43 @@ public class SDMServiceGenericHandler implements EventHandler {
     String eventName = context.getEvent();
     System.out.println(
         "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
-    System.out.println("Context " + context.getParameterInfo().getQueryParams());
+    CqnSelect select = (CqnSelect) context.get("cqn");
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    String upIdKey = "";
+    CdsModel model = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+    // if association is found, try to get foreign key to parent entity
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      // get association type
+      CdsAssociationType assocType = association.getType();
+      // get the refs of the association
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      upIdKey = fkElements.get(0);
+    }
+    System.out.println("UP ID KEY" + upIdKey);
+    String up__ID = cqnAnalyzer.analyze(select).rootKeys().get(upIdKey).toString();
+    System.out.println("UP ID VALUE" + up__ID);
+    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    // get the objectId against the Id
+    String ID = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
+    System.out.println("ID of " + ID);
+    String objectIdForAttachment =
+        DBQuery.getObjectIdForAttachmentID(context.getTarget(), persistenceService, ID);
+    System.out.println("OBJ " + objectIdForAttachment);
     String objectId =
         versioningService.checkOutDocument(
-            repositoryId, sdmCredentials, jwtToken, context.get("").toString());
-    CqnSelect select = (CqnSelect) context.get("cqn");
-    CdsModel cdsModel = context.getModel();
-    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-
-    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
+            repositoryId, sdmCredentials, jwtToken, objectIdForAttachment);
+    System.out.println("RETURNED OBJ " + objectId);
     String attachmentId = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
     DBQuery.updateObjectId(context.getTarget(), persistenceService, objectId, attachmentId);
   }

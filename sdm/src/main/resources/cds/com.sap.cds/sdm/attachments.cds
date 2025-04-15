@@ -9,18 +9,7 @@ extend aspect Attachments with {
     PWC_objectId:String;
     isLatestVersion :String default 'true';
 }
-extend aspect Attachments with actions{
-action createLink(in:many $self,name:String,url:String);
-action editLink(url:String);
-action checkIn(FileUploadParameter : ComplexTypeName not null,isMajorVersion @(title: 'Update Major Version (Default: Minor)') : Boolean,checkInComment @(title: 'Comment(Default: Minor)') : String);
-action checkOut();
-action cancelCheckOut();
-};
-type ComplexTypeName {
-  StreamProperty       : LargeBinary @Core.MediaType: MimeType @Core.ContentDisposition.Filename: FileName;
-  MimeType             : String @Core.IsMediaType;
-  FileName             : String;
-};
+
 annotate Attachments with @UI: {
     HeaderInfo: {
         $Type         : 'UI.HeaderInfoType',
