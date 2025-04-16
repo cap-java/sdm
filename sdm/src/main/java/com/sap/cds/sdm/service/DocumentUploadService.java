@@ -285,7 +285,7 @@ public class DocumentUploadService {
 
               // Step 3: Read next chunk
               bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
-              logger.info("bytesRead is " + bytesRead);
+              logger.debug("bytesRead is " + bytesRead);
               // Step 4: Fetch remaining bytes before checking EOF
               long remainingBytes = chunkedStream.getRemainingBytes();
               logger.debug("remainingBytes is " + remainingBytes);
