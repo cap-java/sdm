@@ -18,7 +18,6 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
-import com.sap.cds.services.cds.CqnService;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
@@ -41,17 +40,12 @@ public class SDMCreateAttachmentsHandlerTest {
   @Mock private SDMCredentials mockCredentials;
   @Mock private Messages messages;
   @Mock private CdsModel model;
-  @Mock private CqnService cqnService;
-  @Mock private CdsEntity attachmentEntity;
-
   private SDMCreateAttachmentsHandler handler;
-
   private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<SDMUtils> sdmUtilsMockedStatic;
   private MockedStatic<DBQuery> dbQueryMockedStatic;
   @Mock private CdsElement cdsElement;
   @Mock private CdsAssociationType cdsAssociationType;
-
   @Mock private CdsStructuredType targetAspect;
 
   @BeforeEach

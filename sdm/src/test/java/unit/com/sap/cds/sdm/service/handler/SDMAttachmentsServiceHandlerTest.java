@@ -60,23 +60,21 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
   @Mock private JwtTokenAuthenticationInfo mockJwtTokenInfo;
+  @Mock private ParameterInfo mockParameterInfo;
   private SDMAttachmentsServiceHandler handlerSpy;
   private PersistenceService persistenceService;
   @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
+  @Mock private MediaData mockMediaData;
+  @Mock private CdsEntity mockDraftEntity;
 
   @Mock private AttachmentRestoreEventContext restoreEventContext;
   private SDMService sdmService;
   private DocumentUploadService documentUploadService;
   @Mock private CdsModel cdsModel;
-
   @Mock private CdsEntity cdsEntity;
-
   @Mock private UserInfo userInfo;
-
-  @Mock private CdsElement cdsElement;
-  @Mock private CdsAssociationType cdsAssociationType;
-  @Mock private CqnElementRef cqnElementRef;
   @Mock private Messages mockMessages;
+  @Mock private AttachmentCreateEventContext eventContext;
 
   String objectId = "objectId";
   String folderId = "folderId";
@@ -316,6 +314,8 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
           .thenReturn(false); // Return false to indicate no restricted characters
 
+      when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+      when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
       // Validate ServiceException for duplicate detection
       ServiceException thrown =
           assertThrows(
@@ -393,6 +393,8 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+      when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
 
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -471,6 +473,8 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+      when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
 
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -549,7 +553,8 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
+      when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+      when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);

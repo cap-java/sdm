@@ -3,14 +3,11 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.Result;
-import com.sap.cds.reflect.CdsEntity;
-import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -19,13 +16,12 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.utilities.SDMUtils;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -38,18 +34,17 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Mock private PersistenceService persistenceService;
   @Mock private CdsUpdateEventContext context;
-  @Mock private AuthenticationInfo authInfo;
-  @Mock private JwtTokenAuthenticationInfo jwtTokenInfo;
   @Mock private SDMCredentials mockCredentials;
   @Mock private Messages messages;
-  @Mock private Result result;
-  @Mock private CdsEntity cdsEntity;
   @Mock private CdsModel model;
   private SDMService sdmService;
   @Mock private SDMUtils sdmUtilsMock;
-  @Mock private DBQuery dbQueryMock;
-
+  @Mock private CdsStructuredType targetAspect;
   private SDMUpdateAttachmentsHandler handler;
+
+  @Mock private CdsElement cdsElement;
+  @Mock private CdsEntity targetEntity;
+  @Mock private CdsAssociationType cdsAssociationType;
 
   private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<DBQuery> dbQueryMockedStatic;
@@ -79,11 +74,36 @@ public class SDMUpdateAttachmentsHandlerTest {
   }
 
   @Test
-  public void testProcessBeforeCallsRename() throws IOException {
-    List<CdsData> data = new ArrayList<>();
-    doNothing().when(handler).updateName(any(CdsUpdateEventContext.class), anyList());
-    handler.processBefore(context, data);
-    verify(handler, times(1)).updateName(context, data);
+  public void testProcessBefore() throws IOException {
+    // Arrange
+    List<String> expectedCompositionNames = Arrays.asList("Name1", "Name2");
+
+    // Simulate a stream of CdsElement instances returned from the mock target's compositions
+    Stream<CdsElement> compositionsStream = Stream.of(cdsElement, cdsElement);
+
+    // mock the target and model of the context
+    when(context.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.compositions()).thenReturn(compositionsStream);
+    when(context.getModel()).thenReturn(model);
+
+    // Mock findEntity to return an optional containing attachmentDraftEntity
+    when(model.findEntity(anyString())).thenReturn(Optional.of(targetEntity));
+
+    // Mock the elements and their associations
+    when(cdsElement.getType()).thenReturn(cdsAssociationType);
+    when(cdsAssociationType.getTargetAspect()).thenReturn(Optional.of(targetAspect));
+    when(targetAspect.getQualifiedName()).thenReturn("sap.attachments.Attachments");
+    when(cdsElement.getName()).thenReturn("Name1").thenReturn("Name2");
+
+    List<CdsData> dataList = new ArrayList<>();
+
+    // Act
+    handler.processBefore(context, dataList);
+
+    // Assert that updateName was called with the compositions detected
+    for (String compositionName : expectedCompositionNames) {
+      verify(handler).updateName(context, dataList, compositionName);
+    }
   }
 
   @Test
@@ -96,7 +116,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         .when(() -> isFileNameDuplicateInDrafts(data))
         .thenReturn(duplicateFilenames);
 
-    handler.updateName(context, data);
+    handler.updateName(context, data, "");
 
     verify(messages, times(1))
         .error(
@@ -391,6 +411,7 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testRenameWithNoAttachments() throws IOException {
+    // Arrange
     List<CdsData> data = new ArrayList<>();
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
@@ -398,16 +419,20 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(model.findEntity("some.qualified.Name.attachments"))
-        .thenReturn(Optional.of(attachmentDraftEntity));
+
+    String expectedEntityName = "some.qualified.Name.attachments";
+    when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
+
     CdsData mockCdsData = mock(CdsData.class);
     when(mockCdsData.get("attachments")).thenReturn(null);
     data.add(mockCdsData);
 
-    handler.updateName(context, data);
+    // Act
+    handler.updateName(context, data, "attachments");
 
+    // Assert
     verify(sdmService, never())
-        .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
+        .updateAttachments(anyString(), eq(mockCredentials), eq(document), eq(secondaryProperties));
   }
 
   //   @Test
