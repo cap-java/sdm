@@ -291,7 +291,6 @@ public class SDMServiceImpl implements SDMService {
         // continue
         if (repoId.equalsIgnoreCase(repositoryId)) {
           folderId = attachment.get("folderId").toString();
-          System.out.println("folderId in first if: " + folderId);
           break;
         }
       }
@@ -347,7 +346,6 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken) {
-    System.out.println("Entered in create folder");
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
