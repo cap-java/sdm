@@ -182,10 +182,7 @@ public class SDMServiceGenericHandler implements EventHandler {
         DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     cmisDocument.setRepositoryId(repositoryId);
     versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
-    String objectId =
-        versioningService.checkOutDocument(
-            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
-    cmisDocument.setObjectId(objectId);
+
     InputStream contentStream = (InputStream) context.get("FileUploadParameter");
     cmisDocument.setContent(contentStream);
     String mimeType =

@@ -142,7 +142,6 @@ public class VersioningServiceImpl implements VersioningService {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-    Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
     HttpPost uploadFile = new HttpPost(sdmUrl);
