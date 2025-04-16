@@ -10,10 +10,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DBQuery {
   private DBQuery() {
@@ -43,15 +40,30 @@ public class DBQuery {
     return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
   }
 
-  public static String getObjectIdForAttachmentID(
+  public static CmisDocument getObjectIdForAttachmentID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
-        Select.from(attachmentEntity).columns("objectId").where(doc -> doc.get("ID").eq(id));
+        Select.from(attachmentEntity)
+            .columns(
+                "objectId", "PWC_objectId", "versionSeriesId", "folderId", "fileName", "mimeType")
+            .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
-    if (result.rowCount() == 0) {
-      return null;
+    System.out.println("Result" + result.rowCount());
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      System.out.println("ewdwed" + res.isPresent() + ":" + res.get());
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setPwcobjectId(
+          row.get("PWC_objectId") != null ? row.get("PWC_objectId").toString() : null);
+      cmisDocument.setVersionSeriesId(
+          row.get("versionSeriesId") != null ? row.get("versionSeriesId").toString() : null);
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
     }
-    return result.rowCount() == 0 ? null : result.list().get(0).get("objectId").toString();
+    return cmisDocument;
   }
 
   public static void addAttachmentToDraft(
@@ -88,23 +100,32 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  public static void updatePWCObjectId(
-      CdsEntity attachmentEntity,
-      PersistenceService persistenceService,
-      String objectId,
-      String attachmentId) {
+  public static void updatePWCObjectIdForCheckIn(
+      CdsEntity attachmentEntity, PersistenceService persistenceService,String versionSeriesId) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
-    updatedFields.put("objectId", objectId);
-    updatedFields.put("PWC_objectId", objectId);
 
+      updatedFields.put("PWC_objectId", null);
+      updatedFields.put("isLatestVersion", false);
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
-            .where(doc -> doc.get("ID").eq(attachmentId));
+            .where(doc -> doc.get("versionSeriesId").eq(versionSeriesId));
     persistenceService.run(updateQuery);
   }
 
+  public static void updatePWCObjectIdForCancelCheckOut(
+          CdsEntity attachmentEntity, PersistenceService persistenceService, String attachmentId,String objectId) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+
+    updatedFields.put("PWC_objectId", objectId);
+    CqnUpdate updateQuery =
+            Update.entity(attachmentEntity)
+                    .data(updatedFields)
+                    .where(doc -> doc.get("ID").eq(attachmentId));
+    persistenceService.run(updateQuery);
+  }
   public static List<CmisDocument> getAttachmentsForFolder(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
     List<CmisDocument> cmisDocuments = new ArrayList<>();

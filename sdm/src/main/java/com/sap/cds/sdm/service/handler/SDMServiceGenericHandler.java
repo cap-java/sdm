@@ -25,6 +25,8 @@ import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,30 +147,80 @@ public class SDMServiceGenericHandler implements EventHandler {
     System.out.println(
         "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    System.out.println("Context Cehck in " + context.getParameterInfo().getQueryParams());
     CqnSelect select = (CqnSelect) context.get("cqn");
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
 
-    System.out.println("Keysyy " + cqnAnalyzer.analyze(select).rootKeys());
+    String upIdKey = "";
+    CdsModel model = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+    // if association is found, try to get foreign key to parent entity
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      // get association type
+      CdsAssociationType assocType = association.getType();
+      // get the refs of the association
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      upIdKey = fkElements.get(0);
+    }
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    System.out.println("Target Keys " + targetKeys);
+    System.out.println("UP ID KEY" + upIdKey);
+    String up__ID = targetKeys.get(upIdKey).toString();
+    System.out.println("UP ID VALUE" + up__ID);
+    System.out.println("context.get(\"isMajorVersion\")" + context.get("isMajorVersion"));
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    CmisDocument cmisDocument = new CmisDocument();
+    // get the objectId against the Id
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     cmisDocument.setRepositoryId(repositoryId);
-    cmisDocument.setObjectId(context.get("").toString());
-    //    InputStream contentStream = (InputStream) data.get("content");
-    //    cmisDocument.setContent(contentStream);
-    //    cmisDocument.setMimeType(mimeType);
-    int resCode = versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
-    if (resCode == 200) {
-      String objectId =
-          versioningService.checkOutDocument(
-              repositoryId, sdmCredentials, jwtToken, context.get("").toString());
+    versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
+    String objectId =
+        versioningService.checkOutDocument(
+            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
+    cmisDocument.setObjectId(objectId);
+    InputStream contentStream = (InputStream) context.get("FileUploadParameter");
+    cmisDocument.setContent(contentStream);
+    String mimeType =
+        URLConnection.guessContentTypeFromName(context.get("FileUploadParameter").toString());
+    cmisDocument.setMimeType(mimeType);
+    String obj = versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
+    if (obj != null) {
+      cmisDocument.setIsMajorVersion((Boolean) context.get("isMajorVersion"));
+      cmisDocument.setComment(context.get("checkinComment").toString());
+      cmisDocument.setObjectId(obj);
+      String objId =
+          versioningService.checkInDocument(repositoryId, sdmCredentials, jwtToken, cmisDocument);
+      // update previous records to isLatestVersion false and PWC_ObjectId null
 
-      String attachmentId = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
-      DBQuery.updateObjectId(context.getTarget(), persistenceService, objectId, attachmentId);
+      DBQuery.updatePWCObjectIdForCheckIn(
+          context.getTarget(), persistenceService, cmisDocument.getVersionSeriesId());
+      // insert new row in to draftservice
+      Map<String, Object> updatedFields = new HashMap<>();
+      updatedFields.put("objectId", objId);
+      updatedFields.put("repositoryId", repositoryId);
+      updatedFields.put("folderId", cmisDocument.getFolderId());
+      updatedFields.put("status", "Clean");
+      cmisDocument.setParentId(up__ID);
+      updatedFields.put(upIdKey, cmisDocument.getParentId());
+      updatedFields.put("mimeType", cmisDocument.getMimeType());
+      updatedFields.put("fileName", cmisDocument.getFileName());
+      updatedFields.put("HasDraftEntity", false);
+      updatedFields.put("HasActiveEntity", false);
+      updatedFields.put("isLatestVersion", true);
+      updatedFields.put("PWC_objectId", objId);
+      updatedFields.put("versionSeriesId", cmisDocument.getVersionSeriesId());
+      var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
+      draftService.newDraft(insert);
+      context.getMessages().success("Document Checkedout Successfully");
+      context.setCompleted();
     }
   }
 
@@ -199,7 +251,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       upIdKey = fkElements.get(0);
     }
     System.out.println("UP ID KEY" + upIdKey);
-    String up__ID = targetKeys.get(upIdKey);
+    String up__ID = targetKeys.get(upIdKey).toString();
     System.out.println("UP ID VALUE" + up__ID);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
@@ -207,17 +259,17 @@ public class SDMServiceGenericHandler implements EventHandler {
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     // get the objectId against the Id
-    String ID = targetKeys.get("ID");
+    String ID = targetKeys.get("ID").toString();
     System.out.println("ID of " + ID);
-    String objectIdForAttachment =
-        DBQuery.getObjectIdForAttachmentID(context.getTarget(), persistenceService, ID);
-    System.out.println("OBJ " + objectIdForAttachment);
+    CmisDocument cmisDocument =
+        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    System.out.println("OBJ " + cmisDocument.getObjectId());
     String objectId =
         versioningService.checkOutDocument(
-            repositoryId, sdmCredentials, jwtToken, objectIdForAttachment);
+            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
     System.out.println("RETURNED OBJ " + objectId);
-    String attachmentId = cqnAnalyzer.analyze(select).rootKeys().get("ID").toString();
-    DBQuery.updateObjectId(context.getTarget(), persistenceService, objectId, attachmentId);
+    DBQuery.updateObjectId(attachmentDraftEntity.get(), persistenceService, objectId, ID);
+    context.setCompleted();
   }
 
   @On(event = "cancelCheckOut")
@@ -226,5 +278,42 @@ public class SDMServiceGenericHandler implements EventHandler {
     String eventName = context.getEvent();
     System.out.println(
         "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    CqnSelect select = (CqnSelect) context.get("cqn");
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    String upIdKey = "";
+    CdsModel model = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity =
+            model.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+    // if association is found, try to get foreign key to parent entity
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      // get association type
+      CdsAssociationType assocType = association.getType();
+      // get the refs of the association
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      upIdKey = fkElements.get(0);
+    }
+    Map<String, Object> targetKeys =
+            cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    System.out.println("Target Keys " + targetKeys);
+    System.out.println("UP ID KEY" + upIdKey);
+    String up__ID = targetKeys.get(upIdKey).toString();
+    System.out.println("UP ID VALUE" + up__ID);
+    System.out.println("context.get(\"isMajorVersion\")" + context.get("isMajorVersion"));
+    AuthenticationInfo authInfo = context.getAuthenticationInfo();
+    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+    String jwtToken = jwtTokenInfo.getToken();
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    // get the objectId against the Id
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+            DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+     String objectId = versioningService.cancelCheckOut(repositoryId,sdmCredentials,jwtToken,cmisDocument.getObjectId());
+    DBQuery.updatePWCObjectIdForCancelCheckOut(attachmentDraftEntity.get(), persistenceService,ID, objectId);
+    context.setCompleted();
   }
 }

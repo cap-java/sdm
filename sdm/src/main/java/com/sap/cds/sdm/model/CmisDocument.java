@@ -25,4 +25,7 @@ public class CmisDocument {
   private long contentLength;
   private String url;
   private String versionSeriesId;
+  private String pwcobjectId;
+  private String comment;
+  private Boolean isMajorVersion;
 }

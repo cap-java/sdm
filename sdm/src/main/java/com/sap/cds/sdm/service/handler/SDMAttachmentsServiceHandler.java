@@ -73,9 +73,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String jwtToken = jwtTokenInfo.getToken();
     String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
     CmisDocument cmisDocument = new CmisDocument();
-    if ("Versioned".equals(repocheck)) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-    }
+    //    if ("Versioned".equals(repocheck)) {
+    //      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+    //    }
     Map<String, Object> attachmentIds = context.getAttachmentIds();
     String upIdKey = "";
     String upID = "";
@@ -166,6 +166,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
   public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
       throws IOException {
+    //check if versioned repo and if yes get all the entries where pwc_objectId not null
+
     String[] contextValues = context.getContentId().split(":");
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];

@@ -6,13 +6,16 @@ import org.json.JSONObject;
 
 public interface VersioningService {
   public String checkInDocument(
-      String repositoryId, SDMCredentials sdmCredentials, String jwtToken, String objectId);
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      String jwtToken,
+      CmisDocument cmisDocument);
 
   public String checkOutDocument(
       String repositoryId, SDMCredentials sdmCredentials, String jwtToken, String objectId);
 
-  public JSONObject cancelCheckOut();
+  public String cancelCheckOut(String repositoryId, SDMCredentials sdmCredentials, String jwtToken, String objectId);
 
-  public int setContentStream(
+  public String setContentStream(
       SDMCredentials sdmCredentials, String jwtToken, CmisDocument cmisDocument);
 }
