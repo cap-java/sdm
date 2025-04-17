@@ -155,7 +155,7 @@ public class DocumentUploadService {
     long startChunkUploadTime = System.currentTimeMillis();
     try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
       long endChunkUploadTime = System.currentTimeMillis();
-      logger.info(
+      logger.debug(
           " Chunk "
               + chunkIndex
               + " appendContent completed and it took "
@@ -320,7 +320,7 @@ public class DocumentUploadService {
               }
 
               long endChunkUploadTime = System.currentTimeMillis();
-              logger.info(
+              logger.debug(
                   " Chunk "
                       + chunkIndex
                       + " having "
