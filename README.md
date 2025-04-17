@@ -239,6 +239,19 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
             INCOMING_REQUEST_TIMEOUT: 3600000
             INCOMING_SESSION_TIMEOUT: 3600000
             timeout: 3600000
+
+      - name: demoappjava-app
+        type: approuter.nodejs
+        path: app
+        properties:
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+        requires:
+        - name: srv-api
+         group: destinations
+         properties:
+            timeout: 3600000  
    ```
 
 6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
