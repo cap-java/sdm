@@ -226,7 +226,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv and app module. Refer the following example from a sample Bookshop app.
 
    ```yaml
    modules:
