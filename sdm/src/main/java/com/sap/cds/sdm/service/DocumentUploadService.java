@@ -335,8 +335,6 @@ public class DocumentUploadService {
                 // Just for debug purpose log the heap consumption details.
                 logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
                 printMemoryConsumption();
-                logger.info("Last chunk processed, exiting upload.");
-                logger.info("Last chunk processed, exiting upload.");
                 hasMoreChunks = false;
               }
             }

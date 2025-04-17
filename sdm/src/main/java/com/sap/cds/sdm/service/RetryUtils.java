@@ -28,6 +28,8 @@ public class RetryUtils {
       logger.info("Evaluating shouldRetry for: {}", throwable.toString());
 
       Throwable cause = throwable;
+      // while loop to check if the cause is wrapped in another exception
+      // and check if the cause is one of the specified exceptions
       while (cause != null) {
         logger.info("Checking cause: {}", cause.getClass().getSimpleName());
         if (cause instanceof EOFException
