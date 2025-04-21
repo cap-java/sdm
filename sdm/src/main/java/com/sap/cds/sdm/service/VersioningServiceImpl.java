@@ -8,8 +8,6 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -104,10 +102,11 @@ public class VersioningServiceImpl implements VersioningService {
   }
 
   @Override
-  public String cancelCheckOut(String repositoryId, SDMCredentials sdmCredentials, String jwtToken, String objectId) {
+  public int cancelCheckOut(
+      String repositoryId, SDMCredentials sdmCredentials, String jwtToken, String objectId) {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
-            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -120,19 +119,17 @@ public class VersioningServiceImpl implements VersioningService {
     createFolderRequest.setEntity(multipart);
     try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
-      String responseBody = EntityUtils.toString(response.getEntity());
-      JSONObject checkOutResponse = new JSONObject(responseBody);
+      System.out.println("Res code " + responseCode);
       if (responseCode == 200) {
 
-        JSONObject succinctProperties = checkOutResponse.getJSONObject("succinctProperties");
-        return succinctProperties.getString("cmis:objectId");
+        return responseCode;
       } else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       } else {
-        throw new ServiceException("Failed to check out document. " + responseBody);
+        throw new ServiceException("Failed to cancel check out document. ");
       }
     } catch (IOException e) {
-      throw new ServiceException("Failed to check out document " + e.getMessage());
+      throw new ServiceException("Failed to cancel check out document " + e.getMessage());
     }
   }
 

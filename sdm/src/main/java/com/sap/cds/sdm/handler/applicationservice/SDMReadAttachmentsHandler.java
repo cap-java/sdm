@@ -30,10 +30,9 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                 @Override
                 public Predicate where(Predicate where) {
                   return CQL.and(
-                          where,
-                          CQL.get("repositoryId").eq(repositoryId)
-                          // Add condition for isLatestVersion
-                  );
+                      where, CQL.get("repositoryId").eq(repositoryId)
+                      // Add condition for isLatestVersion
+                      );
                 }
               });
       context.setCqn(copy);

@@ -166,7 +166,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
   public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
       throws IOException {
-    //check if versioned repo and if yes get all the entries where pwc_objectId not null
+    // check if versioned repo and if yes get all the entries where pwc_objectId not null
 
     String[] contextValues = context.getContentId().split(":");
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {

@@ -215,8 +215,10 @@ public class SDMServiceGenericHandler implements EventHandler {
       updatedFields.put("PWC_objectId", objId);
       updatedFields.put("versionSeriesId", cmisDocument.getVersionSeriesId());
       var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
-      draftService.newDraft(insert);
-      context.getMessages().success("Document Checkedout Successfully");
+      var insertCount = draftService.newDraft(insert);
+      if(insertCount.rowCount() >0) {
+        context.getMessages().success("Document CheckedIn Successfully");
+      }
       context.setCompleted();
     }
   }
@@ -265,7 +267,10 @@ public class SDMServiceGenericHandler implements EventHandler {
         versioningService.checkOutDocument(
             repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
     System.out.println("RETURNED OBJ " + objectId);
-    DBQuery.updateObjectId(attachmentDraftEntity.get(), persistenceService, objectId, ID);
+    if(objectId !=null) {
+      DBQuery.updateObjectId(attachmentDraftEntity.get(), persistenceService, objectId, ID);
+      context.getMessages().success("Document checked out successfully");
+    }
     context.setCompleted();
   }
 
@@ -273,8 +278,7 @@ public class SDMServiceGenericHandler implements EventHandler {
   public void CancelCheckOut(EventContext context) throws IOException {
     // Check the action name and handle accordingly
     String eventName = context.getEvent();
-    System.out.println(
-        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
+    System.out.println("Handling event: " + eventName);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     CqnSelect select = (CqnSelect) context.get("cqn");
     CdsModel cdsModel = context.getModel();
@@ -283,7 +287,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey = "";
     CdsModel model = context.getModel();
     Optional<CdsEntity> attachmentDraftEntity =
-            model.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+        model.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    System.out.println("attachmentDraftEntity: " + attachmentDraftEntity.get());
     Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
     // if association is found, try to get foreign key to parent entity
     if (upAssociation.isPresent()) {
@@ -294,13 +299,13 @@ public class SDMServiceGenericHandler implements EventHandler {
       List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
+    System.out.println("upIdKey: " + upIdKey);
     Map<String, Object> targetKeys =
-            cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     System.out.println("Target Keys " + targetKeys);
     System.out.println("UP ID KEY" + upIdKey);
     String up__ID = targetKeys.get(upIdKey).toString();
     System.out.println("UP ID VALUE" + up__ID);
-    System.out.println("context.get(\"isMajorVersion\")" + context.get("isMajorVersion"));
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
@@ -308,9 +313,15 @@ public class SDMServiceGenericHandler implements EventHandler {
     // get the objectId against the Id
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
-            DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
-     String objectId = versioningService.cancelCheckOut(repositoryId,sdmCredentials,jwtToken,cmisDocument.getObjectId());
-    DBQuery.updatePWCObjectIdForCancelCheckOut(attachmentDraftEntity.get(), persistenceService,ID, objectId);
+        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    int resCode =
+        versioningService.cancelCheckOut(
+            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
+    if (resCode == 200) {
+      DBQuery.updatePWCObjectIdForCancelCheckOut(
+              attachmentDraftEntity.get(), persistenceService, cmisDocument.getVersionSeriesId());
+      context.getMessages().success("Document check out is cancelled.");
+    }
     context.setCompleted();
   }
 }

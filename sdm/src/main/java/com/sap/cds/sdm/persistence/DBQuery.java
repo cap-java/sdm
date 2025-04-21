@@ -101,12 +101,12 @@ public class DBQuery {
   }
 
   public static void updatePWCObjectIdForCheckIn(
-      CdsEntity attachmentEntity, PersistenceService persistenceService,String versionSeriesId) {
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String versionSeriesId) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
 
-      updatedFields.put("PWC_objectId", null);
-      updatedFields.put("isLatestVersion", false);
+    updatedFields.put("PWC_objectId", null);
+    updatedFields.put("isLatestVersion", false);
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
@@ -115,17 +115,17 @@ public class DBQuery {
   }
 
   public static void updatePWCObjectIdForCancelCheckOut(
-          CdsEntity attachmentEntity, PersistenceService persistenceService, String attachmentId,String objectId) {
-    String repositoryId = SDMConstants.REPOSITORY_ID;
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String attachmentId) {
     Map<String, Object> updatedFields = new HashMap<>();
 
-    updatedFields.put("PWC_objectId", objectId);
+    updatedFields.put("PWC_objectId", null);
     CqnUpdate updateQuery =
-            Update.entity(attachmentEntity)
-                    .data(updatedFields)
-                    .where(doc -> doc.get("ID").eq(attachmentId));
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("versionSeriesId").eq(attachmentId));
     persistenceService.run(updateQuery);
   }
+
   public static List<CmisDocument> getAttachmentsForFolder(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
     List<CmisDocument> cmisDocuments = new ArrayList<>();
