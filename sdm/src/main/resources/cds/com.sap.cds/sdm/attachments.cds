@@ -8,6 +8,7 @@ extend aspect Attachments with {
     versionSeriesId: String;
     PWC_objectId:String;
     isLatestVersion :String default 'true';
+    attachmentStatus: String;
 }
 
 annotate Attachments with @UI: {

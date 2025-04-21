@@ -17,6 +17,7 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.VersioningService;
 import com.sap.cds.services.EventContext;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.draft.DraftService;
@@ -167,6 +168,13 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    // get the objectId against the Id
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+            DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    if(cmisDocument.getAttachmentStatus() ==null){
+      throw new ServiceException("Document should be checked out before checkIn");
+    }
     System.out.println("Target Keys " + targetKeys);
     System.out.println("UP ID KEY" + upIdKey);
     String up__ID = targetKeys.get(upIdKey).toString();
@@ -176,10 +184,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    // get the objectId against the Id
-    String ID = targetKeys.get("ID").toString();
-    CmisDocument cmisDocument =
-        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+
     cmisDocument.setRepositoryId(repositoryId);
     versioningService.setContentStream(sdmCredentials, jwtToken, cmisDocument);
 
@@ -302,6 +307,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     System.out.println("upIdKey: " + upIdKey);
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+            DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    if(cmisDocument.getAttachmentStatus() ==null){
+      throw new ServiceException("Document should be checked out before cancelling checkout");
+    }
     System.out.println("Target Keys " + targetKeys);
     System.out.println("UP ID KEY" + upIdKey);
     String up__ID = targetKeys.get(upIdKey).toString();
@@ -311,9 +322,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     // get the objectId against the Id
-    String ID = targetKeys.get("ID").toString();
-    CmisDocument cmisDocument =
-        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+
     int resCode =
         versioningService.cancelCheckOut(
             repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());

@@ -28,4 +28,5 @@ public class CmisDocument {
   private String pwcobjectId;
   private String comment;
   private Boolean isMajorVersion;
+  private String attachmentStatus;
 }

@@ -45,7 +45,7 @@ public class DBQuery {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns(
-                "objectId", "PWC_objectId", "versionSeriesId", "folderId", "fileName", "mimeType")
+                "objectId", "PWC_objectId", "versionSeriesId", "folderId", "fileName", "mimeType","attachmentStatus")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     System.out.println("Result" + result.rowCount());
@@ -62,6 +62,7 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setFolderId(row.get("folderId").toString());
       cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setAttachmentStatus(row.get("attachmentStatus") != null ? row.get("attachmentStatus").toString() : null);
     }
     return cmisDocument;
   }
