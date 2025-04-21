@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Version 1.2.0
 
+### Fixed
+
+- An issue in create mode when deleting an attachment resulted in deletion of all the attachments of the entity.
+
 ### Added
 
 - Support custom properties in attachments.
