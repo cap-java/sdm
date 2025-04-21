@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Version 1.2.0
 
+### Fixed
+
+- When attachment deleted in Create mode the whole folder is getting deleted.
+
 ### Added
 
 - Support custom properties in attachments.
