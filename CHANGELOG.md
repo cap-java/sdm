@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 
-- When attachment deleted in Create mode the whole folder is getting deleted.
+- An issue in create mode when deleting an attachment resulted in deletion of all the attachments of the entity.
 
 ### Added
 
