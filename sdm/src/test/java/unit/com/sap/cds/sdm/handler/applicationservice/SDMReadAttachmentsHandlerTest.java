@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -77,5 +78,40 @@ public class SDMReadAttachmentsHandlerTest {
 
     // Assert — since it enters the 'else' clause, it should call setCqn with original select
     verify(context).setCqn(select);
+  }
+
+  @Test
+  void testModifiesCqnWhenEntityMatchesComposition() {
+    // Arrange
+    String targetEntity = "attachments"; // Matches the composition name
+    String expectedRepositoryId = REPOSITORY_ID_KEY;
+
+    // Original query with no WHERE clause
+    CqnSelect originalCqn = Select.from("SomeEntity");
+
+    // Mock context and target entity
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(context.getCqn()).thenReturn(originalCqn);
+    when(cdsEntity.getQualifiedName()).thenReturn(targetEntity);
+
+    // Mock composition with matching name
+    when(mockComposition.getType()).thenReturn(mockAssociationType);
+    when(mockComposition.getName()).thenReturn("attachments");
+    when(mockTargetAspect.getQualifiedName()).thenReturn("sap.attachments.Attachments");
+    when(mockAssociationType.getTargetAspect()).thenReturn(Optional.of(mockTargetAspect));
+    when(cdsEntity.compositions()).thenReturn(Stream.of(mockComposition));
+
+    // Act
+    sdmReadAttachmentsHandler.processBefore(context);
+
+    // Assert — capture the modified CQN and verify it contains the repositoryId condition
+    ArgumentCaptor<CqnSelect> captor = ArgumentCaptor.forClass(CqnSelect.class);
+    verify(context).setCqn(captor.capture());
+    CqnSelect modifiedCqn = captor.getValue();
+
+    // Basic assertion: check that repositoryId predicate was added
+    String cqnAsString = modifiedCqn.toJson(); // or use toString(), depending on your CQN lib
+    assertTrue(cqnAsString.contains("\"ref\":[\"repositoryId\"]"));
+    assertTrue(cqnAsString.contains("\"val\":\"" + expectedRepositoryId + "\""));
   }
 }
