@@ -110,6 +110,7 @@ public class ReadAheadInputStream extends InputStream {
                       }
                       return result;
                     })
+                .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 3 attempts
                 .toList()
                 .blockingGet();
 
