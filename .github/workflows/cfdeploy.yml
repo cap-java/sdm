@@ -6,6 +6,10 @@ on:
       cf_space:
         description: 'Specify the Cloud Foundry space to deploy to'
         required: true
+      deploy_branch:
+        description: 'Specify the branch to deploy from'
+        required: true
+        default: 'develop' # Optional default value
       repository_id:
         description: 'Specify the Repository ID (leave blank if deploying to developcap)'
         required: false
@@ -22,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          ref: develop
+          ref: ${{ github.event.inputs.deploy_branch }}
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
