@@ -40,44 +40,22 @@ jobs:
             exit 1
           fi
 
-      - name: Deleting the sdm directory for fresh build
-        run: |
-          pwd
-          cd
-          rm -rf .m2/repository/com/sap/cds
+      # - name: Set REPOSITORY_ID
+      #   id: set_repository_id
+      #   run: |
+      #     if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
+      #       echo "Using REPOSITORY_ID from secrets"
+      #       echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
+      #     else
+      #       if [ -z "${{ github.event.inputs.repository_id }}" ]; then
+      #         echo "REPOSITORY_ID must be provided for non-developcap spaces"
+      #         exit 1
+      #       else
+      #         echo "Using provided REPOSITORY_ID"
+      #         echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
+      #       fi
+      #     fi
 
-      - name: Set REPOSITORY_ID
-        id: set_repository_id
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
-            echo "Using REPOSITORY_ID from secrets"
-            echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
-          else
-            if [ -z "${{ github.event.inputs.repository_id }}" ]; then
-              echo "REPOSITORY_ID must be provided for non-developcap spaces"
-              exit 1
-            else
-              echo "Using provided REPOSITORY_ID"
-              echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
-            fi
-          fi
-
-      - name: Configure Maven for GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<EOF
-          <settings>
-            <servers>
-              <server>
-                <id>github-snapshot</id>
-                <username>${{ github.actor }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
@@ -97,7 +75,11 @@ jobs:
           tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
           sudo mv mbt /usr/local/bin/
 
-          mbt build
+
+          # Build the MTA project
+          echo "Running mbt build"
+          mbt build -p=cf -t mta_archives --mtar demoappjava-1.0.0.mtar
+
           
           # Install cf & login 
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
