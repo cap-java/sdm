@@ -45,7 +45,13 @@ public class DBQuery {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns(
-                "objectId", "PWC_objectId", "versionSeriesId", "folderId", "fileName", "mimeType","attachmentStatus")
+                "objectId",
+                "PWC_objectId",
+                "versionSeriesId",
+                "folderId",
+                "fileName",
+                "mimeType",
+                "attachmentStatus")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     System.out.println("Result" + result.rowCount());
@@ -62,7 +68,8 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setFolderId(row.get("folderId").toString());
       cmisDocument.setMimeType(row.get("mimeType").toString());
-      cmisDocument.setAttachmentStatus(row.get("attachmentStatus") != null ? row.get("attachmentStatus").toString() : null);
+      cmisDocument.setAttachmentStatus(
+          row.get("attachmentStatus") != null ? row.get("attachmentStatus").toString() : null);
     }
     return cmisDocument;
   }
@@ -115,17 +122,19 @@ public class DBQuery {
             .where(doc -> doc.get("versionSeriesId").eq(versionSeriesId));
     persistenceService.run(updateQuery);
   }
+
   public static void updatePWCObjectIdForCheckOut(
-          CdsEntity attachmentEntity, PersistenceService persistenceService, String objectId,String ID) {
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String ID) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
 
     updatedFields.put("PWC_objectId", objectId);
     updatedFields.put("attachmentStatus", "CHECKED_OUT");
     CqnUpdate updateQuery =
-            Update.entity(attachmentEntity)
-                    .data(updatedFields)
-                    .where(doc -> doc.get("ID").eq(ID));
+        Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("ID").eq(ID));
     persistenceService.run(updateQuery);
   }
 

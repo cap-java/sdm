@@ -29,15 +29,16 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               new Modifier() {
                 @Override
                 public Predicate where(Predicate where) {
-                    Predicate firstCondition = CQL.get("repositoryId").eq(repositoryId);
-                    Predicate secondCondition = CQL.get("isLatestVersion").eq(true).and(firstCondition);
+                  Predicate firstCondition = CQL.get("repositoryId").eq(repositoryId);
+                  Predicate secondCondition =
+                      CQL.get("isLatestVersion").eq(true).and(firstCondition);
 
-                    // New condition
-                    // replace `newField` and `newValue` with your specific use case
+                  // New condition
+                  // replace `newField` and `newValue` with your specific use case
 
-                    // Combine conditions
-                    return CQL.and(where, secondCondition);
-                  //return CQL.and(where, CQL.get("repositoryId").eq(repositoryId));
+                  // Combine conditions
+                  return CQL.and(where, secondCondition);
+                  // return CQL.and(where, CQL.get("repositoryId").eq(repositoryId));
                 }
               });
       context.setCqn(copy);
