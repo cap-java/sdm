@@ -17,7 +17,7 @@
 
 		<!-- DEPENDENCIES VERSION -->
 		<jdk.version>17</jdk.version>
-		<cds.services.version>3.4.1</cds.services.version>
+		<cds.services.version>3.7.2</cds.services.version>
 		<spring.boot.version>3.3.1</spring.boot.version>
 		<cds.install-cdsdk.version>8.0.2</cds.install-cdsdk.version>
 

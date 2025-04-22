@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.security:java-security:3.5.6" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.security" artifactId="java-security" version="3.5.6" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-security/3.5.6/java-security-3.5.6.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-security/3.5.6/java-security-3.5.6-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/java-security/3.5.6/java-security-3.5.6-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

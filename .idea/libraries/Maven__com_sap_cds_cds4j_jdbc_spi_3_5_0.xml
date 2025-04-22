@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cds:cds4j-jdbc-spi:3.5.0" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cds" artifactId="cds4j-jdbc-spi" version="3.5.0" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cds/cds4j-jdbc-spi/3.5.0/cds4j-jdbc-spi-3.5.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cds/cds4j-jdbc-spi/3.5.0/cds4j-jdbc-spi-3.5.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cds/cds4j-jdbc-spi/3.5.0/cds4j-jdbc-spi-3.5.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

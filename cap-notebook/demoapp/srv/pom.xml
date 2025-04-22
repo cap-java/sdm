@@ -18,7 +18,7 @@
          <dependency>
           <groupId>com.sap.cds</groupId>
            <artifactId>sdm</artifactId>
-          <version>1.0.2-SNAPSHOT</version>
+          <version>1.2.0</version>
         </dependency>
 
 
@@ -135,7 +135,6 @@
 							</commands>
 						</configuration>
 					</execution>
-
 					<execution>
 						<id>cds.generate</id>
 						<goals>
@@ -143,6 +142,8 @@
 						</goals>
 						<configuration>
 							<basePackage>cds.gen</basePackage>
+							 <strictSetters>true</strictSetters>
+							<interfacesForAspects>true</interfacesForAspects>
 						</configuration>
 					</execution>
 				</executions>

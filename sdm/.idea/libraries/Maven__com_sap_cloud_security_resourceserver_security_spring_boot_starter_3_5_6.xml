@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.security:resourceserver-security-spring-boot-starter:3.5.6" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.security" artifactId="resourceserver-security-spring-boot-starter" version="3.5.6" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/resourceserver-security-spring-boot-starter/3.5.6/resourceserver-security-spring-boot-starter-3.5.6.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/resourceserver-security-spring-boot-starter/3.5.6/resourceserver-security-spring-boot-starter-3.5.6-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/security/resourceserver-security-spring-boot-starter/3.5.6/resourceserver-security-spring-boot-starter-3.5.6-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

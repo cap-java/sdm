@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: org.apache.logging.log4j:log4j-api:3.0.0-beta2" type="java-imported" external-system-id="Maven">
+    <properties groupId="org.apache.logging.log4j" artifactId="log4j-api" version="3.0.0-beta2" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-api/3.0.0-beta2/log4j-api-3.0.0-beta2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-api/3.0.0-beta2/log4j-api-3.0.0-beta2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/apache/logging/log4j/log4j-api/3.0.0-beta2/log4j-api-3.0.0-beta2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

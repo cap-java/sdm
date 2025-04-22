@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: com.sap.cloud.environment.servicebinding.api:java-core-api:0.10.5" type="java-imported" external-system-id="Maven">
+    <properties groupId="com.sap.cloud.environment.servicebinding.api" artifactId="java-core-api" version="0.10.5" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/environment/servicebinding/api/java-core-api/0.10.5/java-core-api-0.10.5.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/environment/servicebinding/api/java-core-api/0.10.5/java-core-api-0.10.5-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/sap/cloud/environment/servicebinding/api/java-core-api/0.10.5/java-core-api-0.10.5-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
