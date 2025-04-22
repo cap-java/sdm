@@ -108,10 +108,24 @@ public class DBQuery {
 
     updatedFields.put("PWC_objectId", null);
     updatedFields.put("isLatestVersion", false);
+    updatedFields.put("attachmentStatus", "CHECKED_IN");
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("versionSeriesId").eq(versionSeriesId));
+    persistenceService.run(updateQuery);
+  }
+  public static void updatePWCObjectIdForCheckOut(
+          CdsEntity attachmentEntity, PersistenceService persistenceService, String objectId,String ID) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+
+    updatedFields.put("PWC_objectId", objectId);
+    updatedFields.put("attachmentStatus", "CHECKED_OUT");
+    CqnUpdate updateQuery =
+            Update.entity(attachmentEntity)
+                    .data(updatedFields)
+                    .where(doc -> doc.get("ID").eq(ID));
     persistenceService.run(updateQuery);
   }
 
@@ -120,6 +134,7 @@ public class DBQuery {
     Map<String, Object> updatedFields = new HashMap<>();
 
     updatedFields.put("PWC_objectId", null);
+    updatedFields.put("attachmentStatus", "CANCEL_CHECKED_OUT");
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
