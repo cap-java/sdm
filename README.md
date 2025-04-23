@@ -339,7 +339,6 @@ public void onSubscribe(SubscribeEventContext context) {
         .as(SaasRegistrySubscriptionOptions.class);
  // Access the specific property
  final String subdomain = options.getSubscribedSubdomain();
- System.out.println("subdomain "+subdomain);
  
  SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
  String res = sdmAdminService.offboardRepository(subdomain);
