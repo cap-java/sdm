@@ -3,19 +3,21 @@ name: Deploy
 on:
   push:
     branches:
-      - cf-deploy-spaces
+      - cf-deploy-spaces1
   workflow_dispatch:
     inputs:
       cf_space:
         description: 'Specify the Cloud Foundry space to deploy to'
         required: true
+        default: 'rishi'
       deploy_branch:
         description: 'Specify the branch to deploy from'
         required: true
-        default: 'develop' # Optional default value
+        default: 'deployjobtest' # Optional default value
       repository_id:
         description: 'Specify the Repository ID (leave blank if deploying to developcap)'
         required: false
+        default: '43e88401-59f7-4d87-8cf2-ccfccc1f0251'
 
 permissions:
   pull-requests: read
