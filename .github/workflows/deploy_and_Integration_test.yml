@@ -75,6 +75,13 @@ jobs:
           git branch
           pwd
           cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          # Removing node_modules & package-lock.json
+          cd app
+          rm -rf node_modules package-lock.json
+
+          npm i
+
+          cd ..
           
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
