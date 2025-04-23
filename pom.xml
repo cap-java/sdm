@@ -272,7 +272,7 @@
 
         </plugins>
     </build>
-<!--     <distributionManagement> -->
+    <distributionManagement>
 <!--         <snapshotRepository>
             <id>artifactory</id>
             <name>Artifactory_DMZ-snapshots</name>
@@ -284,7 +284,7 @@
             <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
         </repository> -->
              <!-- GitHub Packages Repositories -->
-<!--         <repository>
+        <repository>
             <id>github-release</id>
             <name>GitHub Packages</name>
             <url>https://maven.pkg.github.com/cap-java/sdm</url>
@@ -294,7 +294,7 @@
             <name>GitHub Packages Snapshots</name>
             <url>https://maven.pkg.github.com/cap-java/sdm</url>
         </snapshotRepository>
-    </distributionManagement> -->
+    </distributionManagement>
          
     <scm>
         <url>https://github.com/cap-java/sdm</url>
