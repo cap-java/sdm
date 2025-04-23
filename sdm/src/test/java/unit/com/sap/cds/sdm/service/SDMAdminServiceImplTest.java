@@ -194,29 +194,17 @@ public class SDMAdminServiceImplTest {
     verify(httpClient).execute(any());
   }
 
-  // @Test
-  // public void testOffboardRepository_returnsNull() {
-  //   // Arrange
-  //   String subdomain = "testSubdomain";
+  @Test
+  public void testRestoreRepository_returnsNull() {
+    // Arrange
+    String subdomain = "testSubdomain";
 
-  //   // Act
-  //   String result = sdmAdminService.offboardRepository(subdomain);
+    // Act
+    String result = sdmAdminService.restoreRepository(subdomain);
 
-  //   // Assert
-  //   assertNull(result, "Expected offboardRepository to return null");
-  // }
-
-  // @Test
-  // public void testRestoreRepository_returnsNull() {
-  //   // Arrange
-  //   String subdomain = "testSubdomain";
-
-  //   // Act
-  //   String result = sdmAdminService.restoreRepository(subdomain);
-
-  //   // Assert
-  //   assertNull(result, "Expected restoreRepository to return null");
-  // }
+    // Assert
+    assertNull(result, "Expected restoreRepository to return null");
+  }
 
   @Test
   public void testOffboardRepository_success() throws Exception {
@@ -465,7 +453,6 @@ public class SDMAdminServiceImplTest {
 
   @Test
   public void testOffboardRepository_invalidRepo_throwsException() throws Exception {
-    System.out.println("In this test case");
     String subdomain = "subdomain";
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
@@ -507,7 +494,6 @@ public class SDMAdminServiceImplTest {
             () -> {
               sdmAdminService.offboardRepository(subdomain);
             });
-    System.out.println("exception check msg: " + exception.getMessage());
 
     assertTrue(
         exception

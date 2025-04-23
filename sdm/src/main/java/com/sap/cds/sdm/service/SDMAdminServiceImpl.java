@@ -58,7 +58,6 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
   @java.lang.Override
   public String offboardRepository(String subdomain) {
-    System.out.println("In plugin OFFBOARD");
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     ClientCredentials clientCredentials =
         new ClientCredentials(sdmCredentials.getClientId(), sdmCredentials.getClientSecret());
@@ -84,14 +83,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
     HttpClient httpClient = factory.createHttpClient(destination);
     String sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/";
-    System.out.println("sdmUrl " + sdmUrl);
     HttpGet getRepos = new HttpGet(sdmUrl);
     String repoId = "";
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepos)) {
       repoId = getRepositoryId(EntityUtils.toString(response.getEntity()));
-      System.out.println("Here? : " + repoId);
     } catch (IOException e) {
-      System.out.println("OR here?");
       throw new ServiceException("Error in offboarding ", e.getMessage());
     }
     sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/" + repoId;
@@ -99,8 +95,6 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     // Set the content type of the request
     offboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(offboardingReq)) {
-
-      System.out.println("offboard " + EntityUtils.toString(response.getEntity()));
       return "Repository Offboarded";
     } catch (IOException e) {
       throw new ServiceException("Error in offboarding ", e.getMessage());
