@@ -51,6 +51,7 @@ public class SDMServiceImpl implements SDMService {
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
       throws IOException {
+    System.out.println("Inside CREATE DOCUMENT : TESTING NEW SNAPSHOT");
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
