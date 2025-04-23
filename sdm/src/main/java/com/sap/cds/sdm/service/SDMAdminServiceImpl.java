@@ -77,11 +77,10 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
     DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
         DefaultHttpClientFactory.builder();
-    builder.timeoutMilliseconds(900000);
-    builder.maxConnectionsPerRoute(50);
-    builder.maxConnectionsTotal(50);
+    builder.timeoutMilliseconds(SDMConstants.TIMEOUT_MILLISECONDS);
+    builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS_PER_ROUTE);
+    builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS_TOTAL);
     DefaultHttpClientFactory factory = builder.build();
-
     HttpClient httpClient = factory.createHttpClient(destination);
     String sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/";
     HttpGet getRepos = new HttpGet(sdmUrl);
@@ -96,7 +95,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     // Set the content type of the request
     offboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(offboardingReq)) {
-      return "Repository Offboarded";
+      return "Repository <" + System.getenv("REPOSITORY_ID") + "> Offboarded";
     } catch (IOException e) {
       throw new ServiceException("Error in offboarding ", e.getMessage());
     }

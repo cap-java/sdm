@@ -342,7 +342,6 @@ public void onSubscribe(SubscribeEventContext context) {
  
  SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
  String res = sdmAdminService.offboardRepository(subdomain);
- System.out.println(res);
  }
  ```
 When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
