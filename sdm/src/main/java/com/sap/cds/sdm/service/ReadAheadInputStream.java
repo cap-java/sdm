@@ -49,7 +49,8 @@ public class ReadAheadInputStream extends InputStream {
     executor.submit(
         () -> {
           try {
-            while (totalBytesRead.get() < totalSize) {
+            boolean continueLoading = true;
+            while (continueLoading && totalBytesRead.get() < totalSize) {
               AtomicReference<byte[]> bufferRef = new AtomicReference<>(new byte[CHUNK_SIZE]);
               AtomicLong bytesReadAtomic = new AtomicLong(0);
 
@@ -69,15 +70,15 @@ public class ReadAheadInputStream extends InputStream {
                 // Ensure last chunk is enqueued
                 chunkQueue.put(bufferRef.get());
 
-                // Only mark as last chunk after enqueuing the last chunk
+                // Mark as last chunk if all bytes are read
                 if (totalBytesRead.get() >= totalSize) {
                   lastChunkLoaded.set(true);
                   logger.info("Last chunk successfully queued and marked.");
-                  break;
+                  continueLoading = false; // Exit the loop
                 }
               } else {
                 logger.warn("No bytes read from stream. Possible EOF.");
-                break;
+                continueLoading = false; // Exit the loop
               }
             }
           } catch (InterruptedException e) {
