@@ -47,6 +47,12 @@ jobs:
             exit 1
           fi
 
+      - name: Deleting the sdm directory for fresh build
+        run: |
+          pwd
+          cd
+          rm -rf .m2/repository/com/sap/cds
+
       # - name: Set REPOSITORY_ID
       #   id: set_repository_id
       #   run: |
