@@ -106,5 +106,9 @@ jobs:
           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE_RISHI }}
 
           # Deploy the application
+          pwd
+          ls -lart
+          cd mta_archives
+          ls -lart
           echo "Running cf deploy"
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
