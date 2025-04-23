@@ -24,8 +24,11 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SDMAdminServiceImpl implements SDMAdminService {
+  private static final Logger logger = LoggerFactory.getLogger(SDMAdminServiceImpl.class);
   @java.lang.Override
   public String onboardRepository(Repository repository)
       throws JsonProcessingException, UnsupportedEncodingException {
@@ -88,6 +91,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepos)) {
       repoId = getRepositoryId(EntityUtils.toString(response.getEntity()));
     } catch (IOException e) {
+      logger.error("Error in offboarding repository : " + e.getMessage());
       throw new ServiceException("Error in offboarding ", e.getMessage());
     }
     sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/" + repoId;
@@ -95,8 +99,10 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     // Set the content type of the request
     offboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(offboardingReq)) {
+      logger.info("Repository <" + System.getenv("REPOSITORY_ID") + "> Offboarded");
       return "Repository <" + System.getenv("REPOSITORY_ID") + "> Offboarded";
     } catch (IOException e) {
+      logger.error("Error in offboarding repository : " + e.getMessage());
       throw new ServiceException("Error in offboarding ", e.getMessage());
     }
   }
