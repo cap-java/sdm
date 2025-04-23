@@ -37,6 +37,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     HttpPost onboardingReq = new HttpPost(sdmUrl);
     ObjectMapper objectMapper = new ObjectMapper();
     RepositoryBody onboardRepository = new RepositoryBody();
+    repository.setExternalId(System.getenv("REPOSITORY_ID"));
     onboardRepository.setRepository(repository);
     String json = objectMapper.writeValueAsString(onboardRepository);
     StringEntity entity = new StringEntity(json);

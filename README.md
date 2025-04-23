@@ -308,7 +308,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides API for onboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding API is used on tenant subscription event of SaaS application.
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APsI is used on tenant subscription and tenant unsubscription events of SaaS application.
   
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
@@ -322,7 +322,6 @@ public void onSubscribe(SubscribeEventContext context) {
    Repository repository = new Repository();
    repository.setDescription("Onboarding Repo Demo");
    repository.setDisplayName(" Test Onboarding repo");
-   repository.setExternalId(System.getenv("REPOSITORY_ID"));
    repository.setSubdomain(subdomain);
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
@@ -330,7 +329,24 @@ public void onSubscribe(SubscribeEventContext context) {
    String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application.
+
+ ```java
+ @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
+ public void afterUnsubscribe(UnsubscribeEventContext context) {
+     //delete onboarded repository
+         final SaasRegistrySubscriptionOptions options = Struct
+        .access(context.getOptions())
+        .as(SaasRegistrySubscriptionOptions.class);
+ // Access the specific property
+ final String subdomain = options.getSubscribedSubdomain();
+ System.out.println("subdomain "+subdomain);
+ 
+ SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+ String res = sdmAdminService.offboardRepository(subdomain);
+ System.out.println(res);
+ }
+ ```
+When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
 The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
 ## Support for Custom Properties
