@@ -108,7 +108,7 @@ jobs:
           # Deploy the application
           pwd
           ls -lart
-          cd mta_archives
-          ls -lart
+          # cd mta_archives
+          # ls -lart
           echo "Running cf deploy"
-          cf deploy mta_archives/demoappjava-1.0.0.mtar -f
+          cf deploy /home/runner/work/sdm/sdm/cap-notebook/demoapp/mta_archives/demoappjava-1.0.0.mtar -f
