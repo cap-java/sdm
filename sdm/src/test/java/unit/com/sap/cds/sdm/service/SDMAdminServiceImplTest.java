@@ -257,7 +257,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository Offboarded", result);
+    assertEquals("Repository <repoid> Offboarded", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -312,7 +312,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository Offboarded", result);
+    assertEquals("Repository <repoid> Offboarded", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -368,7 +368,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository Offboarded", result);
+    assertEquals("Repository <repoid> Offboarded", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 

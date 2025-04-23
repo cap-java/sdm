@@ -57,9 +57,9 @@ public class SDMConstants {
   public static final String DRAFT_NOT_FOUND = "Attachment draft entity not found";
   public static final String UNSUPPORTED_PROPERTIES = "Unsupported properties";
   public static final String REPOSITORY_VERSIONED = "Versioned";
-  public static final Integer TIMEOUT_MILLISECONDS = 900000; 
-  public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50; 
-  public static final Integer MAX_CONNECTIONS_TOTAL = 50; 
+  public static final Integer TIMEOUT_MILLISECONDS = 900000;
+  public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50;
+  public static final Integer MAX_CONNECTIONS_TOTAL = 50;
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
