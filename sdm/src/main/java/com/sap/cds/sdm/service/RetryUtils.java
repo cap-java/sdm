@@ -48,39 +48,28 @@ public class RetryUtils {
 
   public static Function<Flowable<Throwable>, Publisher<?>> retryLogic(int maxAttempts) {
     return errors ->
-        errors
-            .zipWith(
-                Flowable.range(1, maxAttempts),
-                (error, attempt) -> new RetryAttempt(error, attempt))
-            .flatMap(
-                retry -> {
-                  Throwable error = retry.error;
-                  int attempt = retry.attempt;
-
-                  if (shouldRetry().test(error)) {
-                    long delay = (long) Math.pow(2, attempt); // exponential backoff
-                    logger.info(
-                        "Retry attempt {} failed. Retrying in {} seconds. Error: {}",
-                        attempt,
-                        delay,
-                        error.getMessage());
-                    return Flowable.timer(delay, TimeUnit.SECONDS);
-                  } else {
-                    logger.error(
-                        "No retry condition matched or max attempts reached. Failing permanently. Error: {}",
-                        error.getMessage());
-                    return Flowable.error(error);
-                  }
-                });
-  }
-
-  private static class RetryAttempt {
-    final Throwable error;
-    final int attempt;
-
-    RetryAttempt(Throwable error, int attempt) {
-      this.error = error;
-      this.attempt = attempt;
-    }
+        errors.flatMap(
+            error ->
+                Flowable.range(1, maxAttempts + 1)
+                    .concatMap(
+                        attempt -> {
+                          if (shouldRetry().test(error) && attempt <= maxAttempts) {
+                            long delay =
+                                (long)
+                                    Math.pow(2, attempt); // Exponential backoff: 2^attempt seconds
+                            logger.info(
+                                "Retry attempt {} failed. Retrying in {} seconds. Error: {}",
+                                attempt,
+                                delay,
+                                error.getMessage(),
+                                error);
+                            return Flowable.timer(delay, TimeUnit.SECONDS).map(ignored -> error);
+                          } else {
+                            logger.error(
+                                "Max attempts reached or no retry condition matched. Exiting with error.");
+                            return Flowable.error(error);
+                          }
+                        })
+                    .onErrorResumeNext(Flowable.just(error)));
   }
 }
