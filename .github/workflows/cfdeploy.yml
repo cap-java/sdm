@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - cf-deploy-spaces1
+      - cf-deploy-spaces
   workflow_dispatch:
     inputs:
       cf_space:
@@ -17,7 +17,7 @@ on:
       repository_id:
         description: 'Specify the Repository ID (leave blank if deploying to developcap)'
         required: false
-        default: '43e88401-59f7-4d87-8cf2-ccfccc1f0251'
+        default: 'NBOARD_REPO'
 
 permissions:
   pull-requests: read
