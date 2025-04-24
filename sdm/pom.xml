@@ -547,6 +547,9 @@
                             com/sap/cds/sdm/service/RetryUtils.class
                         </exclude>
                         <exclude>
+                            com/sap/cds/sdm/service/RetryUtils$RetryAttempt.class
+                        </exclude>
+                        <exclude>
                             com/sap/cds/sdm/caching/**
                         </exclude>
                     </excludes>
