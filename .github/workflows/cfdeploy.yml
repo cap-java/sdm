@@ -39,34 +39,30 @@ jobs:
 
       - name: Build and package
         run: |
+          pwd
+          echo "changing directory to sdm:"
           cd sdm
           mvn clean install -P unit-tests  -DskipIntegrationTests
 
-      - name: Verify and Checkout Deploy Branch
-        run: |
-          git fetch origin
-          if git rev-parse --verify origin/local_deploy; then
-            git checkout local_deploy
-          else
-            echo "Branch 'local_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
+          echo " Listing the content of cds:"
+          cd /home/runner/.m2/repository/com/sap/cds
+          pwd
+          ls -lart
 
-      - name: Set REPOSITORY_ID
-        id: set_repository_id
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
-            echo "Using REPOSITORY_ID from secrets"
-            echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
-          else
-            if [ -z "${{ github.event.inputs.repository_id }}" ]; then
-              echo "REPOSITORY_ID must be provided for non-developcap spaces"
-              exit 1
-            else
-              echo "Using provided REPOSITORY_ID"
-              echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
-            fi
-          fi
+          echo " Listing the content of sdm:"
+          cd sdm
+          pwd
+          ls -lart
+
+      # - name: Verify and Checkout Deploy Branch
+      #   run: |
+      #     git fetch origin
+      #     if git rev-parse --verify origin/local_deploy; then
+      #       git checkout local_deploy
+      #     else
+      #       echo "Branch 'local_deploy' not found. Please verify the branch name."
+      #       exit 1
+      #     fi
 
       # - name: Set REPOSITORY_ID
       #   id: set_repository_id
@@ -84,35 +80,51 @@ jobs:
       #       fi
       #     fi
 
-      # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
+      # # - name: Set REPOSITORY_ID
+      # #   id: set_repository_id
+      # #   run: |
+      # #     if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
+      # #       echo "Using REPOSITORY_ID from secrets"
+      # #       echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
+      # #     else
+      # #       if [ -z "${{ github.event.inputs.repository_id }}" ]; then
+      # #         echo "REPOSITORY_ID must be provided for non-developcap spaces"
+      # #         exit 1
+      # #       else
+      # #         echo "Using provided REPOSITORY_ID"
+      # #         echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
+      # #       fi
+      # #     fi
+
+      # # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
+      # #   run: |
+      # #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      # #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+
+      # - name: Prepare and Deploy to Cloud Foundry
       #   run: |
-      #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
-      #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      #     echo "Current Branch......"
+      #     git branch
+      #     cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
 
-      - name: Prepare and Deploy to Cloud Foundry
-        run: |
-          echo "Current Branch......"
-          git branch
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
-
-          # Replace placeholder with actual REPOSITORY_ID value
-          sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
+      #     # Replace placeholder with actual REPOSITORY_ID value
+      #     sed -i 's|__REPOSITORY_ID__|'${{ secrets.REPOSITORY_ID }}'|g' ./mta.yaml
           
-          # Download and install the MBT tool
-          wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
-          tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
-          sudo mv mbt /usr/local/bin/
+      #     # Download and install the MBT tool
+      #     wget -P /tmp https://github.com/SAP/cloud-mta-build-tool/releases/download/v1.2.28/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+      #     tar -xvzf /tmp/cloud-mta-build-tool_1.2.28_Linux_amd64.tar.gz
+      #     sudo mv mbt /usr/local/bin/
           
-          # Build the MTA project
-          echo "Running mbt build"
-          mbt build -p=cf -t mta_archives --mtar demoappjava-1.0.0.mtar
+      #     # Build the MTA project
+      #     echo "Running mbt build"
+      #     mbt build -p=cf -t mta_archives --mtar demoappjava-1.0.0.mtar
           
-          # Install cf CLI plugin
-          cf install-plugin multiapps -f
+      #     # Install cf CLI plugin
+      #     cf install-plugin multiapps -f
           
-          # Login to Cloud Foundry again to ensure session is active
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+      #     # Login to Cloud Foundry again to ensure session is active
+      #     cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
           
-          # Deploy the application
-          echo "Running cf deploy"
-          cf deploy mta_archives/demoappjava-1.0.0.mtar -f
+      #     # Deploy the application
+      #     echo "Running cf deploy"
+      #     cf deploy mta_archives/demoappjava-1.0.0.mtar -f
