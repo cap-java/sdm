@@ -117,11 +117,11 @@ public class SDMCreateAttachmentsHandlerTest {
     List<CdsData> data = new ArrayList<>();
     Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
         .thenReturn(duplicateFilenames);
 
     // Act
-    handler.updateName(context, data, "");
+    handler.updateName(context, data, "composition");
 
     // Assert
     verify(messages, times(1))
@@ -134,7 +134,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Arrange
     List<CdsData> data = new ArrayList<>();
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
         .thenReturn(Collections.emptySet());
 
     // Act
@@ -161,7 +161,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock utility methods
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
         .thenReturn(Collections.emptySet());
 
     // Act
@@ -407,7 +407,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock duplicate file name
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data))
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
         .thenReturn(new HashSet<>());
 
     // Mock attachment entity
