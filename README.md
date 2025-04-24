@@ -20,6 +20,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Setup](#setup)
 - [Deploying and testing the application](#deploying-and-testing-the-application)
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
+- [Support for Multitenancy](#support-for-multitenancy)
+- [Support for Custom Properties](#support-for-custom-properties)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -224,7 +226,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv and app module. Refer the following example from a sample Bookshop app.
 
    ```yaml
    modules:
@@ -233,9 +235,23 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
       path: srv
       properties:
             REPOSITORY_ID: <REPO ID>
-            INCOMING_CONNECTION_TIMEOUT: 900000
-            INCOMING_REQUEST_TIMEOUT: 900000
-            timeout: 900000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            timeout: 3600000
+
+      - name: demoappjava-app
+        type: approuter.nodejs
+        path: app
+        properties:
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+        requires:
+        - name: srv-api
+         group: destinations
+         properties:
+            timeout: 3600000  
    ```
 
 6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
@@ -290,10 +306,91 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
    <img width="1300" alt="Delete an attachment" style="border-radius:0.5rem;" src="resources/delete.gif">
 
+## Support for Multitenancy
+
+This plugin provides API for onboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding API is used on tenant subscription event of SaaS application.
+  
+```java
+@After(event = DeploymentService.EVENT_SUBSCRIBE)
+public void onSubscribe(SubscribeEventContext context) {
+   final SaasRegistrySubscriptionOptions options = Struct
+      .access(context.getOptions())
+      .as(SaasRegistrySubscriptionOptions.class);
+   final String subdomain = options.getSubscribedSubdomain();
+
+   // Create repository instance and initialise params
+   Repository repository = new Repository();
+   repository.setDescription("Onboarding Repo Demo");
+   repository.setDisplayName(" Test Onboarding repo");
+   repository.setExternalId(System.getenv("REPOSITORY_ID"));
+   repository.setSubdomain(subdomain);
+
+   // Using SDMAdminServiceImpl onboardRepository() to onboard repository
+   SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+   String response = sdmAdminService.onboardRepository(repository);
+}
+ ```
+When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application.
+The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
+
+## Support for Custom Properties
+
+Custom properties are supported via the usage of CMIS secondary type properties. Follow the below steps to add and use custom properties.
+
+1. If the repository does not contain secondary types and properties, create CMIS secondary types and properties using the [Create Secondary Type API](https://api.sap.com/api/CreateSecondaryTypeApi/overview). The property definition must contain the following section for the CAP plugin to process the property.
+
+   ```json
+   "mcm:miscellaneous": {        
+      "isPartOfTable": "true"  
+   } 
+   ```
+
+   With this, the secondary type and properties definition will be as per the sample given below
+
+      ```json
+      {
+         "id": "Working:DocumentInfo",
+         "displayName": "Document Info",
+         "baseId": "cmis:secondary",
+         "parentId": "cmis:secondary",
+         ...
+         },
+         "propertyDefinitions": {
+            "Working:DocumentInfoRecord": {
+                  "id": "Working:DocumentInfoRecord",
+                  "displayName": "Document Info Record",
+                  ...
+                  "mcm:miscellaneous": {     <-- Required section in the property definition
+                     "isPartOfTable": "true"
+                  }
+            }
+         }
+      }
+      ```
+
+2. Using secondary properties in CAP Application.
+   - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file. 
+   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty`. 
+   - If the property id contains a `:`, replace it with a triple underscore `___`. 
+   
+   Refer the following example from a sample Bookshop app:
+
+      ```cds
+      extend Attachments with {
+         Working___DocumentInfoRecord : String @SDM.Attachments.AdditionalProperty @(title: '{i18n>property1}');
+      }
+      ```
+
+   > **Note**
+   >
+   > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
+
+
 ## Known Restrictions
 
 - Repository : This plugin does not support the use of versioned repositories.
 - File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
+- Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support, Feedback, Contributing
 

@@ -3,6 +3,7 @@ package unit.com.sap.cds.sdm.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
@@ -11,6 +12,7 @@ import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -33,6 +35,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.ehcache.Cache;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -169,6 +172,35 @@ public class SDMServiceImplTest {
                 sdmService.getRepositoryInfo(sdmCredentials, subdomain);
               });
       assertEquals("Failed to get repository info.", exception.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryInfoThrowsServiceExceptionOnHttpClientError() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<HttpClients> httpClientsMockedStatic = mockStatic(HttpClients.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
+
+      // Mock TokenHandler methods
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), any()))
+          .thenReturn(mockHttpClient);
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
+
+      // Simulate IOException during HTTP call
+      when(mockHttpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Assert that ServiceException is thrown
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> sdmServiceImpl.getRepositoryInfo(mockSdmCredentials, "test-subdomain"));
+
+      assertEquals(SDMConstants.REPOSITORY_ERROR, exception.getMessage());
     }
   }
 
@@ -387,6 +419,40 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testCreateFolderThrowsServiceExceptionOnHttpClientError() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<HttpClients> httpClientsMockedStatic = mockStatic(HttpClients.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
+
+      // Mock TokenHandler methods
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), any()))
+          .thenReturn(mockHttpClient);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getSubdomainFromToken(any()))
+          .thenReturn("test-subdomain");
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
+
+      // Simulate IOException during HTTP call
+      when(mockHttpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Assert that ServiceException is thrown
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () ->
+                  sdmServiceImpl.createFolder(
+                      "parentId", "repositoryId", mockSdmCredentials, "jwtToken"));
+
+      assertTrue(exception.getMessage().contains("Failed to create folder Network error"));
+    }
+  }
+
+  @Test
   public void testCreateFolderFailResponseCode403() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
@@ -455,13 +521,14 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("ExpectedFolderId".getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
 
+      InputStream inputStream = new ByteArrayInputStream(expectedResponse.getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      // when(EntityUtils.toString(entity)).thenReturn(expectedResponse);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       String actualResponse =
@@ -483,7 +550,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(500);
       when(response.getEntity()).thenReturn(entity);
@@ -495,6 +562,40 @@ public class SDMServiceImplTest {
       String folderId =
           sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, jwtToken);
       assertNull(folderId, "Expected folderId to be null");
+    }
+  }
+
+  @Test
+  public void testGetFolderIdByPathThrowsServiceExceptionOnHttpClientError() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<HttpClients> httpClientsMockedStatic = mockStatic(HttpClients.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
+
+      // Mock TokenHandler methods
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), any()))
+          .thenReturn(mockHttpClient);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getSubdomainFromToken(any()))
+          .thenReturn("test-subdomain");
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
+
+      // Simulate IOException during HTTP call
+      when(mockHttpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Assert that ServiceException is thrown
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () ->
+                  sdmServiceImpl.getFolderIdByPath(
+                      "parentId", "repositoryId", mockSdmCredentials, "jwtToken"));
+
+      assertTrue(exception.getMessage().contains(SDMConstants.getGenericError("upload")));
     }
   }
 
@@ -520,7 +621,7 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
@@ -795,7 +896,7 @@ public class SDMServiceImplTest {
   }
 
   @Test
-  void testGetFolderId_FolderIdPresentInResult() throws IOException {
+  public void testGetFolderId_FolderIdPresentInResult() throws IOException {
     PersistenceService persistenceService = mock(PersistenceService.class);
     Result result = mock(Result.class);
     Map<String, Object> attachment = new HashMap<>();
@@ -931,7 +1032,7 @@ public class SDMServiceImplTest {
   }
 
   @Test
-  void testGetFolderId_GetFolderIdByPathReturns() throws IOException {
+  public void testGetFolderId_GetFolderIdByPathReturns() throws IOException {
     Result result = mock(Result.class);
     PersistenceService persistenceService = mock(PersistenceService.class);
 
@@ -973,7 +1074,7 @@ public class SDMServiceImplTest {
   }
 
   @Test
-  void testGetFolderId_CreateFolderWhenFolderIdNull() throws IOException {
+  public void testGetFolderId_CreateFolderWhenFolderIdNull() throws IOException {
     // Mock the dependencies
     Result result = mock(Result.class);
     PersistenceService persistenceService = mock(PersistenceService.class);
@@ -1146,13 +1247,226 @@ public class SDMServiceImplTest {
     }
   }
 
+  // @Test
+  // public void testRenameAttachments_Success() throws IOException {
+  //   try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+  //     String jwtToken = "jwt_token";
+  //     CmisDocument cmisDocument = new CmisDocument();
+  //     cmisDocument.setFileName("newFileName");
+  //     cmisDocument.setObjectId("objectId");
+  //     Map<String, String> secondaryProperties = new HashMap<>();
+  //     secondaryProperties.put("property1", "value1");
+  //     secondaryProperties.put("property2", "value2");
+
+  //     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+  //     tokenHandlerMockedStatic
+  //         .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+  //         .thenReturn(httpClient);
+
+  //     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+  //     when(response.getStatusLine()).thenReturn(statusLine);
+  //     when(statusLine.getStatusCode()).thenReturn(200);
+  //     when(response.getEntity()).thenReturn(entity);
+  //     InputStream inputStream = new ByteArrayInputStream("".getBytes());
+  //     when(entity.getContent()).thenReturn(inputStream);
+
+  //     String jsonResponseTypes =
+  //         "[{"
+  //             + "\"type\": {\"id\": \"cmis:secondary\"},"
+  //             + "\"children\": ["
+  //             + "{\"type\": {\"id\": \"Type:1\"}},"
+  //             + "{\"type\": {\"id\": \"Type:2\"}},"
+  //             + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":
+  // \"Type:3child\"}}]}"
+  //             + "]}]";
+
+  //     String jsonResponseProperties =
+  //         "{"
+  //             + "\"id\": \"type:1\","
+  //             + "\"propertyDefinitions\": {"
+  //             + "\"property1\": {"
+  //             + "\"id\": \"property1\","
+  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+  //             + "},"
+  //             + "\"property2\": {"
+  //             + "\"id\": \"property2\","
+  //             + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+  //             + "}"
+  //             + "}}";
+
+  //     inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
+  //     InputStream inputStream2 =
+  //         new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
+
+  //     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+  //     when(response.getStatusLine()).thenReturn(statusLine);
+  //     when(statusLine.getStatusCode()).thenReturn(200);
+  //     when(response.getEntity()).thenReturn(entity);
+  //     when(entity.getContent()).thenReturn(inputStream, inputStream2);
+
+  //     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+  //     int responseCode =
+  //         sdmServiceImpl.updateAttachments(
+  //             jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+
+  //     // Verify the response code
+  //     assertEquals(200, responseCode);
+  //   }
+  // }
+
   @Test
-  public void testRenameAttachments_Success() throws IOException {
-    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+  public void testRenameAttachments_getTypesFail() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+
       String jwtToken = "jwt_token";
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName("newFileName");
       cmisDocument.setObjectId("objectId");
+      Map<String, String> secondaryProperties = new HashMap<>();
+      secondaryProperties.put("property1", "value1");
+      secondaryProperties.put("property2", "value2");
+
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("IOException"));
+
+      // Mock CacheConfig to return null
+      Cache mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
+      when(mockCache.get(any())).thenReturn(null);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Verify the response code
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.updateAttachments(
+                    jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+              });
+
+      assertTrue(exception.getMessage().contains("Could not update the attachment"));
+    }
+  }
+
+  @Test
+  public void testDeleteDocumentThrowsServiceExceptionOnHttpClientError() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<HttpClients> httpClientsMockedStatic = mockStatic(HttpClients.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
+
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getDITokenUsingAuthorities(any(), any(), any()))
+          .thenReturn("dummyToken");
+      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
+      httpClientsMockedStatic.when(HttpClients::createDefault).thenReturn(mockHttpClient);
+
+      // Simulate IOException during HTTP call
+      when(mockHttpClient.execute(any(HttpPost.class))).thenThrow(new IOException("IOException"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Ensure ServiceException is thrown
+      assertThrows(
+          ServiceException.class,
+          () ->
+              sdmServiceImpl.deleteDocument("delete", "123", "user@example.com", "test-subdomain"));
+    }
+  }
+
+  @Test
+  public void testGetSecondaryTypesWithCache() throws IOException {
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      String jwtToken = "jwt_token";
+      String repositoryId = "repoId";
+      List<String> secondaryTypesCached =
+          Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      Cache mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
+      when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+
+      // Verify the response code
+      List<String> secondaryTypes =
+          sdmServiceImpl.getSecondaryTypes(repositoryId, jwtToken, mockSdmCredentials);
+
+      assertEquals(secondaryTypesCached.size(), secondaryTypes.size());
+    }
+  }
+
+  @Test
+  public void testValidSecondaryPropertiesFail() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      String repositoryId = "repoId";
+      String subdomain = "subdomain";
+      List<String> secondaryTypes = Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(null);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(500);
+      when(response.getEntity()).thenReturn(entity);
+      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      when(entity.getContent()).thenReturn(inputStream);
+      when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("IOException"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Verify the response code
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getValidSecondaryProperties(
+                    secondaryTypes, subdomain, mockSdmCredentials, repositoryId);
+              });
+
+      assertTrue(exception.getMessage().contains("Could not update the attachment"));
+    }
+  }
+
+  @Test
+  public void testValidSecondaryPropertiesFailEmptyResponse() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      String jwtToken = "jwt_token";
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName("newFileName");
+      cmisDocument.setObjectId("objectId");
+      Map<String, String> secondaryProperties = new HashMap<>();
+      secondaryProperties.put("property1", "value1");
+      secondaryProperties.put("property2", "value2");
+
+      List<String> secondaryTypesCached = new ArrayList<>();
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       tokenHandlerMockedStatic
@@ -1166,13 +1480,46 @@ public class SDMServiceImplTest {
       InputStream inputStream = new ByteArrayInputStream("".getBytes());
       when(entity.getContent()).thenReturn(inputStream);
 
-      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+      String jsonResponseTypes =
+          "[{"
+              + "\"type\": {\"id\": \"cmis:secondary\"},"
+              + "\"children\": ["
+              + "{\"type\": {\"id\": \"Type:1\"}},"
+              + "{\"type\": {\"id\": \"Type:2\"}},"
+              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\": {\"id\":\"Type:3child\"}}]}"
+              + "]}]";
 
-      int responseCode =
-          sdmServiceImpl.renameAttachments(jwtToken, mockSdmCredentials, cmisDocument);
+      String jsonResponseProperties =
+          "{"
+              + "\"id\": \"type:1\","
+              + "\"propertyDefinitions\": {"
+              + "\"property1\": {"
+              + "\"id\": \"property1\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "},"
+              + "\"property2\": {"
+              + "\"id\": \"property2\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "}"
+              + "}}";
 
-      // Verify the response code
-      assertEquals(200, responseCode);
+      inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
+      InputStream inputStream2 =
+          new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
+
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(null);
+      when(entity.getContent()).thenReturn(inputStream, inputStream2);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.updateAttachments(
+                    jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+              });
     }
   }
 
@@ -1224,6 +1571,71 @@ public class SDMServiceImplTest {
 
       String objectName = sdmServiceImpl.getObject(jwtToken, objectId, sdmCredentials);
       assertNull(objectName);
+    }
+  }
+
+  @Test
+  public void testGetObjectThrowsServiceExceptionOnIOException() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+        MockedStatic<HttpClients> httpClientsMockedStatic = mockStatic(HttpClients.class)) {
+      SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
+
+      // Mock TokenHandler methods
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), any()))
+          .thenReturn(mockHttpClient);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getSubdomainFromToken(any()))
+          .thenReturn("test-subdomain");
+
+      when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
+
+      // Simulate IOException during HTTP call
+      when(mockHttpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      // Assert that ServiceException is thrown
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> sdmServiceImpl.getObject("jwtToken", "objectId", mockSdmCredentials));
+
+      assertEquals(SDMConstants.ATTACHMENT_NOT_FOUND, exception.getMessage());
+      assertTrue(exception.getCause() instanceof IOException);
+    }
+  }
+
+  @Test
+  public void createDocument_ExceptionTest() throws IOException {
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName("sample.pdf");
+      cmisDocument.setAttachmentId("attachmentId");
+      String content = "sample.pdf content";
+      InputStream contentStream =
+          new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+      cmisDocument.setContent(contentStream);
+      cmisDocument.setParentId("parentId");
+      cmisDocument.setRepositoryId("repositoryId");
+      cmisDocument.setFolderId("folderId");
+      cmisDocument.setMimeType("application/pdf");
+
+      String jwtToken = "jwtToken";
+      SDMCredentials sdmCredentials = new SDMCredentials();
+
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Error"));
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
+
+      assertThrows(
+          ServiceException.class,
+          () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
     }
   }
 }

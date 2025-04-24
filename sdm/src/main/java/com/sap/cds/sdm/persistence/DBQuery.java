@@ -2,6 +2,7 @@ package com.sap.cds.sdm.persistence;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -10,10 +11,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DBQuery {
   private DBQuery() {
@@ -21,11 +19,14 @@ public class DBQuery {
   }
 
   public static Result getAttachmentsForUPID(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
-            .where(doc -> doc.get("up__ID").eq(upID));
+            .where(doc -> doc.get(upIdKey).eq(upID));
     return persistenceService.run(q);
   }
 
@@ -58,30 +59,15 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  public static String getFolderIdForActiveEntity(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String upID) {
-    String res = null;
-    CqnSelect query =
-        Select.from(attachmentEntity)
-            .columns("folderId")
-            .where(doc -> doc.get("up__ID").eq(upID).and(doc.get("IsActiveEntity").eq(true)));
-    Result result = persistenceService.run(query);
-
-    for (Map<String, Object> row : result.listOf(Map.class)) {
-      Object folderIdObj = row.get("folderId");
-      if (folderIdObj != null) {
-        res = folderIdObj.toString();
-        break; // Exit the loop after finding the first non-null folderId
-      }
-    }
-    return res;
-  }
-
   public static List<CmisDocument> getAttachmentsForFolder(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
+      String entity,
+      PersistenceService persistenceService,
+      String folderId,
+      AttachmentMarkAsDeletedEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
-        Select.from(attachmentEntity)
+        Select.from(attachmentEntity.get())
             .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
             .where(doc -> doc.get("folderId").eq(folderId));
     Result result = persistenceService.run(q);
@@ -94,6 +80,44 @@ public class DBQuery {
       cmisDocument.setObjectId(row.get("objectId").toString());
       cmisDocuments.add(cmisDocument);
     }
+    if (cmisDocuments.isEmpty()) {
+      attachmentEntity = context.getModel().findEntity(entity);
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+              .where(doc -> doc.get("folderId").eq(folderId));
+      result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        CmisDocument cmisDocument = new CmisDocument();
+        cmisDocument.setFolderId(row.get("folderId").toString());
+        cmisDocument.setRepositoryId(row.get("repositoryId").toString());
+        cmisDocument.setFileName(row.get("fileName").toString());
+        cmisDocument.setAttachmentId(row.get("ID").toString());
+        cmisDocument.setObjectId(row.get("objectId").toString());
+        cmisDocuments.add(cmisDocument);
+      }
+    }
     return cmisDocuments;
+  }
+
+  public static Map<String, String> getPropertiesForID(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String id,
+      List<String> properties) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(properties.toArray(new String[0]))
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    Map<String, String> propertyValueMap = new HashMap<>();
+
+    // Ensure all keys from the properties list are included in the map
+    for (String property : properties) {
+      Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
+      propertyValueMap.put(property, value != null ? value.toString() : null);
+    }
+
+    return propertyValueMap;
   }
 }

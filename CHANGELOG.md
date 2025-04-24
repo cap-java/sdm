@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.2.0
+
+### Fixed
+
+- An issue in create mode when deleting an attachment resulted in deletion of all the attachments of the entity.
+
+### Added
+
+- Support custom properties in attachments.
+- Support large file uploads.
+
+## Version 1.1.0
+
+### Fixed
+
+- Allow any name in the primary key for the entity. 
+- Duplicate filename check with multiple repository switch.
+- Error message for special characters in filename.
+
+### Added
+
+- Support repository onboarding for multitenant use case.
+
 ## Version 1.0.2
 
 ### Added

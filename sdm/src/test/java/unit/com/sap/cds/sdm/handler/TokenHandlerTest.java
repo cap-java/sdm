@@ -2,11 +2,14 @@ package unit.com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -21,10 +24,20 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import org.apache.http.HttpStatus;
+import org.apache.http.HttpVersion;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicStatusLine;
 import org.ehcache.Cache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +57,7 @@ public class TokenHandlerTest {
 
   @Mock private DefaultHttpClientFactory factory;
 
-  @Mock private HttpClient httpClient;
+  @Mock private CloseableHttpClient httpClient;
 
   private Map<String, Object> uaaCredentials;
   private Map<String, Object> uaa;
@@ -70,6 +83,14 @@ public class TokenHandlerTest {
 
     // Instantiate and mock the factory
     when(factory.createHttpClient(any(DefaultHttpDestination.class))).thenReturn(httpClient);
+
+    // Mock the cache to return the expected value
+    Cache<String, String> mockCache = Mockito.mock(Cache.class);
+    Mockito.when(mockCache.get(any())).thenReturn("cachedToken");
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
+        Mockito.mockStatic(CacheConfig.class)) {
+      cacheConfigMockedStatic.when(CacheConfig::getUserTokenCache).thenReturn(mockCache);
+    }
   }
 
   @Test
@@ -225,5 +246,173 @@ public class TokenHandlerTest {
 
     // Asserting the expected result
     assertEquals("tenant", result);
+  }
+
+  @Test
+  public void testGetHttpClientForOnboardFlow() {
+    ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
+    try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
+        Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
+      accessorMockedStatic
+          .when(DefaultServiceBindingAccessor::getInstance)
+          .thenReturn(mockAccessor);
+
+      ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
+
+      Map<String, Object> mockCredentials = new HashMap<>();
+      Map<String, Object> mockUaa = new HashMap<>();
+      mockUaa.put("url", "https://mock.uaa.url");
+      mockUaa.put("clientid", "mockClientId");
+      mockUaa.put("clientsecret", "mockClientSecret");
+      mockCredentials.put("uaa", mockUaa);
+      mockCredentials.put("uri", "https://mock.service.url");
+
+      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
+
+      List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
+      Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
+
+      HttpClient client =
+          TokenHandler.getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
+
+      assertNotNull(client);
+    }
+  }
+
+  // Additional tests for uncovered methods
+
+  @Test
+  public void testToBytes() {
+    String input = "Hello, World!";
+    byte[] expected = input.getBytes(StandardCharsets.UTF_8);
+    byte[] actual = TokenHandler.toBytes(input);
+    assertArrayEquals(expected, actual);
+  }
+
+  @Test
+  public void testToBytesWithNullInput() {
+    assertThrows(NullPointerException.class, () -> TokenHandler.toBytes(null));
+  }
+
+  // @Test
+  public void testGetUserTokenFromAuthorities() throws IOException {
+    SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+    when(mockSdmCredentials.getClientId()).thenReturn("mockClientId");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("mockClientSecret");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://example.com");
+
+    HttpURLConnection mockConn = Mockito.mock(HttpURLConnection.class);
+    when(mockConn.getOutputStream()).thenReturn(new DataOutputStream(new ByteArrayOutputStream()));
+    when(mockConn.getInputStream())
+        .thenReturn(
+            new DataInputStream(
+                new ByteArrayInputStream(
+                    "{\"access_token\":\"mockToken\"}".getBytes(StandardCharsets.UTF_8))));
+
+    try (MockedStatic<URL> urlMockedStatic = Mockito.mockStatic(URL.class)) {
+      URL mockUrl = Mockito.mock(URL.class);
+      urlMockedStatic.when(() -> new URL(anyString())).thenReturn(mockUrl);
+      when(mockUrl.openConnection()).thenReturn(mockConn);
+
+      String result =
+          TokenHandler.getUserTokenFromAuthorities(email, subdomain, mockSdmCredentials);
+      assertEquals("mockToken", result);
+    }
+  }
+
+  @Test
+  public void testGetDIToken() throws IOException {
+    SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+    when(mockSdmCredentials.getClientId()).thenReturn("mockClientId");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("mockClientSecret");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://example.com");
+
+    String token = "mockToken";
+    JsonObject payloadObj = new JsonObject();
+    payloadObj.addProperty("email", email);
+    JsonObject extAttr = new JsonObject();
+    extAttr.addProperty("zdn", subdomain);
+    payloadObj.add("ext_attr", extAttr);
+    payloadObj.addProperty("exp", "1234567890");
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+        Mockito.mockStatic(TokenHandler.class)) {
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getTokenFields(token))
+          .thenReturn(payloadObj);
+
+      Cache<String, String> mockCache = Mockito.mock(Cache.class);
+      Mockito.when(mockCache.get(any())).thenReturn("cachedToken");
+      try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
+          Mockito.mockStatic(CacheConfig.class)) {
+        cacheConfigMockedStatic.when(CacheConfig::getUserTokenCache).thenReturn(mockCache);
+
+        String result = TokenHandler.getDIToken(token, mockSdmCredentials);
+        assertEquals(null, result);
+      }
+    }
+  }
+
+  @Test
+  public void testFillTokenExchangeBody() {
+    SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+    when(mockSdmCredentials.getClientId()).thenReturn("mockClientId");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("mockClientSecret");
+
+    String token = "mockToken";
+    Map<String, String> result = TokenHandler.fillTokenExchangeBody(token, mockSdmCredentials);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(token, result.get("assertion"));
+  }
+
+  @Test
+  public void testGenerateDITokenFromTokenExchange() throws IOException {
+    SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+    when(mockSdmCredentials.getClientId()).thenReturn("mockClientId");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("mockClientSecret");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://example.com");
+
+    String token = "mockToken";
+    JsonObject payloadObj = new JsonObject();
+    payloadObj.addProperty("email", email);
+    JsonObject extAttr = new JsonObject();
+    extAttr.addProperty("zdn", subdomain);
+    payloadObj.add("ext_attr", extAttr);
+    payloadObj.addProperty("exp", "1234567890");
+
+    CloseableHttpClient mockHttpClient = Mockito.mock(CloseableHttpClient.class);
+    CloseableHttpResponse mockResponse = Mockito.mock(CloseableHttpResponse.class);
+    when(mockResponse.getStatusLine())
+        .thenReturn(new BasicStatusLine(HttpVersion.HTTP_1_1, HttpStatus.SC_OK, "OK"));
+    when(mockResponse.getEntity()).thenReturn(new StringEntity("{\"access_token\":\"mockToken\"}"));
+
+    try (MockedStatic<HttpClients> httpClientsMockedStatic = Mockito.mockStatic(HttpClients.class);
+        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
+            Mockito.mockStatic(TokenHandler.class)) {
+      httpClientsMockedStatic.when(HttpClients::createDefault).thenReturn(mockHttpClient);
+      when(mockHttpClient.execute(any(HttpPost.class))).thenReturn(mockResponse);
+
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getTokenFields(token))
+          .thenReturn(payloadObj);
+
+      String result =
+          TokenHandler.generateDITokenFromTokenExchange(token, mockSdmCredentials, payloadObj);
+      assertEquals(null, result);
+    }
+  }
+
+  @Test
+  public void testExtractResponseBodyAsString() throws IOException {
+    CloseableHttpResponse mockResponse = Mockito.mock(CloseableHttpResponse.class);
+    InputStream mockInputStream =
+        new ByteArrayInputStream("mockResponse".getBytes(StandardCharsets.UTF_8));
+    when(mockResponse.getEntity()).thenReturn(new InputStreamEntity(mockInputStream));
+
+    String result = TokenHandler.extractResponseBodyAsString(mockResponse);
+    assertEquals("mockResponse", result);
   }
 }

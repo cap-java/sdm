@@ -34,7 +34,8 @@ runs:
         #./ensure-license.sh
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-        git checkout -b develop
+        git checkout -b Release_v1.1.0
+        git add cap-notebook/version.txt
         git commit -am "Update version to $VERSION"
-        git push --set-upstream origin develop
+        git push --set-upstream origin Release_v1.1.0
       shell: bash

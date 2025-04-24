@@ -5,10 +5,13 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
+import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
+import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -16,9 +19,12 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -29,6 +35,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class SDMServiceImpl implements SDMService {
@@ -127,28 +134,75 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int renameAttachments(
-      String jwtToken, SDMCredentials sdmCredentials, CmisDocument cmisDocument) {
+  public int updateAttachments(
+      String jwtToken,
+      SDMCredentials sdmCredentials,
+      CmisDocument cmisDocument,
+      Map<String, String> secondaryProperties)
+      throws ServiceException {
+
+    Map<String, String> updatedMap = new HashMap<>();
+    for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
+      updatedMap.put(entry.getKey().replace("___", ":"), entry.getValue());
+    }
+
+    secondaryProperties = updatedMap;
+
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
-    String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
-    String fileName = cmisDocument.getFileName();
     String objectId = cmisDocument.getObjectId();
-    HttpPost renameRequest = new HttpPost(sdmUrl);
+    String fileName = cmisDocument.getFileName();
+
+    List<String> secondaryTypes = getSecondaryTypes(repositoryId, jwtToken, sdmCredentials);
+    List<String> validSecondaryProperties =
+        getValidSecondaryProperties(secondaryTypes, subdomain, sdmCredentials, repositoryId);
+    SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
+    secondaryTypesKey.setRepositoryId(repositoryId);
+    CacheConfig.getSecondaryTypesCache().put(secondaryTypesKey, secondaryTypes);
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    secondaryPropertiesKey.setRepositoryId(repositoryId);
+    CacheConfig.getSecondaryPropertiesCache().put(secondaryPropertiesKey, validSecondaryProperties);
+    Set<String> keysToRemove =
+        secondaryProperties.keySet().stream()
+            .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
+            .collect(Collectors.toSet());
+    if (!keysToRemove.isEmpty()) {
+      String errorMessage = String.join(", ", keysToRemove);
+      throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
+    }
+    String sdmUrl =
+        sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
+
+    HttpPost updateRequest = new HttpPost(sdmUrl);
+
+    // Prepare the request body parts
+    Map<String, String> updateRequestBody = new HashMap<>();
+    updateRequestBody.put("cmisaction", "update");
+    updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
+
+    for (int index = 0; index < secondaryTypes.size(); index++) {
+      updateRequestBody.put("propertyValue[0][" + index + "]", secondaryTypes.get(index));
+    }
+
+    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    // Add additional form fields
-    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
-    builder.addTextBody("propertyValue[0]", fileName, ContentType.TEXT_PLAIN);
-    builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
-    HttpEntity multipart = builder.build();
-    renameRequest.setEntity(multipart);
-    try (var response = (CloseableHttpResponse) httpClient.execute(renameRequest)) {
+    SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
+
+    // Set the multipart entity to the request
+    updateRequest.setEntity(builder.build());
+
+    try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
+      if (response.getStatusLine().getStatusCode() == 400) {
+        String responseString = EntityUtils.toString(response.getEntity());
+        JSONObject jsonResponse = new JSONObject(responseString);
+        String message = jsonResponse.getString("message");
+        throw new ServiceException(message);
+      }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.COULD_NOT_RENAME_THE_ATTACHMENT, e);
+      throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
     }
   }
 
@@ -221,32 +275,33 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String token) {
+      Result result, PersistenceService persistenceService, String folderName, String token) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
             .collect(Collectors.toList());
-
     String folderId = null;
     String repositoryId = null;
+    String repoId = SDMConstants.REPOSITORY_ID;
     for (Map<String, Object> attachment : resultList) {
       if (attachment.get("folderId") != null) {
-        folderId = attachment.get("folderId").toString();
         repositoryId = attachment.get("repositoryId").toString();
+        // check if folderId exists for the repositoryId if not then make folderId null else
+        // continue
+        if (repoId.equalsIgnoreCase(repositoryId)) {
+          folderId = attachment.get("folderId").toString();
+          break;
+        }
       }
     }
-    String repoId = SDMConstants.REPOSITORY_ID;
-    // check if folderId exists for the repositoryId if not then make folderId null else continue
-    if (!repoId.equalsIgnoreCase(repositoryId)) {
-      folderId = null;
-    }
+
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {
-      folderId = getFolderIdByPath(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
       if (folderId == null) {
-        folderId = createFolder(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");
@@ -259,6 +314,7 @@ public class SDMServiceImpl implements SDMService {
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String token) {
     String subdomain = TokenHandler.getSubdomainFromToken(token);
+    String folderId = null;
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     String sdmUrl =
@@ -268,15 +324,20 @@ public class SDMServiceImpl implements SDMService {
             + "/root/"
             + parentId
             + "?cmisselector=object";
-    HttpPost getFolderRequest = new HttpPost(sdmUrl);
+    HttpGet getFolderRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 200) {
-        return EntityUtils.toString(response.getEntity());
+        JSONObject jsonObject = new JSONObject(EntityUtils.toString(response.getEntity()));
+        folderId =
+            jsonObject
+                .getJSONObject("properties")
+                .getJSONObject("cmis:objectId")
+                .getString("value");
       } else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       }
-      return null;
+      return folderId;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
@@ -401,5 +462,81 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("delete"));
     }
+  }
+
+  @Override
+  public List<String> getSecondaryTypes(
+      String repositoryId, String jwtToken, SDMCredentials sdmCredentials) throws ServiceException {
+    SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
+    secondaryTypesKey.setRepositoryId(repositoryId);
+    List<String> secondaryTypes = new ArrayList<>();
+    secondaryTypes = CacheConfig.getSecondaryTypesCache().get(secondaryTypesKey);
+    if (secondaryTypes == null) {
+      String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+      var httpClient =
+          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      String sdmUrl =
+          sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
+      HttpGet getTypesRequest = new HttpGet(sdmUrl);
+      try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+        HttpEntity responseEntity = response.getEntity();
+        List<String> result = new ArrayList<>();
+        if (responseEntity != null) {
+          String responseString = EntityUtils.toString(responseEntity, "UTF-8");
+          JSONArray jsonArray = new JSONArray(responseString);
+          JSONArray secondaryTypesJSON = new JSONArray();
+          for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            if (jsonObject.getJSONObject("type").getString("id").equals("cmis:secondary")) {
+              secondaryTypesJSON = jsonObject.getJSONArray("children");
+              break;
+            }
+          }
+          SDMUtils.extractSecondaryTypeIds(secondaryTypesJSON, result);
+        }
+        return result;
+      } catch (IOException e) {
+        throw new ServiceException("Could not update the attachment", e);
+      }
+    }
+    return secondaryTypes;
+  }
+
+  @Override
+  public List<String> getValidSecondaryProperties(
+      List<String> secondaryTypes,
+      String subdomain,
+      SDMCredentials sdmCredentials,
+      String repositoryId) {
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    secondaryPropertiesKey.setRepositoryId(repositoryId);
+    List<String> validSecondaryProperties =
+        CacheConfig.getSecondaryPropertiesCache().get(secondaryPropertiesKey);
+    if (validSecondaryProperties == null) {
+      validSecondaryProperties = new ArrayList<>();
+      Iterator<String> iterator = secondaryTypes.iterator();
+      var httpClient =
+          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      while (iterator.hasNext()) {
+        String value = iterator.next();
+        String sdmUrl =
+            String.format(
+                "%sbrowser/%s?cmisselector=typeDefinition&typeID=%s",
+                sdmCredentials.getUrl(), repositoryId, value);
+        HttpGet getTypesRequest = new HttpGet(sdmUrl);
+        try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          HttpEntity responseEntity = response.getEntity();
+          if (responseEntity != null
+              && Boolean.FALSE.equals(
+                  SDMUtils.checkMCM(responseEntity, validSecondaryProperties))) {
+            iterator.remove();
+          }
+        } catch (IOException e) {
+          throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
+        }
+      }
+    }
+
+    return validSecondaryProperties;
   }
 }

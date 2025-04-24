@@ -3,6 +3,10 @@ package integration.com.sap.cds.sdm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import okhttp3.*;
 import okio.ByteString;
@@ -39,6 +43,10 @@ public class Api {
 
     try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
+        if (response.code() == 401) {
+          System.out.println(
+              "Create entity failed due to incorrect token. Please check the credentials");
+        }
         System.out.println("Create entity failed. Error : " + response.body().string());
         throw new IOException("Could not create entity");
       }
@@ -455,6 +463,252 @@ public class Api {
     } catch (IOException e) {
       System.out.println("Attachment was not renamed : " + e);
       return "Attachment was not renamed";
+    }
+  }
+
+  public String updateSecondaryProperty(
+      String appUrl,
+      String serviceName,
+      String entityID,
+      String attachmentID,
+      String stringProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody body =
+        RequestBody.create(
+            mediaType,
+            ByteString.encodeUtf8(
+                "{\n    \"Working___DocumentInfoRecordString\" : \"" + stringProperty + "\"\n}"));
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books_attachments(up__ID="
+                    + entityID
+                    + ",ID="
+                    + attachmentID
+                    + ",IsActiveEntity=false)")
+            .method("PATCH", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+            "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String updateSecondaryProperty(
+      String appUrl,
+      String serviceName,
+      String entityID,
+      String attachmentID,
+      Integer integerProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody body =
+        RequestBody.create(
+            mediaType,
+            ByteString.encodeUtf8(
+                "{\n    \"Working___DocumentInfoRecordInt\" : " + integerProperty + "\n}"));
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books_attachments(up__ID="
+                    + entityID
+                    + ",ID="
+                    + attachmentID
+                    + ",IsActiveEntity=false)")
+            .method("PATCH", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+            "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String updateSecondaryProperty(
+      String appUrl,
+      String serviceName,
+      String entityID,
+      String attachmentID,
+      LocalDateTime dateTimeProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    // Format the LocalDateTime into an ISO 8601 string with zone offset
+    ZonedDateTime zonedDateTime = dateTimeProperty.atZone(ZoneId.systemDefault());
+    String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
+    RequestBody body =
+        RequestBody.create(
+            mediaType,
+            ByteString.encodeUtf8(
+                "{\n    \"Working___DocumentInfoRecordDate\" : \"" + formattedDateTime + "\"\n}"));
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books_attachments(up__ID="
+                    + entityID
+                    + ",ID="
+                    + attachmentID
+                    + ",IsActiveEntity=false)")
+            .method("PATCH", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+            "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String updateSecondaryProperty(
+      String appUrl,
+      String serviceName,
+      String entityID,
+      String attachmentID,
+      Boolean booleanProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody body =
+        RequestBody.create(
+            mediaType,
+            ByteString.encodeUtf8(
+                "{\n    \"Working___DocumentInfoRecordBoolean\" : " + booleanProperty + "\n}"));
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books_attachments(up__ID="
+                    + entityID
+                    + ",ID="
+                    + attachmentID
+                    + ",IsActiveEntity=false)")
+            .method("PATCH", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+            "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String updateInvalidSecondaryProperty(
+      String appUrl,
+      String serviceName,
+      String entityID,
+      String attachmentID,
+      String invalidSecondaryProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\n    \"abc___myId1\": \"" + invalidSecondaryProperty + "\"\n}";
+    RequestBody body = RequestBody.create(mediaType, ByteString.encodeUtf8(jsonPayload));
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books_attachments(up__ID="
+                    + entityID
+                    + ",ID="
+                    + attachmentID
+                    + ",IsActiveEntity=false)")
+            .method("PATCH", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+            "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public Map<String, Object> fetchAttachmentMetadata(
+      String appUrl, String serviceName, String entityName, String entityID, String attachmentID)
+      throws IOException {
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "_attachments(up__ID="
+            + entityID
+            + ",ID="
+            + attachmentID
+            + ",IsActiveEntity=true)";
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println("Fetch attachment metadata failed. Error: " + response.body().string());
+        throw new IOException("Could not fetch attachment metadata");
+      } else {
+        // Parse the JSON response to extract metadata
+        return objectMapper.readValue(
+            response.body().string(),
+            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+      }
     }
   }
 }
