@@ -6,6 +6,10 @@ on:
       cf_space:
         description: 'Specify the Cloud Foundry space to deploy to'
         required: true
+        default: 'developcap'
+      deploy_branch:
+        description: 'Specify the branch to deploy from'
+        required: true
       repository_id:
         description: 'Specify the Repository ID (leave blank if deploying to developcap)'
         required: false
@@ -22,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          ref: develop
+          ref: ${{ github.event.inputs.deploy_branch }}
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
@@ -30,21 +34,20 @@ jobs:
           java-version: 17
           distribution: 'temurin'
 
+      - name: Build and package
+        run: |
+          mvn clean install -P unit-tests  -DskipIntegrationTests
+          
+
       - name: Verify and Checkout Deploy Branch
         run: |
           git fetch origin
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
+          if git rev-parse --verify origin/local_deploy; then
+            git checkout local_deploy
           else
-            echo "Branch 'develop_deploy' not found. Please verify the branch name."
+            echo "Branch 'local_deploy' not found. Please verify the branch name."
             exit 1
           fi
-
-      - name: Deleting the sdm directory for fresh build
-        run: |
-          pwd
-          cd
-          rm -rf .m2/repository/com/sap/cds
 
       - name: Set REPOSITORY_ID
         id: set_repository_id
@@ -62,22 +65,22 @@ jobs:
             fi
           fi
 
-      - name: Configure Maven for GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<EOF
-          <settings>
-            <servers>
-              <server>
-                <id>github-snapshot</id>
-                <username>${{ github.actor }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Set REPOSITORY_ID
+      #   id: set_repository_id
+      #   run: |
+      #     if [ "${{ github.event.inputs.cf_space }}" = "developcap" ]; then
+      #       echo "Using REPOSITORY_ID from secrets"
+      #       echo "::set-output name=repository_id::${{ secrets.REPOSITORY_ID }}"
+      #     else
+      #       if [ -z "${{ github.event.inputs.repository_id }}" ]; then
+      #         echo "REPOSITORY_ID must be provided for non-developcap spaces"
+      #         exit 1
+      #       else
+      #         echo "Using provided REPOSITORY_ID"
+      #         echo "::set-output name=repository_id::${{ github.event.inputs.repository_id }}"
+      #       fi
+      #     fi
+
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
