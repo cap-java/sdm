@@ -34,6 +34,8 @@ public class SDMConstants {
 
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
   public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
+  public static final String SDM_TOKEN_FETCH = "sdm-token-fetch";
+  public static final String SDM_DESTINATION_KEY = "name";
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
@@ -57,6 +59,10 @@ public class SDMConstants {
   public static final String DRAFT_NOT_FOUND = "Attachment draft entity not found";
   public static final String UNSUPPORTED_PROPERTIES = "Unsupported properties";
   public static final String REPOSITORY_VERSIONED = "Versioned";
+  public static final Integer TIMEOUT_MILLISECONDS = 900000;
+  public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50;
+  public static final Integer MAX_CONNECTIONS_TOTAL = 50;
+  public static final String REST_V2_REPOSITORIES = "rest/v2/repositories";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
