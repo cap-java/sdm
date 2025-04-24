@@ -54,6 +54,13 @@ jobs:
           pwd
           ls -lart
 
+          echo " Listing the content of 1.0.0-RC1:"
+          cd 1.0.0-RC1
+          pwd
+          ls -lart
+
+          
+
       # - name: Verify and Checkout Deploy Branch
       #   run: |
       #     git fetch origin
