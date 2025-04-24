@@ -40,9 +40,9 @@ jobs:
       - name: Build and package
         run: |
           pwd
-          echo "changing directory to sdm:"
-          cd sdm
-          pwd
+          # echo "changing directory to sdm:"
+          # cd sdm
+          # pwd
           ls -lart
           mvn clean install -P unit-tests  -DskipIntegrationTests
 
