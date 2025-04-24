@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 public class SDMAdminServiceImpl implements SDMAdminService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAdminServiceImpl.class);
+  private static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
 
   @java.lang.Override
   public String onboardRepository(Repository repository)
@@ -37,11 +38,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     var httpClient =
         TokenHandler.getHttpClient(
             null, null, repository.getSubdomain(), "TECHNICAL_CREDENTIALS_FLOW");
-    String sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories";
+    String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES;
     HttpPost onboardingReq = new HttpPost(sdmUrl);
     ObjectMapper objectMapper = new ObjectMapper();
     RepositoryBody onboardRepository = new RepositoryBody();
-    repository.setExternalId(System.getenv("REPOSITORY_ID"));
+    repository.setExternalId(REPOSITORY_ID);
     onboardRepository.setRepository(repository);
     String json = objectMapper.writeValueAsString(onboardRepository);
     StringEntity entity = new StringEntity(json);
@@ -76,7 +77,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
         OAuth2DestinationBuilder.forTargetUrl(sdmCredentials.getUrl())
             .withTokenEndpoint(baseTokenUrl)
             .withClient(clientCredentials, OnBehalfOf.TECHNICAL_USER_PROVIDER)
-            .property("name", "sdm-token-fetch")
+            .property(SDMConstants.SDM_DESTINATION_KEY, SDMConstants.SDM_TOKEN_FETCH)
             .build();
 
     DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
@@ -86,7 +87,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS_TOTAL);
     DefaultHttpClientFactory factory = builder.build();
     HttpClient httpClient = factory.createHttpClient(destination);
-    String sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/";
+    String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/";
     HttpGet getRepos = new HttpGet(sdmUrl);
     String repoId = "";
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepos)) {
@@ -95,13 +96,13 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       logger.error("Error in offboarding repository : " + e.getMessage());
       throw new ServiceException("Error in offboarding ", e.getMessage());
     }
-    sdmUrl = sdmCredentials.getUrl() + "rest/v2/repositories/" + repoId;
+    sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/" + repoId;
     HttpDelete offboardingReq = new HttpDelete(sdmUrl);
     // Set the content type of the request
     offboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(offboardingReq)) {
-      logger.info("Repository <" + System.getenv("REPOSITORY_ID") + "> Offboarded");
-      return "Repository <" + System.getenv("REPOSITORY_ID") + "> Offboarded";
+      logger.info("Repository <" + REPOSITORY_ID + "> Offboarded");
+      return "Repository <" + REPOSITORY_ID + "> Offboarded";
     } catch (IOException e) {
       logger.error("Error in offboarding repository : " + e.getMessage());
       throw new ServiceException("Error in offboarding ", e.getMessage());
@@ -118,20 +119,12 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       for (JsonNode repoInfo : repoInfos) {
         JsonNode repository = repoInfo.path("repository");
         if (repository.path("externalId").asText().equals(SDMConstants.REPOSITORY_ID)) {
-          String id = repository.path("id").asText();
-          return id;
+          return repository.path("id").asText();
         }
       }
     } catch (Exception e) {
       throw new ServiceException(String.format(e.getMessage()));
     }
-    return null;
-  }
-
-  @java.lang.Override
-  public String restoreRepository(String subdomain) {
-
-    // This is yet to be implemented
     return null;
   }
 }

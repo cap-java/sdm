@@ -195,18 +195,6 @@ public class SDMAdminServiceImplTest {
   }
 
   @Test
-  public void testRestoreRepository_returnsNull() {
-    // Arrange
-    String subdomain = "testSubdomain";
-
-    // Act
-    String result = sdmAdminService.restoreRepository(subdomain);
-
-    // Assert
-    assertNull(result, "Expected restoreRepository to return null");
-  }
-
-  @Test
   public void testOffboardRepository_success() throws Exception {
     String subdomain = "subdomain";
     SDMCredentials sdmCredentials = new SDMCredentials();

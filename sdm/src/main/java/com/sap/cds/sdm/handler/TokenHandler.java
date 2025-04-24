@@ -296,14 +296,17 @@ public class TokenHandler {
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
               .withClient(clientCredentials, OnBehalfOf.NAMED_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
+              .property(
+                  SDMConstants.SDM_DESTINATION_KEY, SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
               .build();
     } else {
       destination =
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
               .withClient(clientCredentials, OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
+              .property(
+                  SDMConstants.SDM_DESTINATION_KEY,
+                  SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
               .build();
     }
 
