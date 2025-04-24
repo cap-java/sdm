@@ -1,9 +1,6 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - cfdeploy_job
   workflow_dispatch:
     inputs:
       cf_space:
