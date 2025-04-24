@@ -24,13 +24,7 @@ import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
@@ -53,7 +47,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
   public void updateName(CdsUpdateEventContext context, List<CdsData> data, String composition)
       throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       context
           .getMessages()

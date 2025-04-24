@@ -113,10 +113,10 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(context.getMessages()).thenReturn(messages);
     sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
     sdmUtilsMockedStatic
-        .when(() -> isFileNameDuplicateInDrafts(data))
+        .when(() -> isFileNameDuplicateInDrafts(data, "composition"))
         .thenReturn(duplicateFilenames);
 
-    handler.updateName(context, data, "");
+    handler.updateName(context, data, "composition");
 
     verify(messages, times(1))
         .error(
