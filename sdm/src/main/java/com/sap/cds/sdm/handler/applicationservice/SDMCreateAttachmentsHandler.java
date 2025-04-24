@@ -54,7 +54,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   public void updateName(CdsCreateEventContext context, List<CdsData> data, String composition)
       throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
     } else {
