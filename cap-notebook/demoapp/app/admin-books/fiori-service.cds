@@ -29,9 +29,21 @@ annotate AdminService.Books with @(UI: {
     },
     {
       $Type : 'UI.ReferenceFacet',
+      ID     : 'ReferencesFacet',
+      Label : 'References',
+      Target: 'references/@UI.LineItem'
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      ID     : 'FootnotesFacet',
+      Label : 'Footnotes',
+      Target: 'footnotes/@UI.LineItem'
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
       Label : '{i18n>Admin}',
       Target: '@UI.FieldGroup#Admin'
-    },
+    }
   ],
   FieldGroup #General: {Data: [
     {Value: title},
