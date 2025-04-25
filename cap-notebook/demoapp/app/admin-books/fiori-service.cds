@@ -23,19 +23,19 @@ annotate AdminService.Books with @(UI: {
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID     : 'AttachmentsFacet',
+      ID    : 'AttachmentsFacet',
       Label : '{i18n>attachments}',
       Target: 'attachments/@UI.LineItem'
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID     : 'ReferencesFacet',
+      ID    : 'ReferencesFacet',
       Label : 'References',
       Target: 'references/@UI.LineItem'
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID     : 'FootnotesFacet',
+      ID    : 'FootnotesFacet',
       Label : 'Footnotes',
       Target: 'footnotes/@UI.LineItem'
     },
