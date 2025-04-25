@@ -388,6 +388,7 @@ Custom properties are supported via the usage of CMIS secondary type properties.
 
 ## Known Restrictions
 
+- UI5 Version 1.135.0: This version causes error in upload of attachments.
 - Repository : This plugin does not support the use of versioned repositories.
 - File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
 - Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
