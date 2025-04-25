@@ -85,7 +85,7 @@ public class SDMUtilsTest {
     when(mockCdsData.get("attachments")).thenReturn(attachments); // Correctly mock get method
     data.add(mockCdsData);
 
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, "attachments");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }

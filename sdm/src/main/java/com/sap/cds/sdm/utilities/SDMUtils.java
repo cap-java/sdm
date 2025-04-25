@@ -32,11 +32,11 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data) {
+  public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data, String composition) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {

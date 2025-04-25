@@ -226,7 +226,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv and app module. Refer the following example from a sample Bookshop app.
 
    ```yaml
    modules:
@@ -235,9 +235,23 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
       path: srv
       properties:
             REPOSITORY_ID: <REPO ID>
-            INCOMING_CONNECTION_TIMEOUT: 900000
-            INCOMING_REQUEST_TIMEOUT: 900000
-            timeout: 900000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            timeout: 3600000
+
+      - name: demoappjava-app
+        type: approuter.nodejs
+        path: app
+        properties:
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+        requires:
+        - name: srv-api
+         group: destinations
+         properties:
+            timeout: 3600000  
    ```
 
 6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
@@ -294,7 +308,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides API for onboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding API is used on tenant subscription event of SaaS application.
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
   
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
@@ -308,7 +322,6 @@ public void onSubscribe(SubscribeEventContext context) {
    Repository repository = new Repository();
    repository.setDescription("Onboarding Repo Demo");
    repository.setDisplayName(" Test Onboarding repo");
-   repository.setExternalId(System.getenv("REPOSITORY_ID"));
    repository.setSubdomain(subdomain);
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
@@ -316,7 +329,22 @@ public void onSubscribe(SubscribeEventContext context) {
    String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application.
+
+ ```java
+ @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
+ public void afterUnsubscribe(UnsubscribeEventContext context) {
+     //delete onboarded repository
+         final SaasRegistrySubscriptionOptions options = Struct
+        .access(context.getOptions())
+        .as(SaasRegistrySubscriptionOptions.class);
+ // Access the specific property
+ final String subdomain = options.getSubscribedSubdomain();
+ 
+ SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+ String res = sdmAdminService.offboardRepository(subdomain);
+ }
+ ```
+When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
 The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
 ## Support for Custom Properties

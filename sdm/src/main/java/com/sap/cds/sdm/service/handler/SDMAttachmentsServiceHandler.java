@@ -233,7 +233,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String jwtToken =
         eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
+    String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
+    String folderName = upID + "__" + entityName;
+    String folderId = sdmService.getFolderId(result, persistenceService, folderName, jwtToken);
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     setCmisDocumentProperties(

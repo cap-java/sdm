@@ -1,8 +1,10 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.service.exceptions.InsufficientDataException;
 import io.reactivex.Flowable;
 import java.io.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -90,30 +92,37 @@ public class ReadAheadInputStream extends InputStream {
   private void readChunk(AtomicReference<byte[]> bufferRef, AtomicLong bytesReadAtomic)
       throws IOException {
     while (bytesReadAtomic.get() < CHUNK_SIZE) {
-      int readAttempt =
-          Flowable.fromCallable(
-                  () -> {
-                    byte[] buffer = bufferRef.get();
-                    // Read from stream and update bytesReadAtomic
-                    int result =
-                        originalStream.read(
-                            buffer,
-                            (int) bytesReadAtomic.get(),
-                            CHUNK_SIZE - (int) bytesReadAtomic.get());
-                    if (result > 0) {
-                      bytesReadAtomic.addAndGet(result);
-                    }
-                    return result;
-                  })
-              .retryWhen(RetryUtils.retryLogic(5))
-              .blockingFirst(); // Blocking call to wait for the read attempt
+      try {
+        List<Integer> results =
+            Flowable.fromCallable(
+                    () -> {
+                      byte[] buffer = bufferRef.get();
+                      // Read from stream and update bytesReadAtomic
+                      int result =
+                          originalStream.read(
+                              buffer,
+                              (int) bytesReadAtomic.get(),
+                              CHUNK_SIZE - (int) bytesReadAtomic.get());
+                      if (result > 0) {
+                        bytesReadAtomic.addAndGet(result);
+                      } else if (result == 0) {
+                        throw new InsufficientDataException("Read returned 0 bytes");
+                      }
+                      return result;
+                    })
+                .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
+                .toList()
+                .blockingGet();
 
-      if (readAttempt == -1) {
-        logger.info("EOF reached while reading the stream.");
-        break;
-      } else if (readAttempt == 0) {
-        logger.warn("No bytes read from stream. Retrying...");
-        break;
+        int readAttempt = results.get(0);
+
+        if (readAttempt == -1) {
+          logger.info("EOF reached while reading the stream.");
+          break;
+        }
+      } catch (Exception e) {
+        logger.error("Failed to read chunk after retries: {}", e.getMessage(), e);
+        throw new IOException("Failed to read chunk", e);
       }
     }
   }
