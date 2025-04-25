@@ -4,6 +4,12 @@ using {sap.attachments.Attachments, sap.attachments.StatusCode} from`com.sap.cds
 extend entity Books with {
     attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
 }
+extend entity Books with {
+    references : Composition of many Attachments @SDM.attachments: {maxCount: 2, maxCountError: 'Only 2 attachments allowed'};
+}
+extend entity Books with {
+    footnotes : Composition of many Attachments;
+}
 
 entity Statuses @cds.autoexpose @readonly {
     key code : StatusCode;
