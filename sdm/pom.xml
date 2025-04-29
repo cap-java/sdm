@@ -44,7 +44,7 @@
         <commons-codec-version>1.18.0</commons-codec-version>
         <jackson-core-version>2.18.2</jackson-core-version>
         <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
-        <httpclient5-version>5.4.2</httpclient5-version>
+        <httpclient5-version>5.4.4</httpclient5-version>
         <httpcore5-version>5.3.3</httpcore5-version>
         <httpasyncclient-version>4.1.5</httpasyncclient-version>
         <log4j-api-version>3.0.0-beta2</log4j-api-version>
