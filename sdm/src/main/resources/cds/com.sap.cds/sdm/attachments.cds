@@ -5,7 +5,20 @@ extend aspect Attachments with {
     folderId : String ;
     repositoryId : String ;
     objectId : String ;
-}
+versionSeriesId: String;
+    PWC_objectId:String;
+    isLatestVersion :String default 'true';
+    attachmentStatus: String;
+}actions{
+ action checkIn(FileUploadParameter : ComplexTypeName not null,isMajorVersion: Boolean,checkInComment: String);
+action checkOut();
+action cancelCheckOut();
+};
+ type ComplexTypeName {
+  StreamProperty       : LargeBinary @Core.MediaType: MimeType @Core.ContentDisposition.Filename: FileName;
+  MimeType             : String @Core.IsMediaType;
+  FileName             : String;
+  }
 annotate Attachments with @UI: {
     HeaderInfo: {
         $Type         : 'UI.HeaderInfoType',

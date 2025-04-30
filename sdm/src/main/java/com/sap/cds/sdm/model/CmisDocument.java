@@ -24,4 +24,9 @@ public class CmisDocument {
   private String mimeType;
   private long contentLength;
   private String subdomain;
+  private Boolean isMajorVersion;
+  private String comment;
+  private String attachmentStatus;
+  private String versionSeriesId;
+  private String pwcobjectId;
 }

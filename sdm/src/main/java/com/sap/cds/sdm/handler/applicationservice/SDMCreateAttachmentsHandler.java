@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMCreateAttachmentsHandler implements EventHandler {
@@ -191,9 +192,15 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
       try {
-        int responseCode =
+        JSONObject finalResponse =
             sdmService.updateAttachments(
-                jwtToken, sdmCredentials, cmisDocument, updatedSecondaryProperties);
+                context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
+                TokenHandler.getSDMCredentials(),
+                cmisDocument,
+                updatedSecondaryProperties);
+        int responseCode = Integer.parseInt(finalResponse.get("status").toString());
+        System.out.println("Response code create " + responseCode);
+        System.out.println("Final Response " + finalResponse);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
@@ -207,9 +214,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound.add(filenameInRequest);
             replacePropertiesInAttachment(attachment, filenameInRequest, propertiesInDB);
             break;
-          case 200:
-          case 201:
-            // Success cases, do nothing
+          case 200, 201:
+            System.out.println(
+                "In create handler "
+                    + finalResponse.get("objectId")
+                    + ":"
+                    + finalResponse.get("objectId").toString());
+            System.out.println("IDD " + id + ":" + attachmentEntity.get());
+            DBQuery.updateObjectId(
+                attachmentEntity.get(),
+                persistenceService,
+                finalResponse.get("objectId").toString(),
+                id);
             break;
 
           default:

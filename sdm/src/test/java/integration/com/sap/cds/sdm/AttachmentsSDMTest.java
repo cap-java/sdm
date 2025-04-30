@@ -53,11 +53,11 @@ class AttachmentsSDMTest {
     Request request =
         new Request.Builder()
             .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + username
-                    + "&password="
-                    + password)
+                authUrl + "/oauth/token?grant_type=client_credentials"
+                //                    + username
+                //                    + "&password="
+                //                    + password
+                )
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();

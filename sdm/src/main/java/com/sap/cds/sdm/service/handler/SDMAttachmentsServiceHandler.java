@@ -57,7 +57,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             + context.getParameterInfo().getHeaders().get("content-length")
             + " At "
             + System.currentTimeMillis());
-    validateRepository(context);
+    // validateRepository(context);
     processEntities(context);
   }
 
@@ -230,8 +230,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
 
     CmisDocument cmisDocument = new CmisDocument();
+    System.out.println("CONTEXT " + eventContext.getUserInfo().);
     String jwtToken =
         eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
+    System.out.println("TOKEN " + jwtToken);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
@@ -290,6 +292,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(createResult.get("message").toString());
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
+        System.out.println("OBJ ID " + createResult.get("objectId").toString());
+        cmisDocument.setVersionSeriesId(createResult.get("versionSeriesId").toString());
         addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

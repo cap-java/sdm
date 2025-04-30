@@ -30,6 +30,123 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
+  public static CmisDocument getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(
+                "objectId",
+                "PWC_objectId",
+                "versionSeriesId",
+                "folderId",
+                "fileName",
+                "mimeType",
+                "attachmentStatus")
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    System.out.println("Result" + result.rowCount());
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      System.out.println("ewdwed" + res.isPresent() + ":" + res.get());
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setPwcobjectId(
+          row.get("PWC_objectId") != null ? row.get("PWC_objectId").toString() : null);
+      cmisDocument.setVersionSeriesId(
+          row.get("versionSeriesId") != null ? row.get("versionSeriesId").toString() : null);
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setAttachmentStatus(
+          row.get("attachmentStatus") != null ? row.get("attachmentStatus").toString() : null);
+    }
+    return cmisDocument;
+  }
+
+  public static void addAttachmentToDraft(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      CmisDocument cmisDocument) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    System.out.println(
+        "Object details when uploaded "
+            + cmisDocument.getObjectId()
+            + ":"
+            + cmisDocument.getVersionSeriesId());
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", cmisDocument.getObjectId());
+    updatedFields.put("repositoryId", repositoryId);
+    updatedFields.put("folderId", cmisDocument.getFolderId());
+    updatedFields.put("status", "Clean");
+    updatedFields.put("versionSeriesId", cmisDocument.getVersionSeriesId());
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
+    persistenceService.run(updateQuery);
+  }
+
+  public static void updateObjectId(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String attachmentId) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("objectId", objectId);
+
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(attachmentId));
+    System.out.println("Update Query " + updateQuery.isUpdate() + ":" + updateQuery.entries());
+    persistenceService.run(updateQuery);
+  }
+
+  public static void updatePWCObjectIdForCheckIn(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String versionSeriesId) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+
+    updatedFields.put("PWC_objectId", null);
+    updatedFields.put("isLatestVersion", false);
+    updatedFields.put("attachmentStatus", "CHECKED_IN");
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("versionSeriesId").eq(versionSeriesId));
+    persistenceService.run(updateQuery);
+  }
+
+  public static void updatePWCObjectIdForCheckOut(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String ID) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+
+    updatedFields.put("PWC_objectId", objectId);
+    updatedFields.put("attachmentStatus", "CHECKED_OUT");
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("ID").eq(ID));
+    persistenceService.run(updateQuery);
+  }
+
+  public static void updatePWCObjectIdForCancelCheckOut(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String attachmentId) {
+    Map<String, Object> updatedFields = new HashMap<>();
+
+    updatedFields.put("PWC_objectId", null);
+    updatedFields.put("attachmentStatus", "CANCEL_CHECKED_OUT");
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("versionSeriesId").eq(attachmentId));
+    persistenceService.run(updateQuery);
+  }
+
   public static String getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
@@ -39,24 +156,6 @@ public class DBQuery {
       return null;
     }
     return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
-  }
-
-  public static void addAttachmentToDraft(
-      CdsEntity attachmentEntity,
-      PersistenceService persistenceService,
-      CmisDocument cmisDocument) {
-    String repositoryId = SDMConstants.REPOSITORY_ID;
-    Map<String, Object> updatedFields = new HashMap<>();
-    updatedFields.put("objectId", cmisDocument.getObjectId());
-    updatedFields.put("repositoryId", repositoryId);
-    updatedFields.put("folderId", cmisDocument.getFolderId());
-    updatedFields.put("status", "Clean");
-
-    CqnUpdate updateQuery =
-        Update.entity(attachmentEntity)
-            .data(updatedFields)
-            .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
-    persistenceService.run(updateQuery);
   }
 
   public static List<CmisDocument> getAttachmentsForFolder(

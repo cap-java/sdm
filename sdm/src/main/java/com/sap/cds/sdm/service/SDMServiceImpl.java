@@ -100,6 +100,7 @@ public class SDMServiceImpl implements SDMService {
     String id = cmisDocument.getAttachmentId();
     String objectId = "";
     String error = "";
+    String versionSeriesId = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonResponse = new JSONObject(responseString);
@@ -108,6 +109,11 @@ public class SDMServiceImpl implements SDMService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        System.out.println("SUCC " + succinctProperties);
+        //        versionSeriesId =
+        //            succinctProperties.get("cmis:versionSeriesId") != null
+        //                ? succinctProperties.getString("cmis:versionSeriesId")
+        //                : null;
       } else {
         String message = jsonResponse.getString("message");
         if (responseCode == 409
@@ -134,7 +140,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int updateAttachments(
+  public JSONObject updateAttachments(
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
@@ -181,6 +187,7 @@ public class SDMServiceImpl implements SDMService {
     Map<String, String> updateRequestBody = new HashMap<>();
     updateRequestBody.put("cmisaction", "update");
     updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
+    updateRequestBody.put("succinct", "true");
 
     for (int index = 0; index < secondaryTypes.size(); index++) {
       updateRequestBody.put("propertyValue[0][" + index + "]", secondaryTypes.get(index));
@@ -194,13 +201,23 @@ public class SDMServiceImpl implements SDMService {
     updateRequest.setEntity(builder.build());
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
-      if (response.getStatusLine().getStatusCode() == 400) {
-        String responseString = EntityUtils.toString(response.getEntity());
-        JSONObject jsonResponse = new JSONObject(responseString);
+      String responseString = EntityUtils.toString(response.getEntity());
+      JSONObject jsonResponse = new JSONObject(responseString);
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode == 400) {
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
-      return response.getStatusLine().getStatusCode();
+      JSONObject finalResponse = new JSONObject();
+      finalResponse.put("status", responseCode);
+      System.out.println("Respos code " + responseCode + ":" + jsonResponse);
+      if (responseCode == 200 || responseCode == 201) {
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        objectId = succinctProperties.getString("cmis:objectId");
+        System.out.println("Respos " + objectId);
+        finalResponse.put("objectId", objectId);
+      }
+      return finalResponse;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
     }

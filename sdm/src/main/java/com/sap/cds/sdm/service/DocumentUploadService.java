@@ -367,6 +367,7 @@ public class DocumentUploadService {
     String id = cmisDocument.getAttachmentId();
     String objectId = "";
     String error = "";
+    String versionseriesId = "";
 
     try {
       logger.debug("Parsing responseBody: " + responseBody);
@@ -374,6 +375,12 @@ public class DocumentUploadService {
       if (jsonResponse.has("succinctProperties")) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         objectId = succinctProperties.getString("cmis:objectId");
+        System.out.println("SUCCINT " + succinctProperties);
+        versionseriesId =
+            succinctProperties.get("cmis:versionSeriesId") != null
+                ? succinctProperties.getString("cmis:versionSeriesId")
+                : null;
+        finalResponse.put("versionSeriesId", versionseriesId);
       } else if (jsonResponse.has("properties")
           && jsonResponse.getJSONObject("properties").has("cmis:objectId")) {
         objectId =
@@ -381,6 +388,7 @@ public class DocumentUploadService {
                 .getJSONObject("properties")
                 .getJSONObject("cmis:objectId")
                 .getString("value");
+
       } else {
         String message = jsonResponse.optString("message", "Unknown error");
         status = "fail";

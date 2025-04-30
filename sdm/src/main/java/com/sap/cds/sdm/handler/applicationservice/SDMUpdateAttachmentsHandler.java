@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
@@ -184,12 +185,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!updatedSecondaryProperties.isEmpty()) {
       try {
-        int responseCode =
+        JSONObject finalResponse =
             sdmService.updateAttachments(
                 context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
                 TokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties);
+        int responseCode = Integer.parseInt(finalResponse.get("status").toString());
+        System.out.println("Response code update " + responseCode);
+        System.out.println("Final Response " + finalResponse);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
@@ -203,14 +207,27 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             filesNotFound.add(fileNameInDB);
             replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
             break;
-          case 200:
-          case 201:
-            // Success cases, do nothing
+          case 200, 201:
+            System.out.println(
+                "In update handler "
+                    + finalResponse.get("objectId")
+                    + ":"
+                    + finalResponse.get("objectId").toString());
+            System.out.println("IDD " + id + ":" + attachmentEntity.get());
+
+            DBQuery.updateObjectId(
+                attachmentEntity.get(),
+                persistenceService,
+                finalResponse.get("objectId").toString(),
+                id);
             break;
 
           default:
             throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
         }
+        cmisDocument =
+            DBQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+        System.out.println("CMIS " + cmisDocument);
       } catch (ServiceException e) {
         if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
           String unsupportedDetails =
