@@ -423,7 +423,8 @@ Refer the following example from a sample Bookshop app:
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
 
-Refer the following example from a sample Bookshop app, this will create 3 different sections on UI named attachments, references and footnotes:
+Refer the following example from a sample Bookshop app,
+
 - attachments: Will create a section named attachments on UI.
 - references: Will create a section named references on UI.
 - footnotes: Will create a section named footnotes on UI.
