@@ -416,7 +416,7 @@ Refer the following example from a sample Bookshop app:
    ``` 
    > **Note**
    >
-   > Once the maxCount is configured, it is recommended not to alter it. 
+   > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
 
 ## Known Restrictions
 
