@@ -421,9 +421,9 @@ Refer the following example from a sample Bookshop app:
    > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
 
 ## Support for Multiple attachment facets
-The plugin supports creating multiple attachment facets or sections, each allowing different documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
+The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
 
-Refer the following example from a sample Bookshop app:
+Refer the following example from a sample Bookshop app, this will create 3 different sections on UI named attachments, references and footnotes:
 - attachments: Will create a section named attachments on UI.
 - references: Will create a section named references on UI.
 - footnotes: Will create a section named footnotes on UI.
