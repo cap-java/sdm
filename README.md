@@ -23,7 +23,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
-- [Support for Maximum allowed uploads](#support-for-max-allowed-uploads)
+- [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -401,21 +401,22 @@ Custom properties are supported via the usage of CMIS secondary type properties.
    >
    > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
-## support-for-max-allowed-uploads
+## Support for Maximum allowed uploads
 This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable.
 
 Refer the following example from a sample Bookshop app:
--maxCount: Specifies the maximum number of documents a user is allowed to upload.
--maxCountError: Defines the error message displayed when the upload limit (maxCount) is exceeded.
+-  maxCount: Specifies the maximum number of documents a user is allowed to upload.
+-  maxCountError: Defines the error message displayed when the upload limit (maxCount) is exceeded.
 
 ```cds
   extend entity Books with {
     attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
     }
-    
-> **Note**
->
-> Once the maxCount is configured, it is recommended not to alter it. 
+   
+   ``` 
+   > **Note**
+   >
+   > Once the maxCount is configured, it is recommended not to alter it. 
 
 ## Known Restrictions
 
