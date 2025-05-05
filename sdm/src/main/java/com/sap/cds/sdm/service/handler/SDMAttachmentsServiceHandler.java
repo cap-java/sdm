@@ -96,6 +96,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
+    //print this token
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
@@ -230,7 +231,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
 
     CmisDocument cmisDocument = new CmisDocument();
-    System.out.println("CONTEXT " + eventContext.getUserInfo().);
+    System.out.println("CONTEXT " + eventContext.getUserInfo());
     String jwtToken =
         eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
     System.out.println("TOKEN " + jwtToken);

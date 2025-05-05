@@ -179,15 +179,15 @@ public class SDMVersioningHandler implements EventHandler {
     // get the objectId against the Id
 
     System.out.println("OBJ " + cmisDocument.getObjectId());
-    String objectId =
-        versioningService.checkOutDocument(
-            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
-    System.out.println("RETURNED OBJ " + objectId);
-    if (objectId != null) {
-      DBQuery.updatePWCObjectIdForCheckOut(
-          attachmentDraftEntity.get(), persistenceService, objectId, ID);
-      context.getMessages().success("Document checked out successfully");
-    }
+    //    String objectId =
+    //        versioningService.checkOutDocument(
+    //            repositoryId, sdmCredentials, jwtToken, cmisDocument.getObjectId());
+    //    System.out.println("RETURNED OBJ " + objectId);
+    //    if (objectId != null) {
+    //      DBQuery.updatePWCObjectIdForCheckOut(
+    //          attachmentDraftEntity.get(), persistenceService, objectId, ID);
+    //      context.getMessages().success("Document checked out successfully");
+    //    }
     context.setCompleted();
   }
 

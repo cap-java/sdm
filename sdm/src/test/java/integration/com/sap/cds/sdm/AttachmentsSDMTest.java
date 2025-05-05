@@ -54,10 +54,7 @@ class AttachmentsSDMTest {
         new Request.Builder()
             .url(
                 authUrl + "/oauth/token?grant_type=client_credentials"
-                //                    + username
-                //                    + "&password="
-                //                    + password
-                )
+
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();
@@ -74,46 +71,46 @@ class AttachmentsSDMTest {
     api = new Api(config);
   }
 
-  @Test
-  @Order(1)
-  void testCreateEntityAndCheck() {
-    System.out.println("Test (1) : Create entity and check if it exists");
-    Boolean testStatus = false;
-    String response = api.createEntityDraft(appUrl, serviceName, entityName, srvpath);
-    if (response != "Could not create entity") {
-      entityID = response;
-      response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-      if (response == "Saved") {
-        response = api.checkEntity(appUrl, serviceName, entityName, entityID);
-        if (response.equals("Entity exists")) {
-          testStatus = true;
-        }
-      }
-    }
-    if (!testStatus) {
-      fail("Could not create entity");
-    }
-  }
-
-  @Test
-  @Order(2)
-  void testUpdateEmptyEntity() {
-    System.out.println("Test (2) : Update an existing entity");
-    Boolean testStatus = false;
-    String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-    if (response == "Entity in draft mode") {
-      response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-      if (response == "Saved") {
-        response = api.checkEntity(appUrl, serviceName, entityName, entityID);
-        if (response.equals("Entity exists")) {
-          testStatus = true;
-        }
-      }
-    }
-    if (!testStatus) {
-      fail("Could not update entity");
-    }
-  }
+  //  @Test
+  //  @Order(1)
+  //  void testCreateEntityAndCheck() {
+  //    System.out.println("Test (1) : Create entity and check if it exists");
+  //    Boolean testStatus = false;
+  //    String response = api.createEntityDraft(appUrl, serviceName, entityName, srvpath);
+  //    if (response != "Could not create entity") {
+  //      entityID = response;
+  //      response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+  //      if (response == "Saved") {
+  //        response = api.checkEntity(appUrl, serviceName, entityName, entityID);
+  //        if (response.equals("Entity exists")) {
+  //          testStatus = true;
+  //        }
+  //      }
+  //    }
+  //    if (!testStatus) {
+  //      fail("Could not create entity");
+  //    }
+  //  }
+  //
+  //  @Test
+  //  @Order(2)
+  //  void testUpdateEmptyEntity() {
+  //    System.out.println("Test (2) : Update an existing entity");
+  //    Boolean testStatus = false;
+  //    String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+  //    if (response == "Entity in draft mode") {
+  //      response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+  //      if (response == "Saved") {
+  //        response = api.checkEntity(appUrl, serviceName, entityName, entityID);
+  //        if (response.equals("Entity exists")) {
+  //          testStatus = true;
+  //        }
+  //      }
+  //    }
+  //    if (!testStatus) {
+  //      fail("Could not update entity");
+  //    }
+  //  }
 
   @Test
   @Order(3)

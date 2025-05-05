@@ -333,7 +333,8 @@ public class SDMServiceImpl implements SDMService {
     String subdomain = TokenHandler.getSubdomainFromToken(token);
     String folderId = null;
     var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        TokenHandler.getHttpClient(
+            binding, connectionPool, subdomain, "TECHNICAL_CREDENTIALS_FLOW");
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -365,7 +366,8 @@ public class SDMServiceImpl implements SDMService {
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken) {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        TokenHandler.getHttpClient(
+            binding, connectionPool, subdomain, "TECHNICAL_CREDENTIALS_FLOW");
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();

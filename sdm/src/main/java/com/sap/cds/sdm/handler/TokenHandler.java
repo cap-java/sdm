@@ -25,6 +25,7 @@ import com.sap.cloud.security.xsuaa.http.HttpHeaders;
 import com.sap.cloud.security.xsuaa.http.MediaType;
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -328,5 +329,42 @@ public class TokenHandler {
     JsonObject payloadObj = TokenHandler.getTokenFields(token);
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
     return tenantDetails.get("zdn").getAsString();
+  }
+
+  public static String getAccessToken(String jwtToken, SDMCredentials sdmCredentials)
+      throws IOException, ProtocolException {
+    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    //    String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
+    //    if (subdomain != null && !subdomain.isEmpty()) {
+    //      String providersubdomain =
+    //              baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2,
+    // baseTokenUrl.indexOf("."));
+    //      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+    //    }
+    String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
+    String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
+    String bodyParams = "grant_type=client_credentials";
+    byte[] postData = toBytes(bodyParams);
+    String authurl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+    URL url = new URL(authurl);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Authorization", authHeaderValue);
+    conn.setRequestMethod("POST");
+    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+    conn.setRequestProperty("charset", "utf-8");
+    conn.setRequestProperty("Content-Length", "" + postData.length);
+    conn.setUseCaches(false);
+    conn.setDoInput(true);
+    conn.setDoOutput(true);
+    try (DataOutputStream os = new DataOutputStream(conn.getOutputStream())) {
+      os.write(postData);
+    }
+    String resp;
+    try (DataInputStream is = new DataInputStream(conn.getInputStream());
+        BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+      resp = br.lines().collect(Collectors.joining("\n"));
+    }
+    conn.disconnect();
+    return mapper.readValue(resp, JsonNode.class).get("access_token").asText();
   }
 }

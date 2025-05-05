@@ -75,7 +75,8 @@ public class DocumentUploadService {
             () -> {
               try {
                 //  Obtain DI token
-                String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+                // String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+                String accessToken = TokenHandler.getAccessToken(jwtToken, sdmCredentials);
                 String sdmUrl =
                     sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
