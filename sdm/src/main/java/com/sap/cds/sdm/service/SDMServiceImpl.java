@@ -227,8 +227,12 @@ public class SDMServiceImpl implements SDMService {
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    JsonObject payloadObj = TokenHandler.getTokenFields(jwtToken);
+    String grantType = payloadObj.get("grant_type").getAsString();
+    String GRANT_TYPE = grantType.equals("client_credentials")?"TECHNICAL_CREDENTIALS_FLOW":"TOKEN_EXCHANGE";
     var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    TokenHandler.getHttpClient(binding, connectionPool, subdomain, GRANT_TYPE);
 
     String sdmUrl =
         sdmCredentials.getUrl()
