@@ -118,8 +118,22 @@ public class SDMServiceGenericHandler implements EventHandler {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    String content =
+        String.format(
+            "<Link text=\"%s\" target=\"_blank\" href=\"%s\" />",
+            cmisDocument.getFileName(), cmisDocument.getUrl());
+    updatedFields.put("content", cmisDocument.getUrl());
     updatedFields.put(upIdKey, cmisDocument.getParentId());
     updatedFields.put("mimeType", cmisDocument.getMimeType());
+    updatedFields.put(
+        "contentId",
+        cmisDocument.getObjectId()
+            + ":"
+            + cmisDocument.getFolderId()
+            + ":"
+            + context.getTarget()
+            + ":"
+            + subdomain);
     updatedFields.put("fileName", cmisDocument.getFileName());
     updatedFields.put("HasDraftEntity", false);
     updatedFields.put("HasActiveEntity", false);
@@ -127,9 +141,11 @@ public class SDMServiceGenericHandler implements EventHandler {
     var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
     System.out.println(ApplicationHandlerHelper.isMediaEntity(context.getTarget()));
     var test = draftService.newDraft(insert);
+    context.put("objectId", cmisDocument.getObjectId());
+    context.put("folderId", cmisDocument.getFolderId());
+    context.put("entity", context.getTarget());
+    context.put("subdomain", subdomain);
     // execute a select query to refresh the list
-    DBQuery.getAttachmentsForUPID(
-        attachmentDraftEntity.get(), persistenceService, cmisDocument.getParentId(), upIdKey);
     context.setCompleted();
   }
 

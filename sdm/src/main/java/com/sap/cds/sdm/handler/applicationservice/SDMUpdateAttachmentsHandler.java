@@ -202,7 +202,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             DBQuery.updateObjectId(
                 attachmentEntity.get(),
                 persistenceService,
-                finalResponse.get("objectId").toString(),
+                cmisDocument,
+                finalResponse.getString("subdomain"),
                 id);
 
             break;

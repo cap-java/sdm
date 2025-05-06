@@ -217,11 +217,12 @@ public class SDMServiceImpl implements SDMService {
       }
       JSONObject finalResponse = new JSONObject();
       finalResponse.put("status", responseCode);
-      if (responseCode == 200) {
-        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-        objectId = succinctProperties.getString("cmis:objectId");
-        finalResponse.put("objectId", objectId);
-      }
+      finalResponse.put("subdomain", subdomain);
+      //      if (responseCode == 200) {
+      //        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+      //        //        objectId = succinctProperties.getString("cmis:objectId");
+      //        //        finalResponse.put("objectId", objectId);
+      //      }
       return finalResponse;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);

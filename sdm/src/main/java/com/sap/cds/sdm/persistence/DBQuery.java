@@ -95,11 +95,20 @@ public class DBQuery {
   public static void updateObjectId(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
-      String objectId,
+      CmisDocument cmisDocument,
+      String subdomain,
       String attachmentId) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
-    updatedFields.put("objectId", objectId);
+    updatedFields.put(
+        "contentId",
+        cmisDocument.getObjectId()
+            + ":"
+            + cmisDocument.getFolderId()
+            + ":"
+            + attachmentEntity
+            + ":"
+            + subdomain);
 
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
