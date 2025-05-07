@@ -29,4 +29,5 @@ public class CmisDocument {
   private String comment;
   private Boolean isMajorVersion;
   private String attachmentStatus;
+  private String subdomain;
 }

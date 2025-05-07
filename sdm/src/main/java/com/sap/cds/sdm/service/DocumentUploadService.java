@@ -155,7 +155,7 @@ public class DocumentUploadService {
     long startChunkUploadTime = System.currentTimeMillis();
     try (CloseableHttpResponse response = performRequestWithRetry(sdmUrl, request)) {
       long endChunkUploadTime = System.currentTimeMillis();
-      logger.info(
+      logger.debug(
           " Chunk "
               + chunkIndex
               + " appendContent completed and it took "
@@ -285,7 +285,7 @@ public class DocumentUploadService {
 
               // Step 3: Read next chunk
               bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
-              logger.info("bytesRead is " + bytesRead);
+              logger.debug("bytesRead is " + bytesRead);
               // Step 4: Fetch remaining bytes before checking EOF
               long remainingBytes = chunkedStream.getRemainingBytes();
               logger.debug("remainingBytes is " + remainingBytes);
@@ -320,7 +320,7 @@ public class DocumentUploadService {
               }
 
               long endChunkUploadTime = System.currentTimeMillis();
-              logger.info(
+              logger.debug(
                   " Chunk "
                       + chunkIndex
                       + " having "
@@ -335,8 +335,6 @@ public class DocumentUploadService {
                 // Just for debug purpose log the heap consumption details.
                 logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
                 printMemoryConsumption();
-                logger.info("Last chunk processed, exiting upload.");
-                logger.info("Last chunk processed, exiting upload.");
                 hasMoreChunks = false;
               }
             }

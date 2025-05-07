@@ -3,6 +3,8 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.persistence.DBQuery.*;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
@@ -44,11 +46,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
-    updateName(context, data);
+    List<String> attachmentCompositions = getEntityCompositions(context);
+    for (String composition : attachmentCompositions) {
+      updateName(context, data, composition);
+    }
   }
 
-  public void updateName(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+  public void updateName(CdsUpdateEventContext context, List<CdsData> data, String composition)
+      throws IOException {
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       context
           .getMessages()
@@ -58,13 +64,16 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                   String.join(", ", duplicateFilenames)));
     } else {
       Optional<CdsEntity> attachmentEntity =
-          context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
-      renameDocument(attachmentEntity, context, data);
+          context.getModel().findEntity(context.getTarget().getQualifiedName() + "." + composition);
+      renameDocument(attachmentEntity, context, data, composition);
     }
   }
 
   private void renameDocument(
-      Optional<CdsEntity> attachmentEntity, CdsUpdateEventContext context, List<CdsData> data)
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      List<CdsData> data,
+      String composition)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
@@ -72,7 +81,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
       if (attachments != null) {
         processAttachments(
             attachmentEntity,
@@ -267,5 +276,23 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
     }
+  }
+
+  private List<String> getEntityCompositions(CdsUpdateEventContext context) {
+    List<CdsElement> compositions = context.getTarget().compositions().toList();
+    List<String> attachmentsCompositionList = new ArrayList<>();
+    for (CdsElement cdsElement : compositions) {
+      if (cdsElement != null) {
+        CdsAssociationType cdsAssociationType = cdsElement.getType();
+        String targetAspect =
+            cdsAssociationType.getTargetAspect().isPresent()
+                ? cdsAssociationType.getTargetAspect().get().getQualifiedName()
+                : null;
+        if (targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
+          attachmentsCompositionList.add(cdsElement.getName());
+        }
+      }
+    }
+    return attachmentsCompositionList;
   }
 }

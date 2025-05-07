@@ -226,7 +226,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          - name: sdm-di-instance
     ```
 
-5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv module. Refer the following example from a sample Bookshop app.
+5. To allow the application to upload large files, add the connection and request timeouts in mta.yaml under properties of srv and app module. Refer the following example from a sample Bookshop app.
 
    ```yaml
    modules:
@@ -235,9 +235,23 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
       path: srv
       properties:
             REPOSITORY_ID: <REPO ID>
-            INCOMING_CONNECTION_TIMEOUT: 900000
-            INCOMING_REQUEST_TIMEOUT: 900000
-            timeout: 900000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            timeout: 3600000
+
+      - name: demoappjava-app
+        type: approuter.nodejs
+        path: app
+        properties:
+            INCOMING_REQUEST_TIMEOUT: 3600000
+            INCOMING_SESSION_TIMEOUT: 3600000
+            INCOMING_CONNECTION_TIMEOUT: 3600000
+        requires:
+        - name: srv-api
+         group: destinations
+         properties:
+            timeout: 3600000  
    ```
 
 6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
@@ -293,30 +307,45 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
    <img width="1300" alt="Delete an attachment" style="border-radius:0.5rem;" src="resources/delete.gif">
 
 ## Support for Multitenancy
-- This plugin facilitates the onboarding of repositories in a multitenant environment by leveraging the externalId field in SAP Document Management.
-- Application developers can utilize the onboarding API as shown below when developing their CAP (Cloud Application Programming) SaaS applications.
+
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
   
-```sh
+```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
 public void onSubscribe(SubscribeEventContext context) {
-final SaasRegistrySubscriptionOptions options = Struct
-.access(context.getOptions())
-.as(SaasRegistrySubscriptionOptions.class);
-final String subdomain = options.getSubscribedSubdomain();
-SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+   final SaasRegistrySubscriptionOptions options = Struct
+      .access(context.getOptions())
+      .as(SaasRegistrySubscriptionOptions.class);
+   final String subdomain = options.getSubscribedSubdomain();
 
-Repository repository = new Repository();
-//provide the repository details
-repository.setDescription("Onboarding Repo Demo");
-repository.setDisplayName(" Test Onboarding repo");
-repository.setExternalId(System.getenv("REPOSITORY_ID"));
-String response = sdmAdminService.onboardRepository(repository);
+   // Create repository instance and initialise params
+   Repository repository = new Repository();
+   repository.setDescription("Onboarding Repo Demo");
+   repository.setDisplayName(" Test Onboarding repo");
+   repository.setSubdomain(subdomain);
+
+   // Using SDMAdminServiceImpl onboardRepository() to onboard repository
+   SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+   String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-- The necessary fields for the Repository when onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
-- The REPOSITORY_ID from the Multi-Target Application ([MTA](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) should be a readable string instead of a GUID. This identifier is used by the onboarding API to associate a repository with the subscribed tenant.
- When the application is deployed as a SaaS application using the code above, tenants automatically onboard a repository upon subscription.
-- When the application is deployed as a SaaS application with above code, tenants on subscribing the SaaS application gets onboarded automatically.
+
+ ```java
+ @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
+ public void afterUnsubscribe(UnsubscribeEventContext context) {
+     //delete onboarded repository
+         final SaasRegistrySubscriptionOptions options = Struct
+        .access(context.getOptions())
+        .as(SaasRegistrySubscriptionOptions.class);
+ // Access the specific property
+ final String subdomain = options.getSubscribedSubdomain();
+ 
+ SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+ String res = sdmAdminService.offboardRepository(subdomain);
+ }
+ ```
+When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
+The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
 ## Support for Custom Properties
 
@@ -373,6 +402,7 @@ Custom properties are supported via the usage of CMIS secondary type properties.
 
 ## Known Restrictions
 
+- UI5 Version 1.135.0: This version causes error in upload of attachments.
 - Repository : This plugin does not support the use of versioned repositories.
 - File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
 - Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  

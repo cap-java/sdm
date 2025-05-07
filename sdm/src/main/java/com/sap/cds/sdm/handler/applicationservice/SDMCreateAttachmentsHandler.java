@@ -1,6 +1,8 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
@@ -45,11 +47,15 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    updateName(context, data);
+    List<String> attachmentCompositions = getEntityCompositions(context);
+    for (String composition : attachmentCompositions) {
+      updateName(context, data, composition);
+    }
   }
 
-  public void updateName(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data);
+  public void updateName(CdsCreateEventContext context, List<CdsData> data, String composition)
+      throws IOException {
+    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
     } else {
@@ -66,7 +72,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             duplicateFileNameList,
             filesNotFound,
             filesWithUnsupportedProperties,
-            badRequest);
+            badRequest,
+            composition);
       }
       handleWarnings(
           context,
@@ -95,9 +102,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      Map<String, String> badRequest)
+      Map<String, String> badRequest,
+      String composition)
       throws IOException {
-    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
@@ -107,7 +115,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             duplicateFileNameList,
             filesNotFound,
             filesWithUnsupportedProperties,
-            badRequest);
+            badRequest,
+            composition);
       }
       SecondaryPropertiesKey secondaryPropertiesKey =
           new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
@@ -123,11 +132,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      Map<String, String> badRequest)
+      Map<String, String> badRequest,
+      String composition)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + ".attachments");
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + "." + composition);
     String fileNameInDB;
     fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String filenameInRequest = (String) attachment.get("fileName");
@@ -278,5 +288,23 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
     }
+  }
+
+  private List<String> getEntityCompositions(CdsCreateEventContext context) {
+    List<CdsElement> compositions = context.getTarget().compositions().toList();
+    List<String> attachmentsCompositionList = new ArrayList<>();
+    for (CdsElement cdsElement : compositions) {
+      if (cdsElement != null) {
+        CdsAssociationType cdsAssociationType = cdsElement.getType();
+        String targetAspect =
+            cdsAssociationType.getTargetAspect().isPresent()
+                ? cdsAssociationType.getTargetAspect().get().getQualifiedName()
+                : null;
+        if (targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
+          attachmentsCompositionList.add(cdsElement.getName());
+        }
+      }
+    }
+    return attachmentsCompositionList;
   }
 }
