@@ -160,10 +160,10 @@ public class SDMUtils {
     }
   }
 
-  public static List<String> getSecondaryTypeProperties(
+  public static Map<String, String> getSecondaryTypeProperties(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
-    List<String> secondaryTypeProperties = new ArrayList<>();
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
@@ -172,15 +172,35 @@ public class SDMUtils {
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
+          System.out.println("Element : " + element.getName());
+          element
+              .annotations()
+              .forEach(
+                  annotation -> {
+                    System.out.println("Annotation name: " + annotation.getName());
+                    System.out.println("Annotation value: " + annotation.getValue());
+                  });
           // Check if secondary property is present
+          Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
+          if (titleAnnotation.isPresent()) {
+            System.out.println("Title : " + titleAnnotation.get().getValue().toString());
+          }
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          System.out.println("Annotation : " + annotation);
           if (annotation.isPresent()) {
-            secondaryTypeProperties.add(element.getName());
+            System.out.println("Here check");
+            String annotationValue = annotation.get().getValue().toString();
+            // Remove curly braces if present
+            if (annotationValue.startsWith("{") && annotationValue.endsWith("}")) {
+              annotationValue = annotationValue.substring(1, annotationValue.length() - 1);
+            }
+            secondaryTypeProperties.put(element.getName(), annotationValue);
           }
         }
       }
     }
+    System.out.println("Secondary Type Properties: " + secondaryTypeProperties);
     return secondaryTypeProperties;
   }
 
@@ -188,26 +208,33 @@ public class SDMUtils {
       Optional<CdsEntity> attachmentEntity,
       Map<String, Object> attachment,
       PersistenceService persistenceService,
-      List<String> secondaryTypeProperties,
+      Map<String, String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
-    for (String property : secondaryTypeProperties) {
+    for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
+      String property = entry.getKey();
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
+    System.out.println("Properties Map: " + propertiesMap);
+    System.out.println("Properties in DB: " + propertiesInDB);
     // Check the value of secondary properties in DB
-    for (String property : secondaryTypeProperties) {
+    for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
+      String property = entry.getKey();
+      String value = entry.getValue();
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
+      System.out.println(
+          "Property: " + property + " Value in Map: " + valueInMap + " Value in DB: " + valueInDB);
 
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
         if (valueInMap != null) {
-          updatedSecondaryProperties.put(property, valueInMap.toString());
+          updatedSecondaryProperties.put(value, valueInMap.toString());
         } else {
-          updatedSecondaryProperties.put(property, null);
+          updatedSecondaryProperties.put(value, null);
         }
       }
     }

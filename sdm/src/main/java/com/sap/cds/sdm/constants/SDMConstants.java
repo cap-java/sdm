@@ -8,9 +8,10 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID =
+      "28485e11-9444-4e12-a474-bc05603b5ebc"; // System.getenv("REPOSITORY_ID");
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
-      "@SDM.Attachments.AdditionalProperty";
+      "SDM.Attachments.AdditionalProperty.name";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =

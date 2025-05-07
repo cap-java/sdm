@@ -147,20 +147,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     String fileNameInSDM = sdmService.getObject(jwtToken, objectId, sdmCredentials);
 
-    List<String> secondaryTypeProperties =
+    Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     Map<String, String> propertiesInDB;
     propertiesInDB =
         DBQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
-    Map<String, Object> propertiesMap = new HashMap<>();
-    // For each property get the value
-    if (!secondaryTypeProperties.isEmpty()) {
-      for (String property : secondaryTypeProperties) {
-        Object value = attachment.get(property);
-        propertiesMap.put(property, value);
-      }
-    }
+    // Map<String, Object> propertiesMap = new HashMap<>();
+    // // For each property get the value
+    // if (!secondaryTypeProperties.isEmpty()) {
+    //   for (String property : secondaryTypeProperties) {
+    //     Object value = attachment.get(property);
+    //     propertiesMap.put(property, value);
+    //   }
+    // }
     // Get the updated secondary properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -172,7 +172,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
-      replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
+      replacePropertiesInAttachment(
+          attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
     } else {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
@@ -201,11 +202,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
           case 409:
             duplicateFileNameList.add(filenameInRequest);
-            replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
             break;
           case 404:
             filesNotFound.add(filenameInRequest);
-            replacePropertiesInAttachment(attachment, filenameInRequest, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
             break;
           case 200:
           case 201:
@@ -220,22 +223,38 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           String unsupportedDetails =
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
-          replacePropertiesInAttachment(attachment, fileNameInSDM, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
         } else {
           badRequest.put(filenameInRequest, e.getMessage());
-          replacePropertiesInAttachment(attachment, filenameInRequest, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
         }
       }
     }
   }
 
   private void replacePropertiesInAttachment(
-      Map<String, Object> attachment, String fileName, Map<String, String> propertiesInDB) {
+      Map<String, Object> attachment,
+      String fileName,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties) {
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
-        String key = entry.getKey();
-        String value = entry.getValue();
-        attachment.replace(key, value);
+        String dbKey = entry.getKey();
+        String dbValue = entry.getValue();
+
+        // Find the key in secondaryTypeProperties where the value matches dbKey
+        String secondaryKey =
+            secondaryTypeProperties.entrySet().stream()
+                .filter(e -> e.getValue().equals(dbKey))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        if (secondaryKey != null) {
+          attachment.replace(secondaryKey, dbValue);
+        }
       }
     }
     attachment.replace("fileName", fileName);

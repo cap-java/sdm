@@ -141,13 +141,13 @@ public class SDMServiceImpl implements SDMService {
       Map<String, String> secondaryProperties)
       throws ServiceException {
 
-    Map<String, String> updatedMap = new HashMap<>();
-    for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
-      updatedMap.put(entry.getKey().replace("___", ":"), entry.getValue());
-    }
+    // Map<String, String> updatedMap = new HashMap<>();
+    // for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
+    //   updatedMap.put(entry.getKey().replace("___", ":"), entry.getValue());
+    // }
 
-    secondaryProperties = updatedMap;
-
+    // secondaryProperties = updatedMap;
+    System.out.println("secondaryPropertiescheck: " + secondaryProperties);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
@@ -186,7 +186,9 @@ public class SDMServiceImpl implements SDMService {
       updateRequestBody.put("propertyValue[0][" + index + "]", secondaryTypes.get(index));
     }
 
+    System.out.println("secondaryProperties: " + secondaryProperties);
     SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    System.out.println("updateRequestBody: " + updateRequestBody);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
 

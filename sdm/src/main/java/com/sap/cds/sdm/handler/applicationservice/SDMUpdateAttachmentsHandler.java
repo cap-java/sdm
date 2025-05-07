@@ -137,7 +137,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
     // Get list of secondary type properties
-    List<String> secondaryTypeProperties =
+    Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     // Get the updated secondary properties
     Map<String, String> propertiesInDB;
@@ -157,7 +157,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
-      replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+      replacePropertiesInAttachment(
+          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
       return;
     }
     CmisDocument cmisDocument = new CmisDocument();
@@ -191,11 +192,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
           case 409:
             duplicateFileNameList.add(filenameInRequest);
-            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
             break;
           case 404:
             filesNotFound.add(fileNameInDB);
-            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
             break;
           case 200:
           case 201:
@@ -210,22 +213,38 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           String unsupportedDetails =
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
-          replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
         } else {
           badRequest.put(fileNameInDB, e.getMessage());
-          replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
         }
       }
     }
   }
 
   private void replacePropertiesInAttachment(
-      Map<String, Object> attachment, String fileName, Map<String, String> propertiesInDB) {
+      Map<String, Object> attachment,
+      String fileName,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties) {
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
-        String key = entry.getKey();
-        String value = entry.getValue();
-        attachment.replace(key, value);
+        String dbKey = entry.getKey();
+        String dbValue = entry.getValue();
+
+        // Find the key in secondaryTypeProperties where the value matches dbKey
+        String secondaryKey =
+            secondaryTypeProperties.entrySet().stream()
+                .filter(e -> e.getValue().equals(dbKey))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        if (secondaryKey != null) {
+          attachment.replace(secondaryKey, dbValue);
+        }
       }
     }
     attachment.replace("fileName", fileName);
