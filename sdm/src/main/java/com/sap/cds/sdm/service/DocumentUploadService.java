@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.service;
 
+import com.google.gson.JsonObject;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -74,10 +75,18 @@ public class DocumentUploadService {
     return Single.defer(
             () -> {
               try {
+                JsonObject tokenFields = TokenHandler.getTokenFields(jwtToken);
+                String grantType = tokenFields.get("grant_type").getAsString();
+                JsonObject tenantDetails = tokenFields.get("ext_attr").getAsJsonObject();
+                String subdomain= tenantDetails.get("zdn").getAsString();
+                String accessToken ="";
+                if(grantType.equalsIgnoreCase("client_credentials")){
+                   accessToken = TokenHandler.getAccessToken(subdomain, sdmCredentials);
+                }else{
+                   accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+                }
                 //  Obtain DI token
-                // String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
-                String accessToken = TokenHandler.getAccessToken(jwtToken, sdmCredentials);
-                String sdmUrl =
+                  String sdmUrl =
                     sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
                 //  Set HTTP headers

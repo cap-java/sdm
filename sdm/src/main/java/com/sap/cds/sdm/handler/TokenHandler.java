@@ -331,21 +331,20 @@ public class TokenHandler {
     return tenantDetails.get("zdn").getAsString();
   }
 
-  public static String getAccessToken(String jwtToken, SDMCredentials sdmCredentials)
-      throws IOException, ProtocolException {
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    //    String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
-    //    if (subdomain != null && !subdomain.isEmpty()) {
-    //      String providersubdomain =
-    //              baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2,
-    // baseTokenUrl.indexOf("."));
-    //      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
-    //    }
+  public static String getAccessToken(String subdomain, SDMCredentials sdmCredentials)
+      throws IOException {
+        String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+        if (subdomain != null && !subdomain.isEmpty()) {
+          String providersubdomain =
+                  baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2,
+     baseTokenUrl.indexOf("."));
+          baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+        }
     String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
     String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
     String bodyParams = "grant_type=client_credentials";
     byte[] postData = toBytes(bodyParams);
-    String authurl = sdmCredentials.getBaseTokenUrl() + "/oauth/token";
+    String authurl =  baseTokenUrl+ "/oauth/token";
     URL url = new URL(authurl);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty("Authorization", authHeaderValue);

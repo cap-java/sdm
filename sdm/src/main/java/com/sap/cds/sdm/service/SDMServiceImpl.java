@@ -155,9 +155,16 @@ public class SDMServiceImpl implements SDMService {
     secondaryProperties = updatedMap;
 
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    JsonObject tokenFields = TokenHandler.getTokenFields(jwtToken);
+    JsonObject tenantDetails = tokenFields.get("ext_attr").getAsJsonObject();
+    String subdomain= tenantDetails.get("zdn").getAsString();
+String grantType = tokenFields.get("grant_type").getAsString();
+String grant_type= "TOKEN_EXCHANGE";
+if(grantType.equalsIgnoreCase("client_credentials")){
+grant_type = "TECHNICAL_CREDENTIALS_FLOW";
+}
     var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        TokenHandler.getHttpClient(binding, connectionPool, subdomain, grant_type);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
 
@@ -467,10 +474,14 @@ public class SDMServiceImpl implements SDMService {
   public int deleteDocument(String cmisaction, String objectId, String userEmail, String subdomain)
       throws IOException {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-
     HttpClient httpClient = HttpClients.createDefault();
-    String accessToken =
-        TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+    String accessToken ="";
+    if(userEmail !=null) {
+       accessToken =
+              TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+    }else{
+      accessToken= TokenHandler.getAccessToken(subdomain,sdmCredentials);
+    }
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
     deleteDocumentRequest.setHeader("Authorization", "Bearer " + accessToken);
