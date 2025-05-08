@@ -459,7 +459,7 @@ Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the fo
   ``` 
    > **Note**
    >
-   > Once the facet/section name is configured, it is recommended not to alter it.
+   > Once a facet or section name is defined in the CDS file, it is strongly recommended not to modify it. For instance, in the example provided, section names such as attachments, references, and footnotes should remain unchanged after initial configuration. Renaming these sections will result in the creation of new tables, causing any data associated with the original sections to become inaccessible in the UI.
 
 ## Known Restrictions
 
