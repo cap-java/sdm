@@ -96,7 +96,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
-    //print this token
+    // print this token
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();

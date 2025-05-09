@@ -157,14 +157,13 @@ public class SDMServiceImpl implements SDMService {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     JsonObject tokenFields = TokenHandler.getTokenFields(jwtToken);
     JsonObject tenantDetails = tokenFields.get("ext_attr").getAsJsonObject();
-    String subdomain= tenantDetails.get("zdn").getAsString();
-String grantType = tokenFields.get("grant_type").getAsString();
-String grant_type= "TOKEN_EXCHANGE";
-if(grantType.equalsIgnoreCase("client_credentials")){
-grant_type = "TECHNICAL_CREDENTIALS_FLOW";
-}
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, grant_type);
+    String subdomain = tenantDetails.get("zdn").getAsString();
+    String grantType = tokenFields.get("grant_type").getAsString();
+    String grant_type = "TOKEN_EXCHANGE";
+    if (grantType.equalsIgnoreCase("client_credentials")) {
+      grant_type = "TECHNICAL_CREDENTIALS_FLOW";
+    }
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grant_type);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
 
@@ -236,9 +235,10 @@ grant_type = "TECHNICAL_CREDENTIALS_FLOW";
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     JsonObject payloadObj = TokenHandler.getTokenFields(jwtToken);
     String grantType = payloadObj.get("grant_type").getAsString();
-    String GRANT_TYPE = grantType.equals("client_credentials")?"TECHNICAL_CREDENTIALS_FLOW":"TOKEN_EXCHANGE";
+    String GRANT_TYPE =
+        grantType.equals("client_credentials") ? "TECHNICAL_CREDENTIALS_FLOW" : "TOKEN_EXCHANGE";
     var httpClient =
-            TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     TokenHandler.getHttpClient(binding, connectionPool, subdomain, GRANT_TYPE);
 
     String sdmUrl =
@@ -475,12 +475,11 @@ grant_type = "TECHNICAL_CREDENTIALS_FLOW";
       throws IOException {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     HttpClient httpClient = HttpClients.createDefault();
-    String accessToken ="";
-    if(userEmail !=null) {
-       accessToken =
-              TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
-    }else{
-      accessToken= TokenHandler.getAccessToken(subdomain,sdmCredentials);
+    String accessToken = "";
+    if (userEmail != null) {
+      accessToken = TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+    } else {
+      accessToken = TokenHandler.getAccessToken(subdomain, sdmCredentials);
     }
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);

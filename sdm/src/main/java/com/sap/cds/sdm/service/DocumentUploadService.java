@@ -78,15 +78,15 @@ public class DocumentUploadService {
                 JsonObject tokenFields = TokenHandler.getTokenFields(jwtToken);
                 String grantType = tokenFields.get("grant_type").getAsString();
                 JsonObject tenantDetails = tokenFields.get("ext_attr").getAsJsonObject();
-                String subdomain= tenantDetails.get("zdn").getAsString();
-                String accessToken ="";
-                if(grantType.equalsIgnoreCase("client_credentials")){
-                   accessToken = TokenHandler.getAccessToken(subdomain, sdmCredentials);
-                }else{
-                   accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
+                String subdomain = tenantDetails.get("zdn").getAsString();
+                String accessToken = "";
+                if (grantType.equalsIgnoreCase("client_credentials")) {
+                  accessToken = TokenHandler.getAccessToken(subdomain, sdmCredentials);
+                } else {
+                  accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
                 }
                 //  Obtain DI token
-                  String sdmUrl =
+                String sdmUrl =
                     sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
                 //  Set HTTP headers

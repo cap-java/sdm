@@ -25,7 +25,6 @@ import com.sap.cloud.security.xsuaa.http.HttpHeaders;
 import com.sap.cloud.security.xsuaa.http.MediaType;
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -333,18 +332,17 @@ public class TokenHandler {
 
   public static String getAccessToken(String subdomain, SDMCredentials sdmCredentials)
       throws IOException {
-        String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
-        if (subdomain != null && !subdomain.isEmpty()) {
-          String providersubdomain =
-                  baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2,
-     baseTokenUrl.indexOf("."));
-          baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
-        }
+    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+    if (subdomain != null && !subdomain.isEmpty()) {
+      String providersubdomain =
+          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+    }
     String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
     String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
     String bodyParams = "grant_type=client_credentials";
     byte[] postData = toBytes(bodyParams);
-    String authurl =  baseTokenUrl+ "/oauth/token";
+    String authurl = baseTokenUrl + "/oauth/token";
     URL url = new URL(authurl);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty("Authorization", authHeaderValue);
