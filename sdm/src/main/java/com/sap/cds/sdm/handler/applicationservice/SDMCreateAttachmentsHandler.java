@@ -70,8 +70,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             context
                 .getModel()
                 .findEntity(context.getTarget().getQualifiedName() + "." + composition);
-        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
-
+        if (attachments != null && !attachments.isEmpty()) {
+          propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+        }
         processEntity(
             context,
             entity,
