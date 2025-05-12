@@ -73,9 +73,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
+    Map<String, String> propertyTitles = new HashMap<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
-      if (attachments != null) {
+      propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+      if ((attachments != null) && !attachments.isEmpty()) {
         processAttachments(
             attachmentEntity,
             context,
@@ -93,7 +95,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         fileNameWithRestrictedCharacters,
         filesNotFound,
         filesWithUnsupportedProperties,
-        badRequest);
+        badRequest,
+        propertyTitles);
   }
 
   private void processAttachments(
@@ -256,7 +259,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      Map<String, String> badRequest) {
+      Map<String, String> badRequest,
+      Map<String, String> propertyTitles) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -276,7 +280,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!filesWithUnsupportedProperties.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.unsupportedPropertiesMessage(filesWithUnsupportedProperties));
+          .warn(
+              SDMConstants.unsupportedPropertiesMessage(
+                  filesWithUnsupportedProperties, propertyTitles));
     }
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));

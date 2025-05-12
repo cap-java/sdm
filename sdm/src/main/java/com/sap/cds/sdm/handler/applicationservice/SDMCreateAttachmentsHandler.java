@@ -54,6 +54,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   public void updateName(CdsCreateEventContext context, List<CdsData> data, String composition)
       throws IOException {
+    Map<String, String> propertyTitles = new HashMap<>();
     Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
@@ -64,6 +65,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties = new ArrayList<>();
       Map<String, String> badRequest = new HashMap<>();
       for (Map<String, Object> entity : data) {
+        List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+        Optional<CdsEntity> attachmentEntity =
+            context
+                .getModel()
+                .findEntity(context.getTarget().getQualifiedName() + "." + composition);
+        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+
         processEntity(
             context,
             entity,
@@ -72,15 +80,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            composition);
+            composition,
+            attachmentEntity);
+        handleWarnings(
+            context,
+            fileNameWithRestrictedCharacters,
+            duplicateFileNameList,
+            filesNotFound,
+            filesWithUnsupportedProperties,
+            badRequest,
+            propertyTitles);
       }
-      handleWarnings(
-          context,
-          fileNameWithRestrictedCharacters,
-          duplicateFileNameList,
-          filesNotFound,
-          filesWithUnsupportedProperties,
-          badRequest);
     }
   }
 
@@ -102,7 +112,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
-      String composition)
+      String composition,
+      Optional<CdsEntity> attachmentEntity)
       throws IOException {
     List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
     if (attachments != null) {
@@ -115,7 +126,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            composition);
+            composition,
+            attachmentEntity);
       }
       SecondaryPropertiesKey secondaryPropertiesKey =
           new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
@@ -132,11 +144,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
-      String composition)
+      String composition,
+      Optional<CdsEntity> attachmentEntity)
       throws IOException {
     String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-    Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + "." + composition);
     String fileNameInDB;
     fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     String filenameInRequest = (String) attachment.get("fileName");
@@ -266,7 +277,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      Map<String, String> badRequest) {
+      Map<String, String> badRequest,
+      Map<String, String> propertyTitles) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -292,7 +304,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
       List<String> propertiesList = new ArrayList<>(uniqueValues);
-      context.getMessages().warn(SDMConstants.unsupportedPropertiesMessage(propertiesList));
+      context
+          .getMessages()
+          .warn(SDMConstants.unsupportedPropertiesMessage(propertiesList, propertyTitles));
     }
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));

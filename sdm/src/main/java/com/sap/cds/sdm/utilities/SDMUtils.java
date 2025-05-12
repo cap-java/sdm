@@ -160,6 +160,35 @@ public class SDMUtils {
     }
   }
 
+  public static Map<String, String> getPropertyTitles(
+      Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
+    List<String> keysList = new ArrayList<>(attachment.keySet());
+    Map<String, String> titleMap = new HashMap<>();
+    if (attachmentEntity.isPresent()) {
+      CdsEntity entity = attachmentEntity.get();
+      for (String key : keysList) {
+        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+          continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
+        }
+        CdsElement element = entity.getElement(key);
+        if (element != null) {
+          // Check if secondary property is present
+          Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
+          Optional<CdsAnnotation<Object>> propertyNameInSDM =
+              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          if (titleAnnotation.isPresent() && propertyNameInSDM.isPresent()) {
+            String title = titleAnnotation.get().getValue().toString();
+            String propertyName = propertyNameInSDM.get().getValue().toString();
+            titleMap.put(
+                propertyName.substring(1, propertyName.length() - 1),
+                title.substring(6, title.length() - 1));
+          }
+        }
+      }
+    }
+    return titleMap;
+  }
+
   public static Map<String, String> getSecondaryTypeProperties(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
@@ -172,24 +201,10 @@ public class SDMUtils {
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
-          System.out.println("Element : " + element.getName());
-          element
-              .annotations()
-              .forEach(
-                  annotation -> {
-                    System.out.println("Annotation name: " + annotation.getName());
-                    System.out.println("Annotation value: " + annotation.getValue());
-                  });
           // Check if secondary property is present
-          Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
-          if (titleAnnotation.isPresent()) {
-            System.out.println("Title : " + titleAnnotation.get().getValue().toString());
-          }
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
-          System.out.println("Annotation : " + annotation);
           if (annotation.isPresent()) {
-            System.out.println("Here check");
             String annotationValue = annotation.get().getValue().toString();
             // Remove curly braces if present
             if (annotationValue.startsWith("{") && annotationValue.endsWith("}")) {
@@ -200,7 +215,6 @@ public class SDMUtils {
         }
       }
     }
-    System.out.println("Secondary Type Properties: " + secondaryTypeProperties);
     return secondaryTypeProperties;
   }
 
@@ -218,17 +232,12 @@ public class SDMUtils {
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
-    System.out.println("Properties Map: " + propertiesMap);
-    System.out.println("Properties in DB: " + propertiesInDB);
     // Check the value of secondary properties in DB
     for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
       String property = entry.getKey();
       String value = entry.getValue();
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
-      System.out.println(
-          "Property: " + property + " Value in Map: " + valueInMap + " Value in DB: " + valueInDB);
-
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
         if (valueInMap != null) {
