@@ -9,8 +9,10 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
-  public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
+  public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
+  public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
+      "SDM.Attachments.AdditionalProperty";
   public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
       "The file(s) %s have been added multiple times. Please rename and try again.";
   public static final String FILES_RENAME_WARNING_MESSAGE =
@@ -118,8 +120,7 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String unsupportedPropertiesMessage(
-      List<String> propertiesList, Map<String, String> propertyTitles) {
+  public static String unsupportedPropertiesMessage(List<String> propertiesList) {
     // Create the base message
     String prefixMessage = "The following secondary properties are not supported.\n\n";
 
@@ -128,7 +129,7 @@ public class SDMConstants {
 
     // Append each unsupported file name to the StringBuilder
     for (String file : propertiesList) {
-      bulletPoints.append(String.format("\t• %s%n", propertyTitles.get(file)));
+      bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append(
         "\nPlease contact your administrator for assistance with any necessary adjustments.");

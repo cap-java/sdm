@@ -140,7 +140,6 @@ public class DBQuery {
       Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
       propertyValueMap.put(mapKey, value != null ? value.toString() : null);
     }
-
     return propertyValueMap;
   }
 }

@@ -391,6 +391,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Mocking the necessary objects
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
     Map<String, String> secondaryProperties = new HashMap<>();
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
@@ -408,7 +409,12 @@ public class SDMUpdateAttachmentsHandlerTest {
 
     // Verify that updateAttachments is never called
     verify(sdmService, never())
-        .updateAttachments("jwtToken", mockCredentials, document, secondaryProperties);
+        .updateAttachments(
+            "jwtToken",
+            mockCredentials,
+            document,
+            secondaryProperties,
+            secondaryPropertiesWithInvalidDefinitions);
   }
 
   //   @Test
@@ -423,7 +429,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   //     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
 
   //     String expectedEntityName = "some.qualified.Name.attachments";
-  //     when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
+  // when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
 
   //     CdsData mockCdsData = mock(CdsData.class);
   //     when(mockCdsData.get("attachments")).thenReturn(null);
