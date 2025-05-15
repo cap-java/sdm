@@ -56,12 +56,13 @@ class AttachmentsSDMTest {
     RequestBody body = RequestBody.create(mediaType, "");
     Request request =
         new Request.Builder()
-            .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + username
-                    + "&password="
-                    + password)
+            //            .url(
+            //                authUrl
+            //                    + "/oauth/token?grant_type=password&username="
+            //                    + username
+            //                    + "&password="
+            //                    + password)
+            .url(authUrl + "/oauth/token?grant_type=client_credentials")
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();
