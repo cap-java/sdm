@@ -601,7 +601,6 @@ public class SDMUtilsTest {
   void testAttachmentEntityNotPresent() {
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
-    System.out.println("Test result : " + result);
     assertEquals(Collections.emptyMap(), result);
   }
 
