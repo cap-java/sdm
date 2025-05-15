@@ -63,6 +63,7 @@ public class SDMConstants {
   public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50;
   public static final Integer MAX_CONNECTIONS_TOTAL = 50;
   public static final String REST_V2_REPOSITORIES = "rest/v2/repositories";
+  public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
