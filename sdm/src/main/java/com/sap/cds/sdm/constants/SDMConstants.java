@@ -65,6 +65,7 @@ public class SDMConstants {
   public static final String REST_V2_REPOSITORIES = "rest/v2/repositories";
   public static final String TECHNICAL_USER_FLOW = "TECHNICAL_CREDENTIALS_FLOW";
   public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
+  public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
