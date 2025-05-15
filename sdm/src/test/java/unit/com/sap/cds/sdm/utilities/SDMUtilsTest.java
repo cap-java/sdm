@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
@@ -526,8 +527,11 @@ public class SDMUtilsTest {
     Optional<CdsEntity> attachmentEntity = Optional.of(mockEntity);
     Map<String, Object> attachment = new HashMap<>();
     attachment.put("VALID_PROPERTY", new Object());
+    when(mockAnnotation.getValue()).thenReturn("name");
     when(mockEntity.getElement("VALID_PROPERTY")).thenReturn(mockElement);
     when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME))
+        .thenReturn(Optional.of(mockAnnotation));
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
         .thenReturn(Optional.of(mockAnnotation));
     when(mockElement.getName()).thenReturn("VALID_PROPERTY");
 
@@ -535,7 +539,7 @@ public class SDMUtilsTest {
     Map<String, String> result = SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
 
     // Assert: we expect "VALID_PROPERTY" to be in the result
-    assertEquals(Collections.singletonList("VALID_PROPERTY"), result);
+    assertEquals(Map.of("VALID_PROPERTY", "name"), result);
   }
 
   @Test
@@ -597,7 +601,8 @@ public class SDMUtilsTest {
   void testAttachmentEntityNotPresent() {
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
-    assertEquals(Collections.emptyList(), result);
+    System.out.println("Test result : " + result);
+    assertEquals(Collections.emptyMap(), result);
   }
 
   @Test
@@ -607,7 +612,7 @@ public class SDMUtilsTest {
 
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
-    assertEquals(Collections.emptyList(), result);
+    assertEquals(Collections.emptyMap(), result);
   }
 
   @Test
@@ -616,7 +621,7 @@ public class SDMUtilsTest {
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(
             Optional.of(entity), Map.of("DRAFT_READONLY_CONTEXT", "value"));
-    assertEquals(Collections.emptyList(), result);
+    assertEquals(Collections.emptyMap(), result);
     verify(entity, never()).getElement(anyString());
   }
 
@@ -629,7 +634,7 @@ public class SDMUtilsTest {
 
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
-    assertEquals(Collections.emptyList(), result);
+    assertEquals(Collections.emptyMap(), result);
   }
 
   @Test
@@ -638,15 +643,18 @@ public class SDMUtilsTest {
     CdsElement element = mock(CdsElement.class);
     @SuppressWarnings("unchecked")
     CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
+    when(annotation.getValue()).thenReturn("name");
 
     when(entity.getElement("key1")).thenReturn(element);
     when(element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME))
+        .thenReturn(Optional.of(annotation));
+    when(element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
         .thenReturn(Optional.of(annotation));
     when(element.getName()).thenReturn("key1");
 
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
-    assertEquals(List.of("key1"), result);
+    assertEquals(Map.of("key1", "name"), result);
   }
 
   @Test
