@@ -63,6 +63,8 @@ public class SDMConstants {
   public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50;
   public static final Integer MAX_CONNECTIONS_TOTAL = 50;
   public static final String REST_V2_REPOSITORIES = "rest/v2/repositories";
+  public static final String TECHNICAL_USER_FLOW = "TECHNICAL_CREDENTIALS_FLOW";
+  public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

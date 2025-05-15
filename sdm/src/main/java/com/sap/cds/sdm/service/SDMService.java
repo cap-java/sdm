@@ -61,6 +61,7 @@ public interface SDMService {
       List<String> secondaryTypes,
       String subdomain,
       SDMCredentials sdmCredentials,
-      String repositoryId)
+      String repositoryId,
+      String jwtToken)
       throws IOException;
 }
