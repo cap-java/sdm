@@ -363,8 +363,12 @@ public class SDMServiceImplTest {
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -391,8 +395,12 @@ public class SDMServiceImplTest {
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -469,8 +477,12 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -517,8 +529,12 @@ public class SDMServiceImplTest {
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -546,8 +562,12 @@ public class SDMServiceImplTest {
       String jwtToken = "jwt_token";
       String repositoryId = "repository_id";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -617,8 +637,12 @@ public class SDMServiceImplTest {
       String mockUrl = mockWebServer.url("/").toString();
       SDMCredentials sdmCredentials = new SDMCredentials();
       sdmCredentials.setUrl(mockUrl);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -665,9 +689,12 @@ public class SDMServiceImplTest {
 
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -711,8 +738,12 @@ public class SDMServiceImplTest {
 
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -757,9 +788,12 @@ public class SDMServiceImplTest {
 
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -802,9 +836,12 @@ public class SDMServiceImplTest {
 
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -844,8 +881,12 @@ public class SDMServiceImplTest {
       cmisDocument.setMimeType("application/pdf");
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -1153,8 +1194,12 @@ public class SDMServiceImplTest {
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
       MediaData mockData = mock(MediaData.class);
       when(mockContext.getData()).thenReturn(mockData);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -1329,8 +1374,12 @@ public class SDMServiceImplTest {
       secondaryProperties.put("property2", "value2");
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -1421,8 +1470,12 @@ public class SDMServiceImplTest {
       Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(any())).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType("jwtToken"))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -1441,7 +1494,7 @@ public class SDMServiceImplTest {
               ServiceException.class,
               () -> {
                 sdmServiceImpl.getValidSecondaryProperties(
-                    secondaryTypes, subdomain, mockSdmCredentials, repositoryId);
+                    secondaryTypes, subdomain, mockSdmCredentials, repositoryId, "jwtToken");
               });
 
       assertTrue(exception.getMessage().contains("Could not update the attachment"));
@@ -1469,8 +1522,12 @@ public class SDMServiceImplTest {
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
@@ -1532,9 +1589,12 @@ public class SDMServiceImplTest {
       String objectId = "objectId";
       SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -1557,9 +1617,12 @@ public class SDMServiceImplTest {
       String objectId = "objectId";
       SDMServiceImpl sdmServiceImpl = Mockito.spy(new SDMServiceImpl(binding, connectionPool));
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
@@ -1625,9 +1688,12 @@ public class SDMServiceImplTest {
 
       String jwtToken = "jwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
-
+      String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
-          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+          .when(() -> TokenHandler.getGrantType(jwtToken))
+          .thenReturn(grantType);
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
       when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Error"));
