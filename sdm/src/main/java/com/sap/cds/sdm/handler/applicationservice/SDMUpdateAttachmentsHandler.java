@@ -85,9 +85,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       } else {
         propertyTitles = null;
       }
-      secondaryPropertiesWithInvalidDefinitions =
-          SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
-              attachmentEntity, attachments.get(0));
+      if (attachments != null && !attachments.isEmpty()) {
+        secondaryPropertiesWithInvalidDefinitions =
+            SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                attachmentEntity, attachments.get(0));
+      } else {
+        // Handle the case where attachments is null or empty
+        secondaryPropertiesWithInvalidDefinitions = null; // Or any default logic
+      }
       if ((attachments != null) && !attachments.isEmpty()) {
         processAttachments(
             attachmentEntity,

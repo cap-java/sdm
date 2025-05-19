@@ -5,6 +5,7 @@ import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -432,32 +433,37 @@ public class SDMUpdateAttachmentsHandlerTest {
             secondaryPropertiesWithInvalidDefinitions);
   }
 
-  //   @Test
-  //   public void testRenameWithNoAttachments() throws IOException {
-  //     // Arrange
-  //     List<CdsData> data = new ArrayList<>();
-  //     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
-  //     Map<String, String> secondaryProperties = new HashMap<>();
-  //     CmisDocument document = new CmisDocument();
-  //     when(context.getTarget()).thenReturn(attachmentDraftEntity);
-  //     when(context.getModel()).thenReturn(model);
-  //     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+  @Test
+  public void testRenameWithNoAttachments() throws IOException {
+    // Arrange
+    List<CdsData> data = new ArrayList<>();
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    Map<String, String> secondaryProperties = new HashMap<>();
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+    CmisDocument document = new CmisDocument();
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
 
-  //     String expectedEntityName = "some.qualified.Name.attachments";
-  // when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
+    String expectedEntityName = "some.qualified.Name.attachments";
+    when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
 
-  //     CdsData mockCdsData = mock(CdsData.class);
-  //     when(mockCdsData.get("attachments")).thenReturn(null);
-  //     data.add(mockCdsData);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("attachments")).thenReturn(null);
+    data.add(mockCdsData);
 
-  //     // Act
-  //     handler.updateName(context, data, "attachments");
+    // Act
+    handler.updateName(context, data, "attachments");
 
-  //     // Assert
-  //     verify(sdmService, never())
-  //         .updateAttachments(anyString(), eq(mockCredentials), eq(document),
-  // eq(secondaryProperties));
-  //   }
+    // Assert
+    verify(sdmService, never())
+        .updateAttachments(
+            anyString(),
+            eq(mockCredentials),
+            eq(document),
+            eq(secondaryProperties),
+            eq(secondaryPropertiesWithInvalidDefinitions));
+  }
 
   //   @Test
   //   public void testRenameWithRestrictedFilenames() throws IOException {
