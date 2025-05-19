@@ -27,6 +27,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
+import org.ehcache.Cache;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
@@ -134,7 +135,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     SecondaryPropertiesKey secondaryPropertiesKey =
         new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    CacheConfig.getSecondaryPropertiesCache().remove(secondaryPropertiesKey);
+    Cache<SecondaryPropertiesKey, ?> cache = CacheConfig.getSecondaryPropertiesCache();
+    if (cache != null) {
+      cache.remove(secondaryPropertiesKey);
+    }
   }
 
   public void processAttachment(

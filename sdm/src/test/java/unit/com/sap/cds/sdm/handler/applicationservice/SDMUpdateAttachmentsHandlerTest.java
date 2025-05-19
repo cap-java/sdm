@@ -4,6 +4,7 @@ import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -16,6 +17,8 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.authentication.AuthenticationInfo;
+import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -37,6 +40,8 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Mock private SDMCredentials mockCredentials;
   @Mock private Messages messages;
   @Mock private CdsModel model;
+  @Mock private AuthenticationInfo authInfo;
+  @Mock private JwtTokenAuthenticationInfo jwtTokenInfo;
   private SDMService sdmService;
   @Mock private SDMUtils sdmUtilsMock;
   @Mock private CdsStructuredType targetAspect;
@@ -211,63 +216,73 @@ public class SDMUpdateAttachmentsHandlerTest {
   // exist:\nfile1.txt\n");
   //   }
 
-  //   @Test
-  //   public void testRenameWithNoSDMRoles() throws IOException {
-  //     // Mock the data structure to simulate the attachments
-  //     List<CdsData> data = new ArrayList<>();
-  //     Map<String, Object> entity = new HashMap<>();
-  //     List<Map<String, Object>> attachments = new ArrayList<>();
-  //     Map<String, Object> attachment = spy(new HashMap<>());
-  //     Map<String, String> secondaryProperties = new HashMap<>();
-  //     secondaryProperties.put("filename", "file1.txt");
-  //     CmisDocument document = new CmisDocument();
-  //     document.setFileName("file1.txt");
-  //     attachment.put("fileName", "file1.txt");
-  //     attachment.put("url", "objectId");
-  //     attachment.put("ID", "test-id"); // assuming there's an ID field
-  //     attachments.add(attachment);
-  //     entity.put("attachments", attachments);
-  //     CdsData mockCdsData = mock(CdsData.class);
-  //     when(mockCdsData.get("attachments")).thenReturn(attachments);
-  //     data.add(mockCdsData);
+  @Test
+  public void testRenameWithNoSDMRoles() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+    Map<String, String> secondaryProperties = new HashMap<>();
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+    secondaryProperties.put("filename", "file1.txt");
+    CmisDocument document = new CmisDocument();
+    document.setFileName("file1.txt");
+    attachment.put("fileName", "file1.txt");
+    attachment.put("url", "objectId");
+    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachments.add(attachment);
+    entity.put("attachments", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("composition")).thenReturn(attachments);
+    data.add(mockCdsData);
 
-  //     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
-  //     when(context.getTarget()).thenReturn(attachmentDraftEntity);
-  //     when(context.getModel()).thenReturn(model);
-  //     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-  //     when(model.findEntity("some.qualified.Name.attachments"))
-  //         .thenReturn(Optional.of(attachmentDraftEntity));
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    when(model.findEntity("some.qualified.Name.composition"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(context.getMessages()).thenReturn(messages);
 
-  //     // Mock the authentication context
-  //     when(context.getAuthenticationInfo()).thenReturn(authInfo);
-  //     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-  //     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+    // Mock the authentication context
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+    // Or another mock if expected
 
-  //     // Mock the static TokenHandler
-  //     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+    // Mock the static TokenHandler
+    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-  //     // Mock the SDM service responses
-  //     dbQueryMockedStatic = mockStatic(DBQuery.class);
-  //     dbQueryMockedStatic
-  //         .when(
-  //             () ->
-  //                 getAttachmentForID(
-  //                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
-  //         .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
+    // Mock the SDM service responses
+    dbQueryMockedStatic = mockStatic(DBQuery.class);
+    dbQueryMockedStatic
+        .when(
+            () ->
+                getAttachmentForID(
+                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
 
-  //     when(sdmService.updateAttachments("jwtToken", mockCredentials, document,
-  // secondaryProperties))
-  //         .thenReturn(403); // Mock conflict response code
+    when(sdmService.updateAttachments(
+            "jwtToken",
+            mockCredentials,
+            document,
+            secondaryProperties,
+            secondaryPropertiesWithInvalidDefinitions))
+        .thenReturn(403); // Mock conflict response code
 
-  //     ServiceException exception =
-  //         assertThrows(
-  //             ServiceException.class,
-  //             () -> {
-  //               handler.updateName(context, data);
-  //             });
+    handler.updateName(context, data, "composition");
 
-  //     assertEquals(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, exception.getMessage());
-  //   }
+    verify(messages)
+        .warn(
+            argThat(
+                s ->
+                    s != null
+                        && s.contains("Could not update the following files.")
+                        && s.contains("file123.txt")
+                        && s.contains(
+                            "You do not have the required permissions to rename attachments")));
+  }
 
   //   @Test
   //   public void testRenameWith500Error() throws IOException {
