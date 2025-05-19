@@ -43,7 +43,6 @@ import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
-import io.reactivex.Single;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -286,8 +285,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "duplicate");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocumentRx(any(), any(), any()))
-        .thenReturn(Single.just(mockResponse));
+    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
@@ -371,8 +369,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "virus");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocumentRx(any(), any(), any()))
-        .thenReturn(Single.just(mockResponse));
+    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");
@@ -458,8 +455,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "fail");
     mockResponse.put("message", "Failed due to a DI error");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocumentRx(any(), any(), any()))
-        .thenReturn(Single.just(mockResponse));
+    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
         MockedStatic<TokenHandler> tokenHandlerMockedStatic =
             Mockito.mockStatic(TokenHandler.class);
@@ -534,8 +530,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "success");
     mockResponse.put("objectId", "123");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocumentRx(any(), any(), any()))
-        .thenReturn(Single.just(mockResponse));
+    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");

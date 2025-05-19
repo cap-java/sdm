@@ -37,10 +37,13 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SDMServiceImpl implements SDMService {
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
+  private static final Logger logger = LoggerFactory.getLogger(SDMServiceImpl.class);
 
   public SDMServiceImpl(ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
     this.connectionPool = connectionPool;
@@ -49,11 +52,11 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
-      throws IOException {
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -143,8 +146,9 @@ public class SDMServiceImpl implements SDMService {
       throws ServiceException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
 
@@ -155,12 +159,7 @@ public class SDMServiceImpl implements SDMService {
             sdmCredentials); // Fetching the secondary types from the SDM repository
     List<String> validSecondaryProperties =
         getValidSecondaryProperties(
-            secondaryTypes,
-            subdomain,
-            sdmCredentials,
-            repositoryId); // Fetching the valid secondary properties from the SDM repository by
-    // checking whether the value of MCM for that property is true
-
+            secondaryTypes, subdomain, sdmCredentials, repositoryId, jwtToken);
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache()
@@ -246,8 +245,9 @@ public class SDMServiceImpl implements SDMService {
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -279,8 +279,9 @@ public class SDMServiceImpl implements SDMService {
       AttachmentReadEventContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -350,9 +351,10 @@ public class SDMServiceImpl implements SDMService {
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String token) {
     String subdomain = TokenHandler.getSubdomainFromToken(token);
+    String grantType = TokenHandler.getGrantType(token);
+    logger.info("This is a :" + grantType + " flow");
     String folderId = null;
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -383,8 +385,9 @@ public class SDMServiceImpl implements SDMService {
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken) {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -482,8 +485,14 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     HttpClient httpClient = HttpClients.createDefault();
-    String accessToken =
-        TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+    String accessToken = "";
+    if (userEmail != null) {
+      accessToken = TokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain);
+      logger.info("This is a named user flow");
+    } else {
+      accessToken = TokenHandler.getTechnicalUserAccessToken(subdomain, sdmCredentials);
+      logger.info("This is a technical user flow");
+    }
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
     deleteDocumentRequest.setHeader("Authorization", "Bearer " + accessToken);
@@ -509,8 +518,9 @@ public class SDMServiceImpl implements SDMService {
     secondaryTypes = CacheConfig.getSecondaryTypesCache().get(secondaryTypesKey);
     if (secondaryTypes == null) {
       String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-      var httpClient =
-          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      String grantType = TokenHandler.getGrantType(jwtToken);
+      logger.info("This is a :" + grantType + " flow");
+      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
       String sdmUrl =
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
@@ -543,16 +553,17 @@ public class SDMServiceImpl implements SDMService {
       List<String> secondaryTypes,
       String subdomain,
       SDMCredentials sdmCredentials,
-      String repositoryId) {
+      String repositoryId,
+      String jwtToken) {
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
+    String grantType = TokenHandler.getGrantType(jwtToken);
     secondaryPropertiesKey.setRepositoryId(repositoryId);
     List<String> validSecondaryProperties =
         CacheConfig.getSecondaryPropertiesCache().get(secondaryPropertiesKey);
     if (validSecondaryProperties == null) {
       validSecondaryProperties = new ArrayList<>();
       Iterator<String> iterator = secondaryTypes.iterator();
-      var httpClient =
-          TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
       while (iterator.hasNext()) {
         String value = iterator.next();
         String sdmUrl =

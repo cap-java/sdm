@@ -11,6 +11,7 @@ import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.environment.CdsProperties;
@@ -58,7 +59,6 @@ public class TokenHandlerTest {
   @Mock private DefaultHttpClientFactory factory;
 
   @Mock private CloseableHttpClient httpClient;
-
   private Map<String, Object> uaaCredentials;
   private Map<String, Object> uaa;
 
@@ -414,5 +414,63 @@ public class TokenHandlerTest {
 
     String result = TokenHandler.extractResponseBodyAsString(mockResponse);
     assertEquals("mockResponse", result);
+  }
+
+  @Test
+  public void testGetGrantType_ClientCredentials() {
+    String token = "mockToken";
+    String email = "test@example.com";
+    String subdomain = "example-subdomain";
+
+    JsonObject payloadObj = new JsonObject();
+    payloadObj.addProperty("email", email);
+
+    JsonObject extAttr = new JsonObject();
+    extAttr.addProperty("zdn", subdomain);
+    payloadObj.add("ext_attr", extAttr);
+
+    payloadObj.addProperty("exp", "1234567890");
+    payloadObj.addProperty("grant_type", "client_credentials");
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getTokenFields(token))
+          .thenReturn(payloadObj);
+
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getGrantType(token)).thenCallRealMethod();
+
+      String result = TokenHandler.getGrantType(token);
+
+      assertEquals(SDMConstants.TECHNICAL_USER_FLOW, result);
+    }
+  }
+
+  @Test
+  public void testGetGrantType_UserFlow() {
+    String token = "mockToken";
+    String email = "test@example.com";
+    String subdomain = "example-subdomain";
+
+    JsonObject payloadObj = new JsonObject();
+    payloadObj.addProperty("email", email);
+
+    JsonObject extAttr = new JsonObject();
+    extAttr.addProperty("zdn", subdomain);
+    payloadObj.add("ext_attr", extAttr);
+
+    payloadObj.addProperty("exp", "1234567890");
+    payloadObj.addProperty("grant_type", "userFlow");
+
+    try (MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class)) {
+      tokenHandlerMockedStatic
+          .when(() -> TokenHandler.getTokenFields(token))
+          .thenReturn(payloadObj);
+
+      tokenHandlerMockedStatic.when(() -> TokenHandler.getGrantType(token)).thenCallRealMethod();
+
+      String result = TokenHandler.getGrantType(token);
+
+      assertEquals(SDMConstants.NAMED_USER_FLOW, result);
+    }
   }
 }
