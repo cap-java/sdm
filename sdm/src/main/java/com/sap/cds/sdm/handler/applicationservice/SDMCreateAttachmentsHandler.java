@@ -174,14 +174,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         sdmService.getObject(
             jwtToken,
             objectId,
-            sdmCredentials); // Fetching the name of the file from SDM. This is needed because the
-    // filename of the file in the attachments table when the file is
-    // uploaded will be null as the entity isn't saved yet. So if we have
-    // modified the name of the file on the UI before saving and there is
-    // any need to revert the properties of the attachment back due to some
-    // error, we need the original name which is only present in SDM (as we
-    // have modified the name on the UI even the draft table contains the
-    // new name which we want to revert)
+            sdmCredentials); // Fetch original filename from SDM since it's null in attachments
+    // table until save; needed to revert UI-modified names on error.
 
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(

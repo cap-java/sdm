@@ -160,57 +160,53 @@ public class SDMUtils {
     }
   }
 
-  // In this method we form a map of property name and it's title that appears on the UI. This is so
-  // that we can refer to this map while propagating an error to the UI using the title so that it
-  // is intuitive for the user.
+  /* Create a map of property names to their UI titles for intuitive error messages. */
   public static Map<String, String> getPropertyTitles(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
-    List<String> keysList = new ArrayList<>(attachment.keySet());
     Map<String, String> titleMap = new HashMap<>();
-    if (attachmentEntity.isPresent()) {
-      CdsEntity entity = attachmentEntity.get();
-      for (String key : keysList) {
-        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
-          continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
-        }
-        CdsElement element = entity.getElement(key);
-        if (element != null) {
-          // Checking the SDM Annotation, both the old (outdated method) and the correct method.
-          // This is because we will have to throw an error for the properties defined using the old
-          // method, and for that we will keep track of those titles as well
-          Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
-          Optional<CdsAnnotation<Object>> propertyNameInSDM =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
-          Optional<CdsAnnotation<Object>> propertyNameInSDMIncorrect =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
-          String propertyName = null;
-          String title = null;
-          if (propertyNameInSDM.isPresent()) {
-            propertyName = propertyNameInSDM.get().getValue().toString();
-          }
-          if (propertyNameInSDMIncorrect.isPresent()) {
-            propertyName = element.getName();
-          }
-          if (titleAnnotation.isPresent()) {
-            title = titleAnnotation.get().getValue().toString();
-          } else {
-            title =
-                element
-                    .getName(); // This is in case the user has not specified a title for the column
-            // in the cds file (which is optional)
-          }
-          if (propertyName != null && title != null) {
-            titleMap.put(propertyName, title);
-          }
-        }
+    if (attachmentEntity.isEmpty()) {
+      return titleMap;
+    }
+    CdsEntity entity = attachmentEntity.get();
+    for (String key : attachment.keySet()) {
+      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
+        continue;
+      }
+      CdsElement element = entity.getElement(key);
+      if (element == null) {
+        continue;
+      }
+      String propertyName = extractPropertyName(element);
+      String title = extractTitle(element);
+      if (propertyName != null && title != null) {
+        titleMap.put(propertyName, title);
       }
     }
     return titleMap;
   }
 
-  // In this method we identify the properties that were defined incorrectly in the CDS file. This
-  // is so that we can club them with the properties for which the "MCM" value is not true, making
-  // it an invalid/unsupported property from the context of this plugin
+  private static String extractPropertyName(CdsElement element) {
+    /* Check both old and new SDM annotations to track titles for properties needing error handling. */
+    if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME).isPresent()) {
+      return element
+          .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
+          .get()
+          .getValue()
+          .toString();
+    } else if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY).isPresent()) {
+      return element.getName(); // This is in case the user has not specified a title for the column
+    }
+    return null;
+  }
+
+  private static String extractTitle(CdsElement element) {
+    return element
+        .findAnnotation("title")
+        .map(annotation -> annotation.getValue().toString())
+        .orElse(element.getName());
+  }
+
+  /* Identify incorrectly defined properties in the CDS file to group them with unsupported ones where "MCM" is not true. */
   public static Map<String, String> getSecondaryPropertiesWithInvalidDefinition(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
@@ -218,7 +214,7 @@ public class SDMUtils {
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
-        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
           continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);
@@ -232,8 +228,9 @@ public class SDMUtils {
             if (titleAnnotation.isPresent()) {
               title = titleAnnotation.get().getValue().toString();
             } else {
-              title = element.getName(); // This is in case the user has not specified a title for
-              // the column in the cds file (which is optional)
+              title =
+                  element
+                      .getName(); /* This is in case the user has not specified a title for the column in the cds file (which is optional) */
             }
             invalidProperties.put(key, title);
           }
@@ -243,7 +240,7 @@ public class SDMUtils {
     return invalidProperties;
   }
 
-  // In this method we form a map of secondary property name and its title that appears on the UI.
+  // Create a map of secondary property name and its title that appears on the UI.
   public static Map<String, String> getSecondaryTypeProperties(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
@@ -251,7 +248,7 @@ public class SDMUtils {
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
-        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
           continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);

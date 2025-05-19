@@ -619,7 +619,7 @@ public class SDMUtilsTest {
     CdsEntity entity = mock(CdsEntity.class);
     Map<String, String> result =
         SDMUtils.getSecondaryTypeProperties(
-            Optional.of(entity), Map.of("DRAFT_READONLY_CONTEXT", "value"));
+            Optional.of(entity), Map.of(SDMConstants.DRAFT_READONLY_CONTEXT, "value"));
     assertEquals(Collections.emptyMap(), result);
     verify(entity, never()).getElement(anyString());
   }

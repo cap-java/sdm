@@ -1,5 +1,7 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -12,6 +14,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
@@ -384,93 +387,91 @@ public class SDMCreateAttachmentsHandlerTest {
   //     verify(messages, never()).error(anyString());
   //     verify(messages, never()).warn(anyString());
   //   }
-  //   @Test
-  //   public void testUpdateNameWithEmptyFilename() throws IOException {
-  //     List<CdsData> data = new ArrayList<>();
-  //     Map<String, Object> entity = new HashMap<>();
-  //     List<Map<String, Object>> attachments = new ArrayList<>();
+  @Test
+  public void testUpdateNameWithEmptyFilename() throws IOException {
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
 
-  //     Map<String, Object> attachment = new HashMap<>();
-  //     attachment.put("ID", "test-id");
-  //     attachment.put("fileName", null); // Empty filename
-  //     attachment.put("objectId", "test-object-id");
-  //     attachments.add(attachment);
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "test-id");
+    attachment.put("fileName", null); // Empty filename
+    attachment.put("objectId", "test-object-id");
+    attachments.add(attachment);
 
-  //     // entity.put("attachments", attachments);
-  //     entity.put("composition", attachments);
+    // entity.put("attachments", attachments);
+    entity.put("composition", attachments);
 
-  //     CdsData cdsDataEntity = CdsData.create(entity); // Wrap entity in CdsData
-  //     data.add(cdsDataEntity); // Add to data
+    CdsData cdsDataEntity = CdsData.create(entity); // Wrap entity in CdsData
+    data.add(cdsDataEntity); // Add to data
 
-  //     // Mock duplicate file name
-  //     sdmUtilsMockedStatic
-  //         .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
-  //         .thenReturn(new HashSet<>());
+    // Mock duplicate file name
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "composition"))
+        .thenReturn(new HashSet<>());
 
-  //     // Mock attachment entity
-  //     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
-  //     when(context.getTarget()).thenReturn(attachmentDraftEntity);
-  //     when(context.getModel()).thenReturn(model);
-  //     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-  //     dbQueryMockedStatic
-  //         .when(() -> DBQuery.getAttachmentForID(attachmentDraftEntity, persistenceService,
-  // "id"))
-  //         .thenReturn(null);
+    // Mock attachment entity
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    dbQueryMockedStatic
+        .when(() -> DBQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "id"))
+        .thenReturn(null);
 
-  //     // Mock findEntity to return an optional containing attachmentDraftEntity
-  //     when(model.findEntity("some.qualified.Name" + "." + "composition"))
-  //         .thenReturn(Optional.of(attachmentDraftEntity));
+    // Mock findEntity to return an optional containing attachmentDraftEntity
+    when(model.findEntity("some.qualified.Name" + "." + "composition"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
 
-  //     // Mock authentication
-  //     when(context.getMessages()).thenReturn(messages);
-  //     when(context.getAuthenticationInfo()).thenReturn(authInfo);
-  //     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-  //     when(jwtTokenInfo.getToken()).thenReturn("testJwtToken");
+    // Mock authentication
+    when(context.getMessages()).thenReturn(messages);
+    when(context.getAuthenticationInfo()).thenReturn(authInfo);
+    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
+    when(jwtTokenInfo.getToken()).thenReturn("testJwtToken");
 
-  //     // Mock getObject
-  //     when(sdmService.getObject("testJwtToken", "test-object-id", mockCredentials))
-  //         .thenReturn("fileInSDM.txt");
+    // Mock getObject
+    when(sdmService.getObject("testJwtToken", "test-object-id", mockCredentials))
+        .thenReturn("fileInSDM.txt");
 
-  //     // Mock getSecondaryTypeProperties
-  //     List<String> secondaryTypeProperties = new ArrayList<>();
-  //     Map<String, String> updatedSecondaryProperties = new HashMap<>();
-  //     sdmUtilsMockedStatic
-  //         .when(
-  //             () ->
-  //                 SDMUtils.getSecondaryTypeProperties(Optional.of(attachmentDraftEntity),
-  // attachment))
-  //         .thenReturn(secondaryTypeProperties);
-  //     dbQueryMockedStatic
-  //         .when(
-  //             () ->
-  //                 DBQuery.getPropertiesForID(
-  //                     attachmentDraftEntity, persistenceService, "id", secondaryTypeProperties))
-  //         .thenReturn(updatedSecondaryProperties);
-  //     sdmUtilsMockedStatic
-  //         .when(
-  //             () ->
-  //                 SDMUtils.getUpdatedSecondaryProperties(
-  //                     Optional.of(attachmentDraftEntity),
-  //                     attachment,
-  //                     persistenceService,
-  //                     secondaryTypeProperties,
-  //                     updatedSecondaryProperties))
-  //         .thenReturn(new HashMap<>());
+    // Mock getSecondaryTypeProperties
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    Map<String, String> updatedSecondaryProperties = new HashMap<>();
+    sdmUtilsMockedStatic
+        .when(
+            () ->
+                SDMUtils.getSecondaryTypeProperties(Optional.of(attachmentDraftEntity), attachment))
+        .thenReturn(secondaryTypeProperties);
+    dbQueryMockedStatic
+        .when(
+            () ->
+                DBQuery.getPropertiesForID(
+                    attachmentDraftEntity, persistenceService, "id", secondaryTypeProperties))
+        .thenReturn(updatedSecondaryProperties);
+    sdmUtilsMockedStatic
+        .when(
+            () ->
+                SDMUtils.getUpdatedSecondaryProperties(
+                    Optional.of(attachmentDraftEntity),
+                    attachment,
+                    persistenceService,
+                    secondaryTypeProperties,
+                    updatedSecondaryProperties))
+        .thenReturn(new HashMap<>());
 
-  //     // Mock restricted character
-  //     String fileNameInRequest = "fileNameInRequest";
-  //     sdmUtilsMockedStatic
-  //         .when(() -> SDMUtils.isRestrictedCharactersInName(fileNameInRequest))
-  //         .thenReturn(false);
+    // Mock restricted character
+    String fileNameInRequest = "fileNameInRequest";
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isRestrictedCharactersInName(fileNameInRequest))
+        .thenReturn(false);
 
-  //     // Act & Assert
-  //     ServiceException exception =
-  //         assertThrows(
-  //             ServiceException.class, () -> handler.updateName(context, data, "composition"));
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class, () -> handler.updateName(context, data, "composition"));
 
-  //     // Assert that the correct exception message is returned
-  //     assertEquals("Filename cannot be empty", exception.getMessage());
-  //   }
+    // Assert that the correct exception message is returned
+    assertEquals("Filename cannot be empty", exception.getMessage());
+  }
 
   //   @Test
   //   public void testUpdateNameWithMultipleAttachments() throws IOException {

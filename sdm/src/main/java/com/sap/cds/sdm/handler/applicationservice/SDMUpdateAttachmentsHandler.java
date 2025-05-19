@@ -72,7 +72,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String composition)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
-    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions;
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
@@ -80,7 +80,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     Map<String, String> propertyTitles = new HashMap<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
-      propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+      if (attachments != null && !attachments.isEmpty()) {
+        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+      } else {
+        propertyTitles = null;
+      }
       secondaryPropertiesWithInvalidDefinitions =
           SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
               attachmentEntity, attachments.get(0));
@@ -132,12 +136,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           badRequest,
           secondaryPropertiesWithInvalidDefinitions);
     }
-    SecondaryPropertiesKey secondaryPropertiesKey =
-        new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
     Cache<SecondaryPropertiesKey, ?> cache = CacheConfig.getSecondaryPropertiesCache();
     if (cache != null) {
-      cache.remove(secondaryPropertiesKey);
+      cache.remove(secondaryPropertiesKey); // Emptying cache after attachments are updated in loop
     }
   }
 
@@ -160,9 +163,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String fileNameInDB;
     fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     if (fileNameInDB
-        == null) { // This means an attachment is being uploaded on UPDATE of entity, so once again
-      // we have to fetch the original name from SDM, to use in case the values of
-      // properties need to be reverted.
+        == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
+      // values if needed.
       String objectId = (String) attachment.get("objectId");
       AuthenticationInfo authInfo = context.getAuthenticationInfo();
       JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
@@ -170,7 +172,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
       fileNameInDB = sdmService.getObject(jwtToken, objectId, sdmCredentials);
     }
-    Map<String, String> propertiesInDB = new HashMap<>();
+    Map<String, String> propertiesInDB;
     propertiesInDB =
         DBQuery.getPropertiesForID(
             attachmentEntity.get(),
