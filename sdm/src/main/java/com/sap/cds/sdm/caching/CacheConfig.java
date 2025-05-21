@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
-import org.ehcache.config.builders.*;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.expiry.Duration;
 import org.ehcache.expiry.Expirations;
 import org.slf4j.Logger;
@@ -18,6 +20,7 @@ public class CacheConfig {
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<RepoKey, String> versionedRepoCache;
   private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
+  private static Cache<String, String> maxAllowedAttachmentsCache;
   private static Cache<SecondaryPropertiesKey, List<String>> secondaryPropertiesCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
@@ -76,6 +79,12 @@ public class CacheConfig {
                     ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(Expirations.noExpiration()));
 
+    maxAllowedAttachmentsCache =
+        cacheManager.createCache(
+            "maxAllowedAttachmentsCache",
+            CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                    String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                .withExpiry(Expirations.noExpiration()));
     secondaryPropertiesCache =
         cacheManager.createCache(
             "secondaryProperties",
@@ -100,6 +109,10 @@ public class CacheConfig {
 
   public static Cache<RepoKey, String> getVersionedRepoCache() {
     return versionedRepoCache;
+  }
+
+  public static Cache<String, String> getMaxAllowedAttachmentsCache() {
+    return maxAllowedAttachmentsCache;
   }
 
   public static Cache<SecondaryTypesKey, List<String>> getSecondaryTypesCache() {

@@ -34,7 +34,7 @@
         <test-generation-folder>src/test/gen</test-generation-folder>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <attachments_version>1.0.5</attachments_version>
+        <attachments_version>1.0.7</attachments_version>
         <lombok.version>1.18.36</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <ehcache-version>3.10.8</ehcache-version>
@@ -44,7 +44,7 @@
         <commons-codec-version>1.18.0</commons-codec-version>
         <jackson-core-version>2.18.2</jackson-core-version>
         <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
-        <httpclient5-version>5.4.2</httpclient5-version>
+        <httpclient5-version>5.4.4</httpclient5-version>
         <httpcore5-version>5.3.3</httpcore5-version>
         <httpasyncclient-version>4.1.5</httpasyncclient-version>
         <log4j-api-version>3.0.0-beta2</log4j-api-version>
@@ -545,6 +545,9 @@
                         </exclude>
                         <exclude>
                             com/sap/cds/sdm/service/RetryUtils.class
+                        </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/RetryUtils$RetryAttempt.class
                         </exclude>
                         <exclude>
                             com/sap/cds/sdm/caching/**

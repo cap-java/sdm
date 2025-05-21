@@ -39,7 +39,7 @@ annotate Attachments with @UI: {
     content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
         @(title: '{i18n>Attachment}');
-       folderId @UI.Hidden;
+    folderId @UI.Hidden;
     repositoryId  @UI.Hidden ;
     objectId  @UI.Hidden ;
     mimeType @UI.Hidden;

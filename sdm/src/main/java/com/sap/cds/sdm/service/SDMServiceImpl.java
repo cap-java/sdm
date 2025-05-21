@@ -298,13 +298,12 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String token) {
+      Result result, PersistenceService persistenceService, String folderName, String token) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
             .collect(Collectors.toList());
-
     String folderId = null;
     String repositoryId = null;
     String repoId = SDMConstants.REPOSITORY_ID;
@@ -323,9 +322,9 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {
-      folderId = getFolderIdByPath(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
       if (folderId == null) {
-        folderId = createFolder(upID, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");
@@ -338,6 +337,7 @@ public class SDMServiceImpl implements SDMService {
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, String token) {
     String subdomain = TokenHandler.getSubdomainFromToken(token);
+    String folderId = null;
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     String sdmUrl =
@@ -347,15 +347,20 @@ public class SDMServiceImpl implements SDMService {
             + "/root/"
             + parentId
             + "?cmisselector=object";
-    HttpPost getFolderRequest = new HttpPost(sdmUrl);
+    HttpGet getFolderRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 200) {
-        return EntityUtils.toString(response.getEntity());
+        JSONObject jsonObject = new JSONObject(EntityUtils.toString(response.getEntity()));
+        folderId =
+            jsonObject
+                .getJSONObject("properties")
+                .getJSONObject("cmis:objectId")
+                .getString("value");
       } else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       }
-      return null;
+      return folderId;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }

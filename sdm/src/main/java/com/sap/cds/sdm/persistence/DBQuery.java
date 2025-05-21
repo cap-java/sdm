@@ -2,6 +2,7 @@ package com.sap.cds.sdm.persistence;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -161,10 +162,14 @@ public class DBQuery {
   }
 
   public static List<CmisDocument> getAttachmentsForFolder(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String folderId) {
+      String entity,
+      PersistenceService persistenceService,
+      String folderId,
+      AttachmentMarkAsDeletedEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
-        Select.from(attachmentEntity)
+        Select.from(attachmentEntity.get())
             .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
             .where(doc -> doc.get("folderId").eq(folderId));
     Result result = persistenceService.run(q);
@@ -176,6 +181,23 @@ public class DBQuery {
       cmisDocument.setAttachmentId(row.get("ID").toString());
       cmisDocument.setObjectId(row.get("objectId").toString());
       cmisDocuments.add(cmisDocument);
+    }
+    if (cmisDocuments.isEmpty()) {
+      attachmentEntity = context.getModel().findEntity(entity);
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+              .where(doc -> doc.get("folderId").eq(folderId));
+      result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        CmisDocument cmisDocument = new CmisDocument();
+        cmisDocument.setFolderId(row.get("folderId").toString());
+        cmisDocument.setRepositoryId(row.get("repositoryId").toString());
+        cmisDocument.setFileName(row.get("fileName").toString());
+        cmisDocument.setAttachmentId(row.get("ID").toString());
+        cmisDocument.setObjectId(row.get("objectId").toString());
+        cmisDocuments.add(cmisDocument);
+      }
     }
     return cmisDocuments;
   }
