@@ -245,7 +245,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     JSONObject createResult = null;
     try {
       createResult =
-          documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
+          documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
       logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
       logger.info("Upload Finished at: " + System.currentTimeMillis());
     } catch (Exception e) {

@@ -5,6 +5,9 @@ import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
+
 import io.reactivex.BackpressureOverflowStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
@@ -14,110 +17,96 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.entity.mime.InputStreamBody;
-import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.HttpEntity;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.entity.ContentType;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DocumentUploadService {
 
-  private final CloseableHttpClient httpClient;
+  //private final CloseableHttpClient httpClient;
   MemoryMXBean memoryMXBean;
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
+  private final ServiceBinding binding;
+  private final CdsProperties.ConnectionPool connectionPool;
 
-  public DocumentUploadService() {
+  public DocumentUploadService(ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
     logger.info("DocumentUploadService is instantiated");
-    PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-    connectionManager.setMaxTotal(20);
-    connectionManager.setDefaultMaxPerRoute(5);
+    // PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+    // connectionManager.setMaxTotal(20);
+    // connectionManager.setDefaultMaxPerRoute(5);
 
-    // Configure request with timeouts
-    RequestConfig requestConfig =
-        RequestConfig.custom()
-            .setConnectionRequestTimeout(60, TimeUnit.MINUTES)
-            .setResponseTimeout(60, TimeUnit.MINUTES)
-            .build();
+    // // Configure request with timeouts
+    // RequestConfig requestConfig =
+    //     RequestConfig.custom()
+    //         .setConnectionRequestTimeout(60, TimeUnit.MINUTES)
+    //         .setResponseTimeout(60, TimeUnit.MINUTES)
+    //         .build();
 
-    ConnectionConfig connectionConfig =
-        ConnectionConfig.custom().setConnectTimeout(60, TimeUnit.MINUTES).build();
-    connectionManager.setDefaultConnectionConfig(connectionConfig);
+    // ConnectionConfig connectionConfig =
+    //     ConnectionConfig.custom().setConnectTimeout(60, TimeUnit.MINUTES).build();
+    // connectionManager.setDefaultConnectionConfig(connectionConfig);
 
-    // Create a HttpClient using the connection manager
-    httpClient =
-        HttpClients.custom()
-            .setConnectionManager(connectionManager)
-            .setDefaultRequestConfig(requestConfig)
-            .build();
+    // // Create a HttpClient using the connection manager
+    // httpClient =
+    //     HttpClients.custom()
+    //         .setConnectionManager(connectionManager)
+    //         .setDefaultRequestConfig(requestConfig)
+    //         .build();
 
-    // Getting the handle to Mem management bean to print out heap mem used at required intervals.
-    memoryMXBean = ManagementFactory.getMemoryMXBean();
+    // // Getting the handle to Mem management bean to print out heap mem used at required intervals.
+    // memoryMXBean = ManagementFactory.getMemoryMXBean();
+
+    this.connectionPool = connectionPool;
+    this.binding = binding;
   }
 
   /*
-   * Reactive Java implementation to create document.
+   * Implementation to create document.
    */
-  public Single<JSONObject> createDocumentRx(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
-    return Single.defer(
-            () -> {
-              try {
-                //  Obtain DI token
-                String accessToken = TokenHandler.getDIToken(jwtToken, sdmCredentials);
-                String sdmUrl =
-                    sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
-
-                //  Set HTTP headers
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "Bearer " + accessToken);
-                headers.put("Connection", "keep-alive");
-
-                long totalSize = cmisDocument.getContentLength();
-                int chunkSize = SDMConstants.CHUNK_SIZE;
-
-                if (totalSize <= 200 * 1024 * 1024) {
-                  //  Upload directly if file is ≤ 200MB
-                  return uploadSingleChunk(cmisDocument, headers, sdmUrl);
-                } else {
-                  //  Upload in chunks if file is > 100MB
-                  return uploadLargeFileInChunks(cmisDocument, headers, sdmUrl, chunkSize);
-                }
-              } catch (Exception e) {
-                return Single.error(
-                    new IOException(" Error uploading document: " + e.getMessage(), e));
-              }
-            })
-        .subscribeOn(io.reactivex.schedulers.Schedulers.io());
+  public JSONObject createDocument(
+        CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException {
+    try {
+        long totalSize = cmisDocument.getContentLength();
+        int chunkSize = SDMConstants.CHUNK_SIZE;
+        
+        if (totalSize <= 200 * 1024 * 1024) {
+            // Upload directly if file is ≤ 200MB
+            return uploadSingleChunk(cmisDocument, sdmCredentials, jwtToken);
+        } else {
+            // Upload in chunks if file is > 200MB
+            //return uploadLargeFileInChunksNonReactive(cmisDocument, headers, sdmUrl, chunkSize);
+        }
+    } catch (Exception e) {
+        throw new IOException("Error uploading document: " + e.getMessage(), e);
+    }
   }
 
-  private CloseableHttpResponse performRequestWithRetry(String sdmUrl, HttpUriRequestBase request)
-      throws IOException {
-    return Flowable.fromCallable(() -> httpClient.execute(request))
-        .onBackpressureBuffer(
-            3, // Keeping a very low buffer as we hardly need it as the consumer (di call to
-            // appendcontent) is fast enough for the producer (sending the rest call) as we are
-            // making synchronous call
-            () ->
-                logger.error(
-                    "Buffer overflow! Handle appropriately."), // Callback for overflow handling
-            BackpressureOverflowStrategy
-                .ERROR) // Strategy when overflow happens: just emit an error.
-        .retryWhen(RetryUtils.retryLogic(3))
-        .blockingSingle();
+  private void executeHttpPost(
+    HttpClient httpClient,
+    HttpPost uploadFile,
+    CmisDocument cmisDocument,
+    Map<String, String> finalResponse)
+    throws ServiceException {
+    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      formResponse(cmisDocument, finalResponse, response);
+    } catch (IOException e) {
+    throw new ServiceException("Error in setting timeout", e.getMessage());
+    }
   }
-
   /*
    * CMIS call to appending content stream
    */
@@ -192,61 +181,43 @@ public class DocumentUploadService {
     }
   }
 
-  private Single<JSONObject> uploadSingleChunk(
-      CmisDocument cmisDocument, Map<String, String> headers, String sdmUrl) {
+  public JSONObject uploadSingleChunk(
+        CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException {
 
-    return Single.defer(
-        () -> {
-          try {
-            //  Initialize ReadAheadInputStream
-            InputStream originalStream = cmisDocument.getContent();
-            if (originalStream == null) {
-              return Single.error(new IOException(" File stream is null!"));
-            }
+    InputStream originalStream = cmisDocument.getContent();
+    if (originalStream == null) {
+        throw new IOException("File stream is null!");
+    }
 
-            //  Prepare Multipart Request
-            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-            builder.addTextBody("cmisaction", "createDocument");
-            builder.addTextBody("objectId", cmisDocument.getFolderId());
-            builder.addTextBody("propertyId[0]", "cmis:name");
-            builder.addTextBody("propertyValue[0]", cmisDocument.getFileName());
-            builder.addTextBody("propertyId[1]", "cmis:objectTypeId");
-            builder.addTextBody("propertyValue[1]", "cmis:document");
-            builder.addTextBody("succinct", "true");
-            // Add media part with file metadata
+    // Prepare Multipart Request
+    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
 
-            builder.addBinaryBody(
-                "filename",
-                cmisDocument.getContent(),
-                ContentType.create(cmisDocument.getMimeType()),
-                cmisDocument.getFileName());
-            HttpEntity entity = builder.build();
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
-            HttpPost request = new HttpPost(sdmUrl);
-            request.setEntity(entity);
-            headers.forEach(request::addHeader);
-            return Single.fromCallable(
-                    () -> {
-                      try (CloseableHttpResponse response =
-                          performRequestWithRetry(sdmUrl, request)) {
-                        String responseBody = EntityUtils.toString(response.getEntity());
-                        logger.debug(" Upload Response: " + responseBody);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    builder.addBinaryBody(
+            "filename",
+            cmisDocument.getContent(),
+            ContentType.create(cmisDocument.getMimeType()),
+            cmisDocument.getFileName());
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[0]", cmisDocument.getFileName(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    HttpEntity entity = builder.build();
+    HttpPost request = new HttpPost(sdmUrl);
+    request.setEntity(entity);
 
-                        Map<String, String> finalResMap = new HashMap<>();
-                        formResponse(cmisDocument, finalResMap, responseBody);
+    Map<String, String> finalResMap = new HashMap<>();
+    executeHttpPost(httpClient, request, cmisDocument, finalResMap);
 
-                        return new JSONObject(finalResMap);
-                      }
-                    })
-                .toFlowable()
-                .retryWhen(RetryUtils.retryLogic(3))
-                .singleOrError();
-          } catch (Exception e) {
-            return Single.error(
-                new IOException(" Error uploading small document: " + e.getMessage(), e));
-          }
-        });
-  }
+    return new JSONObject(finalResMap);
+}
 
   private Single<JSONObject> uploadLargeFileInChunks(
       CmisDocument cmisDocument, Map<String, String> headers, String sdmUrl, int chunkSize) {
@@ -360,33 +331,35 @@ public class DocumentUploadService {
   }
 
   private void formResponse(
-      CmisDocument cmisDocument, Map<String, String> finalResponse, String responseBody) {
-    logger.info("Entering formResponse method");
+      CmisDocument cmisDocument,
+      Map<String, String> finalResponse,
+      CloseableHttpResponse response) {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
     String objectId = "";
     String error = "";
-
     try {
-      logger.debug("Parsing responseBody: " + responseBody);
-      JSONObject jsonResponse = new JSONObject(responseBody);
-      if (jsonResponse.has("succinctProperties")) {
+      String responseString = EntityUtils.toString(response.getEntity());
+      JSONObject jsonResponse = new JSONObject(responseString);
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode == 201 || responseCode == 200) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
-      } else if (jsonResponse.has("properties")
-          && jsonResponse.getJSONObject("properties").has("cmis:objectId")) {
-        objectId =
-            jsonResponse
-                .getJSONObject("properties")
-                .getJSONObject("cmis:objectId")
-                .getString("value");
       } else {
-        String message = jsonResponse.optString("message", "Unknown error");
-        status = "fail";
-        error = message;
+        String message = jsonResponse.getString("message");
+        if (responseCode == 409
+            && "Malware Service Exception: Virus found in the file!".equals(message)) {
+          status = "virus";
+        } else if (responseCode == 409) {
+          status = "duplicate";
+        } else {
+          status = "fail";
+          error = message;
+        }
       }
-
+      // Construct the final response
       finalResponse.put("name", name);
       finalResponse.put("id", id);
       finalResponse.put("status", status);
@@ -394,8 +367,7 @@ public class DocumentUploadService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
-    } catch (Exception e) {
-      logger.error("Exception in formResponse: " + e.getMessage());
+    } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }
