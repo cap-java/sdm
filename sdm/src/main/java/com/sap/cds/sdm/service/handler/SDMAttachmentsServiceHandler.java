@@ -253,6 +253,14 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
       logger.info("Upload Finished at: " + System.currentTimeMillis());
     } catch (Exception e) {
+      String subDomain = TokenHandler.getSubdomainFromToken(jwtToken);
+      logger.info(
+          "objectId to be deleted:{},userEmail = {}, subdomain = {} ",
+          cmisDocument.getObjectId(),
+          eventContext.getUserInfo().getName(),
+          subDomain);
+      sdmService.deleteDocument(
+          "delete", cmisDocument.getObjectId(), eventContext.getUserInfo().getName(), subDomain);
       logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
       throw new ServiceException(
           SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);

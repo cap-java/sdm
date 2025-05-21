@@ -242,8 +242,7 @@ public class DocumentUploadService {
                 .retryWhen(RetryUtils.retryLogic(3))
                 .singleOrError();
           } catch (Exception e) {
-            return Single.error(
-                new IOException(" Error uploading small document: " + e.getMessage(), e));
+            return Single.error(new ServiceException(" Error uploading the document"));
           }
         });
   }
@@ -345,7 +344,8 @@ public class DocumentUploadService {
           } catch (Exception e) {
             logger.error("Exception in uploadLargeFileInChunks: " + e.getMessage());
             return Single.error(
-                new IOException("Error uploading document in chunks: " + e.getMessage(), e));
+                new ServiceException(
+                    "Error uploading document in chunks. Make sure you are in stable network during the large file upload"));
           } finally {
             if (chunkedStream != null) {
               try {

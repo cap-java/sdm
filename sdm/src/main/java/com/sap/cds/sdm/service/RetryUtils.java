@@ -58,7 +58,7 @@ public class RetryUtils {
                   int attempt = retry.attempt;
 
                   if (shouldRetry().test(error)) {
-                    long delay = (long) Math.pow(2, attempt); // exponential backoff
+                    long delay = (long) Math.pow(1.1, attempt); // exponential backoff
                     logger.info(
                         "Retry attempt {} failed. Retrying in {} seconds. Error: {}",
                         attempt,

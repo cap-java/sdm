@@ -37,15 +37,20 @@ public class ReadAheadInputStream extends InputStream {
     this.currentBuffer = new byte[CHUNK_SIZE];
 
     logger.info(" Initializing ReadAheadInputStream..."); // Once per one file upload
-    preloadChunks(); // preload one chunk
-    loadNextChunk(); // Ensure first chunk is available
+    try {
+      preloadChunks(); // preload one chunk
+      loadNextChunk(); // Ensure first chunk is available
+    } catch (Exception e) {
+      logger.error("Error during initialization: {}", e.getMessage(), e);
+      throw new IOException("Error during initialization", e);
+    }
   }
 
   public boolean isChunkQueueEmpty() {
     return this.chunkQueue.isEmpty();
   }
 
-  private void preloadChunks() {
+  private void preloadChunks() throws RuntimeException {
     executor.submit(
         () -> {
           try {
@@ -85,6 +90,8 @@ public class ReadAheadInputStream extends InputStream {
             Thread.currentThread().interrupt();
           } catch (Exception e) {
             logger.error("Unexpected exception during background loading", e);
+            throw new RuntimeException(
+                new IOException("IOException occurred during background loading", e));
           }
         });
   }
@@ -110,10 +117,12 @@ public class ReadAheadInputStream extends InputStream {
                       }
                       return result;
                     })
-                .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
+                .retryWhen(RetryUtils.retryLogic(4)) // Apply retry logic with 5 attempts
                 .toList()
                 .blockingGet();
-
+        if (results == null || results.isEmpty())
+          throw new IOException("Failed to read chunk: results is null or empty");
+        // Check if the read was successful
         int readAttempt = results.get(0);
 
         if (readAttempt == -1) {
