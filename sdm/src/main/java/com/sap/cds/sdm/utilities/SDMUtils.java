@@ -172,15 +172,15 @@ public class SDMUtils {
       if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key) || entity.getElement(key) == null) {
         continue;
       }
-      
+
       CdsElement element = entity.getElement(key);
       String propertyName = extractPropertyName(element);
       String title = extractTitle(element);
-    
+
       if (propertyName != null && title != null) {
         titleMap.put(propertyName, title);
       }
-    }    
+    }
     return titleMap;
   }
 
