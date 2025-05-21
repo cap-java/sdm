@@ -2,14 +2,15 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.*;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -28,6 +29,7 @@ import java.util.*;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
@@ -227,12 +229,15 @@ public class SDMUpdateAttachmentsHandlerTest {
     Map<String, String> secondaryProperties = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
     secondaryProperties.put("filename", "file1.txt");
+
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
+
     attachment.put("fileName", "file1.txt");
     attachment.put("url", "objectId");
-    attachment.put("ID", "test-id"); // assuming there's an ID field
+    attachment.put("ID", "test-id");
     attachments.add(attachment);
+
     entity.put("attachments", attachments);
     CdsData mockCdsData = mock(CdsData.class);
     when(mockCdsData.get("composition")).thenReturn(attachments);
@@ -246,23 +251,19 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn(Optional.of(attachmentDraftEntity));
     when(context.getMessages()).thenReturn(messages);
 
-    // Mock the authentication context
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
-    // Or another mock if expected
 
-    // Mock the static TokenHandler
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
-    // Mock the SDM service responses
     dbQueryMockedStatic = mockStatic(DBQuery.class);
     dbQueryMockedStatic
         .when(
             () ->
                 getAttachmentForID(
                     any(CdsEntity.class), any(PersistenceService.class), anyString()))
-        .thenReturn("file123.txt"); // Mock a different file name in SDM to trigger renaming
+        .thenReturn("file123.txt"); // triggers rename
 
     when(sdmService.updateAttachments(
             "jwtToken",
@@ -270,19 +271,19 @@ public class SDMUpdateAttachmentsHandlerTest {
             document,
             secondaryProperties,
             secondaryPropertiesWithInvalidDefinitions))
-        .thenReturn(403); // Mock conflict response code
+        .thenReturn(403); // Forbidden
 
+    // Call the method
     handler.updateName(context, data, "composition");
 
-    verify(messages)
-        .warn(
-            argThat(
-                s ->
-                    s != null
-                        && s.contains("Could not update the following files.")
-                        && s.contains("file123.txt")
-                        && s.contains(
-                            "You do not have the required permissions to rename attachments")));
+    // Capture and assert the warning message
+    ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
+    verify(messages).warn(warningCaptor.capture());
+    String warningMessage = warningCaptor.getValue();
+
+    String expectedMessage =
+        SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
+    assertEquals(expectedMessage, warningMessage);
   }
 
   //   @Test

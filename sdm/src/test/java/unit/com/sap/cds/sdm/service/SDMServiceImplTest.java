@@ -1386,13 +1386,15 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(500);
+      when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      String mockErrorJson = "403 : Error";
+      InputStream inputStream =
+          new ByteArrayInputStream(mockErrorJson.getBytes(StandardCharsets.UTF_8));
       when(entity.getContent()).thenReturn(inputStream);
-      when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("IOException"));
+      when(entity.getContent()).thenReturn(inputStream);
 
       // Mock CacheConfig to return null
       Cache mockCache = mock(Cache.class);
@@ -1402,19 +1404,14 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       // Verify the response code
-      ServiceException exception =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                sdmServiceImpl.updateAttachments(
-                    jwtToken,
-                    mockSdmCredentials,
-                    cmisDocument,
-                    secondaryProperties,
-                    secondaryPropertiesWithInvalidDefinitions);
-              });
-
-      assertTrue(exception.getMessage().contains("Could not update the attachment"));
+      int responseCode =
+          sdmServiceImpl.updateAttachments(
+              jwtToken,
+              mockSdmCredentials,
+              cmisDocument,
+              secondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions);
+      assertEquals(responseCode, 403);
     }
   }
 

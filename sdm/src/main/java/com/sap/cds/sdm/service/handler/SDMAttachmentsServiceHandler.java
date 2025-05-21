@@ -285,6 +285,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
+      case "unauthorized":
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         addAttachmentToDraft(

@@ -65,6 +65,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound = new ArrayList<>();
       List<String> filesWithUnsupportedProperties = new ArrayList<>();
       Map<String, String> badRequest = new HashMap<>();
+      List<String> noSDMRoles = new ArrayList<>();
       for (Map<String, Object> entity : data) {
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
         Optional<CdsEntity> attachmentEntity =
@@ -87,7 +88,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             badRequest,
             composition,
             attachmentEntity,
-            secondaryPropertiesWithInvalidDefinitions);
+            secondaryPropertiesWithInvalidDefinitions,
+            noSDMRoles);
         handleWarnings(
             context,
             fileNameWithRestrictedCharacters,
@@ -95,7 +97,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            propertyTitles);
+            propertyTitles,
+            noSDMRoles);
       }
     }
   }
@@ -120,7 +123,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       String composition,
       Optional<CdsEntity> attachmentEntity,
-      Map<String, String> secondaryPropertiesWithInvalidDefinitions)
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
       throws IOException {
     List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
     if (attachments != null) {
@@ -135,7 +139,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             badRequest,
             composition,
             attachmentEntity,
-            secondaryPropertiesWithInvalidDefinitions);
+            secondaryPropertiesWithInvalidDefinitions,
+            noSDMRoles);
       }
       SecondaryPropertiesKey secondaryPropertiesKey =
           new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
@@ -154,7 +159,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       String composition,
       Optional<CdsEntity> attachmentEntity,
-      Map<String, String> secondaryPropertiesWithInvalidDefinitions)
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String fileNameInDB;
@@ -238,7 +244,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
-            throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
+            noSDMRoles.add(fileNameInSDM);
+            replacePropertiesInAttachment(
+                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
 
           case 409:
             duplicateFileNameList.add(filenameInRequest);
@@ -308,7 +316,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
-      Map<String, String> propertyTitles) {
+      Map<String, String> propertyTitles,
+      List<String> noSDMRoles) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -345,6 +354,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
+    }
+    if (!noSDMRoles.isEmpty()) {
+      context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create"));
     }
   }
 

@@ -29,7 +29,7 @@ public class SDMConstants {
   public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
       "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
-      "You do not have the required permissions to rename attachments. Kindly contact the admin";
+      "You do not have the required permissions to update attachments. Kindly contact the admin";
   public static final String SDM_ROLES_ERROR_MESSAGE =
       "Unable to rename the file due to an error at the server";
   public static final String SDM_ENV_NAME = "sdm";
@@ -121,6 +121,27 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s : %s%n", entry.getKey(), entry.getValue()));
     }
     bulletPoints.append("\nPlease try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String noSDMRolesMessage(List<String> files, String operation) {
+    // Create the base message
+    String prefixMessage = "Could not " + operation + " the following files. \n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each file name and its error message to the StringBuilder
+    for (String item : files) {
+      bulletPoints.append(String.format("\t• %s%n", item));
+    }
+    bulletPoints.append(System.lineSeparator());
+    if (operation == "create") {
+      bulletPoints.append(USER_NOT_AUTHORISED_ERROR);
+    } else {
+      bulletPoints.append(SDM_MISSING_ROLES_EXCEPTION_MSG);
+    }
+
     return bulletPoints.toString();
   }
 

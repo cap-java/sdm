@@ -118,6 +118,8 @@ public class SDMServiceImpl implements SDMService {
           status = "virus";
         } else if (responseCode == 409) {
           status = "duplicate";
+        } else if (responseCode == 403) {
+          status = "unauthorized";
         } else {
           status = "fail";
           error = message;
@@ -151,12 +153,21 @@ public class SDMServiceImpl implements SDMService {
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
-
-    List<String> secondaryTypes =
-        getSecondaryTypes(
-            repositoryId,
-            jwtToken,
-            sdmCredentials); // Fetching the secondary types from the SDM repository
+    List<String> secondaryTypes;
+    try {
+      secondaryTypes =
+          getSecondaryTypes(
+              repositoryId,
+              jwtToken,
+              sdmCredentials); // Fetching the secondary types from the SDM repository
+    } catch (Exception e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.length() >= 3) {
+        return (Integer.parseInt(errorMessage.substring(0, 3)));
+      } else {
+        return 500;
+      }
+    }
     List<String> validSecondaryProperties =
         getValidSecondaryProperties(
             secondaryTypes, subdomain, sdmCredentials, repositoryId, jwtToken);
@@ -525,6 +536,11 @@ public class SDMServiceImpl implements SDMService {
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
       try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+          String reasonPhrase = response.getStatusLine().getReasonPhrase();
+          throw new ServiceException(statusCode + " : " + reasonPhrase);
+        }
         HttpEntity responseEntity = response.getEntity();
         List<String> result = new ArrayList<>();
         if (responseEntity != null) {
