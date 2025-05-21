@@ -169,19 +169,18 @@ public class SDMUtils {
     }
     CdsEntity entity = attachmentEntity.get();
     for (String key : attachment.keySet()) {
-      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
+      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key) || entity.getElement(key) == null) {
         continue;
       }
+      
       CdsElement element = entity.getElement(key);
-      if (element == null) {
-        continue;
-      }
       String propertyName = extractPropertyName(element);
       String title = extractTitle(element);
+    
       if (propertyName != null && title != null) {
         titleMap.put(propertyName, title);
       }
-    }
+    }    
     return titleMap;
   }
 
@@ -220,9 +219,9 @@ public class SDMUtils {
         CdsElement element = entity.getElement(key);
         if (element != null) {
           // Checking the outdated/old SDM Annotation
-          Optional<CdsAnnotation<Object>> SDMAnnotation =
+          Optional<CdsAnnotation<Object>> sdmAnnotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
-          if (SDMAnnotation.isPresent()) {
+          if (sdmAnnotation.isPresent()) {
             Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
             String title = null;
             if (titleAnnotation.isPresent()) {

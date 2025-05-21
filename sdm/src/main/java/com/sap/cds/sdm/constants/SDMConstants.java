@@ -136,7 +136,7 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s%n", item));
     }
     bulletPoints.append(System.lineSeparator());
-    if (operation == "create") {
+    if (operation.equals("create")) {
       bulletPoints.append(USER_NOT_AUTHORISED_ERROR);
     } else {
       bulletPoints.append(SDM_MISSING_ROLES_EXCEPTION_MSG);
