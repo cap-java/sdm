@@ -186,6 +186,7 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), any()))
           .thenReturn(mockHttpClient);
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
@@ -440,6 +441,7 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getSubdomainFromToken(any()))
           .thenReturn("test-subdomain");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
@@ -599,6 +601,7 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getSubdomainFromToken(any()))
           .thenReturn("test-subdomain");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
@@ -1372,6 +1375,7 @@ public class SDMServiceImplTest {
       Map<String, String> secondaryProperties = new HashMap<>();
       secondaryProperties.put("property1", "value1");
       secondaryProperties.put("property2", "value2");
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
 
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       String grantType = "TOKEN_EXCHANGE";
@@ -1382,13 +1386,15 @@ public class SDMServiceImplTest {
           .when(() -> TokenHandler.getHttpClient(any(), any(), any(), eq(grantType)))
           .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(500);
+      when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream = new ByteArrayInputStream("".getBytes());
+      String mockErrorJson = "403 : Error";
+      InputStream inputStream =
+          new ByteArrayInputStream(mockErrorJson.getBytes(StandardCharsets.UTF_8));
       when(entity.getContent()).thenReturn(inputStream);
-      when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("IOException"));
+      when(entity.getContent()).thenReturn(inputStream);
 
       // Mock CacheConfig to return null
       Cache mockCache = mock(Cache.class);
@@ -1398,15 +1404,14 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool);
 
       // Verify the response code
-      ServiceException exception =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                sdmServiceImpl.updateAttachments(
-                    jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
-              });
-
-      assertTrue(exception.getMessage().contains("Could not update the attachment"));
+      int responseCode =
+          sdmServiceImpl.updateAttachments(
+              jwtToken,
+              mockSdmCredentials,
+              cmisDocument,
+              secondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions);
+      assertEquals(responseCode, 403);
     }
   }
 
@@ -1420,6 +1425,7 @@ public class SDMServiceImplTest {
       tokenHandlerMockedStatic
           .when(() -> TokenHandler.getDITokenUsingAuthorities(any(), any(), any()))
           .thenReturn("dummyToken");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
       httpClientsMockedStatic.when(HttpClients::createDefault).thenReturn(mockHttpClient);
@@ -1469,6 +1475,7 @@ public class SDMServiceImplTest {
       List<String> secondaryTypes = Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
       Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(any())).thenReturn(null);
+
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       String grantType = "TOKEN_EXCHANGE";
       tokenHandlerMockedStatic
@@ -1518,6 +1525,7 @@ public class SDMServiceImplTest {
 
       Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(any())).thenReturn(secondaryTypesCached);
+
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
 
@@ -1536,6 +1544,7 @@ public class SDMServiceImplTest {
       when(response.getEntity()).thenReturn(entity);
       InputStream inputStream = new ByteArrayInputStream("".getBytes());
       when(entity.getContent()).thenReturn(inputStream);
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
 
       String jsonResponseTypes =
           "[{"
@@ -1575,7 +1584,11 @@ public class SDMServiceImplTest {
               ServiceException.class,
               () -> {
                 sdmServiceImpl.updateAttachments(
-                    jwtToken, mockSdmCredentials, cmisDocument, secondaryProperties);
+                    jwtToken,
+                    mockSdmCredentials,
+                    cmisDocument,
+                    secondaryProperties,
+                    secondaryPropertiesWithInvalidDefinitions);
               });
     }
   }

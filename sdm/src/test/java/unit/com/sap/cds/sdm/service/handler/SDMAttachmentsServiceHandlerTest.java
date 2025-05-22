@@ -550,6 +550,7 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
@@ -608,6 +609,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> DBQuery.getAttachmentsForUPID(cdsEntity, persistenceService, null, ""))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
@@ -665,6 +667,7 @@ public class SDMAttachmentsServiceHandlerTest {
                       cdsEntity, persistenceService, anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
 
       handlerSpy.createAttachment(mockContext);
@@ -725,6 +728,7 @@ public class SDMAttachmentsServiceHandlerTest {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
+
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))

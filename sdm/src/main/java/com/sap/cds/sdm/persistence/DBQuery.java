@@ -120,4 +120,26 @@ public class DBQuery {
 
     return propertyValueMap;
   }
+
+  public static Map<String, String> getPropertiesForID(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String id,
+      Map<String, String> properties) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(properties.keySet().toArray(new String[0]))
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    Map<String, String> propertyValueMap = new HashMap<>();
+
+    // Iterate through the map and populate propertyValueMap
+    for (Map.Entry<String, String> entry : properties.entrySet()) {
+      String property = entry.getKey();
+      String mapKey = entry.getValue();
+      Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
+      propertyValueMap.put(mapKey, value != null ? value.toString() : null);
+    }
+    return propertyValueMap;
+  }
 }
