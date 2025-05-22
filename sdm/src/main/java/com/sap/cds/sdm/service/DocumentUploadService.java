@@ -270,7 +270,6 @@ public class DocumentUploadService {
         if (isLastChunk) {
           // Just for debug purpose log the heap consumption details.
           logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
-          printMemoryConsumption();
           hasMoreChunks = false;
         }
       }
