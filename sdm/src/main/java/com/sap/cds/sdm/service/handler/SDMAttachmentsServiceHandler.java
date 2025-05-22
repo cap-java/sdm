@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
-  private final DocumentUploadService documentService;
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
 
   public SDMAttachmentsServiceHandler(
@@ -47,7 +46,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       DocumentUploadService documentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
-    this.documentService = documentService;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
@@ -294,6 +292,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
+      case "unauthorized":
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         addAttachmentToDraft(

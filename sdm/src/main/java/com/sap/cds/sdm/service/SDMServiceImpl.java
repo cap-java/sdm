@@ -118,6 +118,8 @@ public class SDMServiceImpl implements SDMService {
           status = "virus";
         } else if (responseCode == 409) {
           status = "duplicate";
+        } else if (responseCode == 403) {
+          status = "unauthorized";
         } else {
           status = "fail";
           error = message;
@@ -141,16 +143,9 @@ public class SDMServiceImpl implements SDMService {
       String jwtToken,
       SDMCredentials sdmCredentials,
       CmisDocument cmisDocument,
-      Map<String, String> secondaryProperties)
+      Map<String, String> secondaryProperties,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions)
       throws ServiceException {
-
-    Map<String, String> updatedMap = new HashMap<>();
-    for (Map.Entry<String, String> entry : secondaryProperties.entrySet()) {
-      updatedMap.put(entry.getKey().replace("___", ":"), entry.getValue());
-    }
-
-    secondaryProperties = updatedMap;
-
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
@@ -158,42 +153,88 @@ public class SDMServiceImpl implements SDMService {
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
-
-    List<String> secondaryTypes = getSecondaryTypes(repositoryId, jwtToken, sdmCredentials);
+    List<String> secondaryTypes;
+    try {
+      secondaryTypes =
+          getSecondaryTypes(
+              repositoryId,
+              jwtToken,
+              sdmCredentials); // Fetching the secondary types from the SDM repository
+    } catch (Exception e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.length() >= 3) {
+        return (Integer.parseInt(errorMessage.substring(0, 3)));
+      } else {
+        return 500;
+      }
+    }
     List<String> validSecondaryProperties =
         getValidSecondaryProperties(
             secondaryTypes, subdomain, sdmCredentials, repositoryId, jwtToken);
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
-    CacheConfig.getSecondaryTypesCache().put(secondaryTypesKey, secondaryTypes);
+    CacheConfig.getSecondaryTypesCache()
+        .put(
+            secondaryTypesKey,
+            secondaryTypes); // Setting the secondary types we just fetched in the cache
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(repositoryId);
-    CacheConfig.getSecondaryPropertiesCache().put(secondaryPropertiesKey, validSecondaryProperties);
+    CacheConfig.getSecondaryPropertiesCache()
+        .put(
+            secondaryPropertiesKey,
+            validSecondaryProperties); // Setting the valid secondary properties we just fetched in
+    // the cache. This will stay in cache until the current list
+    // of attachments in draft table are saved. Then it will be
+    // removed as the properties can be updated from the backend
+    // by the time new attachments are added to the draft
+
     Set<String> keysToRemove =
         secondaryProperties.keySet().stream()
             .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
-            .collect(Collectors.toSet());
+            .collect(
+                Collectors
+                    .toSet()); // Adding the properties which are unsupported to a list so that
+    // exeception can be thrown
+    Set<String> keysMap1 = secondaryProperties.keySet();
+    for (Map.Entry<String, String> entry :
+        secondaryPropertiesWithInvalidDefinitions
+            .entrySet()) { // Adding the properties which are defined incorrectly to a list so that
+      // exeception can be thrown
+      if (keysMap1.contains(entry.getValue())) {
+        keysToRemove.add(entry.getValue());
+      }
+    }
     if (!keysToRemove.isEmpty()) {
       String errorMessage = String.join(", ", keysToRemove);
-      throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
+      throw new ServiceException(
+          SDMConstants.UNSUPPORTED_PROPERTIES
+              + " "
+              + errorMessage); // Some invalid/unsupported properties were present and were updated.
+      // So processing is stopped (Request is not sent to SDM) and
+      // exception is thrown
     }
+
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
-
     HttpPost updateRequest = new HttpPost(sdmUrl);
 
     // Prepare the request body parts
     Map<String, String> updateRequestBody = new HashMap<>();
     updateRequestBody.put("cmisaction", "update");
-    updateRequestBody.put("propertyId[0]", "cmis:secondaryObjectTypeIds");
+    updateRequestBody.put(
+        "propertyId[0]",
+        "cmis:secondaryObjectTypeIds"); // Creating request body for update properties
 
     for (int index = 0; index < secondaryTypes.size(); index++) {
-      updateRequestBody.put("propertyValue[0][" + index + "]", secondaryTypes.get(index));
+      updateRequestBody.put(
+          "propertyValue[0][" + index + "]",
+          secondaryTypes.get(index)); // Adding Secondary Types to the request body
     }
 
     SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    SDMUtils.assembleRequestBodySecondaryTypes(builder, updateRequestBody, objectId);
+    SDMUtils.assembleRequestBodySecondaryTypes(
+        builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
 
     // Set the multipart entity to the request
     updateRequest.setEntity(builder.build());
@@ -495,6 +536,11 @@ public class SDMServiceImpl implements SDMService {
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
       try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+          String reasonPhrase = response.getStatusLine().getReasonPhrase();
+          throw new ServiceException(statusCode + " : " + reasonPhrase);
+        }
         HttpEntity responseEntity = response.getEntity();
         List<String> result = new ArrayList<>();
         if (responseEntity != null) {
