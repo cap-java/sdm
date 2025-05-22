@@ -215,11 +215,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           case 200:
           case 201:
             // Success cases, do nothing
-            DBQuery.updateObjectId(
-                attachmentEntity.get(),
-                persistenceService,
-                finalResponse.get("objectId").toString(),
-                id);
+//            DBQuery.updateObjectId(
+//                attachmentEntity.get(),
+//                persistenceService,
+//                finalResponse.get("objectId").toString(),
+//                id);
             break;
 
           default:
