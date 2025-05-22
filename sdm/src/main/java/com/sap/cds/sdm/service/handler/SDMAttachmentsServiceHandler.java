@@ -161,7 +161,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     Result result =
         DBQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
-    checkAttachmentConstraints(eventContext, result);
+    checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
     validateFileName(data.getFileName(), result, attachmentIds);
@@ -190,8 +190,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     return upIdKey;
   }
 
-  private void checkAttachmentConstraints(AttachmentCreateEventContext eventContext, Result result)
+  private void checkAttachmentConstraints(
+      AttachmentCreateEventContext eventContext,
+      CdsEntity attachmentDraftEntity,
+      String upID,
+      String upIdKey)
       throws ServiceException {
+    // Fetch the row count for current repository
+    Result result =
+        DBQuery.getAttachmentsForUPIDAndRepository(
+            attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
