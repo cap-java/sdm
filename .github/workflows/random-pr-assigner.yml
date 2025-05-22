@@ -5,7 +5,7 @@ on:
     types: [opened, ready_for_review] # Triggers when a PR is opened or changes from draft to open
 
 jobs:
-  assign_reviewer: # Renamed job as it's no longer notifying
+  assign_reviewer:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write # Grant permission to write to pull requests (needed for requesting reviews)
@@ -62,5 +62,5 @@ jobs:
             --method POST \
             -H "Accept: application/vnd.github.v3+json" \
             /repos/$REPO/pulls/$PR_NUMBER/requested_reviewers \
-            -f reviewers='["$SELECTED_REVIEWER"]'
+            --input - <<< '{"reviewers": ["'"$SELECTED_REVIEWER"'"]}' # CORRECTED LINE
           echo "Review request sent."
