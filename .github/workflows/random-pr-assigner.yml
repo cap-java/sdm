@@ -23,6 +23,7 @@ jobs:
             "yashmeet29"
             "vibhutikumar07"
             "rishikunnath2747"
+            "pujaDeshmukh17"
           )
 
           PR_AUTHOR="${{ github.actor }}"
