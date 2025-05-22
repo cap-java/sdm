@@ -204,10 +204,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
             eventContext.getModel().entities().toList(), eventContext.getAttachmentEntity());
-
     String[] maxCountArr = errorMessageCount.split("__");
     long maxCount = Long.parseLong(maxCountArr[0]);
-    if (maxCount > 0 && rowCount > maxCount) {
+    if (maxCount > 0 && rowCount >= maxCount) {
       String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
         throw new ServiceException(message);
