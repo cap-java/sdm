@@ -223,7 +223,12 @@ public class SDMAttachmentsServiceHandlerTest {
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -302,7 +307,11 @@ public class SDMAttachmentsServiceHandlerTest {
                   DBQuery.getAttachmentsForUPID(
                       mockDraftEntity, persistenceService, "upid", "up__ID"))
           .thenReturn(mockResult);
-
+      DBQueryMockedStatic.when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
@@ -387,6 +396,12 @@ public class SDMAttachmentsServiceHandlerTest {
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
@@ -465,6 +480,18 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("0__null");
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
@@ -546,6 +573,12 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("0__null");
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
@@ -723,6 +756,12 @@ public class SDMAttachmentsServiceHandlerTest {
         MockedStatic<SDMUtils> sdmUtilsMockedStatic = Mockito.mockStatic(SDMUtils.class)) {
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       sdmUtilsMockedStatic
@@ -1006,6 +1045,12 @@ public class SDMAttachmentsServiceHandlerTest {
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
       tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
@@ -1073,6 +1118,12 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("1__null");
       dbQueryMockedStatic
           .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+          .thenReturn(mockResult);
+      dbQueryMockedStatic
+          .when(
+              () ->
+                  DBQuery.getAttachmentsForUPIDAndRepository(
+                      any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 

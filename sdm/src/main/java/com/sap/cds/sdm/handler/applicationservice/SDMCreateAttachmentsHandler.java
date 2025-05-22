@@ -247,7 +247,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             noSDMRoles.add(fileNameInSDM);
             replacePropertiesInAttachment(
                 attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-
+            break;
           case 409:
             duplicateFileNameList.add(filenameInRequest);
             replacePropertiesInAttachment(

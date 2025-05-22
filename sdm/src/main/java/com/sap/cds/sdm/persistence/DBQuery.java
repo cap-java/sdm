@@ -30,6 +30,22 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
+  public static Result getAttachmentsForUPIDAndRepository(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .where(
+                doc ->
+                    doc.get(upIdKey)
+                        .eq(upID)
+                        .and(doc.get("repositoryId").eq(SDMConstants.REPOSITORY_ID)));
+    return persistenceService.run(q);
+  }
+
   public static String getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
