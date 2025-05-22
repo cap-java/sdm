@@ -1,0 +1,66 @@
+name: Auto-Assign Random Reviewer
+
+on:
+  pull_request:
+    types: [opened, ready_for_review] # Triggers when a PR is opened or changes from draft to open
+
+jobs:
+  assign_reviewer: # Renamed job as it's no longer notifying
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Grant permission to write to pull requests (needed for requesting reviews)
+      contents: read       # Needed for checkout action
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Define Team Reviewers and Select Random
+        id: select_reviewer
+        run: |
+          # Define your team members' GitHub usernames
+          REVIEWERS=(
+            "yashmeet29"
+            "vibhutikumar07"
+            "rishikunnath2747"
+          )
+
+          PR_AUTHOR="${{ github.actor }}"
+
+          # Filter out the PR author from the reviewers list to avoid self-review
+          FILTERED_REVIEWERS=()
+          for reviewer in "${REVIEWERS[@]}"; do
+            if [ "$reviewer" != "$PR_AUTHOR" ]; then
+              FILTERED_REVIEWERS+=("$reviewer")
+            fi
+          done
+
+          # Check if there are any eligible reviewers
+          if [ ${#FILTERED_REVIEWERS[@]} -eq 0 ]; then
+            echo "No eligible reviewers found (all are PR author or list is empty)."
+            echo "selected_reviewer=" >> $GITHUB_OUTPUT
+            exit 0 # Exit successfully if no one to assign
+          fi
+
+          # Select a random reviewer from the filtered list
+          RANDOM_INDEX=$(( RANDOM % ${#FILTERED_REVIEWERS[@]} ))
+          SELECTED_REVIEWER="${FILTERED_REVIEWERS[$RANDOM_INDEX]}"
+
+          echo "Selected reviewer: $SELECTED_REVIEWER"
+          echo "selected_reviewer=$SELECTED_REVIEWER" >> "$GITHUB_OUTPUT"
+
+      - name: Request Review from Selected Reviewer
+        if: steps.select_reviewer.outputs.selected_reviewer != '' # Only run if a reviewer was selected
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub's built-in token
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          SELECTED_REVIEWER: ${{ steps.select_reviewer.outputs.selected_reviewer }}
+        run: |
+          echo "Requesting review from $SELECTED_REVIEWER for PR #$PR_NUMBER..."
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            /repos/$REPO/pulls/$PR_NUMBER/requested_reviewers \
+            -f reviewers='["$SELECTED_REVIEWER"]'
+          echo "Review request sent."
