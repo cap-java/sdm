@@ -21,7 +21,6 @@ jobs:
           # Define your team members' GitHub usernames
           REVIEWERS=(
             "yashmeet29"
-            "vibhutikumar07"
             "rishikunnath2747"
             "pujaDeshmukh17"
           )
