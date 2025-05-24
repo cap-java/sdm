@@ -1,9 +1,10 @@
-package integration.com.sap.cds.sdm;
+package integration.com.sap.cds.sdm.single;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.Credentials;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

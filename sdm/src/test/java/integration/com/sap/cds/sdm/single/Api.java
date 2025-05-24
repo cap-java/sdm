@@ -1,4 +1,4 @@
-package integration.com.sap.cds.sdm;
+package integration.com.sap.cds.sdm.single;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
