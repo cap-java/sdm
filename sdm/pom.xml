@@ -70,7 +70,7 @@
             </build>
         </profile>
         <profile>
-            <id>integration-tests</id>
+            <id>integration-tests-named-user</id>
             <build>
                 <plugins>
                     <plugin>
@@ -86,7 +86,33 @@
                                 </goals>
                                 <configuration>
                                     <includes>
-                                        <include>**/integration/**/*.java</include>
+                                        <include>**/integration/**/IntegrationTestNamedUser.java</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>integration-tests-technical-user</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/integration/**/IntegrationTestTechnicalUser.java</include>
                                     </includes>
                                 </configuration>
                             </execution>
