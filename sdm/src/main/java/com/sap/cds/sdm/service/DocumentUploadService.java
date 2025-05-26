@@ -196,7 +196,8 @@ public class DocumentUploadService {
   private JSONObject uploadLargeFileInChunks(
       CmisDocument cmisDocument, String sdmUrl, int chunkSize, String jwtToken) throws IOException {
 
-    try (ReadAheadInputStream chunkedStream = new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
+    try (ReadAheadInputStream chunkedStream =
+        new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
       if (chunkedStream == null) {
         throw new IOException("File stream is null!");
       }
@@ -269,14 +270,6 @@ public class DocumentUploadService {
       logger.error("Exception in uploadLargeFileInChunks: {}", e.getMessage());
       throw new IOException(
           "Error uploading document in chunks. Make sure you are in stable network during the large file upload");
-    } finally {
-      if (chunkedStream != null) {
-        try {
-          chunkedStream.close();
-        } catch (IOException e) {
-          logger.error("Error closing chunkedStream: {}", Arrays.toString(e.getStackTrace()));
-        }
-      }
     }
   }
 
