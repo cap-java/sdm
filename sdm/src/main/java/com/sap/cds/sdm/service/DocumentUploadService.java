@@ -58,7 +58,7 @@ public class DocumentUploadService {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > 200MB
-        return uploadLargeFileInChunksNonReactive(cmisDocument, sdmUrl, chunkSize, jwtToken);
+        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, jwtToken);
       }
     } catch (Exception e) {
       throw new IOException("Error uploading document: " + e.getMessage(), e);
@@ -119,7 +119,13 @@ public class DocumentUploadService {
 
     Map<String, String> finalResponse = new HashMap<>();
 
-    this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
+    try {
+      this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
+
+    } catch (Exception e) {
+      logger.error("Error in appending content: {}", e.getMessage());
+      throw new IOException("Error in appending content: " + e.getMessage(), e);
+    }
   }
 
   private JSONObject createEmptyDocument(CmisDocument cmisDocument, String sdmUrl, String jwtToken)
@@ -135,10 +141,8 @@ public class DocumentUploadService {
     builder.addTextBody("succinct", "true");
 
     HttpEntity entity = builder.build();
-    Map<String, String> headers = new HashMap<>();
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
-    headers.forEach(request::addHeader);
 
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
@@ -190,7 +194,7 @@ public class DocumentUploadService {
     return new JSONObject(finalResMap);
   }
 
-  private JSONObject uploadLargeFileInChunksNonReactive(
+  private JSONObject uploadLargeFileInChunks(
       CmisDocument cmisDocument, String sdmUrl, int chunkSize, String jwtToken) throws IOException {
 
     ReadAheadInputStream chunkedStream = null;
@@ -205,11 +209,11 @@ public class DocumentUploadService {
       // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, jwtToken);
-      logger.info("Response Body: " + responseBody);
+      logger.info("Response Body: {}", responseBody);
 
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
-      logger.info("objectId of empty doc is " + objectId);
+      logger.info("objectId of empty doc is {}", objectId);
 
       // Step 2: Upload Chunks Sequentially
       int chunkIndex = 0;
@@ -221,10 +225,10 @@ public class DocumentUploadService {
 
         // Step 3: Read next chunk
         bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
-        logger.info("bytesRead is " + bytesRead);
+        logger.info("bytesRead is {}", bytesRead);
         // Step 4: Fetch remaining bytes before checking EOF
         long remainingBytes = chunkedStream.getRemainingBytes();
-        logger.info("remainingBytes is " + remainingBytes);
+        logger.info("remainingBytes is {}", remainingBytes);
 
         // Step 5: Check if it's the last chunk
         boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();
@@ -240,14 +244,11 @@ public class DocumentUploadService {
 
         // Log every chunk details
         logger.info(
-            "Chunk "
-                + chunkIndex
-                + " | BytesRead: "
-                + bytesRead
-                + " | RemainingBytes: "
-                + remainingBytes
-                + " | isLastChunk? "
-                + isLastChunk);
+            "Chunk {} | BytesRead: {} | RemainingBytes: {} | isLastChunk? {}",
+            chunkIndex,
+            bytesRead,
+            remainingBytes,
+            isLastChunk);
 
         // Step 7: Append Chunk. Call cmis api to append content stream
         if (bytesRead > 0) {
@@ -257,35 +258,28 @@ public class DocumentUploadService {
 
         long endChunkUploadTime = System.currentTimeMillis();
         logger.info(
-            " Chunk "
-                + chunkIndex
-                + " having "
-                + bytesRead
-                + " bytes is read and it took "
-                + ((int) (endChunkUploadTime - startChunkUploadTime) / 1000)
-                + " seconds");
+            "Chunk {} having {} bytes is read and it took {} seconds",
+            chunkIndex,
+            bytesRead,
+            ((int) (endChunkUploadTime - startChunkUploadTime) / 1000));
 
         chunkIndex++;
 
         if (isLastChunk) {
-          // Just for debug purpose log the heap consumption details.
-          logger.info("Heap Memory Usage during the Upload when chunkIndex is " + chunkIndex);
           hasMoreChunks = false;
         }
       }
-      // Step 8: Finally use the custom formResponse to return
-      // Map<String, String> finalResMap = new HashMap<>();
-      // this.formResponse(cmisDocument, finalResMap, responseBody);
       return responseBody;
     } catch (Exception e) {
-      logger.error("Exception in uploadLargeFileInChunks: " + e.getMessage());
-      throw new IOException("Error uploading document in chunks: " + e.getMessage(), e);
+      logger.error("Exception in uploadLargeFileInChunks: {}", e.getMessage());
+      throw new IOException(
+          "Error uploading document in chunks. Make sure you are in stable network during the large file upload");
     } finally {
       if (chunkedStream != null) {
         try {
           chunkedStream.close();
         } catch (IOException e) {
-          logger.error("Error closing chunkedStream: \n" + Arrays.toString(e.getStackTrace()));
+          logger.error("Error closing chunkedStream: {}", Arrays.toString(e.getStackTrace()));
         }
       }
     }

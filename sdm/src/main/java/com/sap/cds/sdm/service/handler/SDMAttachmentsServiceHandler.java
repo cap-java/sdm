@@ -53,10 +53,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     logger.info(
-        "CREATE_ATTACHMENT Event Received with content length "
-            + context.getParameterInfo().getHeaders().get("content-length")
-            + " At "
-            + System.currentTimeMillis());
+        "CREATE_ATTACHMENT Event Received with content length {} At {}",
+        (context.getParameterInfo() != null && context.getParameterInfo().getHeaders() != null)
+            ? context.getParameterInfo().getHeaders().get("content-length")
+            : null,
+        System.currentTimeMillis());
     validateRepository(context);
     processEntities(context);
   }
@@ -245,15 +246,26 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     JSONObject createResult = null;
     try {
       createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
-      logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
-      logger.info("Upload Finished at: " + System.currentTimeMillis());
+      logger.info("Synchronous Response from documentService: {}", createResult);
+      logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {
-      logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+      // Revisit this to delete the empty documents if appendContent fails
+
+      // String subDomain = TokenHandler.getSubdomainFromToken(jwtToken);
+      // logger.info(
+      //     "objectId to be deleted:{},userEmail = {}, subdomain = {} ",
+      //     cmisDocument.getObjectId(),
+      //     eventContext.getUserInfo().getName(),
+      //     subDomain);
+      // sdmService.deleteDocument(
+      //     "delete", cmisDocument.getObjectId(), eventContext.getUserInfo().getName(), subDomain);
+
+      logger.error("Error in documentService: \n{}", Arrays.toString(e.getStackTrace()));
       throw new ServiceException(
           SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
     }
-    logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
-    logger.info("Upload Finished at: " + System.currentTimeMillis());
+    logger.info("Synchronous Response from documentService: {}", createResult);
+    logger.info("Upload Finished at: {}", System.currentTimeMillis());
     handleCreateDocumentResult(cmisDocument, createResult, eventContext);
   }
 
