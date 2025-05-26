@@ -9,7 +9,6 @@ import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.*;
 import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 import java.util.*;
 import org.apache.hc.core5.http.ParseException;
 import org.apache.http.HttpEntity;
