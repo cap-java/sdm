@@ -162,7 +162,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     Result result =
         DBQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
-    checkAttachmentConstraints(eventContext, result);
+    checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
     validateFileName(data.getFileName(), result, attachmentIds);
@@ -191,16 +191,23 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     return upIdKey;
   }
 
-  private void checkAttachmentConstraints(AttachmentCreateEventContext eventContext, Result result)
+  private void checkAttachmentConstraints(
+      AttachmentCreateEventContext eventContext,
+      CdsEntity attachmentDraftEntity,
+      String upID,
+      String upIdKey)
       throws ServiceException {
+    // Fetch the row count for current repository
+    Result result =
+        DBQuery.getAttachmentsForUPIDAndRepository(
+            attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
             eventContext.getModel().entities().toList(), eventContext.getAttachmentEntity());
-
     String[] maxCountArr = errorMessageCount.split("__");
     long maxCount = Long.parseLong(maxCountArr[0]);
-    if (maxCount > 0 && rowCount > maxCount) {
+    if (maxCount > 0 && rowCount >= maxCount) {
       String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
         throw new ServiceException(message);
@@ -299,6 +306,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
+      case "unauthorized":
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         addAttachmentToDraft(
