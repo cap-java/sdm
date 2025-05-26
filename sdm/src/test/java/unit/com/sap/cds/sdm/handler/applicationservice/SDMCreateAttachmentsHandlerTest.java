@@ -168,7 +168,7 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data, "");
 
     // Assert that no updateAttachments calls were made, as there are no attachments
-    verify(sdmService, never()).updateAttachments(anyString(), any(), any(), any());
+    verify(sdmService, never()).updateAttachments(anyString(), any(), any(), any(), any());
 
     // Assert that no error or warning messages were logged
     verify(messages, never()).error(anyString());
@@ -434,7 +434,7 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn("fileInSDM.txt");
 
     // Mock getSecondaryTypeProperties
-    List<String> secondaryTypeProperties = new ArrayList<>();
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     sdmUtilsMockedStatic
         .when(
@@ -527,7 +527,7 @@ public class SDMCreateAttachmentsHandlerTest {
   //         .thenReturn(Collections.emptyList());
 
   //     sdmUtilsMockedStatic
-  //         .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any(), any()))
+  //         .when(() -> SDMUtils.getUpdatedSecondaryProperties(any(), any(), any(), any(),any()))
   //         .thenReturn(new HashMap<>());
 
   //     // Mock DB query responses

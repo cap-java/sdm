@@ -388,14 +388,18 @@ Custom properties are supported via the usage of CMIS secondary type properties.
 
 2. Using secondary properties in CAP Application.
    - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file. 
-   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty`. 
-   - If the property id contains a `:`, replace it with a triple underscore `___`. 
+   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty.name`. 
+   - In this field set the name of the secondary property in SDM. 
    
    Refer the following example from a sample Bookshop app:
 
       ```cds
       extend Attachments with {
-         Working___DocumentInfoRecord : String @SDM.Attachments.AdditionalProperty @(title: '{i18n>property1}');
+         customProperty : String
+            @SDM.Attachments.AdditionalProperty: {
+               name: 'Working:DocumentInfoRecordString'
+            }  
+            @(title: 'DocumentInfoRecordString');
       }
       ```
 
