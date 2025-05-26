@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 public class DocumentUploadService {
 
-  // private final CloseableHttpClient httpClient;
   MemoryMXBean memoryMXBean;
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
   private final ServiceBinding binding;
@@ -71,10 +70,10 @@ public class DocumentUploadService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
-    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+    try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException("Error in setting timeout", e.getMessage());
+      throw new ServiceException("Error in setting timeout", e);
     }
   }
 
@@ -197,14 +196,10 @@ public class DocumentUploadService {
   private JSONObject uploadLargeFileInChunks(
       CmisDocument cmisDocument, String sdmUrl, int chunkSize, String jwtToken) throws IOException {
 
-    ReadAheadInputStream chunkedStream = null;
-    try {
-      InputStream originalStream = cmisDocument.getContent();
-      if (originalStream == null) {
+    try (ReadAheadInputStream chunkedStream = new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
+      if (chunkedStream == null) {
         throw new IOException("File stream is null!");
       }
-
-      chunkedStream = new ReadAheadInputStream(originalStream, cmisDocument.getContentLength());
 
       // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
       // set in every chunk appendContent
