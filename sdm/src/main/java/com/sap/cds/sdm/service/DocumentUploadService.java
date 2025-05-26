@@ -314,23 +314,4 @@ public class DocumentUploadService {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }
-
-  // Helper method to convert bytes to megabytes
-  private static long bytesToMegabytes(long bytes) {
-    return bytes / (1024 * 1024);
-  }
-
-  /*
-   * Utility method to log the memory usage details
-   */
-  private void printMemoryConsumption() {
-    MemoryUsage heapMemoryUsage = this.memoryMXBean.getHeapMemoryUsage();
-    // Print the heap memory usage details
-    logger.info(
-        "Init: {} MB, \t\t|Used: {} MB \t\t|Committed: {} MB  \t\t|Max: {} MB",
-        bytesToMegabytes(heapMemoryUsage.getInit()),
-        bytesToMegabytes(heapMemoryUsage.getUsed()),
-        bytesToMegabytes(heapMemoryUsage.getCommitted()),
-        bytesToMegabytes(heapMemoryUsage.getMax()));
-  }
 }
