@@ -202,7 +202,8 @@ jobs:
           password=$password
           EOL
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DskipUnitTests || { echo "Maven tests failed"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
     
       
 
