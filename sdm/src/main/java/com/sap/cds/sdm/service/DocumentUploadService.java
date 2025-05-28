@@ -49,7 +49,7 @@ public class DocumentUploadService {
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
 
-      if (totalSize <= 200 * 1024 * 1024) {
+      if (totalSize <= 400 * 1024 * 1024) {
         // Upload directly if file is ≤ 200MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, jwtToken);
       } else {
