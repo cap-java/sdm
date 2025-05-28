@@ -15,7 +15,7 @@ import okhttp3.*;
 import org.junit.jupiter.api.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AttachmentsSDMTest {
+class IntegrationTest {
   private static String token;
   private static String entityID;
   private static String entityID2;
@@ -54,17 +54,35 @@ class AttachmentsSDMTest {
     OkHttpClient client = new OkHttpClient().newBuilder().build();
     MediaType mediaType = MediaType.parse("text/plain");
     RequestBody body = RequestBody.create(mediaType, "");
-    Request request =
-        new Request.Builder()
-            .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + username
-                    + "&password="
-                    + password)
-            .method("POST", body)
-            .addHeader("Authorization", basicAuth)
-            .build();
+    Request request;
+
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    if (tokenFlowFlag.equals("namedUser")) {
+      System.out.println("Running integration tests with named user token flow");
+      request =
+          new Request.Builder()
+              .url(
+                  authUrl
+                      + "/oauth/token?grant_type=password&username="
+                      + username
+                      + "&password="
+                      + password)
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
+    } else if (tokenFlowFlag.equals("technicalUser")) {
+      System.out.println("Running integration tests with technical user token flow");
+      request =
+          new Request.Builder()
+              .url(authUrl + "/oauth/token?grant_type=client_credentials")
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
+
+    } else {
+      throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
+    }
+
     Response response = client.newCall(request).execute();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
