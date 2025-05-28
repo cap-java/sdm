@@ -467,7 +467,7 @@ Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the fo
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.
 - Repository : This plugin does not support the use of versioned repositories.
-- File size : If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
+- File size : If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scanning, only attachments upto 400 MB will be scanned for virus. 
 - Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support, Feedback, Contributing
