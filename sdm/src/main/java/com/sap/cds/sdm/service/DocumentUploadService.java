@@ -49,13 +49,13 @@ public class DocumentUploadService {
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
 
-      if (totalSize <= 200 * 1024 * 1024) {
-        // Upload directly if file is ≤ 200MB
+      if (totalSize <= 400 * 1024 * 1024) {
+        // Upload directly if file is ≤ 400MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, jwtToken);
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
-        // Upload in chunks if file is > 200MB
+        // Upload in chunks if file is > 400MB
         return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, jwtToken);
       }
     } catch (Exception e) {
@@ -112,8 +112,9 @@ public class DocumentUploadService {
     headers.forEach(request::addHeader);
 
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :{} flow", grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
 
@@ -143,8 +144,9 @@ public class DocumentUploadService {
     request.setEntity(entity);
 
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :{} flow", grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
@@ -163,8 +165,9 @@ public class DocumentUploadService {
 
     // Prepare Multipart Request
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    var httpClient =
-        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :{} flow", grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -296,6 +299,8 @@ public class DocumentUploadService {
           status = "virus";
         } else if (responseCode == 409) {
           status = "duplicate";
+        } else if (responseCode == 403) {
+          status = "unauthorized";
         } else {
           status = "fail";
           error = message;
