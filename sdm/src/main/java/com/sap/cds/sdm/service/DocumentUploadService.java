@@ -50,12 +50,12 @@ public class DocumentUploadService {
       int chunkSize = SDMConstants.CHUNK_SIZE;
 
       if (totalSize <= 400 * 1024 * 1024) {
-        // Upload directly if file is ≤ 200MB
+        // Upload directly if file is ≤ 400MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, jwtToken);
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
-        // Upload in chunks if file is > 200MB
+        // Upload in chunks if file is > 400MB
         return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, jwtToken);
       }
     } catch (Exception e) {
