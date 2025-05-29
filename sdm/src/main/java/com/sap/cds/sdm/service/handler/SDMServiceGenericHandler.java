@@ -62,6 +62,19 @@ public class SDMServiceGenericHandler implements EventHandler {
     createLink(context);
   }
 
+  @On(event = "CreateDocumentWithRelation")
+  public void CreateDocumentWithRelation(EventContext context) throws IOException {
+    // Check the action name and handle accordingly
+
+    System.out.println(
+        "Handling event on upload: "
+            + context.getEvent()
+            + ":"
+            + context.getTarget()
+            + ":"
+            + context.get("cqn"));
+  }
+
   @On(event = "editLink")
   public void edit(EventContext context) throws IOException {
     // Check the action name and handle accordingly
@@ -141,10 +154,6 @@ public class SDMServiceGenericHandler implements EventHandler {
     var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
     System.out.println(ApplicationHandlerHelper.isMediaEntity(context.getTarget()));
     var test = draftService.newDraft(insert);
-    context.put("objectId", cmisDocument.getObjectId());
-    context.put("folderId", cmisDocument.getFolderId());
-    context.put("entity", context.getTarget());
-    context.put("subdomain", subdomain);
     // execute a select query to refresh the list
     context.setCompleted();
   }

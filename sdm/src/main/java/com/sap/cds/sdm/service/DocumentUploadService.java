@@ -374,10 +374,10 @@ public class DocumentUploadService {
       if (jsonResponse.has("succinctProperties")) {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         objectId = succinctProperties.getString("cmis:objectId");
-        if (succinctProperties.has("cmis:versionSeriesId")) {
-          finalResponse.put(
-              "versionSeriesId", succinctProperties.getString("cmis:versionSeriesId"));
-        }
+        //        if (succinctProperties.has("cmis:versionSeriesId")) {
+        //          finalResponse.put(
+        //              "versionSeriesId", succinctProperties.getString("cmis:versionSeriesId"));
+        //        }
 
       } else if (jsonResponse.has("properties")
           && jsonResponse.getJSONObject("properties").has("cmis:objectId")) {

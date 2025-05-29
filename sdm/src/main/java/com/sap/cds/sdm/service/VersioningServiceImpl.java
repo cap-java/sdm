@@ -55,7 +55,7 @@ public class VersioningServiceImpl implements VersioningService {
       if (responseCode == 201) {
 
         JSONObject succinctProperties = checkOutResponse.getJSONObject("succinctProperties");
-        cmisDocument.setVersionSeriesId(succinctProperties.getString("cmis:versionSeriesId"));
+        // cmisDocument.setVersionSeriesId(succinctProperties.getString("cmis:versionSeriesId"));
         return succinctProperties.getString("cmis:objectId");
       } else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);

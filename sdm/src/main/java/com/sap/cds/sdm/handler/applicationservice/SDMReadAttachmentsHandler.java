@@ -48,9 +48,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               });
       context.setCqn(copy);
 
-      } else {
-        context.setCqn(context.getCqn());
-      }
+    } else {
+      context.setCqn(context.getCqn());
     }
   }
 

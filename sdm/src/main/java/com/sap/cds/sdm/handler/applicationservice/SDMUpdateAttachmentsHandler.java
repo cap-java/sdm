@@ -208,12 +208,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           case 200:
           case 201:
             // Success cases, update the objectId in database table
-//            DBQuery.updateObjectId(
-//                attachmentEntity.get(),
-//                persistenceService,
-//                cmisDocument,
-//                finalResponse.getString("subdomain"),
-//                id);
+            //            DBQuery.updateObjectId(
+            //                attachmentEntity.get(),
+            //                persistenceService,
+            //                cmisDocument,
+            //                finalResponse.getString("subdomain"),
+            //                id);
 
             break;
 
