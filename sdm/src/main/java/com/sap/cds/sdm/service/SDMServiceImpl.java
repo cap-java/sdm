@@ -55,7 +55,7 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
-    logger.info("This is a :" + grantType + " flow");
+    logger.info("This is a :{} flow", grantType);
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
