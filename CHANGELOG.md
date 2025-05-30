@@ -4,7 +4,24 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.3.1
+
+### Fixed
+
+- An issue in uploading large size attachments.
+
+## Version 1.3.0
+
+### Added
+- Support multiple attachments composition in CAP Entity.
+- Support repository off-boarding in multi tenant use case.
+- Support maximum allowed attachments upload.
+
 ## Version 1.2.0
+
+### Fixed
+
+- An issue in create mode when deleting an attachment resulted in deletion of all the attachments of the entity.
 
 ### Added
 

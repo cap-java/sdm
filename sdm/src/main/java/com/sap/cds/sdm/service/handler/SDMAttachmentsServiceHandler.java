@@ -53,10 +53,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     logger.info(
-        "CREATE_ATTACHMENT Event Received with content length "
-            + context.getParameterInfo().getHeaders().get("content-length")
-            + " At "
-            + System.currentTimeMillis());
+        "CREATE_ATTACHMENT Event Received with content length {} At {}",
+        (context.getParameterInfo() != null && context.getParameterInfo().getHeaders() != null)
+            ? context.getParameterInfo().getHeaders().get("content-length")
+            : null,
+        System.currentTimeMillis());
     validateRepository(context);
     processEntities(context);
   }
@@ -161,7 +162,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     Result result =
         DBQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
-    checkAttachmentConstraints(eventContext, result);
+    checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
     validateFileName(data.getFileName(), result, attachmentIds);
@@ -190,16 +191,23 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     return upIdKey;
   }
 
-  private void checkAttachmentConstraints(AttachmentCreateEventContext eventContext, Result result)
+  private void checkAttachmentConstraints(
+      AttachmentCreateEventContext eventContext,
+      CdsEntity attachmentDraftEntity,
+      String upID,
+      String upIdKey)
       throws ServiceException {
+    // Fetch the row count for current repository
+    Result result =
+        DBQuery.getAttachmentsForUPIDAndRepository(
+            attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
             eventContext.getModel().entities().toList(), eventContext.getAttachmentEntity());
-
     String[] maxCountArr = errorMessageCount.split("__");
     long maxCount = Long.parseLong(maxCountArr[0]);
-    if (maxCount > 0 && rowCount > maxCount) {
+    if (maxCount > 0 && rowCount >= maxCount) {
       String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
         throw new ServiceException(message);
@@ -233,7 +241,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String jwtToken =
         eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String folderId = sdmService.getFolderId(result, persistenceService, upID, jwtToken);
+    String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
+    String folderName = upID + "__" + entityName;
+    String folderId = sdmService.getFolderId(result, persistenceService, folderName, jwtToken);
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     setCmisDocumentProperties(
@@ -242,17 +252,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
-      createResult =
-          documentService.createDocumentRx(cmisDocument, sdmCredentials, jwtToken).blockingGet();
-      logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
-      logger.info("Upload Finished at: " + System.currentTimeMillis());
+      createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+      logger.info("Synchronous Response from documentService: {}", createResult);
+      logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {
-      logger.error("Error in documentServiceRx: \n" + Arrays.toString(e.getStackTrace()));
+      logger.error("Error in documentService: \n{}", Arrays.toString(e.getStackTrace()));
       throw new ServiceException(
           SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
     }
-    logger.info("Synchronous Response from documentServiceRx: " + createResult.toString());
-    logger.info("Upload Finished at: " + System.currentTimeMillis());
+    logger.info("Synchronous Response from documentService: {}", createResult);
+    logger.info("Upload Finished at: {}", System.currentTimeMillis());
     handleCreateDocumentResult(cmisDocument, createResult, eventContext);
   }
 
@@ -286,6 +295,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
+      case "unauthorized":
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         addAttachmentToDraft(

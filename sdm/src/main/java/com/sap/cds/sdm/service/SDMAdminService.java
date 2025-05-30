@@ -9,6 +9,4 @@ public interface SDMAdminService {
       throws JsonProcessingException, UnsupportedEncodingException;
 
   public String offboardRepository(String subdomain);
-
-  public String restoreRepository(String subdomain);
 }

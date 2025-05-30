@@ -2,13 +2,11 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
-import com.sap.cds.reflect.CdsEntity;
-import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.services.cds.CdsReadEventContext;
@@ -24,10 +22,10 @@ public class SDMReadAttachmentsHandlerTest {
   @Mock private CdsEntity cdsEntity;
 
   @Mock private CdsReadEventContext context;
+  @Mock private CdsElement mockComposition;
+  @Mock private CdsAssociationType mockAssociationType;
 
-  @Mock private CdsModel model;
-
-  @Mock private CqnSelect cqnSelect;
+  @Mock private CdsStructuredType mockTargetAspect;
 
   @InjectMocks private SDMReadAttachmentsHandler sdmReadAttachmentsHandler;
 
@@ -40,9 +38,8 @@ public class SDMReadAttachmentsHandlerTest {
     CqnSelect select =
         Select.from(cdsEntity).where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
     when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(any(), any())).thenReturn(true);
     when(context.getCqn()).thenReturn(select);
-    when(cdsEntity.getQualifiedName()).thenReturn(targetEntity);
-
     // Act
     sdmReadAttachmentsHandler.processBefore(context); // Refers to the method you provided
 
@@ -57,19 +54,20 @@ public class SDMReadAttachmentsHandlerTest {
   @Test
   void testModifyCqnForNonAttachmentsEntity() {
     // Arrange
-    String targetEntity = "nonAttachments";
+    String targetEntity = "nonAttachments"; // Does not match the mocked composition name
     CqnSelect select =
-        Select.from(cdsEntity).where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
+        Select.from("SomeEntity").where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
+
+    // Mock target
     when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(any(), any())).thenReturn(false);
+
     when(context.getCqn()).thenReturn(select);
-    when(cdsEntity.getQualifiedName()).thenReturn(targetEntity);
-    when(context.getTarget().getQualifiedName()).thenReturn(targetEntity);
-
+    // Mock composition with Attachments aspect
     // Act
-    sdmReadAttachmentsHandler.processBefore(context); // Refers to the method you provided
+    sdmReadAttachmentsHandler.processBefore(context);
 
-    // Assert
-    verify(context)
-        .setCqn(select); // Ensure that the original CqnSelect is set without modification
+    // Assert — since it enters the 'else' clause, it should call setCqn with original select
+    verify(context).setCqn(select);
   }
 }

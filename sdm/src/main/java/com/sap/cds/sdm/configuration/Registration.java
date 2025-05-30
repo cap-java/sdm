@@ -60,7 +60,7 @@ public class Registration implements CdsRuntimeConfiguration {
     var connectionPool = getConnectionPool(environment);
 
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
-    DocumentUploadService documentService = new DocumentUploadService();
+    DocumentUploadService documentService = new DocumentUploadService(binding, connectionPool);
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));

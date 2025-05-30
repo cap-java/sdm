@@ -13,6 +13,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Virus scanning : Provides the capability to support virus scan for virus scan enabled repositories.
 - Draft functionality : Provides the capability of working with draft attachments.
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
+- Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 
 ## Table of Contents
 
@@ -22,6 +24,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Use com.sap.cds:sdm dependency](#use-comsapcdssdm-dependency)
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
+- [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -308,7 +312,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides API for onboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding API is used on tenant subscription event of SaaS application.
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
   
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
@@ -322,7 +326,6 @@ public void onSubscribe(SubscribeEventContext context) {
    Repository repository = new Repository();
    repository.setDescription("Onboarding Repo Demo");
    repository.setDisplayName(" Test Onboarding repo");
-   repository.setExternalId(System.getenv("REPOSITORY_ID"));
    repository.setSubdomain(subdomain);
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
@@ -330,7 +333,22 @@ public void onSubscribe(SubscribeEventContext context) {
    String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application.
+
+ ```java
+ @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
+ public void afterUnsubscribe(UnsubscribeEventContext context) {
+     //delete onboarded repository
+         final SaasRegistrySubscriptionOptions options = Struct
+        .access(context.getOptions())
+        .as(SaasRegistrySubscriptionOptions.class);
+ // Access the specific property
+ final String subdomain = options.getSubscribedSubdomain();
+ 
+ SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
+ String res = sdmAdminService.offboardRepository(subdomain);
+ }
+ ```
+When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
 The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
 ## Support for Custom Properties
@@ -370,14 +388,18 @@ Custom properties are supported via the usage of CMIS secondary type properties.
 
 2. Using secondary properties in CAP Application.
    - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file. 
-   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty`. 
-   - If the property id contains a `:`, replace it with a triple underscore `___`. 
+   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty.name`. 
+   - In this field set the name of the secondary property in SDM. 
    
    Refer the following example from a sample Bookshop app:
 
       ```cds
       extend Attachments with {
-         Working___DocumentInfoRecord : String @SDM.Attachments.AdditionalProperty @(title: '{i18n>property1}');
+         customProperty : String
+            @SDM.Attachments.AdditionalProperty: {
+               name: 'Working:DocumentInfoRecordString'
+            }  
+            @(title: 'DocumentInfoRecordString');
       }
       ```
 
@@ -385,11 +407,69 @@ Custom properties are supported via the usage of CMIS secondary type properties.
    >
    > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
+## Support for Maximum allowed uploads
+This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit and the error message.
+
+Refer the following example from a sample Bookshop app:
+-  maxCount: Specifies the maximum number of documents a user is allowed to upload.
+-  maxCountError: Defines the error message displayed when the upload limit (maxCount) is exceeded.
+
+```cds
+  extend entity Books with {
+    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
+    }
+   
+   ``` 
+   > **Note**
+   >
+   > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+
+## Support for Multiple attachment facets
+The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
+
+Refer the following example from a sample Bookshop app,
+
+- attachments: Will create a section named attachments on UI.
+- references: Will create a section named references on UI.
+- footnotes: Will create a section named footnotes on UI.
+```cds
+   extend entity Books with {
+    attachments : Composition of many Attachments;
+    references : Composition of many Attachments;
+    footnotes : Composition of many Attachments;
+}
+```
+Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/fiori-service.cds) from a sample Bookshop app.
+```cds
+{
+      $Type : 'UI.ReferenceFacet',
+      ID    : 'AttachmentsFacet',
+      Label : '{i18n>attachments}',
+      Target: 'attachments/@UI.LineItem'
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      ID    : 'ReferencesFacet',
+      Label : 'References',
+      Target: 'references/@UI.LineItem'
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      ID    : 'FootnotesFacet',
+      Label : 'Footnotes',
+      Target: 'footnotes/@UI.LineItem'
+    }
+    
+  ``` 
+   > **Note**
+   >
+   > Once a facet or section name is defined in the CDS file, it is strongly recommended not to modify it. For instance, in the example provided, section names such as attachments, references, and footnotes should remain unchanged after initial configuration. Renaming these sections will result in the creation of new tables, causing any data associated with the original sections to become inaccessible in the UI.
 
 ## Known Restrictions
 
+- UI5 Version 1.135.0: This version causes error in upload of attachments.
 - Repository : This plugin does not support the use of versioned repositories.
-- File size : Attachments are limited to a maximum size of 700 MB. If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scan enabled for all files, attachments are limited to a maximum size of 400 MB. 
+- File size : If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scanning, only attachments upto 400 MB will be scanned for virus. 
 - Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support, Feedback, Contributing

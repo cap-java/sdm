@@ -32,11 +32,11 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data) {
+  public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data, String composition) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {
@@ -160,23 +160,113 @@ public class SDMUtils {
     }
   }
 
-  public static List<String> getSecondaryTypeProperties(
+  /* Create a map of property names to their UI titles for intuitive error messages. */
+  public static Map<String, String> getPropertyTitles(
+      Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
+    Map<String, String> titleMap = new HashMap<>();
+    if (attachmentEntity.isEmpty()) {
+      return titleMap;
+    }
+    CdsEntity entity = attachmentEntity.get();
+    for (String key : attachment.keySet()) {
+      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key) || entity.getElement(key) == null) {
+        continue;
+      }
+
+      CdsElement element = entity.getElement(key);
+      String propertyName = extractPropertyName(element);
+      String title = extractTitle(element);
+
+      if (propertyName != null && title != null) {
+        titleMap.put(propertyName, title);
+      }
+    }
+    return titleMap;
+  }
+
+  private static String extractPropertyName(CdsElement element) {
+    /* Check both old and new SDM annotations to track titles for properties needing error handling. */
+    if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME).isPresent()) {
+      return element
+          .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
+          .get()
+          .getValue()
+          .toString();
+    } else if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY).isPresent()) {
+      return element.getName(); // This is in case the user has not specified a title for the column
+    }
+    return null;
+  }
+
+  private static String extractTitle(CdsElement element) {
+    return element
+        .findAnnotation("title")
+        .map(annotation -> annotation.getValue().toString())
+        .orElse(element.getName());
+  }
+
+  /* Identify incorrectly defined properties in the CDS file to group them with unsupported ones where "MCM" is not true. */
+  public static Map<String, String> getSecondaryPropertiesWithInvalidDefinition(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
-    List<String> secondaryTypeProperties = new ArrayList<>();
+    Map<String, String> invalidProperties = new HashMap<>();
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
-        if ("DRAFT_READONLY_CONTEXT".equals(key)) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
           continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
-          // Check if secondary property is present
+          // Checking the outdated/old SDM Annotation
+          Optional<CdsAnnotation<Object>> sdmAnnotation =
+              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          if (sdmAnnotation.isPresent()) {
+            Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
+            String title = null;
+            if (titleAnnotation.isPresent()) {
+              title = titleAnnotation.get().getValue().toString();
+            } else {
+              title =
+                  element
+                      .getName(); /* This is in case the user has not specified a title for the column in the cds file (which is optional) */
+            }
+            invalidProperties.put(key, title);
+          }
+        }
+      }
+    }
+    return invalidProperties;
+  }
+
+  // Create a map of secondary property name and its title that appears on the UI.
+  public static Map<String, String> getSecondaryTypeProperties(
+      Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
+    List<String> keysList = new ArrayList<>(attachment.keySet());
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    if (attachmentEntity.isPresent()) {
+      CdsEntity entity = attachmentEntity.get();
+      for (String key : keysList) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
+          continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
+        }
+        CdsElement element = entity.getElement(key);
+        if (element != null) {
+          // Checking the SDM Annotation, both the old (outdated method) and the correct method.
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          Optional<CdsAnnotation<Object>> nameAnnotation =
+              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
           if (annotation.isPresent()) {
-            secondaryTypeProperties.add(element.getName());
+            // If the property was defined using the old method, we will use the actual name of the
+            // property
+            secondaryTypeProperties.put(element.getName(), element.getName());
+          }
+          if (nameAnnotation.isPresent()) {
+            // If the property was defined using the new method, we will use the name specified in
+            // the annotation
+            secondaryTypeProperties.put(
+                element.getName(), nameAnnotation.get().getValue().toString());
           }
         }
       }
@@ -188,26 +278,28 @@ public class SDMUtils {
       Optional<CdsEntity> attachmentEntity,
       Map<String, Object> attachment,
       PersistenceService persistenceService,
-      List<String> secondaryTypeProperties,
+      Map<String, String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
-    for (String property : secondaryTypeProperties) {
+    for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
+      String property = entry.getKey();
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
     // Check the value of secondary properties in DB
-    for (String property : secondaryTypeProperties) {
+    for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
+      String property = entry.getKey();
+      String value = entry.getValue();
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
-
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
         if (valueInMap != null) {
-          updatedSecondaryProperties.put(property, valueInMap.toString());
+          updatedSecondaryProperties.put(value, valueInMap.toString());
         } else {
-          updatedSecondaryProperties.put(property, null);
+          updatedSecondaryProperties.put(value, null);
         }
       }
     }

@@ -11,7 +11,6 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import java.util.*;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMReadAttachmentsHandler implements EventHandler {
@@ -22,7 +21,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.DEFAULT)
   public void processBefore(CdsReadEventContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    if (context.getTarget().getQualifiedName().contains("attachments")) {
+    if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
       CqnSelect copy =
           CQL.copy(
               context.getCqn(),

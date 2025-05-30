@@ -110,8 +110,13 @@ public class ReadAheadInputStream extends InputStream {
                       }
                       return result;
                     })
+                .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
                 .toList()
                 .blockingGet();
+
+        if (results == null || results.isEmpty())
+          throw new IOException("Failed to read chunk: results is null or empty");
+        // Check if the read was successful
 
         int readAttempt = results.get(0);
 

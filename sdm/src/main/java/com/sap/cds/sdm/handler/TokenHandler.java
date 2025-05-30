@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.handler;
 
+import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
+import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -296,14 +298,17 @@ public class TokenHandler {
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
               .withClient(clientCredentials, OnBehalfOf.NAMED_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
+              .property(
+                  SDMConstants.SDM_DESTINATION_KEY, SDMConstants.SDM_TOKEN_EXCHANGE_DESTINATION)
               .build();
     } else {
       destination =
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
               .withClient(clientCredentials, OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT)
-              .property("name", SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
+              .property(
+                  SDMConstants.SDM_DESTINATION_KEY,
+                  SDMConstants.SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION)
               .build();
     }
 
@@ -328,5 +333,51 @@ public class TokenHandler {
     JsonObject payloadObj = TokenHandler.getTokenFields(token);
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
     return tenantDetails.get("zdn").getAsString();
+  }
+
+  public static String getGrantType(String token) {
+    JsonObject payloadObj = TokenHandler.getTokenFields(token);
+    String grantType = payloadObj.get("grant_type").getAsString();
+    if (grantType.equalsIgnoreCase("client_credentials")) {
+      grantType = TECHNICAL_USER_FLOW;
+    } else {
+      grantType = NAMED_USER_FLOW;
+    }
+    return grantType;
+  }
+
+  public static String getTechnicalUserAccessToken(String subdomain, SDMCredentials sdmCredentials)
+      throws IOException {
+    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
+    if (subdomain != null && !subdomain.isEmpty()) {
+      String providersubdomain =
+          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
+      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+    }
+    String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
+    String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
+    String bodyParams = "grant_type=client_credentials";
+    byte[] postData = toBytes(bodyParams);
+    String authurl = baseTokenUrl + "/oauth/token";
+    URL url = new URL(authurl);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Authorization", authHeaderValue);
+    conn.setRequestMethod("POST");
+    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+    conn.setRequestProperty("charset", "utf-8");
+    conn.setRequestProperty("Content-Length", "" + postData.length);
+    conn.setUseCaches(false);
+    conn.setDoInput(true);
+    conn.setDoOutput(true);
+    try (DataOutputStream os = new DataOutputStream(conn.getOutputStream())) {
+      os.write(postData);
+    }
+    String resp;
+    try (DataInputStream is = new DataInputStream(conn.getInputStream());
+        BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+      resp = br.lines().collect(Collectors.joining("\n"));
+    }
+    conn.disconnect();
+    return mapper.readValue(resp, JsonNode.class).get("access_token").asText();
   }
 }
