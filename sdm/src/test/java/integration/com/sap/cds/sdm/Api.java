@@ -1,4 +1,4 @@
-package integration.com.sap.cds.sdm.single;
+package integration.com.sap.cds.sdm;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -24,14 +24,16 @@ public class Api {
   }
 
   public String createEntityDraft(
-      String appUrl, String serviceName, String entityName, String srvpath) {
+      String appUrl, String serviceName, String entityName, String entityName2, String srvpath) {
     MediaType mediaType = MediaType.parse("application/json");
 
     // Creating the Entity (draft)
     RequestBody body =
         RequestBody.create(
             mediaType,
-            "{\n    \"title\": \"IntegrationTestEntity\",\n    \"author\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Rishi\"\n    }\n}");
+            "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+                + entityName2
+                + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}");
 
     Request request =
         new Request.Builder()
@@ -213,16 +215,17 @@ public class Api {
     return ("Entity doesn't exist");
   }
 
-  public List<String> createAttachment(
+  public List<String> createFacet(
       String appUrl,
       String serviceName,
       String entityName,
+      String facetName,
       String entityID,
       String srvpath,
       Map<String, Object> postData,
       File file)
       throws IOException {
-    String attachmentID;
+    String ID;
     String error = "";
 
     // Creating empty attachments
@@ -243,7 +246,8 @@ public class Api {
                     + entityName
                     + "(ID="
                     + entityID
-                    + ",IsActiveEntity=false)/attachments")
+                    + ",IsActiveEntity=false)/"
+                    + facetName)
             .method("POST", body)
             .addHeader("Content-Type", "application/json")
             .addHeader("Authorization", token)
@@ -251,11 +255,11 @@ public class Api {
 
     try (Response response = httpClient.newCall(postRequest).execute()) {
       if (response.code() != 201) {
-        System.out.println("Create attachment failed. Error : " + response.body().string());
-        throw new IOException("Could not create attachment");
+        System.out.println("Create " + facetName + " failed. Error : " + response.body().string());
+        throw new IOException("Could not create " + facetName);
       }
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
-      attachmentID = (String) responseMap.get("ID");
+      ID = (String) responseMap.get("ID");
 
       long startTime = System.nanoTime();
       // Upload file content into the empty attachment
@@ -267,10 +271,14 @@ public class Api {
                       + appUrl
                       + "/odata/v4/"
                       + serviceName
-                      + "/Books_attachments(up__ID="
+                      + "/"
+                      + entityName
+                      + "_"
+                      + facetName
+                      + "(up__ID="
                       + entityID
                       + ",ID="
-                      + attachmentID
+                      + ID
                       + ",IsActiveEntity=false)/content")
               .put(fileBody)
               .addHeader("Authorization", token)
@@ -279,7 +287,7 @@ public class Api {
       try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
         if (fileResponse.code() != 204) {
           String responseBodyString = fileResponse.body().string();
-          System.out.println("Create attachment failed. Error : " + responseBodyString);
+          System.out.println("Create " + facetName + " failed. Error : " + responseBodyString);
           error = responseBodyString;
           Request request =
               new Request.Builder()
@@ -288,10 +296,14 @@ public class Api {
                           + appUrl
                           + "/odata/v4/"
                           + serviceName
-                          + "/Books_attachments(up__ID="
+                          + "/"
+                          + entityName
+                          + "_"
+                          + facetName
+                          + "(up__ID="
                           + entityID
                           + ",ID="
-                          + attachmentID
+                          + ID
                           + ",IsActiveEntity=false)")
                   .delete()
                   .addHeader("Authorization", token)
@@ -300,37 +312,43 @@ public class Api {
           try (Response deleteResponse = httpClient.newCall(request).execute()) {
             if (deleteResponse.code() != 204) {
               System.out.println(
-                  "Delete attachment failed. Error : " + deleteResponse.body().string());
-              throw new IOException("Attachment was not created and its container was not deleted");
+                  "Delete " + facetName + " failed. Error : " + deleteResponse.body().string());
+              throw new IOException(
+                  facetName + " was not created and its container was not deleted");
             }
             List<String> createResponse = new ArrayList<>();
             createResponse.add(error);
             return createResponse;
           } catch (IOException e) {
             System.out.println(
-                "Attachment was not created and its container was not deleted : " + e);
+                facetName + " was not created and its container was not deleted : " + e);
           }
         }
         long endTime = System.nanoTime(); // Record end time
         double duration = (endTime - startTime) / 1_000_000_000.0;
         System.out.println("Time taken to create(s) : " + duration);
         List<String> createResponse = new ArrayList<>();
-        createResponse.add("Attachment created");
-        createResponse.add(attachmentID);
+        createResponse.add(facetName + " created");
+        createResponse.add(ID);
         return createResponse;
       } catch (IOException e) {
-        System.out.println("Attachment was not created and its container was not deleted : " + e);
+        System.out.println(facetName + " was not created and its container was not deleted : " + e);
       }
     } catch (IOException e) {
-      System.out.println("Attachment was not created : " + e);
+      System.out.println(facetName + " was not created : " + e);
     }
     List<String> createResponse = new ArrayList<>();
-    createResponse.add("Attachment was not created");
+    createResponse.add(facetName + " was not created");
     return createResponse;
   }
 
-  public String readAttachment(
-      String appUrl, String serviceName, String entityName, String entityID, String attachmentID)
+  public String readFacet(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID)
       throws IOException {
     Request request =
         new Request.Builder()
@@ -343,10 +361,12 @@ public class Api {
                     + entityName
                     + "(ID="
                     + entityID
-                    + ",IsActiveEntity=true)/attachments(up__ID="
+                    + ",IsActiveEntity=true)/"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=true)/content")
             .addHeader("Authorization", token)
             .get()
@@ -355,18 +375,23 @@ public class Api {
     try {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
-        System.out.println("Read attachment failed. Error : " + response.body().string());
-        throw new IOException("Could not read attachment");
+        System.out.println("Read " + facetName + " failed. Error : " + response.body().string());
+        throw new IOException("Could not read " + facetName);
       }
       return "OK";
     } catch (IOException e) {
-      System.out.println("Could not read attachment : " + e);
-      return "Could not read attachment";
+      System.out.println("Could not read " + facetName + " : " + e);
+      return "Could not read " + facetName;
     }
   }
 
-  public String readAttachmentDraft(
-      String appUrl, String serviceName, String entityName, String entityID, String attachmentID)
+  public String readFacetDraft(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID)
       throws IOException {
     Request request =
         new Request.Builder()
@@ -379,10 +404,12 @@ public class Api {
                     + entityName
                     + "(ID="
                     + entityID
-                    + ",IsActiveEntity=false)/attachments(up__ID="
+                    + ",IsActiveEntity=false)/"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)/content")
             .addHeader("Authorization", token)
             .get()
@@ -401,8 +428,13 @@ public class Api {
     }
   }
 
-  public String deleteAttachment(
-      String appUrl, String serviceName, String entityID, String attachmentID) {
+  public String deleteFacet(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID) {
     Request request =
         new Request.Builder()
             .url(
@@ -410,10 +442,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .delete()
             .addHeader("Authorization", token)
@@ -421,18 +457,25 @@ public class Api {
 
     try (Response deleteResponse = httpClient.newCall(request).execute()) {
       if (deleteResponse.code() != 204) {
-        System.out.println("Delete attachment failed. Error : " + deleteResponse.body().string());
-        throw new IOException("Attachment was not deleted");
+        System.out.println(
+            "Delete " + facetName + " failed. Error : " + deleteResponse.body().string());
+        throw new IOException(facetName + " was not deleted");
       }
       return "Deleted";
     } catch (IOException e) {
-      System.out.println("Attachment was not deleted : " + e);
-      return "Attachment was not deleted";
+      System.out.println(facetName + " was not deleted : " + e);
+      return facetName + " was not deleted";
     }
   }
 
-  public String renameAttachment(
-      String appUrl, String serviceName, String entityID, String attachmentID, String name) {
+  public String renameFacet(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String name) {
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
         RequestBody.create(
@@ -444,10 +487,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -456,21 +503,24 @@ public class Api {
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
-        System.out.println("Rename attachment failed. Error : " + renameResponse.body().string());
-        throw new IOException("Attachment was not renamed");
+        System.out.println(
+            "Rename " + facetName + " failed. Error : " + renameResponse.body().string());
+        throw new IOException(facetName + " was not renamed");
       }
       return "Renamed";
     } catch (IOException e) {
-      System.out.println("Attachment was not renamed : " + e);
-      return "Attachment was not renamed";
+      System.out.println(facetName + " was not renamed : " + e);
+      return facetName + " was not renamed";
     }
   }
 
   public String updateSecondaryProperty(
       String appUrl,
       String serviceName,
+      String entityName,
+      String facetName,
       String entityID,
-      String attachmentID,
+      String ID,
       String stringProperty) {
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
@@ -485,10 +535,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -511,8 +565,10 @@ public class Api {
   public String updateSecondaryProperty(
       String appUrl,
       String serviceName,
+      String entityName,
+      String facetName,
       String entityID,
-      String attachmentID,
+      String ID,
       Integer integerProperty) {
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
@@ -527,10 +583,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -553,8 +613,10 @@ public class Api {
   public String updateSecondaryProperty(
       String appUrl,
       String serviceName,
+      String entityName,
+      String facetName,
       String entityID,
-      String attachmentID,
+      String ID,
       LocalDateTime dateTimeProperty) {
     MediaType mediaType = MediaType.parse("application/json");
     // Format the LocalDateTime into an ISO 8601 string with zone offset
@@ -573,10 +635,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -599,8 +665,10 @@ public class Api {
   public String updateSecondaryProperty(
       String appUrl,
       String serviceName,
+      String entityName,
+      String facetName,
       String entityID,
-      String attachmentID,
+      String ID,
       Boolean booleanProperty) {
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
@@ -615,10 +683,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -641,8 +713,10 @@ public class Api {
   public String updateInvalidSecondaryProperty(
       String appUrl,
       String serviceName,
+      String entityName,
+      String facetName,
       String entityID,
-      String attachmentID,
+      String ID,
       String invalidSecondaryProperty) {
     MediaType mediaType = MediaType.parse("application/json");
     String jsonPayload = "{\n    \"abc___myId1\": \"" + invalidSecondaryProperty + "\"\n}";
@@ -654,10 +728,14 @@ public class Api {
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
-                    + "/Books_attachments(up__ID="
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
                     + entityID
                     + ",ID="
-                    + attachmentID
+                    + ID
                     + ",IsActiveEntity=false)")
             .method("PATCH", body)
             .addHeader("Content-Type", "application/json")
@@ -677,8 +755,13 @@ public class Api {
     }
   }
 
-  public Map<String, Object> fetchAttachmentMetadata(
-      String appUrl, String serviceName, String entityName, String entityID, String attachmentID)
+  public Map<String, Object> fetchFacetMetadata(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID)
       throws IOException {
     // Construct the URL for fetching attachment metadata
     String url =
@@ -688,10 +771,12 @@ public class Api {
             + serviceName
             + "/"
             + entityName
-            + "_attachments(up__ID="
+            + "_"
+            + facetName
+            + "(up__ID="
             + entityID
             + ",ID="
-            + attachmentID
+            + ID
             + ",IsActiveEntity=true)";
 
     // Make a GET request to fetch the attachment metadata
@@ -701,8 +786,9 @@ public class Api {
     try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
-        System.out.println("Fetch attachment metadata failed. Error: " + response.body().string());
-        throw new IOException("Could not fetch attachment metadata");
+        System.out.println(
+            "Fetch " + facetName + " metadata failed. Error: " + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         // Parse the JSON response to extract metadata
         return objectMapper.readValue(

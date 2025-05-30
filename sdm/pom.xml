@@ -69,9 +69,8 @@
                 </plugins>
             </build>
         </profile>
-        <!-- Profile for running only AttachmentsSDMTest.java -->
         <profile>
-            <id>integration-tests-single</id>
+            <id>integration-tests</id>
             <build>
             <plugins>
                 <plugin>
@@ -80,42 +79,15 @@
                     <version>3.3.1</version>
                     <executions>
                         <execution>
-                            <id>integration-test-single</id>
+                            <id>integration-test</id>
                             <goals>
                                 <goal>integration-test</goal>
                                 <goal>verify</goal>
                             </goals>
                             <configuration>
                                 <includes>
-                                    <include>**/single/AttachmentsSDMTest.java</include>
-                                </includes>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </build>
-    </profile>
-
-    <!-- Profile for running only AttachmentsNewServiceTest.java -->
-    <profile>
-        <id>integration-tests-multiple</id>
-        <build>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <version>3.3.1</version>
-                    <executions>
-                        <execution>
-                            <id>integration-test-multiple</id>
-                            <goals>
-                                <goal>integration-test</goal>
-                                <goal>verify</goal>
-                            </goals>
-                            <configuration>
-                                <includes>
-                                    <include>**/multiple/AttachmentsSDMTest.java</include>
+                                    <include>**AttachmentsSDMTest_MultipleFacet.java</include>
+                                    <include>**AttachmentsSDMTest_SingleFacet.java</include>
                                 </includes>
                             </configuration>
                         </execution>
