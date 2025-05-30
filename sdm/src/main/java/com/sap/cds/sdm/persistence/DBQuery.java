@@ -45,34 +45,37 @@ public class DBQuery {
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns(
-                "objectId",
-                "PWC_objectId",
-                "versionSeriesId",
-                "folderId",
-                "fileName",
-                "mimeType",
-                "attachmentStatus")
+            .columns("objectId", "folderId", "fileName", "mimeType", "linkUrl")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     System.out.println("Result" + result.rowCount());
     Optional<Row> res = result.first();
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
-      System.out.println("ewdwed" + res.isPresent() + ":" + res.get());
       Row row = res.get();
       cmisDocument.setObjectId(row.get("objectId").toString());
-      cmisDocument.setPwcobjectId(
-          row.get("PWC_objectId") != null ? row.get("PWC_objectId").toString() : null);
-      cmisDocument.setVersionSeriesId(
-          row.get("versionSeriesId") != null ? row.get("versionSeriesId").toString() : null);
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setFolderId(row.get("folderId").toString());
       cmisDocument.setMimeType(row.get("mimeType").toString());
-      cmisDocument.setAttachmentStatus(
-          row.get("attachmentStatus") != null ? row.get("attachmentStatus").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl").toString());
     }
     return cmisDocument;
+  }
+
+  public static String getUrlForObjectId(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity).columns("linkUrl").where(doc -> doc.get("objectId").eq(id));
+    Result result = persistenceService.run(q);
+    System.out.println("Result" + result.rowCount());
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      if (row.get("linkUrl") != null) return row.get("linkUrl").toString();
+      else return null;
+    }
+    return null;
   }
 
   public static void addAttachmentToDraft(

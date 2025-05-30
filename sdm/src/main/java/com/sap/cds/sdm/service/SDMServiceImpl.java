@@ -19,6 +19,7 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -561,5 +562,42 @@ public class SDMServiceImpl implements SDMService {
     }
 
     return validSecondaryProperties;
+  }
+
+  @Override
+  public int editLink(CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
+      throws IOException {
+    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    var httpClient =
+        TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+System.out.println("OBJ "+cmisDocument.getObjectId());
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "setContent", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    builder.addTextBody("media", "binary", ContentType.TEXT_PLAIN);
+    builder.addTextBody("overwriteFlag", "true", ContentType.TEXT_PLAIN);
+    URL url = new URL(cmisDocument.getUrl());
+    try (InputStream inputStream = url.openStream()) {
+      builder.addBinaryBody(
+          "filename",
+          inputStream,
+          ContentType.create(cmisDocument.getMimeType()),
+          cmisDocument.getFileName());
+      HttpEntity multipart = builder.build();
+      uploadFile.setEntity(multipart);
+      try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+        String responseString = EntityUtils.toString(response.getEntity());
+        int code = response.getStatusLine().getStatusCode();
+        System.out.println("Response " + code + ":" + responseString);
+        return code;
+      }
+    } catch (IOException e) {
+      throw new ServiceException("Error in setting timeout", e.getMessage());
+    }
   }
 }

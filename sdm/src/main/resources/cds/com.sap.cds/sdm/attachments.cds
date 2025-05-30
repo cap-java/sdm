@@ -5,7 +5,7 @@ extend aspect Attachments with {
     folderId : String ;
     repositoryId : String ;
     objectId : String ;
-    linkUrl:String;
+    linkUrl:String @HTML5.LinkTarget: '_blank';
 }
 annotate Attachments with @UI: {
     HeaderInfo: {

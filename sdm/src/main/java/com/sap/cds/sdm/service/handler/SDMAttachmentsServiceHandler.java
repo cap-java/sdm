@@ -95,16 +95,26 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
+
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    try {
-      sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
-    } catch (Exception e) {
-      throw new ServiceException(e.getMessage());
+    // get the link url against objectId and open it
+    Optional<CdsEntity> attachmentEntity =
+        context.getModel().findEntity(contentIdParts[2] + "_drafts");
+    String url = DBQuery.getUrlForObjectId(attachmentEntity.get(), persistenceService, objectId);
+    System.out.println("URL " + url);
+    if (url != null) {
+      Runtime.getRuntime().exec(new String[] {"open", url});
+    } else {
+      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      try {
+        sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+      } catch (Exception e) {
+        throw new ServiceException(e.getMessage());
+      }
     }
     context.setCompleted();
   }

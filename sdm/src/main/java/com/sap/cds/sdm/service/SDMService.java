@@ -63,4 +63,7 @@ public interface SDMService {
       SDMCredentials sdmCredentials,
       String repositoryId)
       throws IOException;
+
+  public int editLink(CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
+      throws IOException;
 }
