@@ -13,7 +13,7 @@ import okhttp3.*;
 import org.junit.jupiter.api.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AttachmentsSDMTest_MultipleFacet {
+class IntegrationTest_MultipleFacet {
   private static String token;
   private static String entityID;
   private static String[] facet = {"attachments", "references", "footnotes"};

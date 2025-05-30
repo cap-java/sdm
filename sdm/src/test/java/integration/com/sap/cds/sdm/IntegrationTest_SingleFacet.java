@@ -13,7 +13,7 @@ import okhttp3.*;
 import org.junit.jupiter.api.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AttachmentsSDMTest_SingleFacet {
+class IntegrationTest_SingleFacet {
   private static String token;
   private static String entityID;
   private static String entityID2;
