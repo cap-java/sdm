@@ -215,7 +215,7 @@ public class Api {
     return ("Entity doesn't exist");
   }
 
-  public List<String> createFacet(
+  public List<String> createAttachment(
       String appUrl,
       String serviceName,
       String entityName,
@@ -255,8 +255,12 @@ public class Api {
 
     try (Response response = httpClient.newCall(postRequest).execute()) {
       if (response.code() != 201) {
-        System.out.println("Create " + facetName + " failed. Error : " + response.body().string());
-        throw new IOException("Could not create " + facetName);
+        System.out.println(
+            "Create Attachment in the section: "
+                + facetName
+                + " failed. Error : "
+                + response.body().string());
+        throw new IOException("Could not read Attachment");
       }
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
       ID = (String) responseMap.get("ID");
@@ -287,7 +291,11 @@ public class Api {
       try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
         if (fileResponse.code() != 204) {
           String responseBodyString = fileResponse.body().string();
-          System.out.println("Create " + facetName + " failed. Error : " + responseBodyString);
+          System.out.println(
+              "Create Attachment in the section: "
+                  + facetName
+                  + " failed. Error : "
+                  + responseBodyString);
           error = responseBodyString;
           Request request =
               new Request.Builder()
@@ -312,37 +320,45 @@ public class Api {
           try (Response deleteResponse = httpClient.newCall(request).execute()) {
             if (deleteResponse.code() != 204) {
               System.out.println(
-                  "Delete " + facetName + " failed. Error : " + deleteResponse.body().string());
+                  "Delete Attachment in section :"
+                      + facetName
+                      + " failed. Error : "
+                      + deleteResponse.body().string());
               throw new IOException(
-                  facetName + " was not created and its container was not deleted");
+                  "Attachment was not created in section : "
+                      + facetName
+                      + " and its container was not deleted : ");
             }
             List<String> createResponse = new ArrayList<>();
             createResponse.add(error);
             return createResponse;
           } catch (IOException e) {
             System.out.println(
-                facetName + " was not created and its container was not deleted : " + e);
+                "Attachment was not created in section : "
+                    + facetName
+                    + " and its container was not deleted : "
+                    + e);
           }
         }
         long endTime = System.nanoTime(); // Record end time
         double duration = (endTime - startTime) / 1_000_000_000.0;
         System.out.println("Time taken to create(s) : " + duration);
         List<String> createResponse = new ArrayList<>();
-        createResponse.add(facetName + " created");
+        createResponse.add("Attachment created");
         createResponse.add(ID);
         return createResponse;
       } catch (IOException e) {
-        System.out.println(facetName + " was not created and its container was not deleted : " + e);
+        System.out.println("Attachment was not created in section: " + facetName + " : " + e);
       }
     } catch (IOException e) {
-      System.out.println(facetName + " was not created : " + e);
+      System.out.println("Attachment was not created in section: " + facetName + " : " + e);
     }
     List<String> createResponse = new ArrayList<>();
-    createResponse.add(facetName + " was not created");
+    createResponse.add("Attachment was not created in section: " + facetName);
     return createResponse;
   }
 
-  public String readFacet(
+  public String readAttachment(
       String appUrl,
       String serviceName,
       String entityName,
@@ -375,17 +391,21 @@ public class Api {
     try {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
-        System.out.println("Read " + facetName + " failed. Error : " + response.body().string());
-        throw new IOException("Could not read " + facetName);
+        System.out.println(
+            "Read Attachnent failed in the"
+                + facetName
+                + " section. Error :"
+                + response.body().string());
+        throw new IOException("Read Attachnent failed in the" + facetName + " section");
       }
       return "OK";
     } catch (IOException e) {
-      System.out.println("Could not read " + facetName + " : " + e);
-      return "Could not read " + facetName;
+      System.out.println("Could not read Attachment :" + e);
+      return "Could not read Attachment";
     }
   }
 
-  public String readFacetDraft(
+  public String readAttachmentDraft(
       String appUrl,
       String serviceName,
       String entityName,
@@ -423,12 +443,12 @@ public class Api {
       }
       return "OK";
     } catch (IOException e) {
-      System.out.println("Could not read attachment : " + e);
-      return "Could not read attachment";
+      System.out.println("Could not read Attachment : " + e);
+      return "Could not read Attachment";
     }
   }
 
-  public String deleteFacet(
+  public String deleteAttachment(
       String appUrl,
       String serviceName,
       String entityName,
@@ -458,17 +478,20 @@ public class Api {
     try (Response deleteResponse = httpClient.newCall(request).execute()) {
       if (deleteResponse.code() != 204) {
         System.out.println(
-            "Delete " + facetName + " failed. Error : " + deleteResponse.body().string());
-        throw new IOException(facetName + " was not deleted");
+            "Delete Attachment failed in the"
+                + facetName
+                + " section. Error :"
+                + deleteResponse.body().string());
+        throw new IOException("Attachment was not deleted in section : " + facetName);
       }
       return "Deleted";
     } catch (IOException e) {
-      System.out.println(facetName + " was not deleted : " + e);
-      return facetName + " was not deleted";
+      System.out.println("Could not delete Attachment:" + facetName + " :" + e);
+      return "Could not delete Attachment";
     }
   }
 
-  public String renameFacet(
+  public String renameAttachment(
       String appUrl,
       String serviceName,
       String entityName,
@@ -504,13 +527,16 @@ public class Api {
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
         System.out.println(
-            "Rename " + facetName + " failed. Error : " + renameResponse.body().string());
-        throw new IOException(facetName + " was not renamed");
+            "Rename Attachment failed in the"
+                + facetName
+                + " section. Error : "
+                + renameResponse.body().string());
+        throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
     } catch (IOException e) {
-      System.out.println(facetName + " was not renamed : " + e);
-      return facetName + " was not renamed";
+      System.out.println("Attachment was not renamed in section: " + facetName + " : " + e);
+      return "Attachment was not renamed in section: " + facetName;
     }
   }
 
@@ -755,7 +781,7 @@ public class Api {
     }
   }
 
-  public Map<String, Object> fetchFacetMetadata(
+  public Map<String, Object> fetchMetadata(
       String appUrl,
       String serviceName,
       String entityName,
@@ -787,7 +813,10 @@ public class Api {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
-            "Fetch " + facetName + " metadata failed. Error: " + response.body().string());
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
         throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         // Parse the JSON response to extract metadata

@@ -110,10 +110,10 @@ class IntegrationTest_MultipleFacet {
       throws IOException {
     String ID = null;
     List<String> FacetResponse =
-        api.createFacet(
+        api.createAttachment(
             appUrl, serviceName, entityName, facet, newentityId, srvpath, postData, file);
     String check = FacetResponse.get(0);
-    if (check.equals(facet + " created")) {
+    if (check.equals("Attachment created")) {
       ID = FacetResponse.get(1);
       return ID;
     }
@@ -128,14 +128,16 @@ class IntegrationTest_MultipleFacet {
     boolean status = false;
 
     for (int i = 0; i < facet.length; i++) {
-      response[i] = api.readFacetDraft(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
+      response[i] =
+          api.readAttachmentDraft(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
       if ("OK".equals(response[i])) Counter++;
     }
     if (Counter >= 2) {
       String saveResponse = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
       if ("Saved".equals(saveResponse)) {
         for (int i = 0; i < facet.length; i++) {
-          response[i] = api.readFacet(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
+          response[i] =
+              api.readAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
           if (!"OK".equals(response[i])) {
             return false;
           }
@@ -149,11 +151,12 @@ class IntegrationTest_MultipleFacet {
   private boolean checkDuplicateCreation(String facetType, List<String> createResponse)
       throws IOException {
     String creationCheck = createResponse.get(0);
-    boolean wasCreated =
-        (facetType + " created").equals(creationCheck); // Evaluating creation status
+    boolean wasCreated = ("Attachment created").equals(creationCheck); // Evaluating creation status
     if (wasCreated) {
       System.out.println(
-          facetType + " was created when it should have been rejected as a duplicate.");
+          "Attachment was created in section : "
+              + facetType
+              + " when it should have been rejected as a duplicate.");
       return false;
     } else {
       String expectedJson =
@@ -162,10 +165,11 @@ class IntegrationTest_MultipleFacet {
       JsonNode actualJsonNode = objectMapper.readTree(creationCheck);
       JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
       if (expectedJsonNode.equals(actualJsonNode)) {
-        System.out.println(facetType + " correctly failed due to duplicate upload.");
+        System.out.println(
+            " Attachment correctly failed in section " + facetType + " due to duplicate upload.");
         return true;
       } else {
-        System.out.println(facetType + " failed but with an unexpected error: " + creationCheck);
+        System.out.println(" Attachment failed but with an unexpected error: " + creationCheck);
         return false;
       }
     }
@@ -176,13 +180,13 @@ class IntegrationTest_MultipleFacet {
     String type = facet;
     switch (type.toLowerCase()) {
       case "attachments":
-        result = api.renameFacet(appUrl, serviceName, entityName, facet, eId, id, newName);
+        result = api.renameAttachment(appUrl, serviceName, entityName, facet, eId, id, newName);
         break;
       case "references":
-        result = api.renameFacet(appUrl, serviceName, entityName, facet, eId, id, newName);
+        result = api.renameAttachment(appUrl, serviceName, entityName, facet, eId, id, newName);
         break;
       case "footnotes":
-        result = api.renameFacet(appUrl, serviceName, entityName, facet, eId, id, newName);
+        result = api.renameAttachment(appUrl, serviceName, entityName, facet, eId, id, newName);
         break;
       default:
         System.out.println("Unknown type: " + type);
@@ -341,7 +345,7 @@ class IntegrationTest_MultipleFacet {
       Boolean allFacetsFailedCorrectly = true;
       for (int i = 0; i < facet.length; i++) {
         List<String> facetResponse =
-            api.createFacet(
+            api.createAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID, srvpath, postData, file);
         allFacetsFailedCorrectly &= checkDuplicateCreation(facet[i], facetResponse);
       }
@@ -418,7 +422,8 @@ class IntegrationTest_MultipleFacet {
         for (int i = 0; i < facet.length; i++) {
           // Read the facet to ensure it exists
           response =
-              api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID, ID[i], name[i]);
+              api.renameAttachment(
+                  appUrl, serviceName, entityName, facet[i], entityID, ID[i], name[i]);
           if (!"Renamed".equals(response)) {
             testStatus = false;
             System.out.println(facet[i] + " was not renamed: " + response);
@@ -491,7 +496,8 @@ class IntegrationTest_MultipleFacet {
     if (response.equals("Entity in draft mode")) {
       for (int i = 0; i < facet.length; i++) {
         response =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID, ID3[i], name[i]);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID, ID3[i], name[i]);
         if (response.equals("Renamed")) counter++;
       }
       if (counter >= 2) {
@@ -509,7 +515,7 @@ class IntegrationTest_MultipleFacet {
           for (int i = 0; i < facet.length; i++) {
             // Attempt to rename again with a different name
             response =
-                api.renameFacet(
+                api.renameAttachment(
                     appUrl, serviceName, entityName, facet[i], entityID, ID3[i], name2[i]);
             if (response.equals("Renamed")) counter++;
           }
@@ -535,11 +541,12 @@ class IntegrationTest_MultipleFacet {
   void testDeleteSingleAttachment() throws IOException {
     System.out.println("Test (11) : Delete single attachment, reference, and footnote");
     Boolean testStatus = false;
+    counter = -1;
 
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response.equals("Entity in draft mode")) {
       for (int i = 0; i < facet.length; i++) {
-        response = api.deleteFacet(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
+        response = api.deleteAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
         if (response.equals("Deleted")) counter++;
       }
       if (counter >= 2)
@@ -547,8 +554,8 @@ class IntegrationTest_MultipleFacet {
       counter = -1; // Reset counter for the next check
       if (response.equals("Saved")) {
         for (int i = 0; i < facet.length; i++) {
-          response = api.readFacet(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
-          if (response.equals("Could not read " + facet[i])) counter++;
+          response = api.readAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID[i]);
+          if (response.equals("Could not read Attachment")) counter++;
         }
         if (counter >= 2) testStatus = true;
         else fail("Could not read deleted facets");
@@ -567,9 +574,9 @@ class IntegrationTest_MultipleFacet {
     if (response.equals("Entity in draft mode")) {
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.deleteFacet(appUrl, serviceName, entityName, facet[i], entityID, ID2[i]);
+            api.deleteAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID2[i]);
         String response2 =
-            api.deleteFacet(appUrl, serviceName, entityName, facet[i], entityID, ID3[i]);
+            api.deleteAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID3[i]);
         if (response1.equals("Deleted") && response2.equals("Deleted")) counter++;
       }
     }
@@ -578,9 +585,9 @@ class IntegrationTest_MultipleFacet {
     if (response.equals("Saved")) {
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.readFacet(appUrl, serviceName, entityName, facet[i], entityID, ID2[i]);
+            api.readAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID2[i]);
         String response2 =
-            api.readFacet(appUrl, serviceName, entityName, facet[i], entityID, ID3[i]);
+            api.readAttachment(appUrl, serviceName, entityName, facet[i], entityID, ID3[i]);
         if (response1.equals("Could not read " + facet[i])
             && response2.equals("Could not read " + facet[i])) {
           counter++;
@@ -637,7 +644,8 @@ class IntegrationTest_MultipleFacet {
       String name[] = {"sample1234.pdf", "reference1234.pdf", "footnote1234.pdf"};
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -694,7 +702,8 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for attachment");
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -774,7 +783,8 @@ class IntegrationTest_MultipleFacet {
       for (int i = 0; i < facet.length; i++) {
         // Rename and update secondary properties
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -810,7 +820,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
       for (int i = 0; i < facet.length; i++) {
         Map<String, Object> FacetMetadata =
-            api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
+            api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
         assertEquals("sample.pdf", FacetMetadata.get("fileName"));
         assertNull(FacetMetadata.get("abc___myId1"));
         assertNull(FacetMetadata.get("abc___myId2"));
@@ -849,7 +859,8 @@ class IntegrationTest_MultipleFacet {
       for (int i = 0; i < facet.length; i++) {
         // Rename and update secondary properties
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -885,7 +896,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
       for (int i = 0; i < facet.length; i++) {
         Map<String, Object> FacetMetadata =
-            api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
+            api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
         assertEquals("sample.pdf", FacetMetadata.get("fileName"));
         assertNull(FacetMetadata.get("abc___myId1"));
         assertNull(FacetMetadata.get("abc___myId2"));
@@ -968,7 +979,8 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for PDF");
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -1096,7 +1108,8 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for PDF");
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -1269,7 +1282,8 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for PDF");
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -1365,7 +1379,7 @@ class IntegrationTest_MultipleFacet {
         // for PDF
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
           assertEquals(name[0], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1377,7 +1391,7 @@ class IntegrationTest_MultipleFacet {
         // for TXT
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID2[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID2[i]);
           assertEquals(name[1], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1389,7 +1403,7 @@ class IntegrationTest_MultipleFacet {
         // for EXE
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID3[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID3[i]);
           assertEquals(name[2], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1432,7 +1446,8 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for PDF");
       for (int i = 0; i < facet.length; i++) {
         String response1 =
-            api.renameFacet(appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -1528,7 +1543,7 @@ class IntegrationTest_MultipleFacet {
         // for PDF
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID[i]);
           assertEquals(name[0], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1540,7 +1555,7 @@ class IntegrationTest_MultipleFacet {
         // for TXT
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID2[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID2[i]);
           assertEquals(name[1], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1552,7 +1567,7 @@ class IntegrationTest_MultipleFacet {
         // for EXE
         for (int i = 0; i < facet.length; i++) {
           Map<String, Object> FacetMetadata =
-              api.fetchFacetMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID3[i]);
+              api.fetchMetadata(appUrl, serviceName, entityName, facet[i], entityID3, ID3[i]);
           assertEquals(name[2], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("abc___myId1"));
           assertNull(FacetMetadata.get("abc___myId2"));
@@ -1581,7 +1596,7 @@ class IntegrationTest_MultipleFacet {
   @Order(22)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-        "Test (23): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (22): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1602,7 +1617,7 @@ class IntegrationTest_MultipleFacet {
       postData1.put("modifiedBy", "test@test.com");
 
       List<String> createResponse1 =
-          api.createFacet(
+          api.createAttachment(
               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData1, file);
       if (createResponse1.get(0).equals("Attachment created")) {
         ID[0] = createResponse1.get(1);
@@ -1619,7 +1634,7 @@ class IntegrationTest_MultipleFacet {
       postData2.put("modifiedBy", "test@test.com");
 
       List<String> createResponse2 =
-          api.createFacet(
+          api.createAttachment(
               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData2, file);
       if (createResponse2.get(0).equals("Attachment created")) {
         ID2[0] = createResponse2.get(1);
@@ -1636,7 +1651,7 @@ class IntegrationTest_MultipleFacet {
       postData3.put("modifiedBy", "test@test.com");
 
       List<String> createResponse3 =
-          api.createFacet(
+          api.createAttachment(
               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData3, file);
       if (createResponse3.get(0).equals("Attachment created")) {
         ID[0] = createResponse3.get(1);
@@ -1653,7 +1668,7 @@ class IntegrationTest_MultipleFacet {
       postData4.put("modifiedBy", "test@test.com");
 
       List<String> createResponse4 =
-          api.createFacet(
+          api.createAttachment(
               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData3, file);
       if (createResponse4.get(0).equals("Attachment created")) {
         ID4[0] = createResponse4.get(1);
@@ -1670,7 +1685,7 @@ class IntegrationTest_MultipleFacet {
       postData5.put("modifiedBy", "test@test.com");
 
       List<String> createResponse5 =
-          api.createFacet(
+          api.createAttachment(
               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData3, file);
       if (createResponse5.get(0).equals("Only 4 attachments allowed.")) {
         testStatus = true;
@@ -1702,7 +1717,7 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(23)
   void testUploadNAttachments() throws IOException {
-    System.out.println("Test (24): Upload maximum 4 attachments in an exsisting entity");
+    System.out.println("Test (23): Upload maximum 4 attachments in an exsisting entity");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File originalFile = new File(classLoader.getResource("sample.exe").getFile());
@@ -1725,7 +1740,7 @@ class IntegrationTest_MultipleFacet {
         postData.put("modifiedBy", "test@test.com");
 
         List<String> createResponse =
-            api.createFacet(
+            api.createAttachment(
                 appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData, tempFile);
 
         String resultMessage = createResponse.get(0);
