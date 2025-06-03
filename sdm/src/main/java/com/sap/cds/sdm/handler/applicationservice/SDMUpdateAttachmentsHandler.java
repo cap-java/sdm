@@ -78,6 +78,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
     Map<String, String> propertyTitles = new HashMap<>();
+    List<String> fileWithWhiteSpace = new ArrayList<>();
     List<String> noSDMRoles = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
@@ -105,7 +106,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             filesWithUnsupportedProperties,
             badRequest,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles);
+            noSDMRoles,
+            fileWithWhiteSpace);
       }
     }
     handleWarnings(
@@ -116,7 +118,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         filesWithUnsupportedProperties,
         badRequest,
         propertyTitles,
-        noSDMRoles);
+        noSDMRoles,
+        fileWithWhiteSpace);
   }
 
   private void processAttachments(
@@ -129,7 +132,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      List<String> fileWithWhiteSpace)
       throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
@@ -144,7 +148,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filesWithUnsupportedProperties,
           badRequest,
           secondaryPropertiesWithInvalidDefinitions,
-          noSDMRoles);
+          noSDMRoles,
+          fileWithWhiteSpace);
     }
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
@@ -164,7 +169,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      List<String> fileWithWhiteSpace)
       throws IOException {
     String id = (String) attachment.get("ID");
     Map<String, String> secondaryTypeProperties =
@@ -220,8 +226,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Filename cannot be empty");
       }
     } else {
-      if (filenameInRequest == null) {
-        throw new ServiceException("Filename cannot be empty");
+      if (filenameInRequest == null || filenameInRequest.trim().length() == 0) {
+        fileWithWhiteSpace.add(fileNameInDB);
+        replacePropertiesInAttachment(
+            attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
       } else if (!fileNameInDB.equals(filenameInRequest)) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
@@ -311,7 +319,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
-      List<String> noSDMRoles) {
+      List<String> noSDMRoles,
+      List<String> fileWithWhiteSpace) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -350,6 +359,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!noSDMRoles.isEmpty()) {
       context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update"));
+      if (!fileWithWhiteSpace.isEmpty()) {
+        context
+            .getMessages()
+            .warn(
+                String.format(
+                    SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE,
+                    String.join(", ", fileWithWhiteSpace)));
+      }
     }
   }
 

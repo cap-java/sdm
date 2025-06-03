@@ -69,6 +69,8 @@ public class SDMConstants {
   public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
   public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
+  public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
+      "The following file(s) could not be updated because the filename(s) cannot be empty.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
@@ -142,6 +144,21 @@ public class SDMConstants {
       bulletPoints.append(SDM_MISSING_ROLES_EXCEPTION_MSG);
     }
 
+    return bulletPoints.toString();
+  }
+
+  public static String removeWhiteSpace(List<String> noWhiteSpace) {
+    // Create the base message
+    String prefixMessage = "File name cannot start with Space. \n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each file name and its error message to the StringBuilder
+    for (String file : noWhiteSpace) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append(System.lineSeparator());
     return bulletPoints.toString();
   }
 
