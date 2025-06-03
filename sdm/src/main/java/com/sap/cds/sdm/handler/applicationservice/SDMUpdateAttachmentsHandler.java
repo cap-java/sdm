@@ -11,10 +11,12 @@ import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
@@ -25,6 +27,7 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
+import org.ehcache.Cache;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMUpdateAttachmentsHandler implements EventHandler {
@@ -69,14 +72,29 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String composition)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions;
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
-    List<String> fileWithWhiteSpace = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
+    Map<String, String> propertyTitles = new HashMap<>();
+    List<String> noSDMRoles = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
-      if (attachments != null) {
+      if (attachments != null && !attachments.isEmpty()) {
+        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+      } else {
+        propertyTitles = null;
+      }
+      if (attachments != null && !attachments.isEmpty()) {
+        secondaryPropertiesWithInvalidDefinitions =
+            SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                attachmentEntity, attachments.get(0));
+      } else {
+        // Handle the case where attachments is null or empty
+        secondaryPropertiesWithInvalidDefinitions = null;
+      }
+      if ((attachments != null) && !attachments.isEmpty()) {
         processAttachments(
             attachmentEntity,
             context,
@@ -86,7 +104,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            fileWithWhiteSpace);
+            secondaryPropertiesWithInvalidDefinitions,
+            noSDMRoles);
       }
     }
     handleWarnings(
@@ -95,8 +114,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         fileNameWithRestrictedCharacters,
         filesNotFound,
         filesWithUnsupportedProperties,
-        fileWithWhiteSpace,
-        badRequest);
+        badRequest,
+        propertyTitles,
+        noSDMRoles);
   }
 
   private void processAttachments(
@@ -108,7 +128,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
-      List<String> fileWithWhiteSpace)
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
       throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
@@ -122,12 +143,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filesNotFound,
           filesWithUnsupportedProperties,
           badRequest,
-          fileWithWhiteSpace);
+          secondaryPropertiesWithInvalidDefinitions,
+          noSDMRoles);
     }
-    SecondaryPropertiesKey secondaryPropertiesKey =
-        new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
+    SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    CacheConfig.getSecondaryPropertiesCache().remove(secondaryPropertiesKey);
+    Cache<SecondaryPropertiesKey, ?> cache = CacheConfig.getSecondaryPropertiesCache();
+    if (cache != null) {
+      cache.remove(secondaryPropertiesKey); // Emptying cache after attachments are updated in loop
+    }
   }
 
   public void processAttachment(
@@ -139,17 +163,34 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
-      List<String> fileWithWhiteSpace)
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
       throws IOException {
-    String id = (String) attachment.get("ID"); // Ensure appropriate cast to String
-    // Get list of secondary type properties
-    List<String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
-    // Get the updated secondary properties
+    String id = (String) attachment.get("ID");
+    Map<String, String> secondaryTypeProperties =
+        SDMUtils.getSecondaryTypeProperties(
+            attachmentEntity,
+            attachment); // Fetching the secondary type properties from the attachment entity
+    String fileNameInDB;
+    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    if (fileNameInDB
+        == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
+      // values if needed.
+      String objectId = (String) attachment.get("objectId");
+      AuthenticationInfo authInfo = context.getAuthenticationInfo();
+      JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+      String jwtToken = jwtTokenInfo.getToken();
+      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      fileNameInDB = sdmService.getObject(jwtToken, objectId, sdmCredentials);
+    }
     Map<String, String> propertiesInDB;
     propertiesInDB =
         DBQuery.getPropertiesForID(
-            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+            attachmentEntity.get(),
+            persistenceService,
+            id,
+            secondaryTypeProperties); // Fetching the values of the properties from the DB
+
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -158,12 +199,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             secondaryTypeProperties,
             propertiesInDB);
     String filenameInRequest = (String) attachment.get("fileName");
-    String fileNameInDB;
-    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+
     String objectId = (String) attachment.get("objectId");
-    if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+    if (Boolean.TRUE.equals(
+        SDMUtils.isRestrictedCharactersInName(
+            filenameInRequest))) { // Check if the filename contains restricted characters and stop
+      // further processing if it does (Request not sent to SDM)
       fileNameWithRestrictedCharacters.add(filenameInRequest);
-      replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+      replacePropertiesInAttachment(
+          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
       return;
     }
     CmisDocument cmisDocument = new CmisDocument();
@@ -176,10 +220,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Filename cannot be empty");
       }
     } else {
-      if (filenameInRequest == null || filenameInRequest.trim().length() == 0) {
-        fileWithWhiteSpace.add(fileNameInDB);
-        replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
-
+      if (filenameInRequest == null) {
+        throw new ServiceException("Filename cannot be empty");
       } else if (!fileNameInDB.equals(filenameInRequest)) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
@@ -191,19 +233,24 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                 context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
                 TokenHandler.getSDMCredentials(),
                 cmisDocument,
-                updatedSecondaryProperties);
+                updatedSecondaryProperties,
+                secondaryPropertiesWithInvalidDefinitions);
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
-            throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG, null);
-
+            noSDMRoles.add(fileNameInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+            break;
           case 409:
             duplicateFileNameList.add(filenameInRequest);
-            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
             break;
           case 404:
             filesNotFound.add(fileNameInDB);
-            replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
             break;
           case 200:
           case 201:
@@ -214,26 +261,43 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
         }
       } catch (ServiceException e) {
+        // This exception is thrown when there are unsupported properties in the request
         if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
           String unsupportedDetails =
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
-          replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
         } else {
           badRequest.put(fileNameInDB, e.getMessage());
-          replacePropertiesInAttachment(attachment, fileNameInDB, propertiesInDB);
+          replacePropertiesInAttachment(
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
         }
       }
     }
   }
 
   private void replacePropertiesInAttachment(
-      Map<String, Object> attachment, String fileName, Map<String, String> propertiesInDB) {
+      Map<String, Object> attachment,
+      String fileName,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties) {
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
-        String key = entry.getKey();
-        String value = entry.getValue();
-        attachment.replace(key, value);
+        String dbKey = entry.getKey();
+        String dbValue = entry.getValue();
+
+        // Find the key in secondaryTypeProperties where the value matches dbKey
+        String secondaryKey =
+            secondaryTypeProperties.entrySet().stream()
+                .filter(e -> e.getValue().equals(dbKey))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        if (secondaryKey != null) {
+          attachment.replace(secondaryKey, dbValue);
+        }
       }
     }
     attachment.replace("fileName", fileName);
@@ -245,8 +309,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
-      List<String> fileWithWhiteSpace,
-      Map<String, String> badRequest) {
+      Map<String, String> badRequest,
+      Map<String, String> propertyTitles,
+      List<String> noSDMRoles) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
@@ -264,20 +329,27 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
-      context
-          .getMessages()
-          .warn(SDMConstants.unsupportedPropertiesMessage(filesWithUnsupportedProperties));
+      List<String> invalidPropertyNames = new ArrayList<>();
+      Set<String> uniqueValues = new HashSet<>();
+      for (String str : filesWithUnsupportedProperties) {
+        String[] values = str.split(",");
+        for (String value : values) {
+          uniqueValues.add(value.trim());
+        }
+      }
+      List<String> propertiesList = new ArrayList<>(uniqueValues);
+      for (String file : propertiesList) {
+        invalidPropertyNames.add(propertyTitles.get(file));
+      }
+      if (!invalidPropertyNames.isEmpty()) {
+        context.getMessages().warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames));
+      }
     }
     if (!badRequest.isEmpty()) {
       context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
     }
-    if (!fileWithWhiteSpace.isEmpty()) {
-      context
-          .getMessages()
-          .warn(
-              String.format(
-                  SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE,
-                  String.join(", ", fileWithWhiteSpace)));
+    if (!noSDMRoles.isEmpty()) {
+      context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update"));
     }
   }
 
