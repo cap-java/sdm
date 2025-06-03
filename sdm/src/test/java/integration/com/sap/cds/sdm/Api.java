@@ -3,10 +3,6 @@ package integration.com.sap.cds.sdm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import okhttp3.*;
 import okio.ByteString;
@@ -547,13 +543,8 @@ public class Api {
       String facetName,
       String entityID,
       String ID,
-      String stringProperty) {
-    MediaType mediaType = MediaType.parse("application/json");
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            ByteString.encodeUtf8(
-                "{\n    \"Working___DocumentInfoRecordString\" : \"" + stringProperty + "\"\n}"));
+      RequestBody requestBody) {
+
     Request request =
         new Request.Builder()
             .url(
@@ -570,7 +561,7 @@ public class Api {
                     + ",ID="
                     + ID
                     + ",IsActiveEntity=false)")
-            .method("PATCH", body)
+            .method("PATCH", requestBody)
             .addHeader("Content-Type", "application/json")
             .addHeader("Authorization", token)
             .build();
@@ -578,160 +569,12 @@ public class Api {
     try (Response updateResponse = httpClient.newCall(request).execute()) {
       if (updateResponse.code() != 200) {
         System.out.println(
-            "Updating secondary property failed. Error : " + updateResponse.body().string());
+            "Updating secondary property failed. Error: " + updateResponse.body().string());
         throw new IOException("Secondary Property was not updated");
       }
       return "Updated";
     } catch (IOException e) {
-      System.out.println("Secondary Property was not updated : " + e);
-      return "Secondary Property was not updated";
-    }
-  }
-
-  public String updateSecondaryProperty(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      Integer integerProperty) {
-    MediaType mediaType = MediaType.parse("application/json");
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            ByteString.encodeUtf8(
-                "{\n    \"Working___DocumentInfoRecordInt\" : " + integerProperty + "\n}"));
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
-      if (updateResponse.code() != 200) {
-        System.out.println(
-            "Updating secondary property failed. Error : " + updateResponse.body().string());
-        throw new IOException("Secondary Property was not updated");
-      }
-      return "Updated";
-    } catch (IOException e) {
-      System.out.println("Secondary Property was not updated : " + e);
-      return "Secondary Property was not updated";
-    }
-  }
-
-  public String updateSecondaryProperty(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      LocalDateTime dateTimeProperty) {
-    MediaType mediaType = MediaType.parse("application/json");
-    // Format the LocalDateTime into an ISO 8601 string with zone offset
-    ZonedDateTime zonedDateTime = dateTimeProperty.atZone(ZoneId.systemDefault());
-    String formattedDateTime = zonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            ByteString.encodeUtf8(
-                "{\n    \"Working___DocumentInfoRecordDate\" : \"" + formattedDateTime + "\"\n}"));
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
-      if (updateResponse.code() != 200) {
-        System.out.println(
-            "Updating secondary property failed. Error : " + updateResponse.body().string());
-        throw new IOException("Secondary Property was not updated");
-      }
-      return "Updated";
-    } catch (IOException e) {
-      System.out.println("Secondary Property was not updated : " + e);
-      return "Secondary Property was not updated";
-    }
-  }
-
-  public String updateSecondaryProperty(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      Boolean booleanProperty) {
-    MediaType mediaType = MediaType.parse("application/json");
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            ByteString.encodeUtf8(
-                "{\n    \"Working___DocumentInfoRecordBoolean\" : " + booleanProperty + "\n}"));
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
-      if (updateResponse.code() != 200) {
-        System.out.println(
-            "Updating secondary property failed. Error : " + updateResponse.body().string());
-        throw new IOException("Secondary Property was not updated");
-      }
-      return "Updated";
-    } catch (IOException e) {
-      System.out.println("Secondary Property was not updated : " + e);
+      System.out.println("Secondary Property was not updated: " + e);
       return "Secondary Property was not updated";
     }
   }
