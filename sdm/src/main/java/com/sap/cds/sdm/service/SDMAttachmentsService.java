@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.service;
 
+import static com.sap.cds.sdm.service.RegisterService.SDM_NAME;
+
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
@@ -17,8 +19,7 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SDMAttachmentsService extends ServiceDelegator
-    implements AttachmentService, RegisterService {
+public class SDMAttachmentsService extends ServiceDelegator implements AttachmentService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsService.class);
 
   public SDMAttachmentsService() {
@@ -32,9 +33,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     var readContext = AttachmentReadEventContext.create();
     readContext.setContentId(contentId);
     readContext.setData(MediaData.create());
-
     emit(readContext);
-
     return readContext.getData().getContent();
   }
 

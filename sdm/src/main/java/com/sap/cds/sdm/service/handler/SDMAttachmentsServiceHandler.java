@@ -108,6 +108,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     System.out.println("URL " + url);
     if (url != null) {
       Runtime.getRuntime().exec(new String[] {"open", url});
+      context.setData();
     } else {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
       try {

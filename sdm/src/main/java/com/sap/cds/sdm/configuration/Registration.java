@@ -1,9 +1,11 @@
 package com.sap.cds.sdm.configuration;
 
+import com.sap.cds.feature.attachments.handler.applicationservice.processor.readhelper.validator.DefaultAttachmentStatusValidator;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
+import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsContentHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.service.*;
@@ -54,7 +56,6 @@ public class Registration implements CdsRuntimeConfiguration {
             .filter(b -> ServiceBindingUtils.matches(b, SDMConstants.SDM_ENV_NAME))
             .toList();
     var binding = !bindings.isEmpty() ? bindings.get(0) : null;
-
     // get HTTP connection pool configuration
     var connectionPool = getConnectionPool(environment);
     List<DraftService> draftServiceList =
@@ -63,6 +64,10 @@ public class Registration implements CdsRuntimeConfiguration {
     VersioningService versioningService = new VersioningServiceImpl(binding, connectionPool);
     DocumentUploadService documentService = new DocumentUploadService();
     configurer.eventHandler(buildReadHandler());
+    var statusValidator = new DefaultAttachmentStatusValidator();
+    var sdmAttachmentService = new SDMAttachmentsService();
+    configurer.eventHandler(
+        new SDMReadAttachmentsContentHandler(sdmAttachmentService, statusValidator));
     configurer.eventHandler(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(

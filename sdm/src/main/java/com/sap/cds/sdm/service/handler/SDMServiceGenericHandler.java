@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
-import com.sap.cds.feature.attachments.handler.common.ApplicationHandlerHelper;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
@@ -29,6 +28,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
+import java.rmi.ServerException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,25 +90,18 @@ public class SDMServiceGenericHandler implements EventHandler {
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
 
-    String upIdKey = "";
     Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
-    // if association is found, try to get foreign key to parent entity
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType assocType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    System.out.println("Target Keys " + targetKeys + ":" + targetKeys.size());
     // get the objectId against the Id
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    if (!cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+      throw new ServerException("Not supported for Documents.");
+    }
     Runtime.getRuntime().exec(new String[] {"open", cmisDocument.getUrl()});
     context.setCompleted();
   }
@@ -177,13 +170,14 @@ public class SDMServiceGenericHandler implements EventHandler {
             + ":"
             + context.getTarget()
             + ":"
-            + subdomain);
+            + subdomain
+            + ":"
+            + cmisDocument.getMimeType());
     updatedFields.put("fileName", cmisDocument.getFileName());
     updatedFields.put("HasDraftEntity", false);
     updatedFields.put("HasActiveEntity", false);
     updatedFields.put("linkUrl", cmisDocument.getUrl());
     var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
-    System.out.println(ApplicationHandlerHelper.isMediaEntity(context.getTarget()));
     draftService.newDraft(insert);
     context.setCompleted();
   }
@@ -192,20 +186,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     System.out.println("Parameters from edit " + context.get("url").toString());
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-
-    String upIdKey = "";
     Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
-    // if association is found, try to get foreign key to parent entity
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType assocType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     // get the objectId against the Id
@@ -218,15 +200,19 @@ public class SDMServiceGenericHandler implements EventHandler {
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    cmisDocument.setRepositoryId(SDMConstants.REPOSITORY_ID);
+    System.out.println("URL " + cmisDocument.getUrl());
     int responseCode = sdmService.editLink(cmisDocument, sdmCredentials, jwtToken);
     System.out.println("Res code " + responseCode);
-    if (responseCode == 200) {
+    if (responseCode == 201) {
       Map<String, Object> updatedFields = new HashMap<>();
       updatedFields.put("linkUrl", cmisDocument.getUrl());
       var update =
           Update.entity(attachmentDraftEntity.get())
               .data(updatedFields)
-              .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
+              .where(doc -> doc.get("ID").eq(ID));
+      var t = persistenceService.run(update);
+      System.out.println("UPDATE " + update + ":" + t);
     }
     context.setCompleted();
   }
@@ -430,5 +416,23 @@ public class SDMServiceGenericHandler implements EventHandler {
       context.getMessages().success("Document check out is cancelled.");
     }
     context.setCompleted();
+  }
+
+  @On(event = "getLinkUrl")
+  public void getLinkUrl(EventContext context) throws IOException {
+    // Check the action name and handle accordingly
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    Optional<CdsEntity> attachmentDraftEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    // get the objectId against the Id
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    // return cmisDocument.getUrl();
+    // context.setCompleted();
   }
 }

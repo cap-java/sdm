@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -571,7 +572,7 @@ public class SDMServiceImpl implements SDMService {
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, subdomain, "TOKEN_EXCHANGE");
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
-System.out.println("OBJ "+cmisDocument.getObjectId());
+    System.out.println("OBJ " + cmisDocument.getObjectId());
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     // Add additional form fields
@@ -582,22 +583,28 @@ System.out.println("OBJ "+cmisDocument.getObjectId());
     builder.addTextBody("media", "binary", ContentType.TEXT_PLAIN);
     builder.addTextBody("overwriteFlag", "true", ContentType.TEXT_PLAIN);
     URL url = new URL(cmisDocument.getUrl());
-    try (InputStream inputStream = url.openStream()) {
-      builder.addBinaryBody(
-          "filename",
-          inputStream,
-          ContentType.create(cmisDocument.getMimeType()),
-          cmisDocument.getFileName());
-      HttpEntity multipart = builder.build();
-      uploadFile.setEntity(multipart);
-      try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
-        String responseString = EntityUtils.toString(response.getEntity());
-        int code = response.getStatusLine().getStatusCode();
-        System.out.println("Response " + code + ":" + responseString);
-        return code;
-      }
+    System.out.println("URL " + cmisDocument.getUrl());
+    String sContent = "[InternetShortcut]\nURL=" + cmisDocument.getUrl();
+
+    // Convert the string content to a byte array for the InputStream
+    byte[] byteArray = sContent.getBytes(StandardCharsets.UTF_8);
+    InputStream inputStream = new ByteArrayInputStream(byteArray);
+    builder.addBinaryBody(
+        "filename",
+        inputStream,
+        ContentType.create(cmisDocument.getMimeType()),
+        cmisDocument.getFileName());
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      String responseString = EntityUtils.toString(response.getEntity());
+      int code = response.getStatusLine().getStatusCode();
+      System.out.println("HEADER" + response.getFirstHeader("x-correlationid"));
+      System.out.println("Response " + code + ":" + responseString);
+      return code;
     } catch (IOException e) {
-      throw new ServiceException("Error in setting timeout", e.getMessage());
+      e.printStackTrace();
+      throw new ServiceException("Error in updating the link", e.getMessage());
     }
   }
 }

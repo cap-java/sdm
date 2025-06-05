@@ -7,6 +7,14 @@ extend aspect Attachments with {
     objectId : String ;
     linkUrl:String @HTML5.LinkTarget: '_blank';
 }
+extend aspect Attachments with actions {
+      @(
+                                           Common.SideEffects             : {TargetEntities: ['']},
+                                         )
+    action createLink(in:many $self,name:String,url:String);
+    action editLink(url: String);
+    action openLink();
+ };
 annotate Attachments with @UI: {
     HeaderInfo: {
         $Type         : 'UI.HeaderInfoType',
