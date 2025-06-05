@@ -86,7 +86,8 @@
                                 </goals>
                                 <configuration>
                                     <includes>
-                                        <include>**/integration/**/IntegrationTest.java</include>
+                                        <include>**IntegrationTest_MultipleFacet.java</include>
+                                        <include>**IntegrationTest_SingleFacet.java</include>
                                     </includes>
                                 </configuration>
                             </execution>
