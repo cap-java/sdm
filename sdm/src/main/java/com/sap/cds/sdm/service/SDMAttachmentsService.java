@@ -10,6 +10,8 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.sdm.model.CopyAttachmentInput;
+import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
@@ -36,6 +38,18 @@ public class SDMAttachmentsService extends ServiceDelegator
     emit(readContext);
 
     return readContext.getData().getContent();
+  }
+
+  @Override
+  public void copyAttachments(CopyAttachmentInput input) {
+    System.out.println("Inside copyAttachments method - SDMAttachmentsService");
+
+    var copyContext = AttachmentCopyEventContext.create();
+    copyContext.setUpId(input.upId());
+    copyContext.setFacet(input.facet());
+    copyContext.setObjectIds(input.objectIds());
+
+    emit(copyContext);
   }
 
   @Override

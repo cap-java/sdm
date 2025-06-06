@@ -17,16 +17,40 @@ annotate Attachments with @UI: {
          {Value: content, @HTML5.CssDefaults: {width: '20%'}},
           {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
           {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-          {Value: note, @HTML5.CssDefaults: {width: '20%'}}
+          {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+          {
+      $Type  : 'UI.DataFieldForActionGroup',
+      ID     : 'TableActionGroup',
+      Label  : 'Link',
+       ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
+      Actions: [
+ 
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Create Link',
+          Action: 'AdminService.createLink',
+        },
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Edit Link',
+          Action: 'AdminService.editLink',
+        },
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Open Link',
+          Action: 'AdminService.openLink',
+        }
+      ]
+    },
     ]
 } {
     note       @(title: '{i18n>Note}');
     fileName  @(title: '{i18n>Filename}');
     modifiedAt @(odata.etag: null);
     content
-       @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
+       @Core.ContentDisposition: { Filename: fileName }
         @(title: '{i18n>Attachment}');
-    folderId @UI.Hidden;
+       folderId @UI.Hidden;
     repositoryId  @UI.Hidden ;
     objectId  @UI.Hidden ;
     mimeType @UI.Hidden;
