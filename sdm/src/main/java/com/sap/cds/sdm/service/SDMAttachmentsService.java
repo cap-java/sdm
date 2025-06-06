@@ -28,6 +28,18 @@ public class SDMAttachmentsService extends ServiceDelegator
   }
 
   @Override
+  public void copyAttachments(CopyAttachmentInput input) {
+    System.out.println("Inside copyAttachments method - SDMAttachmentsService");
+
+    var copyContext = AttachmentCopyEventContext.create();
+    copyContext.setUpId(input.upId());
+    copyContext.setFacet(input.facet());
+    copyContext.setObjectIds(input.objectIds());
+
+    emit(copyContext);
+  }
+
+  @Override
   public InputStream readAttachment(String contentId) {
     logger.info("Reading attachment with document id: {}", contentId);
 
@@ -38,18 +50,6 @@ public class SDMAttachmentsService extends ServiceDelegator
     emit(readContext);
 
     return readContext.getData().getContent();
-  }
-
-  @Override
-  public void copyAttachments(CopyAttachmentInput input) {
-    System.out.println("Inside copyAttachments method - SDMAttachmentsService");
-
-    var copyContext = AttachmentCopyEventContext.create();
-    copyContext.setUpId(input.upId());
-    copyContext.setFacet(input.facet());
-    copyContext.setObjectIds(input.objectIds());
-
-    emit(copyContext);
   }
 
   @Override

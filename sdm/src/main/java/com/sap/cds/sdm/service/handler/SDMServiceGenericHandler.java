@@ -2,7 +2,6 @@ package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.service.RegisterService;
-import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.handler.EventHandler;
@@ -13,24 +12,19 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-@ServiceName(value = "*", type = RegisterService.class)
+@ServiceName({"*"})
 public class SDMServiceGenericHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final RegisterService attachmentService;
 
-  public SDMServiceGenericHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMServiceGenericHandler(
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      RegisterService attachmentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
-  }
-
-  @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
-  public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
-    System.out.println("Inside correct method - Nexus");
-    // Check the action name and handle accordingly
-    String eventName = context.getEvent();
-    System.out.println(
-        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
-    // copyAttachmentsImpl(context);
+    this.attachmentService = attachmentService;
   }
 
   @On(event = "copyAttachments")
@@ -68,9 +62,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     System.out.println("UP ID : " + up__ID);
     System.out.println("Facet : " + facet);
     System.out.println("Object IDs : " + objectIds);
-    SDMAttachmentsService s = new SDMAttachmentsService();
+    // RegisterService s = new SDMAttachmentsService();
     var copyEventInput = new CopyAttachmentInput(up__ID, facet, objectIds);
-    s.copyAttachments(copyEventInput);
+    attachmentService.copyAttachments(copyEventInput);
     context.setCompleted();
   }
 }
