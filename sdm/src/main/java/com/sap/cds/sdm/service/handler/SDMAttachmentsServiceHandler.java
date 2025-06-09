@@ -26,6 +26,7 @@ import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.utils.StringUtils;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
@@ -105,10 +106,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     Optional<CdsEntity> attachmentEntity =
         context.getModel().findEntity(contentIdParts[2] + "_drafts");
     String url = DBQuery.getUrlForObjectId(attachmentEntity.get(), persistenceService, objectId);
-    System.out.println("URL " + url);
     if (url != null) {
       Runtime.getRuntime().exec(new String[] {"open", url});
-      context.setData();
+      context.getData().setContent(new ByteArrayInputStream(new byte[0]));
     } else {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
       try {
