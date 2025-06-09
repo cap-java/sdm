@@ -35,7 +35,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String up__ID = context.get("up__ID").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.asList(objectIdsString.split(" "));
-    String facet = context.getTarget().getQualifiedName().split("\\.")[2];
+    // String facet = context.getTarget().getQualifiedName().split("\\.")[2];
 
     // CdsModel cdsModel = context.getModel();
     // CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
@@ -60,10 +60,11 @@ public class SDMServiceGenericHandler implements EventHandler {
     // Fetch the list of object ids using the ID (upid on line 74)
     // copyattachmentinput model needs to be created by setting values
     System.out.println("UP ID : " + up__ID);
-    System.out.println("Facet : " + facet);
     System.out.println("Object IDs : " + objectIds);
+    System.out.println("Facet : " + context.getTarget().getQualifiedName());
     // RegisterService s = new SDMAttachmentsService();
-    var copyEventInput = new CopyAttachmentInput(up__ID, facet, objectIds);
+    var copyEventInput =
+        new CopyAttachmentInput(up__ID, context.getTarget().getQualifiedName(), objectIds);
     attachmentService.copyAttachments(copyEventInput);
     context.setCompleted();
   }

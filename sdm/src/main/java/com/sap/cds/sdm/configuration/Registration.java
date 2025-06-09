@@ -10,6 +10,7 @@ import com.sap.cds.sdm.service.*;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -59,6 +60,8 @@ public class Registration implements CdsRuntimeConfiguration {
             .filter(b -> ServiceBindingUtils.matches(b, SDMConstants.SDM_ENV_NAME))
             .toList();
     var binding = !bindings.isEmpty() ? bindings.get(0) : null;
+    List<DraftService> draftServiceList =
+        configurer.getCdsRuntime().getServiceCatalog().getServices(DraftService.class).toList();
 
     // get HTTP connection pool configuration
     var connectionPool = getConnectionPool(environment);
@@ -72,7 +75,8 @@ public class Registration implements CdsRuntimeConfiguration {
         new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
     configurer.eventHandler(
         new SDMServiceGenericHandler(persistenceService, sdmService, attachmentService));
-    configurer.eventHandler(new SDMCustomServiceHandler());
+    configurer.eventHandler(
+        new SDMCustomServiceHandler(persistenceService, sdmService, draftServiceList.get(0)));
   }
 
   private AttachmentService buildAttachmentService() {

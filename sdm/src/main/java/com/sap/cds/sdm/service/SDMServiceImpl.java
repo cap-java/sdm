@@ -602,4 +602,33 @@ public class SDMServiceImpl implements SDMService {
 
     return validSecondaryProperties;
   }
+
+  @Override
+  public void copyAttachment(
+      CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials)
+      throws IOException {
+    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    String grantType = TokenHandler.getGrantType(jwtToken);
+    logger.info("This is a :{} flow", grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    Map<String, String> finalResponse = new HashMap<>();
+
+    // Add additional form fields
+    System.out.println("ObjectId : " + cmisDocument.getObjectId());
+    System.out.println("SourceId : " + cmisDocument.getFolderId());
+    builder.addTextBody("cmisaction", "createDocumentFromSource", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("sourceId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    if (!finalResponse.get("status").equals("success"))
+      ;
+    {
+      throw new ServiceException("Failed to copy attachment");
+    }
+  }
 }

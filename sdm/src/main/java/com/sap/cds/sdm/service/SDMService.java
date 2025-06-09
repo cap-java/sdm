@@ -65,4 +65,7 @@ public interface SDMService {
       String repositoryId,
       String jwtToken)
       throws IOException;
+
+  public void copyAttachment(
+      CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials) throws IOException;
 }

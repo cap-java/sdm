@@ -3,6 +3,7 @@
  **************************************************************************/
 package com.sap.cds.sdm.service.handler;
 
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.EventName;
@@ -13,7 +14,7 @@ import java.util.List;
  * event.
  */
 @EventName(RegisterService.EVENT_COPY_ATTACHMENT)
-public interface AttachmentCopyEventContext extends EventContext {
+public interface AttachmentCopyEventContext extends AttachmentCreateEventContext {
 
   /**
    * Creates an {@link EventContext} already overlay with this interface. The event is set to be
