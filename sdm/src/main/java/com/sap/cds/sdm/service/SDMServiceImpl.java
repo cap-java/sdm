@@ -610,7 +610,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public void copyAttachment(
+  public List<String> copyAttachment(
       CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials)
       throws IOException {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
@@ -631,8 +631,25 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true");
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
-    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
-    if (!finalResponse.get("status").equals("success")) {
+    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      if (response.getStatusLine().getStatusCode() == 201) {
+        System.out.println("Inside else");
+        String responseBody = EntityUtils.toString(response.getEntity());
+        JSONObject jsonObject = new JSONObject(responseBody);
+        JSONObject props = jsonObject.getJSONObject("succinctProperties");
+        String fileName = props.optString("cmis:contentStreamFileName", "unknown-filename");
+        String mimeType = props.optString("cmis:contentStreamMimeType", "application/octet-stream");
+        System.out.println(List.of(fileName, mimeType));
+        return List.of(fileName, mimeType);
+      } else {
+        throw new ServiceException("Failed to copy attachment");
+      }
+      // formResponse(cmisDocument, finalResponse, response);
+      // if (!finalResponse.get("status").equals("success")) {
+
+      // }
+    } catch (IOException e) {
+      System.out.println("Error msg in copying attachment: " + e.getMessage());
       throw new ServiceException("Failed to copy attachment");
     }
   }
