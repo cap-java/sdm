@@ -37,3 +37,4 @@ public class SDMServiceGenericHandler implements EventHandler {
     attachmentService.copyAttachments(copyEventInput);
     context.setCompleted();
   }
+}
