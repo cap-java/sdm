@@ -32,10 +32,10 @@ class IntegrationTest_MultipleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String serviceName = "UserService";
-  private static String entityName = "Notebooks";
-  private static String entityName2 = "writer";
-  private static String srvpath = "UserService";
+  private static String serviceName = "AdminService";
+  private static String entityName = "Books";
+  private static String entityName2 = "author";
+  private static String srvpath = "AdminService";
   private static Api api;
   private static int counter;
 
