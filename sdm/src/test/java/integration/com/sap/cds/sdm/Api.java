@@ -140,6 +140,10 @@ public class Api {
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
             return (draftResponseBodyString);
           }
+          String sapMessages = draftResponse.header("sap-messages");
+          if (sapMessages != null && !sapMessages.isEmpty()) {
+            return sapMessages;
+          }
           return "Saved";
         } catch (IOException e) {
           System.out.println("Could not save entity : " + e);
