@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Support codelist for custom properties.
 
 ### Fixed
-- An issue where attachments uploaded with first repository was visible when application is redeployed with second repository.
+- An issue where attachments uploaded with one repository was visible when application is redeployed with another repository.
 
 ## Version 1.3.1
 
