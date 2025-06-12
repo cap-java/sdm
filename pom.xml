@@ -283,7 +283,7 @@
                     <extensions>true</extensions>
                 </plugin>
             </plugin> 
-         </pluginManagement>
+        </pluginManagement>
     </build>
     <profiles>
         <profile>
