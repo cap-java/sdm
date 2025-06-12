@@ -632,15 +632,19 @@ public class SDMServiceImpl implements SDMService {
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      System.out.println("Response Message : " + response.getStatusLine().getReasonPhrase());
+      System.out.println("Response Code : " + response.getStatusLine().getStatusCode());
       if (response.getStatusLine().getStatusCode() == 201) {
         System.out.println("Inside else");
         String responseBody = EntityUtils.toString(response.getEntity());
         JSONObject jsonObject = new JSONObject(responseBody);
         JSONObject props = jsonObject.getJSONObject("succinctProperties");
-        String fileName = props.optString("cmis:contentStreamFileName", "unknown-filename");
-        String mimeType = props.optString("cmis:contentStreamMimeType", "application/octet-stream");
+        String fileName = props.optString("cmis:contentStreamFileName");
+        String mimeType = props.optString("cmis:contentStreamMimeType");
+        String objectId = props.optString("cmis:objectId");
+
         System.out.println(List.of(fileName, mimeType));
-        return List.of(fileName, mimeType);
+        return List.of(fileName, mimeType, objectId);
       } else {
         throw new ServiceException("Failed to copy attachment");
       }

@@ -1,6 +1,10 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.ql.Insert;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -17,9 +21,9 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.json.JSONObject;
 
 @ServiceName(value = "*", type = RegisterService.class)
@@ -80,30 +84,48 @@ public class SDMCustomServiceHandler {
           "Failed to copy attachment for UP ID: " + upID + " and facet: " + facet);
     }
 
+    String upIdKey = "";
+    CdsModel model = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(context.getFacet() + "_drafts");
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      CdsAssociationType assocType = association.getType();
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      upIdKey = fkElements.get(0);
+    } else {
+      throw new ServiceException("Failed to fetch UP ID");
+    }
     Map<String, Object> updatedFields = new HashMap<>();
-    Iterator<List<String>> metadataIterator = attachmentsMetadata.iterator();
-    for (String objectId : objectIds) {
-      if (!metadataIterator.hasNext()) {
-        throw new IllegalStateException(
-            "Attachments metadata does not match the number of objectIds");
-      }
-      List<String> metadata = metadataIterator.next();
-      String fileName = metadata.get(0); // First value from the list
-      String mimeType = metadata.get(1); // Second value from the list
-      updatedFields.put("objectId", objectId);
+    for (List<String> attachmentMetadata : attachmentsMetadata) {
+      String fileName = attachmentMetadata.get(0);
+      String mimeType = attachmentMetadata.get(1);
+      String newObjectId = attachmentMetadata.get(2);
+      updatedFields.put("objectId", newObjectId);
       updatedFields.put("repositoryId", repositoryId);
       updatedFields.put("folderId", folderId);
       updatedFields.put("status", "Clean");
-      updatedFields.put(folderName, upID);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("fileName", fileName);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
+      String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+      updatedFields.put(
+          "contentId",
+          newObjectId
+              + ":"
+              + folderId
+              + ":"
+              + context.getFacet()
+              + ":"
+              + subdomain
+              + ":"
+              + mimeType);
+      System.out.println("Facet " + context.getFacet() + ":" + upIdKey + ":" + upID);
+      updatedFields.put(upIdKey, upID);
       var insert = Insert.into(context.getFacet()).entry(updatedFields);
       draftService.newDraft(insert);
     }
-
-    // copyAttachmentsImpl(context);
     context.setCompleted();
   }
 }
