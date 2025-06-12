@@ -354,6 +354,149 @@ public class Api {
     return createResponse;
   }
 
+  public List<String> createAttachment_RestrictedCharacter(
+      String appUrl,
+      String serviceName,
+      String entityName,
+      String facetName,
+      String entityID,
+      String srvpath,
+      Map<String, Object> postData,
+      File file)
+      throws IOException {
+    String ID;
+    String error = "";
+
+    // Creating empty attachments
+    String fileName = "sam/../ple.pdf";
+
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody body =
+        RequestBody.create(
+            mediaType, ByteString.encodeUtf8("{\n    \"fileName\" : \"" + fileName + "\"\n}"));
+    Request postRequest =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=false)/"
+                    + facetName)
+            .method("POST", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response response = httpClient.newCall(postRequest).execute()) {
+      if (response.code() != 201) {
+        System.out.println(
+            "Create Attachment in the section: "
+                + facetName
+                + " failed. Error : "
+                + response.body().string());
+        throw new IOException("Could not read Attachment");
+      }
+      Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
+      ID = (String) responseMap.get("ID");
+
+      long startTime = System.nanoTime();
+      // Upload file content into the empty attachment
+      RequestBody fileBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
+      Request fileRequest =
+          new Request.Builder()
+              .url(
+                  "https://"
+                      + appUrl
+                      + "/odata/v4/"
+                      + serviceName
+                      + "/"
+                      + entityName
+                      + "_"
+                      + facetName
+                      + "(up__ID="
+                      + entityID
+                      + ",ID="
+                      + ID
+                      + ",IsActiveEntity=false)/content")
+              .put(fileBody)
+              .addHeader("Authorization", token)
+              .build();
+
+      try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
+        if (fileResponse.code() != 204) {
+          String responseBodyString = fileResponse.body().string();
+          System.out.println(
+              "Create Attachment in the section: "
+                  + facetName
+                  + " failed. Error : "
+                  + responseBodyString);
+          error = responseBodyString;
+          Request request =
+              new Request.Builder()
+                  .url(
+                      "https://"
+                          + appUrl
+                          + "/odata/v4/"
+                          + serviceName
+                          + "/"
+                          + entityName
+                          + "_"
+                          + facetName
+                          + "(up__ID="
+                          + entityID
+                          + ",ID="
+                          + ID
+                          + ",IsActiveEntity=false)")
+                  .delete()
+                  .addHeader("Authorization", token)
+                  .build();
+
+          try (Response deleteResponse = httpClient.newCall(request).execute()) {
+            if (deleteResponse.code() != 204) {
+              System.out.println(
+                  "Delete Attachment in section :"
+                      + facetName
+                      + " failed. Error : "
+                      + deleteResponse.body().string());
+              throw new IOException(
+                  "Attachment was not created in section : "
+                      + facetName
+                      + " and its container was not deleted : ");
+            }
+            List<String> createResponse = new ArrayList<>();
+            createResponse.add(error);
+            return createResponse;
+          } catch (IOException e) {
+            System.out.println(
+                "Attachment was not created in section : "
+                    + facetName
+                    + " and its container was not deleted : "
+                    + e);
+          }
+        }
+        long endTime = System.nanoTime(); // Record end time
+        double duration = (endTime - startTime) / 1_000_000_000.0;
+        System.out.println("Time taken to create(s) : " + duration);
+        List<String> createResponse = new ArrayList<>();
+        createResponse.add("Attachment created");
+        createResponse.add(ID);
+        return createResponse;
+      } catch (IOException e) {
+        System.out.println("Attachment was not created in section: " + facetName + " : " + e);
+      }
+    } catch (IOException e) {
+      System.out.println("Attachment was not created in section: " + facetName + " : " + e);
+    }
+    List<String> createResponse = new ArrayList<>();
+    createResponse.add("Attachment was not created in section: " + facetName);
+    return createResponse;
+  }
+
   public String readAttachment(
       String appUrl,
       String serviceName,
