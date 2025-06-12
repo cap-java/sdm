@@ -1,4 +1,4 @@
-name: Deploy to OSS
+name: Deploy to Maven Central
 
 env:
   JAVA_VERSION: '17'
@@ -96,9 +96,8 @@ jobs:
       - name: Deploy
         uses: ./.github/actions/deploy-release
         with:
-          user: ${{ secrets.OSSRH_SONATYPE_ORG_API_USER }}
-          password: ${{ secrets.OSSRH_SONATYPE_ORG_API_PASSWD }}
-          profile: ${{ secrets.OSSRH_SONATYPE_ORG_PROFILE_ID }}
+          user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
+          password: ${{ secrets.CENTRAL_REPOSITORY_PASS }}
           pgp-pub-key: ${{ secrets.PGP_PUBKEY_ID }}
           pgp-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
           pgp-passphrase: ${{ secrets.PGP_PASSPHRASE }}
