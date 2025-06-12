@@ -38,6 +38,7 @@ class IntegrationTest_MultipleFacet {
   private static String srvpath = "UserService";
   private static Api api;
   private static int counter;
+  private static IntegrationTestUtils integrationTestUtils;
 
   @BeforeAll
   static void setup() throws IOException {
@@ -49,6 +50,7 @@ class IntegrationTest_MultipleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -654,7 +656,7 @@ class IntegrationTest_MultipleFacet {
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
 
         // Update customProperty1 (String - dropdown value)
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -734,7 +736,7 @@ class IntegrationTest_MultipleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name[i]);
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -824,7 +826,7 @@ class IntegrationTest_MultipleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -905,7 +907,7 @@ class IntegrationTest_MultipleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         // Update secondary properties for Drop down
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1030,7 +1032,7 @@ class IntegrationTest_MultipleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1095,7 +1097,7 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for EXE");
       for (int i = 0; i < facet.length; i++) {
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1172,7 +1174,7 @@ class IntegrationTest_MultipleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facet[i], entityID3, ID[i], name1);
         // Update secondary properties for Drop down
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1237,7 +1239,7 @@ class IntegrationTest_MultipleFacet {
       System.out.println("Renaming and updating secondary properties for EXE");
       for (int i = 0; i < facet.length; i++) {
         // Update secondary properties for Drop down
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1351,7 +1353,8 @@ class IntegrationTest_MultipleFacet {
       Boolean[] Updated3 = new Boolean[3];
 
       String name1 = "sample1234.pdf";
-      String dropdownValue = api.getDropDownValue(); // returns a plain string like "option-123"
+      String dropdownValue =
+          integrationTestUtils.getDropDownValue(); // returns a plain string like "option-123"
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
       Integer secondaryPropertyInt1 = 1234;
       LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
@@ -1422,7 +1425,7 @@ class IntegrationTest_MultipleFacet {
 
       // Update EXE properties
       System.out.println("Renaming and updating secondary properties for EXE");
-      String dropdownValueExe = api.getDropDownValue();
+      String dropdownValueExe = integrationTestUtils.getDropDownValue();
       String jsonDropdownExe = "{ \"customProperty1_code\" : \"" + dropdownValueExe + "\" }";
 
       for (int i = 0; i < facet.length; i++) {
@@ -1522,7 +1525,7 @@ class IntegrationTest_MultipleFacet {
       Integer secondaryPropertyInt1 = 12;
       LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
       String invalidPropertyPDF = "testidinvalidPDF";
-      String dropdownValue = api.getDropDownValue();
+      String dropdownValue = integrationTestUtils.getDropDownValue();
       System.out.println("drop down value is: " + dropdownValue);
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
 
@@ -1599,13 +1602,16 @@ class IntegrationTest_MultipleFacet {
       Integer secondaryPropertyInt3 = 12;
       // EXE
       System.out.println("Renaming and updating secondary properties for EXE");
+      String dropdownValue1 = integrationTestUtils.getDropDownValue();
       for (int i = 0; i < facet.length; i++) {
         // Update secondary properties for String
-        RequestBody bodyDropdown =
-            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+        System.out.println("drop down value is: " + dropdownValue1);
+        String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
+        RequestBody bodyDropdown1 =
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
-                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], bodyDropdown);
+                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], bodyDropdown1);
         // Update secondary properties for Integer
         RequestBody bodyInt =
             RequestBody.create(
@@ -1665,7 +1671,7 @@ class IntegrationTest_MultipleFacet {
           assertEquals(name[2], FacetMetadata.get("fileName"));
           assertNull(FacetMetadata.get("customProperty3"));
           assertNull(FacetMetadata.get("customProperty4"));
-          assertEquals(dropdownValue, FacetMetadata.get("customProperty1_code"));
+          assertEquals(dropdownValue1, FacetMetadata.get("customProperty1_code"));
           assertEquals(12, FacetMetadata.get("customProperty2"));
         }
 

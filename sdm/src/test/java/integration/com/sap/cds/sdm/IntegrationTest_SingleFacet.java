@@ -38,6 +38,8 @@ class IntegrationTest_SingleFacet {
   private static String attachmentID4 = "";
   private static String attachmentID5 = "";
 
+  private static IntegrationTestUtils integrationTestUtils;
+
   @BeforeAll
   static void setup() throws IOException {
     // Define your clientId and clientSecret
@@ -48,6 +50,7 @@ class IntegrationTest_SingleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -576,7 +579,7 @@ class IntegrationTest_SingleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
-        String dropdownValue1 = api.getDropDownValue();
+        String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -645,7 +648,7 @@ class IntegrationTest_SingleFacet {
           api.renameAttachment(
               appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
-      String dropdownValue1 = api.getDropDownValue();
+      String dropdownValue1 = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
       RequestBody bodyDropdown =
           RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -748,7 +751,7 @@ class IntegrationTest_SingleFacet {
 
         // Update secondary properties for String using dropdown selected value as object with code
 
-        String dropdownValue1 = api.getDropDownValue();
+        String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown1 =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
@@ -851,7 +854,7 @@ class IntegrationTest_SingleFacet {
       String response1 =
           api.renameAttachment(
               appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
-      String dropdownValue = api.getDropDownValue();
+      String dropdownValue = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
       RequestBody bodyDropdown =
           RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1012,7 +1015,7 @@ class IntegrationTest_SingleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1071,7 +1074,7 @@ class IntegrationTest_SingleFacet {
         LocalDateTime secondaryPropertyDateTime3 = LocalDateTime.now();
         System.out.println("Updating secondary properties for attachment EXE");
         // Update secondary properties for String
-        String dropdownValue1 = api.getDropDownValue();
+        String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown1 =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
@@ -1152,7 +1155,7 @@ class IntegrationTest_SingleFacet {
           api.renameAttachment(
               appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
-      String dropdownValue1 = api.getDropDownValue();
+      String dropdownValue1 = integrationTestUtils.getDropDownValue();
       String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
       RequestBody bodyDropdown1 =
           RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
@@ -1213,7 +1216,7 @@ class IntegrationTest_SingleFacet {
       LocalDateTime secondaryPropertyDateTime3 = LocalDateTime.now();
       System.out.println("Updating secondary properties for attachment EXE");
       // Update secondary properties for String
-      String dropdownValue2 = api.getDropDownValue();
+      String dropdownValue2 = integrationTestUtils.getDropDownValue();
       String jsonDropdown2 = "{ \"customProperty1_code\" : \"" + dropdownValue2 + "\" }";
       RequestBody bodyDropdown2 =
           RequestBody.create(MediaType.parse("application/json"), jsonDropdown2);
@@ -1350,7 +1353,7 @@ class IntegrationTest_SingleFacet {
             api.renameAttachment(
                 appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
-        String dropdownValue = api.getDropDownValue();
+        String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1517,7 +1520,7 @@ class IntegrationTest_SingleFacet {
           api.renameAttachment(
               appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
-      String dropdownValue = api.getDropDownValue();
+      String dropdownValue = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
       RequestBody bodyDropdown =
           RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
@@ -1834,15 +1837,5 @@ class IntegrationTest_SingleFacet {
         System.out.println("Successfully deleted the test entity4");
       }
     }
-  }
-
-  private String validateDropDownString(String stringProperty) {
-    // Only allow "A", "B", or "C" as valid values
-    List<String> allowedValues = Arrays.asList("A", "B", "C");
-    if (stringProperty == null || !allowedValues.contains(stringProperty)) {
-      System.out.println("Invalid secondary property value: " + stringProperty);
-      return "Secondary Property was not updated";
-    }
-    return stringProperty;
   }
 }
