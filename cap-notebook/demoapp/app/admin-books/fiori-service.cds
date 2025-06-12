@@ -23,7 +23,7 @@ annotate AdminService.Books with @(UI: {
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID     : 'AttachmentsFacet',
+      ID    : 'AttachmentsFacet',
       Label : '{i18n>attachments}',
       Target: 'attachments/@UI.LineItem'
     },
@@ -43,7 +43,7 @@ annotate AdminService.Books with @(UI: {
       $Type : 'UI.ReferenceFacet',
       Label : '{i18n>Admin}',
       Target: '@UI.FieldGroup#Admin'
-    },
+    }
   ],
   FieldGroup #General: {Data: [
     {Value: title},
@@ -126,4 +126,8 @@ annotate AdminService.Books with {
 // Show Genre as drop down, not a dialog
 annotate AdminService.Books with {
   genre @Common.ValueListWithFixedValues;
+}
+
+annotate AdminService.Books.attachments with {
+  customProperty1 @Common.ValueListWithFixedValues;
 }
