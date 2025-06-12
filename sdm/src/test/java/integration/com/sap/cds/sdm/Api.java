@@ -675,7 +675,8 @@ public class Api {
     ClassLoader classLoader = getClass().getClassLoader();
     File csvFile = new File(classLoader.getResource("WDIRSCodeList.csv").getFile());
 
-    String selectedCode = null;
+    List<String> codes = new ArrayList<>();
+
     try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
       String line;
       boolean firstLine = true;
@@ -686,8 +687,7 @@ public class Api {
         }
         String[] parts = line.split(";");
         if (parts.length >= 1 && !parts[0].trim().isEmpty()) {
-          selectedCode = parts[0].trim(); // Extract code (e.g., A, B, or C)
-          break;
+          codes.add(parts[0].trim()); // Add the code (A, B, C) to list
         }
       }
     } catch (FileNotFoundException e) {
@@ -696,9 +696,12 @@ public class Api {
       throw new RuntimeException(e);
     }
 
-    if (selectedCode == null || selectedCode.isEmpty()) {
+    if (codes.isEmpty()) {
       fail("No valid dropdown code found in WDIRSCodeList.csv");
     }
-    return selectedCode;
+
+    // Return a random value from the list
+    Random random = new Random();
+    return codes.get(random.nextInt(codes.size()));
   }
 }

@@ -1420,10 +1420,8 @@ class IntegrationTest_SingleFacet {
         System.out.println("Updating valid secondary properties for attachment EXE");
 
         // Update secondary properties for String
-        String dropdownValue1 = api.getDropDownValue();
-        String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown1 =
-            RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
         String updateSecondaryPropertyResponseEXE1 =
             api.updateSecondaryProperty(
                 appUrl,
@@ -1479,7 +1477,7 @@ class IntegrationTest_SingleFacet {
           assertEquals("sample.exe", attachmentMetadataEXE.get("fileName"));
           assertNull(attachmentMetadataEXE.get("customProperty3"));
           assertNull(attachmentMetadataEXE.get("customProperty4"));
-          assertEquals("A", attachmentMetadataEXE.get("customProperty1_code"));
+          assertEquals(dropdownValue, attachmentMetadataEXE.get("customProperty1_code"));
           assertEquals(1234, attachmentMetadataEXE.get("customProperty2"));
 
           if (response == "Saved") {
@@ -1589,10 +1587,8 @@ class IntegrationTest_SingleFacet {
       System.out.println("Updating valid secondary properties for attachment EXE");
 
       // Update secondary properties for String
-      String dropdownValue1 = api.getDropDownValue();
-      String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
       RequestBody bodyDropdown1 =
-          RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
       String updateSecondaryPropertyResponseEXE1 =
           api.updateSecondaryProperty(
               appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDropdown1);
@@ -1639,7 +1635,7 @@ class IntegrationTest_SingleFacet {
         assertEquals("sample.exe", attachmentMetadataEXE.get("fileName"));
         assertNull(attachmentMetadataEXE.get("customProperty3"));
         assertNull(attachmentMetadataEXE.get("customProperty4"));
-        assertEquals("A", attachmentMetadataEXE.get("customProperty1_code"));
+        assertEquals(dropdownValue, attachmentMetadataEXE.get("customProperty1_code"));
         assertEquals(12, attachmentMetadataEXE.get("customProperty2"));
 
         if (response == "Saved") {
