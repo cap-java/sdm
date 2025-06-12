@@ -17,36 +17,42 @@ entity Statuses @cds.autoexpose @readonly {
 
 extend Attachments with {
     statusText : Association to Statuses on statusText.code = $self.status;
-    Working___DocumentInfoRecordString : String
+    customProperty1 : WDIRS_CodeList_TYPE
         @SDM.Attachments.AdditionalProperty: {
             name: 'Working:DocumentInfoRecordString'
         } 
         @(title: 'DocumentInfoRecordString');
-    Working___DocumentInfoRecordInt : Integer
+    customProperty2 : Integer
         @SDM.Attachments.AdditionalProperty: {
             name: 'Working:DocumentInfoRecordInt'
         };
-    abc___myId1 : String
+    customProperty3 : String
     @SDM.Attachments.AdditionalProperty: {
         name: 'abc:myId1'
     }  
     @(title: 'id1');
-    abc___myId2 : String
+    customProperty4 : String
     @SDM.Attachments.AdditionalProperty: {
         name: 'abc:myId2'
     }  
     @(title: 'id2');
-    Working___DocumentInfoRecordDate : DateTime
+    customProperty5 : DateTime
     @SDM.Attachments.AdditionalProperty: {
         name: 'Working:DocumentInfoRecordDate'
     }  
     @(title: 'DocumentInfoRecordDate');
-    Working___DocumentInfoRecordBoolean : Boolean
+    customProperty6 : Boolean
     @SDM.Attachments.AdditionalProperty: {
         name: 'Working:DocumentInfoRecordBoolean'
     }  
     @(title: 'DocumentInfoRecordBoolean');
 }
+
+entity WDIRSCodeList : CodeList {
+    key code  : String(30) @Common.Text : name @Common.TextArrangement: #TextFirst;
+};
+
+type WDIRS_CodeList_TYPE : Association to one WDIRSCodeList;
 
 annotate Books.attachments with {
     status @(
