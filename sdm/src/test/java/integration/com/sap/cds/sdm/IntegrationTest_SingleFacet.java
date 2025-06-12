@@ -413,7 +413,6 @@ class IntegrationTest_SingleFacet {
               appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-        System.out.println("abinav response" + response);
         if (response.contains("Rename unsuccessful")
             && response.contains("unsupported characters")
             && response.contains("invalid/name")) {
