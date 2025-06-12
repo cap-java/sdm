@@ -38,7 +38,8 @@ runs:
       with:
         distribution: 'sapmachine'
         java-version: '17'
-        server-id: ossrh
+        cache: maven
+        server-id: central
         server-username: MAVEN_CENTRAL_USER
         server-password: MAVEN_CENTRAL_PASSWORD
 
