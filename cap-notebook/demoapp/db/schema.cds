@@ -35,3 +35,24 @@ entity Genres : CodeList {
       children : Composition of many Genres
                    on children.parent = $self;
 }
+
+/** Adding {Notebooks,Writers} for user service */
+entity Notebooks : managed, cuid {
+  @mandatory title  : localized String(111);
+  descr             : localized String(1111);
+  @mandatory writer : Association to Writers;
+  stock             : Integer;
+  price             : Decimal;
+  currency          : Currency;
+  image             : LargeBinary @Core.MediaType: 'image/png';
+}
+
+entity Writers : managed, cuid {
+  @mandatory name : String(111);
+  dateOfBirth     : Date;
+  dateOfDeath     : Date;
+  placeOfBirth    : String;
+  placeOfDeath    : String;
+  notebooks       : Association to many Notebooks
+                      on notebooks.writer = $self;
+}
