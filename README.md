@@ -470,7 +470,7 @@ Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the fo
 ## Support for technical user
 The CAP OData operations can be performed on attachments using a technical user. This flow can be used for machine-to-machine (M2M) interactions, where user involvement is not necessary.
 
-A leading CAP application service should add the requires with annotation "system-user". Refer the following [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app.
+A leading CAP application's service should add the requires with annotation "system-user". For more detailed information on "system-user" within the SAP CAP framework, refer to the [Capire documentation](https://cap.cloud.sap/docs/guides/security/authorization#pseudo-roles). Here is an [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app demonstrating the implementation.
 ```cds
 service AdminService @(requires: ['admin', 'system-user'])
 ```
