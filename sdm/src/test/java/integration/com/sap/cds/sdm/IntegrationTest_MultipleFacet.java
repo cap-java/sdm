@@ -602,7 +602,7 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(13)
   void testUploadMultipleAttachment_NoRestrictedCharacters() throws IOException {
-    System.out.println("Test (12) : Restricted characters");
+    System.out.println("Test (13) : Restricted characters");
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("abc.pdf").getFile());
     Boolean testStatus = false;
