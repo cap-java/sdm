@@ -55,18 +55,14 @@ runs:
         ls -al ./deploy-oss
       shell: bash
 
-    - name: "Deploy Locally"
-      run: |
-        echo "Deploying artifacts locally..."
-        mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
-          -Durl=file:./temp_local_repo \
-          -Dmaven.install.skip=true \
-          -Dmaven.test.skip=true \
-          -Dgpg.passphrase="$GPG_PASSPHRASE" \
-          -Dgpg.keyname="$GPG_PUB_KEY" \
-          -Drevision="${{ inputs.revision }}" \
-          deploy
-      working-directory: ./deploy-oss
+    - name: Deploy to Maven Central
+      run: >
+        mvn -B -ntp --show-version
+        -Dmaven.install.skip=true
+        -Dmaven.test.skip=true
+        -Dgpg.passphrase="$GPG_PASSPHRASE"
+        -Dgpg.keyname="$GPG_PUB_KEY"
+        clean deploy -P deploy-release
       shell: bash
       env:
         MAVEN_CENTRAL_USER: ${{ inputs.user }}
@@ -74,24 +70,43 @@ runs:
         GPG_PASSPHRASE: ${{ inputs.pgp-passphrase }}
         GPG_PUB_KEY: ${{ inputs.pgp-pub-key }}
 
-    - name: "List Contents of Local Repo"
-      run: |
-        echo "Contents of temp_local_repo:"
-        ls -al ./deploy-oss/temp_local_repo
-      shell: bash
+    # - name: "Deploy Locally"
+    #   run: |
+    #     echo "Deploying artifacts locally..."
+    #     mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
+    #       -Durl=file:./temp_local_repo \
+    #       -Dmaven.install.skip=true \
+    #       -Dmaven.test.skip=true \
+    #       -Dgpg.passphrase="$GPG_PASSPHRASE" \
+    #       -Dgpg.keyname="$GPG_PUB_KEY" \
+    #       -Drevision="${{ inputs.revision }}" \
+    #       deploy
+    #   working-directory: ./deploy-oss
+    #   shell: bash
+    #   env:
+    #     MAVEN_CENTRAL_USER: ${{ inputs.user }}
+    #     MAVEN_CENTRAL_PASSWORD: ${{ inputs.password }}
+    #     GPG_PASSPHRASE: ${{ inputs.pgp-passphrase }}
+    #     GPG_PUB_KEY: ${{ inputs.pgp-pub-key }}
 
-    - name: "Deploy Staging"
-      run: |
-        mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
-          org.sonatype.plugins:nexus-staging-maven-plugin:1.6.13:deploy-staged-repository \
-          -DserverId=ossrh \
-          -DnexusUrl=https://oss.sonatype.org \
-          -DrepositoryDirectory=./temp_local_repo \
-          -DstagingProfileId="$MAVEN_CENTRAL_PROFILE_ID" \
-          -Drevision="${{ inputs.revision }}"
-      working-directory: ./deploy-oss
-      shell: bash  
-      env:
-        MAVEN_CENTRAL_USER: ${{ inputs.user }}
-        MAVEN_CENTRAL_PASSWORD: ${{ inputs.password }}
-        MAVEN_CENTRAL_PROFILE_ID: ${{ inputs.profile }}
+    # - name: "List Contents of Local Repo"
+    #   run: |
+    #     echo "Contents of temp_local_repo:"
+    #     ls -al ./deploy-oss/temp_local_repo
+    #   shell: bash
+
+    # - name: "Deploy Staging"
+    #   run: |
+    #     mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
+    #       org.sonatype.plugins:nexus-staging-maven-plugin:1.6.13:deploy-staged-repository \
+    #       -DserverId=ossrh \
+    #       -DnexusUrl=https://oss.sonatype.org \
+    #       -DrepositoryDirectory=./temp_local_repo \
+    #       -DstagingProfileId="$MAVEN_CENTRAL_PROFILE_ID" \
+    #       -Drevision="${{ inputs.revision }}"
+    #   working-directory: ./deploy-oss
+    #   shell: bash  
+    #   env:
+    #     MAVEN_CENTRAL_USER: ${{ inputs.user }}
+    #     MAVEN_CENTRAL_PASSWORD: ${{ inputs.password }}
+    #     MAVEN_CENTRAL_PROFILE_ID: ${{ inputs.profile }}
