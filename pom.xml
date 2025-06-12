@@ -282,6 +282,7 @@
                     <version>0.7.0</version>
                     <extensions>true</extensions>
                 </plugin>
+            </plugin> 
          </pluginManagement>
     </build>
     <profiles>
