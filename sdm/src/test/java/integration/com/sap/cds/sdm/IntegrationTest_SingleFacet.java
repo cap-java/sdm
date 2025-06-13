@@ -526,55 +526,6 @@ class IntegrationTest_SingleFacet {
     }
   }
 
-  // @Test
-  // @Order(13)
-  // void testUploadSingleAttachment_RestrictedCharacters() throws IOException {
-  //   System.out.println("Test (13) : Restricted characters");
-  //   ClassLoader classLoader = getClass().getClassLoader();
-  //   File file = new File(classLoader.getResource("sample.pdf").getFile());
-  //   Boolean testStatus = false;
-
-  //   Map<String, Object> postData = new HashMap<>();
-  //   postData.put("up__ID", entityID3);
-  //   postData.put("mimeType", "application/pdf");
-  //   postData.put("createdAt", new Date().toString());
-  //   postData.put("createdBy", "test@test.com");
-  //   postData.put("modifiedBy", "test@test.com");
-
-  //   String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID4);
-  //   if (response == "Entity in draft mode") {
-  //     List<String> createResponse =
-  //         api.createAttachment_RestrictedCharacter(
-  //             appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData, file);
-  //     if (createResponse.get(0).equals("Attachment created")) {
-  //       entityID4 = createResponse.get(1);
-  //       System.out.println("Attachment created");
-  //       testStatus = true;
-
-  //       if (response.equals("Renamed")) {
-  //         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID4);
-  //         System.out.println("Shubham response" + response);
-  //         if (response.contains("Rename unsuccessful")
-  //             && response.contains("restricted characters")
-  //             && response.contains("invalid/name")) {
-  //           testStatus = true;
-  //         } else {
-  //           api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-  //         }
-  //       }
-  //     }
-  //   }
-  //   if (!testStatus) {
-  //     fail("Attachment was renamed with restricted characters");
-  //   }
-  //   String deleteEntityResponse = api.deleteEntity(appUrl, serviceName, entityName, entityID4);
-  //   if (deleteEntityResponse.equals("Entity Deleted")) {
-  //     System.out.println("Entity deleted successfully");
-  //   } else {
-  //     System.out.println("Failed to delete entity: " + deleteEntityResponse);
-  //   }
-  // }
-
   @Test
   @Order(13)
   void testUploadSingleAttachment_RestrictedCharacters() throws IOException {

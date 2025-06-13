@@ -599,58 +599,6 @@ class IntegrationTest_MultipleFacet {
     } else fail("Could not save entity after deletion");
   }
 
-  // @Test
-  // @Order(13)
-  // void testUploadMultipleAttachment_RestrictedCharacters() throws IOException {
-  //   System.out.println("Test (13) : Restricted characters");
-  //   ClassLoader classLoader = getClass().getClassLoader();
-  //   File file = new File(classLoader.getResource("abc.pdf").getFile());
-  //   Boolean testStatus = false;
-
-  //   Map<String, Object> postData = new HashMap<>();
-  //   postData.put("up__ID", entityID2);
-  //   postData.put("mimeType", "application/pdf");
-  //   postData.put("createdAt", new Date().toString());
-  //   postData.put("createdBy", "test@test.com");
-  //   postData.put("modifiedBy", "test@test.com");
-
-  //   String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID2);
-  //   if (response == "Entity in draft mode") {
-  //     for (int i = 0; i < facet.length; i++) {
-  //       List<String> createResponse =
-  //           api.createAttachment_RestrictedCharacter(
-  //               appUrl, serviceName, entityName, facet[0], entityID2, srvpath, postData, file);
-
-  //       if (createResponse.get(0).equals("Attachment created")) {
-  //         ID[0] = createResponse.get(1);
-  //         System.out.println("Attachment created");
-  //         testStatus = true;
-  //         if (response.equals("Renamed")) counter++;
-  //       }
-  //       if (counter >= 2) {
-  //         counter = -1;
-  //         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-  //         System.out.println(response);
-  //         if (response.contains("Rename unsuccessful")
-  //             && response.contains("unsupported characters")) {
-  //           testStatus = true;
-  //         }
-  //       } else {
-  //         api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-  //       }
-  //     }
-  //   }
-  //   if (!testStatus) {
-  //     fail("Attachment was renamed with restricted characters");
-  //   }
-  //   // String deleteEntityResponse = api.deleteEntity(appUrl, serviceName, entityName,entityID2);
-  //   // if (deleteEntityResponse.equals("Entity Deleted")) {
-  //   //   System.out.println("Entity deleted successfully");
-  //   // } else {
-  //   //   System.out.println("Failed to delete entity: " + deleteEntityResponse);
-  //   // }
-  // }
-
   @Test
   @Order(13)
   void testUploadMultipleAttachment_RestrictedCharacters() throws IOException {
