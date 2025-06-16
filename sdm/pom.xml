@@ -114,6 +114,12 @@
     <groupId>org.apache.httpcomponents</groupId>
     <artifactId>httpasyncclient</artifactId>
     <version>${httpasyncclient-version}</version>
+    <exclusions>
+        <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
 <!-- Log4j dependencies -->
 <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
