@@ -127,3 +127,7 @@ annotate AdminService.Books with {
 annotate AdminService.Books with {
   genre @Common.ValueListWithFixedValues;
 }
+
+annotate AdminService.Books.attachments with {
+  customProperty1 @Common.ValueListWithFixedValues;
+}
