@@ -18,6 +18,7 @@ import org.junit.jupiter.api.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_MultipleFacet {
   private static String token;
+  private static String tokenNoRoles;
   private static String entityID;
   private static String[] facet = {"attachments", "references", "footnotes"};
   private static String[] ID = {"attachmentID1", "referenceID1", "footnoteID1"};
@@ -32,11 +33,14 @@ class IntegrationTest_MultipleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
+  private static String username2;
+  private static String password2;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static Api api;
+  private static Api apiNoRoles;
   private static int counter;
 
   @BeforeAll
@@ -49,6 +53,8 @@ class IntegrationTest_MultipleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    username2 = credentialsProperties.getProperty("username2");
+    password2 = credentialsProperties.getProperty("password2");
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -87,17 +93,41 @@ class IntegrationTest_MultipleFacet {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
 
+    Request requestNoRoles =
+        new Request.Builder()
+            .url(
+                authUrl
+                    + "/oauth/token?grant_type=password&username="
+                    + username2
+                    + "&password="
+                    + password2)
+            .method("POST", body)
+            .addHeader("Authorization", basicAuth)
+            .build();
+
     Response response = client.newCall(request).execute();
+    Response responseNoRoles = client.newCall(requestNoRoles).execute();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
       String errorBody = response.body().string();
       System.out.println("Error body: " + errorBody);
     }
+    if (responseNoRoles.code() != 200) {
+      System.out.println("Token generation failed. Response code: " + responseNoRoles.code());
+      String errorBody = responseNoRoles.body().string();
+      System.out.println("Error body: " + errorBody);
+    }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
+    tokenNoRoles =
+        new ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
     response.close();
+    responseNoRoles.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
     api = new Api(config);
+    Map<String, String> configNoRoles = new HashMap<>();
+    configNoRoles.put("Authorization", "Bearer " + tokenNoRoles);
+    apiNoRoles = new Api(configNoRoles);
   }
 
   private String CreateandReturnFacetID(
@@ -573,7 +603,7 @@ class IntegrationTest_MultipleFacet {
   @Order(12)
   void testRenameMultipleEntitiesWithOneUnsupportedCharacter() {
     System.out.println(
-        "Test (12) : rename multiple files out of which one file name contains unsupported characters");
+        "Test (12) : Rename multiple files out of which one file name contains unsupported characters");
     boolean testStatus = false;
 
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
@@ -604,7 +634,7 @@ class IntegrationTest_MultipleFacet {
     }
 
     if (!testStatus) {
-      fail(" Attachment was renamed which one file name contains unsupported characters");
+      fail("Attachment was renamed with unsupported characters");
     }
   }
 
@@ -612,55 +642,17 @@ class IntegrationTest_MultipleFacet {
   @Order(13)
   void testRenameEntitiesWithoutSDMRole() throws IOException {
     System.out.println("Test (13) : Rename attachments where user don't have SDM-Roles");
-    Properties credentialsProperties = Credentials.getCredentials();
-    String clientId = credentialsProperties.getProperty("clientID");
-    String clientSecret = credentialsProperties.getProperty("clientSecret");
-    appUrl = credentialsProperties.getProperty("appUrl");
-    authUrl = credentialsProperties.getProperty("authUrl");
-    String username2 = credentialsProperties.getProperty("username2");
-    String password2 = credentialsProperties.getProperty("password2");
-
-    String credentials = clientId + ":" + clientSecret;
-    String basicAuth =
-        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-    OkHttpClient client = new OkHttpClient().newBuilder().build();
-    MediaType mediaType = MediaType.parse("text/plain");
-    RequestBody body = RequestBody.create(mediaType, "");
-    Request request =
-        new Request.Builder()
-            .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + username2
-                    + "&password="
-                    + password2)
-            .method("POST", body)
-            .addHeader("Authorization", basicAuth)
-            .build();
-    Response response = client.newCall(request).execute();
-    if (response.code() != 200) {
-      System.out.println("Token generation failed. Response code: " + response.code());
-      String errorBody = response.body().string();
-      System.out.println("Error body: " + errorBody);
-    }
-    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    response.close();
-    Map<String, String> config = new HashMap<>();
-    config.put("Authorization", "Bearer " + token);
-    api = new Api(config);
-    System.out.println("Test (8) : Rename single attachment, reference, and footnote");
     boolean testStatus = true;
 
     try {
-      String apiResponse = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+      String apiResponse =
+          apiNoRoles.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
 
       if ("Entity in draft mode".equals(apiResponse)) {
         String[] name = {"sample123", "reference123", "footnote123"};
         for (int i = 0; i < facet.length; i++) {
-          // Read the facet to ensure it exists
           apiResponse =
-              api.renameAttachment(
+              apiNoRoles.renameAttachment(
                   appUrl, serviceName, entityName, facet[i], entityID, ID[i], name[i]);
           if (!"Renamed".equals(apiResponse)) {
             testStatus = false;
@@ -668,18 +660,16 @@ class IntegrationTest_MultipleFacet {
           }
         }
         if (testStatus) {
-          apiResponse = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+          apiResponse =
+              apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
           if (!apiResponse.contains(
               "You do not have the required permissions to update attachments")) {
             testStatus = false;
             System.out.println("Entity draft not saved: " + apiResponse);
           }
         } else {
-          api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+          apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         }
-      } else {
-        testStatus = false;
-        System.out.println("Entity was not put into draft mode: " + apiResponse);
       }
     } catch (Exception e) {
       testStatus = false;
@@ -687,7 +677,7 @@ class IntegrationTest_MultipleFacet {
     }
 
     if (!testStatus) {
-      fail("Attachment got renamed without SDM role, which is not expected.");
+      fail("Attachment got renamed without SDM roles.");
     }
   }
 

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_SingleFacet {
   private static String token;
+  private static String tokenNoRoles;
   private static String entityID;
   private static String entityID2;
   private static String facetName = "attachments";
@@ -27,11 +28,14 @@ class IntegrationTest_SingleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
+  private static String username2;
+  private static String password2;
   private static String serviceName = "UserService";
   private static String entityName = "Notebooks";
   private static String entityName2 = "writer";
   private static String srvpath = "UserService";
   private static Api api;
+  private static Api apiNoRoles;
   private static String attachmentID1 = "";
   private static String attachmentID2 = "";
   private static String attachmentID3 = "";
@@ -48,6 +52,8 @@ class IntegrationTest_SingleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    username2 = credentialsProperties.getProperty("username2");
+    password2 = credentialsProperties.getProperty("password2");
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -86,17 +92,42 @@ class IntegrationTest_SingleFacet {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
 
+    Request requestNoRoles =
+        new Request.Builder()
+            .url(
+                authUrl
+                    + "/oauth/token?grant_type=password&username="
+                    + username2
+                    + "&password="
+                    + password2)
+            .method("POST", body)
+            .addHeader("Authorization", basicAuth)
+            .build();
+
     Response response = client.newCall(request).execute();
+    Response responseNoRoles = client.newCall(requestNoRoles).execute();
+    System.out.println("Error body: " + response.body().string());
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
       String errorBody = response.body().string();
       System.out.println("Error body: " + errorBody);
     }
+    if (responseNoRoles.code() != 200) {
+      System.out.println("Token generation failed. Response code: " + responseNoRoles.code());
+      String errorBody = responseNoRoles.body().string();
+      System.out.println("Error body: " + errorBody);
+    }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
+    tokenNoRoles =
+        new ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
     response.close();
+    responseNoRoles.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
     api = new Api(config);
+    Map<String, String> configNoRoles = new HashMap<>();
+    configNoRoles.put("Authorization", "Bearer " + tokenNoRoles);
+    apiNoRoles = new Api(configNoRoles);
   }
 
   @Test
@@ -536,44 +567,6 @@ class IntegrationTest_SingleFacet {
   @Order(13)
   void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
     System.out.println("Test (13) : Rename attachments where user don't have SDM-Roles");
-    Properties credentialsProperties = Credentials.getCredentials();
-    String clientId = credentialsProperties.getProperty("clientID");
-    String clientSecret = credentialsProperties.getProperty("clientSecret");
-    appUrl = credentialsProperties.getProperty("appUrl");
-    authUrl = credentialsProperties.getProperty("authUrl");
-    String credentials = clientId + ":" + clientSecret;
-    String basicAuth =
-        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-    OkHttpClient client = new OkHttpClient().newBuilder().build();
-    MediaType mediaType = MediaType.parse("text/plain");
-    RequestBody body = RequestBody.create(mediaType, "");
-    Request request;
-    String username2 = credentialsProperties.getProperty("username2");
-    String password2 = credentialsProperties.getProperty("password2");
-    System.out.println("Running integration tests with user without sdm role token flow");
-    request =
-        new Request.Builder()
-            .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + username2
-                    + "&password="
-                    + password2)
-            .method("POST", body)
-            .addHeader("Authorization", basicAuth)
-            .build();
-    Response response = client.newCall(request).execute();
-    if (response.code() != 200) {
-      System.out.println("Token generation failed. Response code: " + response.code());
-      String errorBody = response.body().string();
-      System.out.println("Error body: " + errorBody);
-    }
-    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    response.close();
-    Map<String, String> config = new HashMap<>();
-    config.put("Authorization", "Bearer " + token);
-    api = new Api(config);
     boolean testStatus = false;
     String apiResponse = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     String name = "sample123";
