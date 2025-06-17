@@ -7,13 +7,13 @@ import java.util.*;
 import okhttp3.*;
 import okio.ByteString;
 
-public class Api implements ApiInterface {
+public class ApiMT implements ApiInterface {
   private final Map<String, String> config;
   private final OkHttpClient httpClient;
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
 
-  public Api(Map<String, String> config) {
+  public ApiMT(Map<String, String> config) {
     this.config = new HashMap<>(config);
     this.httpClient = new OkHttpClient();
     this.token = this.config.get("Authorization");
@@ -33,7 +33,7 @@ public class Api implements ApiInterface {
 
     Request request =
         new Request.Builder()
-            .url("https://" + appUrl + "/odata/v4/" + serviceName + "/" + entityName)
+            .url("https://" + appUrl + "/api/admin/" + entityName)
             .method("POST", body)
             .addHeader("Content-Type", "application/json")
             .addHeader("Authorization", token)
@@ -64,9 +64,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -96,9 +94,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -121,9 +117,7 @@ public class Api implements ApiInterface {
                 .url(
                     "https://"
                         + appUrl
-                        + "/odata/v4/"
-                        + serviceName
-                        + "/"
+                        + "/api/admin/"
                         + entityName
                         + "(ID="
                         + entityID
@@ -159,9 +153,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -188,9 +180,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -236,9 +226,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -269,9 +257,7 @@ public class Api implements ApiInterface {
               .url(
                   "https://"
                       + appUrl
-                      + "/odata/v4/"
-                      + serviceName
-                      + "/"
+                      + "/api/admin/"
                       + entityName
                       + "_"
                       + facetName
@@ -298,9 +284,7 @@ public class Api implements ApiInterface {
                   .url(
                       "https://"
                           + appUrl
-                          + "/odata/v4/"
-                          + serviceName
-                          + "/"
+                          + "/api/admin/"
                           + entityName
                           + "_"
                           + facetName
@@ -367,9 +351,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -388,7 +370,7 @@ public class Api implements ApiInterface {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
         System.out.println(
-            "Read Attachnent failed in the"
+            "Read Attachment failed in the "
                 + facetName
                 + " section. Error :"
                 + response.body().string());
@@ -414,9 +396,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "(ID="
                     + entityID
@@ -456,9 +436,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "_"
                     + facetName
@@ -504,9 +482,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "_"
                     + facetName
@@ -523,7 +499,7 @@ public class Api implements ApiInterface {
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
         System.out.println(
-            "Rename Attachment failed in the"
+            "Rename Attachment failed in the "
                 + facetName
                 + " section. Error : "
                 + renameResponse.body().string());
@@ -550,9 +526,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
+                    + "/api/admin/"
                     + entityName
                     + "_"
                     + facetName
@@ -595,7 +569,7 @@ public class Api implements ApiInterface {
             .url(
                 "https://"
                     + appUrl
-                    + "/odata/v4/"
+                    + "/api/admin/"
                     + serviceName
                     + "/"
                     + entityName
@@ -636,7 +610,7 @@ public class Api implements ApiInterface {
     String url =
         "https://"
             + appUrl
-            + "/odata/v4/"
+            + "/api/admin/"
             + serviceName
             + "/"
             + entityName

@@ -23,15 +23,17 @@ class IntegrationTest_SingleFacet {
   private static String facetName = "attachments";
   private static String entityID3;
   private static String entityID4;
+  private static String clientId;
+  private static String clientSecret;
   private static String appUrl;
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String serviceName = "UserService";
-  private static String entityName = "Notebooks";
-  private static String entityName2 = "writer";
-  private static String srvpath = "UserService";
-  private static Api api;
+  private static String serviceName = "AdminService";
+  private static String entityName = "Books";
+  private static String entityName2 = "author";
+  private static String srvpath = "AdminService";
+  private static ApiInterface api;
   private static String attachmentID1 = "";
   private static String attachmentID2 = "";
   private static String attachmentID3 = "";
@@ -42,12 +44,30 @@ class IntegrationTest_SingleFacet {
   static void setup() throws IOException {
     // Define your clientId and clientSecret
     Properties credentialsProperties = Credentials.getCredentials();
-    String clientId = credentialsProperties.getProperty("clientID");
-    String clientSecret = credentialsProperties.getProperty("clientSecret");
-    appUrl = credentialsProperties.getProperty("appUrl");
-    authUrl = credentialsProperties.getProperty("authUrl");
+    String tenancyModel = System.getProperty("tenancyModel");
+    String tenant = System.getProperty("tenant");
+
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    if (tenancyModel.equals("single")) {
+      clientId = credentialsProperties.getProperty("clientID");
+      clientSecret = credentialsProperties.getProperty("clientSecret");
+      appUrl = credentialsProperties.getProperty("appUrl");
+      authUrl = credentialsProperties.getProperty("authUrl");
+    } else if (tenancyModel.equals("multi")) {
+      clientId = credentialsProperties.getProperty("clientIDMT");
+      clientSecret = credentialsProperties.getProperty("clientSecretMT");
+      appUrl = credentialsProperties.getProperty("appUrlMT");
+      if (tenant.equals("SDC")) {
+        authUrl = credentialsProperties.getProperty("authUrlMTSDC");
+      } else if (tenant.equals("GWC")) {
+        authUrl = credentialsProperties.getProperty("authUrlMTGWC");
+      } else {
+        throw new IllegalArgumentException("Invalid tenant specified: " + tenant);
+      }
+    } else {
+      throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
+    }
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -81,7 +101,6 @@ class IntegrationTest_SingleFacet {
               .method("POST", body)
               .addHeader("Authorization", basicAuth)
               .build();
-
     } else {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
@@ -96,7 +115,15 @@ class IntegrationTest_SingleFacet {
     response.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
-    api = new Api(config);
+    if (tenancyModel.equals("multi")) {
+      System.out.println("Running integration tests for multi-tenant scenario");
+      api = new ApiMT(config);
+    } else if (tenancyModel.equals("single")) {
+      System.out.println("Running integration tests for single-tenant scenario");
+      api = new Api(config);
+    } else {
+      throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
+    }
   }
 
   @Test
