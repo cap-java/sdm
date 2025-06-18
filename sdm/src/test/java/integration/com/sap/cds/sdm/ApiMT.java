@@ -562,7 +562,7 @@ public class ApiMT implements ApiInterface {
       String ID,
       String invalidSecondaryProperty) {
     MediaType mediaType = MediaType.parse("application/json");
-    String jsonPayload = "{\n    \"abc___myId1\": \"" + invalidSecondaryProperty + "\"\n}";
+    String jsonPayload = "{\n    \"customProperty3\": \"" + invalidSecondaryProperty + "\"\n}";
     RequestBody body = RequestBody.create(mediaType, ByteString.encodeUtf8(jsonPayload));
     Request request =
         new Request.Builder()
@@ -570,8 +570,6 @@ public class ApiMT implements ApiInterface {
                 "https://"
                     + appUrl
                     + "/api/admin/"
-                    + serviceName
-                    + "/"
                     + entityName
                     + "_"
                     + facetName
@@ -611,8 +609,6 @@ public class ApiMT implements ApiInterface {
         "https://"
             + appUrl
             + "/api/admin/"
-            + serviceName
-            + "/"
             + entityName
             + "_"
             + facetName

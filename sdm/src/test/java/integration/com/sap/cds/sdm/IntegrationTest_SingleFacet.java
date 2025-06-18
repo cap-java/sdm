@@ -52,6 +52,7 @@ class IntegrationTest_SingleFacet {
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
     if (tenancyModel.equals("single")) {
+      System.out.println("Running integration tests | Single tenant Scenario");
       clientId = credentialsProperties.getProperty("clientID");
       clientSecret = credentialsProperties.getProperty("clientSecret");
       appUrl = credentialsProperties.getProperty("appUrl");
@@ -61,8 +62,11 @@ class IntegrationTest_SingleFacet {
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
       if (tenant.equals("SDC")) {
+        System.out.println("Running integration tests | Multitenant Scenario | SDM DEV Consumer");
         authUrl = credentialsProperties.getProperty("authUrlMTSDC");
       } else if (tenant.equals("GWC")) {
+        System.out.println(
+            "Running integration tests | Multitenant Scenario | Googleworkspace Consumer");
         authUrl = credentialsProperties.getProperty("authUrlMTGWC");
       } else {
         throw new IllegalArgumentException("Invalid tenant specified: " + tenant);
@@ -84,7 +88,7 @@ class IntegrationTest_SingleFacet {
 
     String tokenFlowFlag = System.getProperty("tokenFlow");
     if (tokenFlowFlag.equals("namedUser")) {
-      System.out.println("Running integration tests with named user token flow");
+      System.out.println("Named user token flow");
       request =
           new Request.Builder()
               .url(
@@ -97,7 +101,7 @@ class IntegrationTest_SingleFacet {
               .addHeader("Authorization", basicAuth)
               .build();
     } else if (tokenFlowFlag.equals("technicalUser")) {
-      System.out.println("Running integration tests with technical user token flow");
+      System.out.println("Technical user token flow");
       request =
           new Request.Builder()
               .url(authUrl + "/oauth/token?grant_type=client_credentials")
@@ -119,10 +123,8 @@ class IntegrationTest_SingleFacet {
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
     if (tenancyModel.equals("multi")) {
-      System.out.println("Running integration tests for multi-tenant scenario");
       api = new ApiMT(config);
     } else if (tenancyModel.equals("single")) {
-      System.out.println("Running integration tests for single-tenant scenario");
       api = new Api(config);
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);

@@ -88,7 +88,7 @@ class IntegrationTest_MultipleFacet {
 
     String tokenFlowFlag = System.getProperty("tokenFlow");
     if (tokenFlowFlag.equals("namedUser")) {
-      System.out.println("Running integration tests with named user token flow");
+      System.out.println("Named user token flow");
       request =
           new Request.Builder()
               .url(
@@ -101,7 +101,7 @@ class IntegrationTest_MultipleFacet {
               .addHeader("Authorization", basicAuth)
               .build();
     } else if (tokenFlowFlag.equals("technicalUser")) {
-      System.out.println("Running integration tests with technical user token flow");
+      System.out.println("Technical user token flow");
       request =
           new Request.Builder()
               .url(authUrl + "/oauth/token?grant_type=client_credentials")
@@ -123,10 +123,8 @@ class IntegrationTest_MultipleFacet {
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
     if (tenancyModel.equals("multi")) {
-      System.out.println("Running integration tests for multi-tenant scenario");
       api = new ApiMT(config);
     } else if (tenancyModel.equals("single")) {
-      System.out.println("Running integration tests for single-tenant scenario");
       api = new Api(config);
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
@@ -1642,7 +1640,7 @@ class IntegrationTest_MultipleFacet {
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
-                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], bodyDropdown1);
+                appUrl, serviceName, entityName, facet[i], entityID3, ID3[i], bodyDropdown1);
         // Update secondary properties for Integer
         RequestBody bodyInt =
             RequestBody.create(
