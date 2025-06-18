@@ -529,7 +529,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(13)
   void testUploadSingleAttachment_RestrictedCharacters() throws IOException {
-    System.out.println("Test (13): Restricted characters");
+    System.out.println("Test (13): Creating attachment with restricted characters");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("sample.pdf").getFile());
@@ -546,10 +546,18 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID4);
 
     if ("Entity in draft mode".equals(response)) {
+      File renamedFile = new File(file.getParent(), "Sam..//.ple.pdf");
 
       List<String> createResponse =
-          api.createAttachment_RestrictedCharacter(
-              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData, file);
+          api.createAttachment(
+              appUrl,
+              serviceName,
+              entityName,
+              facetName,
+              entityID4,
+              srvpath,
+              postData,
+              renamedFile);
 
       if (createResponse.size() >= 2 && "Attachment created".equals(createResponse.get(0))) {
         System.out.println("Attachment created");
@@ -1966,94 +1974,4 @@ class IntegrationTest_SingleFacet {
       }
     }
   }
-
-  // @Test
-  // @Order(25)
-  // void testUploadSingleAttachmentNoSDMRoles() throws IOException {
-
-  //   // Define your clientId and clientSecret
-  //   Properties credentialsProperties = Credentials.getCredentials();
-  //   String clientId = credentialsProperties.getProperty("clientID");
-  //   String clientSecret = credentialsProperties.getProperty("clientSecret");
-  //   appUrl = credentialsProperties.getProperty("appUrl");
-  //   authUrl = credentialsProperties.getProperty("authUrl");
-  //   String username2 = credentialsProperties.getProperty("username2");
-  //   String password2 = credentialsProperties.getProperty("password2");
-
-  //   String credentials = clientId + ":" + clientSecret;
-  //   String basicAuth =
-  //       "Basic " +
-  // Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-  //   OkHttpClient client = new OkHttpClient().newBuilder().build();
-  //   MediaType mediaType = MediaType.parse("text/plain");
-  //   RequestBody body = RequestBody.create(mediaType, "");
-  //   Request request =
-  //       new Request.Builder()
-  //           .url(
-  //               authUrl
-  //                   + "/oauth/token?grant_type=password&username="
-  //                   + username2
-  //                   + "&password="
-  //                   + password2)
-  //           .method("POST", body)
-  //           .addHeader("Authorization", basicAuth)
-  //           .build();
-
-  //   Response response = client.newCall(request).execute();
-  //   if (response.code() != 200) {
-  //     System.out.println("Token generation failed. Response code: " + response.code());
-  //     String errorBody = response.body().string();
-  //     System.out.println("Error body: " + errorBody);
-  //   }
-  //   token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-  //   response.close();
-  //   Map<String, String> config = new HashMap<>();
-  //   config.put("Authorization", "Bearer " + token);
-  //   api = new Api(config);
-
-  //   System.out.println("creating attachment without SDM roles");
-  //   Boolean testStatus = false;
-  //   String createResponse =
-  //       api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
-
-  //   ClassLoader classLoader = getClass().getClassLoader();
-  //   File file = new File(classLoader.getResource("sample.pdf").getFile());
-
-  //   Map<String, Object> postData = new HashMap<>();
-  //   postData.put("up__ID", entityID);
-  //   postData.put("mimeType", "application/pdf");
-  //   postData.put("createdAt", new Date().toString());
-  //   postData.put("createdBy", "test@test.com");
-  //   postData.put("modifiedBy", "test@test.com");
-  //   createResponse = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-  //   if ("Entity in draft mode".equals(createResponse)) {
-  //     List<String> createResponse2 =
-  //         api.createAttachment(
-  //             appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
-  //     String check = createResponse2.get(0);
-  //     if (check.equals("Attachment created")) {
-  //       attachmentID1 = createResponse2.get(1);
-  //       createResponse =
-  //           api.readAttachmentDraft(
-  //               appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
-  //       if (response.equals("OK")) {
-  //         createResponse = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath,
-  // entityID);
-  //         if (response.equals("Saved")) {
-  //           createResponse =
-  //               api.readAttachment(
-  //                   appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
-
-  //           if (response.equals("OK")) {
-  //             testStatus = true;
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  //   if (!testStatus) {
-  //     fail("Create attachment failed without SDM Roles " + response);
-  //   }
-  // }
 }

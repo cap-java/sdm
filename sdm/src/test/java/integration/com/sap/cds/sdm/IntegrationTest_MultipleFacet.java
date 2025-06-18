@@ -602,7 +602,7 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(13)
   void testUploadMultipleAttachment_RestrictedCharacters() throws IOException {
-    System.out.println("Test (13) : Restricted characters");
+    System.out.println("Test (13) : Creating attachment with Restricted characters");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("abc.pdf").getFile());
@@ -624,9 +624,10 @@ class IntegrationTest_MultipleFacet {
     int renameCount = 0;
 
     for (int i = 0; i < facet.length; i++) {
+      File renamedFile = new File(file.getParent(), "Sam.//..pdf");
       List<String> createResponse =
-          api.createAttachment_RestrictedCharacter(
-              appUrl, serviceName, entityName, facet[i], entityID2, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facet[i], entityID2, srvpath, postData, renamedFile);
 
       System.out.println("Create response for facet[" + i + "]: " + createResponse);
 
@@ -2013,104 +2014,4 @@ class IntegrationTest_MultipleFacet {
       }
     }
   }
-
-  // @Test
-  // @Order(23)
-  // void testUploadNAttachmentsNoSDMRoles() throws IOException {
-  //   System.out.println("Upload attachment without SDM Roles and with assigned role collection");
-
-  //   Properties credentialsProperties = Credentials.getCredentials();
-  //   String clientId = credentialsProperties.getProperty("clientID");
-  //   String clientSecret = credentialsProperties.getProperty("clientSecret");
-  //   appUrl = credentialsProperties.getProperty("appUrl");
-  //   authUrl = credentialsProperties.getProperty("authUrl");
-  //   String username2 = credentialsProperties.getProperty("username2");
-  //   String password2 = credentialsProperties.getProperty("password2");
-
-  //   String credentials = clientId + ":" + clientSecret;
-  //   String basicAuth =
-  //       "Basic " +
-  // Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-
-  //   OkHttpClient client = new OkHttpClient().newBuilder().build();
-  //   MediaType mediaType = MediaType.parse("text/plain");
-  //   RequestBody body = RequestBody.create(mediaType, "");
-  //   Request request =
-  //       new Request.Builder()
-  //           .url(
-  //               authUrl
-  //                   + "/oauth/token?grant_type=password&username="
-  //                   + username2
-  //                   + "&password="
-  //                   + password2)
-  //           .method("POST", body)
-  //           .addHeader("Authorization", basicAuth)
-  //           .build();
-  //   Response response = client.newCall(request).execute();
-  //   if (response.code() != 200) {
-  //     System.out.println("Token generation failed. Response code: " + response.code());
-  //     String errorBody = response.body().string();
-  //     System.out.println("Error body: " + errorBody);
-  //   }
-  //   token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-  //   response.close();
-  //   Map<String, String> config = new HashMap<>();
-  //   config.put("Authorization", "Bearer " + token);
-  //   api = new Api(config);
-
-  //   ClassLoader classLoader = getClass().getClassLoader();
-  //   File originalFile = new File(classLoader.getResource("sample.exe").getFile());
-
-  //   boolean testStatus = false;
-  //   String createResponse =
-  //       api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID4);
-  //   System.out.println("response: " + response);
-
-  //   if ("Entity in draft mode".equals(response)) {
-  //     for (int i = 1; i <= 5; i++) {
-  //       File tempFile = File.createTempFile("sample_" + i + "_", ".exe");
-  //       Files.copy(originalFile.toPath(), tempFile.toPath(),
-  // StandardCopyOption.REPLACE_EXISTING);
-
-  //       Map<String, Object> postData = new HashMap<>();
-  //       postData.put("up__ID", entityID4);
-  //       postData.put("mimeType", "application/exe");
-  //       postData.put("createdAt", new Date().toString());
-  //       postData.put("createdBy", "test@test.com");
-  //       postData.put("modifiedBy", "test@test.com");
-
-  //       List<String> createResponse2 =
-  //           api.createAttachment(
-  //               appUrl, serviceName, entityName, facet[0], entityID4, srvpath, postData,
-  // tempFile);
-
-  //       String resultMessage = createResponse2.get(0);
-  //       System.out.println("Result message for attachment " + i + ": " + resultMessage);
-
-  //       if (resultMessage.contains("Only 4 attachments allowed")) {
-  //         String expectedJson =
-  //             "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
-  //         ObjectMapper objectMapper = new ObjectMapper();
-  //         JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
-  //         JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
-  //         if (expectedJsonNode.equals(actualJsonNode)) {
-  //           testStatus = true;
-  //         }
-  //       } else {
-  //         testStatus = false;
-  //       }
-  //       tempFile.delete();
-  //     }
-  //     if (!testStatus) {
-  //       fail("5th attachment did not trigger the expected error.");
-  //     }
-  //     String deleteEntityResponse = api.deleteEntity(appUrl, serviceName, entityName, entityID4);
-  //     if (deleteEntityResponse != "Entity Deleted") {
-  //       fail("Could not delete entity");
-  //     } else {
-  //       System.out.println("Successfully deleted the test entity4");
-  //     }
-  //   }
-  // }
-
 }
