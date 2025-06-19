@@ -1611,7 +1611,7 @@ class IntegrationTest_MultipleFacet {
             RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
         String updateSecondaryPropertyResponse1 =
             api.updateSecondaryProperty(
-                appUrl, serviceName, entityName, facet[i], entityID3, ID[i], bodyDropdown1);
+                appUrl, serviceName, entityName, facet[i], entityID3, ID3[i], bodyDropdown1);
         // Update secondary properties for Integer
         RequestBody bodyInt =
             RequestBody.create(
