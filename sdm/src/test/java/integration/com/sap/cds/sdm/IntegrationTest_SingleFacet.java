@@ -446,9 +446,10 @@ class IntegrationTest_SingleFacet {
                       appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-        if (response.contains("Rename unsuccessful")
-                && response.contains("unsupported characters")
-                && response.contains("invalid/name")) {
+        String expected =
+                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters "
+                       + "(/, \\\\). \\n\\n\\t\\u2022 invalid/name\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
           testStatus = true;
         }
       } else {
@@ -456,7 +457,7 @@ class IntegrationTest_SingleFacet {
       }
     }
     if (!testStatus) {
-      fail("Attachment was renamed with unsupported characters or error was not detected");
+      fail("Attachment was renamed with unsupported characters");
     }
   }
 
@@ -548,10 +549,10 @@ class IntegrationTest_SingleFacet {
 
       if (renameResponse1.equals("Renamed") && renameResponse2.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-
-        if (response.contains("Rename unsuccessful")
-                && response.contains("unsupported characters")
-                && response.contains("invalid/attachment2.pdf")) {
+        String expected =
+                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
+                       + " (/, \\\\). \\n\\n\\t\\u2022 invalid/attachment2.pdf\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
           testStatus = true;
         }
       } else {
@@ -561,7 +562,7 @@ class IntegrationTest_SingleFacet {
 
     if (!testStatus) {
       fail(
-              "Multiple renames should have failed due to one unsupported character or error was not detected");
+              "Multiple renames should have failed due to one unsupported characters");
     }
   }
 
@@ -580,9 +581,10 @@ class IntegrationTest_SingleFacet {
       if (apiResponse.equals("Renamed")) {
         apiResponse =
                 apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-        if (apiResponse.contains("Could not update the following files")
-                && apiResponse.contains(
-                "You do not have the required permissions to update attachments")) {
+        String expected =
+                "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 valid_attachment1.pdf"
+                       + "\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+        if (apiResponse.equals(expected)) {
           testStatus = true;
         }
       } else {

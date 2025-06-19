@@ -505,9 +505,11 @@ class IntegrationTest_MultipleFacet {
       if (counter >= 2) {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-        System.out.println(response);
-        if (response.contains("Rename unsuccessful")
-                && response.contains("unsupported characters")) {
+        String expected =
+                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                        + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                        + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 footnote1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
           testStatus = true;
         }
       } else {
@@ -515,7 +517,7 @@ class IntegrationTest_MultipleFacet {
       }
     }
     if (!testStatus) {
-      fail("Attachment was renamed with unsupported characters or error was not detected");
+      fail("Attachment was renamed with unsupported characters");
     }
   }
 
@@ -623,11 +625,10 @@ class IntegrationTest_MultipleFacet {
 
       if (successCount >= 2) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-        System.out.println("Save response: " + response);
-
-        if (response.contains("Rename unsuccessful")
-                && response.contains("unsupported characters")
-                && response.contains("note/invalid")) {
+        String expected =
+                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
+                       + " (/, \\\\). \\n\\n\\t\\u2022 note/invalid\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
           testStatus = true;
         }
       } else {
@@ -651,13 +652,12 @@ class IntegrationTest_MultipleFacet {
               apiNoRoles.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
 
       if ("Entity in draft mode".equals(apiResponse)) {
-        String[] name = {"sample123", "reference123", "footnote123"};
+        String[] name = {"sample456", "reference456", "footnote456"};
         for (int i = 0; i < facet.length; i++) {
           apiResponse =
                   apiNoRoles.renameAttachment(
                           appUrl, serviceName, entityName, facet[i], entityID, ID[i], name[i]);
           if (!"Renamed".equals(apiResponse)) {
-            System.out.println("line 660: " + apiResponse);
             testStatus = false;
             System.out.println(facet[i] + " was not renamed: " + apiResponse);
           }
@@ -665,9 +665,11 @@ class IntegrationTest_MultipleFacet {
         if (testStatus) {
           apiResponse =
                   apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
-          if (!apiResponse.contains(
-                  "You do not have the required permissions to update attachments")) {
-            System.out.println("line 670: " + apiResponse);
+          String expected =
+                  "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},"
+                          + "{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},"
+                          + "{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+          if (!apiResponse.equals(expected)) {
             testStatus = false;
             System.out.println("Entity draft not saved: " + apiResponse);
           }
@@ -850,11 +852,11 @@ class IntegrationTest_MultipleFacet {
 
       if (counter >= 2) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-        if (response.contains("The following secondary properties are not supported"))
-          testStatus = true;
       }
+      String expectedResponse =
+              "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
 
-      if (response.contains("The following secondary properties are not supported")) {
+      if (response.equals(expectedResponse)) {
         testStatus = true;
       }
     }
@@ -926,7 +928,9 @@ class IntegrationTest_MultipleFacet {
       }
       if (counter >= 2)
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-      if (response.contains("The following secondary properties are not supported")) {
+      String expectedResponse =
+              "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+      if (response.equals(expectedResponse)) {
         testStatus = true;
         System.out.println("Renamed & updated Secondary properties for attachment");
       }
@@ -1023,7 +1027,9 @@ class IntegrationTest_MultipleFacet {
         assertNull(FacetMetadata.get("customProperty6"));
         assertNull(FacetMetadata.get("customProperty5"));
       }
-      if (response.contains("The following secondary properties are not supported")) {
+      String expectedResponse =
+              "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+      if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
         System.out.println("Rename & update secondary properties for attachment is unsuccessfull");
@@ -1104,7 +1110,9 @@ class IntegrationTest_MultipleFacet {
         assertNull(FacetMetadata.get("customProperty6"));
         assertNull(FacetMetadata.get("customProperty5"));
       }
-      if (response.contains("The following secondary properties are not supported")) {
+      String expectedResponse =
+              "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 id1\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+      if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
         System.out.println(
@@ -1288,7 +1296,9 @@ class IntegrationTest_MultipleFacet {
               && Updated3[1]
               && Updated3[2]) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-        if (response.contains("The following secondary properties are not supported")) {
+        String expectedResponse =
+                "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+        if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties");
@@ -1431,7 +1441,9 @@ class IntegrationTest_MultipleFacet {
               && Updated3[1]
               && Updated3[2]) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-        if (response.contains("The following secondary properties are not supported")) {
+        String expectedResponse =
+                "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n\\n\\t\\u2022 DocumentInfoRecordString\\n\\t\\u2022 DocumentInfoRecordDate\\n\\t\\u2022 customProperty2\\n\\t\\u2022 DocumentInfoRecordBoolean\\n\\nPlease contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+        if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties for attachments");
