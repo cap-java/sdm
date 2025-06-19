@@ -61,7 +61,7 @@ class IntegrationTest_SingleFacet {
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
     String basicAuth =
-            "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 
     OkHttpClient client = new OkHttpClient().newBuilder().build();
     MediaType mediaType = MediaType.parse("text/plain");
@@ -72,40 +72,40 @@ class IntegrationTest_SingleFacet {
     if (tokenFlowFlag.equals("namedUser")) {
       System.out.println("Running integration tests with named user token flow");
       request =
-              new Request.Builder()
-                      .url(
-                              authUrl
-                                      + "/oauth/token?grant_type=password&username="
-                                      + username
-                                      + "&password="
-                                      + password)
-                      .method("POST", body)
-                      .addHeader("Authorization", basicAuth)
-                      .build();
+          new Request.Builder()
+              .url(
+                  authUrl
+                      + "/oauth/token?grant_type=password&username="
+                      + username
+                      + "&password="
+                      + password)
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
     } else if (tokenFlowFlag.equals("technicalUser")) {
       System.out.println("Running integration tests with technical user token flow");
       request =
-              new Request.Builder()
-                      .url(authUrl + "/oauth/token?grant_type=client_credentials")
-                      .method("POST", body)
-                      .addHeader("Authorization", basicAuth)
-                      .build();
+          new Request.Builder()
+              .url(authUrl + "/oauth/token?grant_type=client_credentials")
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
 
     } else {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
 
     Request requestNoRoles =
-            new Request.Builder()
-                    .url(
-                            authUrl
-                                    + "/oauth/token?grant_type=password&username="
-                                    + username2
-                                    + "&password="
-                                    + password2)
-                    .method("POST", body)
-                    .addHeader("Authorization", basicAuth)
-                    .build();
+        new Request.Builder()
+            .url(
+                authUrl
+                    + "/oauth/token?grant_type=password&username="
+                    + username2
+                    + "&password="
+                    + password2)
+            .method("POST", body)
+            .addHeader("Authorization", basicAuth)
+            .build();
 
     Response response = client.newCall(request).execute();
     Response responseNoRoles = client.newCall(requestNoRoles).execute();
@@ -121,7 +121,7 @@ class IntegrationTest_SingleFacet {
     }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
     tokenNoRoles =
-            new ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
+        new ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
     response.close();
     responseNoRoles.close();
     Map<String, String> config = new HashMap<>();
@@ -191,20 +191,20 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID1 = createResponse.get(1);
         response =
-                api.readAttachmentDraft(
-                        appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
+            api.readAttachmentDraft(
+                appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
         if (response.equals("OK")) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
           if (response.equals("Saved")) {
             response =
-                    api.readAttachment(
-                            appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
+                api.readAttachment(
+                    appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
 
             if (response.equals("OK")) {
               testStatus = true;
@@ -236,20 +236,20 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID2 = createResponse.get(1);
         response =
-                api.readAttachmentDraft(
-                        appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
+            api.readAttachmentDraft(
+                appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
         if (response.equals("OK")) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
           if (response.equals("Saved")) {
             response =
-                    api.readAttachment(
-                            appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
+                api.readAttachment(
+                    appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
             if (response.equals("OK")) {
               testStatus = true;
             }
@@ -280,20 +280,20 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID3 = createResponse.get(1);
         response =
-                api.readAttachmentDraft(
-                        appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
+            api.readAttachmentDraft(
+                appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
         if (response.equals("OK")) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
           if (response.equals("Saved")) {
             response =
-                    api.readAttachment(
-                            appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
+                api.readAttachment(
+                    appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
             if (response.equals("OK")) {
               testStatus = true;
             }
@@ -324,8 +324,8 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         testStatus = false;
@@ -333,7 +333,7 @@ class IntegrationTest_SingleFacet {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
           String expectedJson =
-                  "{\"error\":{\"code\":\"500\",\"message\":\"sample.pdf already exists.\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"sample.pdf already exists.\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(check);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -381,20 +381,20 @@ class IntegrationTest_SingleFacet {
     response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID2);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID2, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID2, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals(facetName + " created")) {
         attachmentID4 = createResponse.get(1);
         response =
-                api.readAttachmentDraft(
-                        appUrl, serviceName, entityName, facetName, entityID2, attachmentID4);
+            api.readAttachmentDraft(
+                appUrl, serviceName, entityName, facetName, entityID2, attachmentID4);
         if (response.equals("OK")) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID2);
           if (response.equals("Saved")) {
             response =
-                    api.readAttachment(
-                            appUrl, serviceName, entityName, facetName, entityID2, attachmentID4);
+                api.readAttachment(
+                    appUrl, serviceName, entityName, facetName, entityID2, attachmentID4);
 
             if (response.equals("OK")) {
               testStatus = true;
@@ -417,8 +417,8 @@ class IntegrationTest_SingleFacet {
     String name = "sample123";
     if (response == "Entity in draft mode") {
       response =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
@@ -442,13 +442,13 @@ class IntegrationTest_SingleFacet {
     String name = "invalid/name";
     if (response == "Entity in draft mode") {
       response =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         String expected =
-                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters "
-                       + "(/, \\\\). \\n\\n\\t\\u2022 invalid/name\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters "
+                + "(/, \\\\). \\n\\n\\t\\u2022 invalid/name\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
         }
@@ -471,11 +471,11 @@ class IntegrationTest_SingleFacet {
     String name2 = "sample12345";
     if (response == "Entity in draft mode") {
       String response1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID2, name1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID2, name1);
       String response2 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name2);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name2);
       if (response1.equals("Renamed") && response2.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
@@ -500,17 +500,17 @@ class IntegrationTest_SingleFacet {
     String name2 = "sample123456";
     if (response == "Entity in draft mode") {
       response =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name);
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         String expected =
-                "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sample123 have been added "
-                        + "multiple times. Please rename and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sample123 have been added "
+                + "multiple times. Please rename and try again.\"}}";
         if (response.equals(expected)) {
           response =
-                  api.renameAttachment(
-                          appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name2);
+              api.renameAttachment(
+                  appUrl, serviceName, entityName, facetName, entityID, attachmentID3, name2);
           if (response.equals("Renamed")) {
             response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
             if (response.equals("Saved")) {
@@ -531,7 +531,7 @@ class IntegrationTest_SingleFacet {
   @Order(12)
   void testRenameMultipleAttachmentsWithOneUnsupportedCharacter() {
     System.out.println(
-            "Test (12) : Rename multiple attachments where one name has unsupported characters");
+        "Test (12) : Rename multiple attachments where one name has unsupported characters");
     Boolean testStatus = false;
 
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
@@ -541,17 +541,17 @@ class IntegrationTest_SingleFacet {
       String invalidName2 = "invalid/attachment2.pdf";
 
       String renameResponse1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID1, validName1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID1, validName1);
       String renameResponse2 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID2, invalidName2);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID2, invalidName2);
 
       if (renameResponse1.equals("Renamed") && renameResponse2.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         String expected =
-                "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
-                       + " (/, \\\\). \\n\\n\\t\\u2022 invalid/attachment2.pdf\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
+                + " (/, \\\\). \\n\\n\\t\\u2022 invalid/attachment2.pdf\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
         }
@@ -561,8 +561,7 @@ class IntegrationTest_SingleFacet {
     }
 
     if (!testStatus) {
-      fail(
-              "Multiple renames should have failed due to one unsupported characters");
+      fail("Multiple renames should have failed due to one unsupported characters");
     }
   }
 
@@ -572,18 +571,18 @@ class IntegrationTest_SingleFacet {
     System.out.println("Test (13) : Rename attachments where user don't have SDM-Roles");
     boolean testStatus = false;
     String apiResponse =
-            apiNoRoles.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+        apiNoRoles.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     String name = "sample123";
     if (apiResponse == "Entity in draft mode") {
       apiResponse =
-              apiNoRoles.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
+          apiNoRoles.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID, attachmentID1, name);
       if (apiResponse.equals("Renamed")) {
         apiResponse =
-                apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+            apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         String expected =
-                "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 valid_attachment1.pdf"
-                       + "\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+            "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 valid_attachment1.pdf"
+                + "\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
         if (apiResponse.equals(expected)) {
           testStatus = true;
         }
@@ -604,13 +603,13 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       response =
-              api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
+          api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
       if (response == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
           response =
-                  api.readAttachment(
-                          appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
+              api.readAttachment(
+                  appUrl, serviceName, entityName, facetName, entityID, attachmentID1);
           if (response.equals("Could not read Attachment")) {
             testStatus = true;
           }
@@ -630,20 +629,20 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       String response1 =
-              api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
+          api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
       String response2 =
-              api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
+          api.deleteAttachment(appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
       if (response1 == "Deleted" && response2 == "Deleted") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
         if (response == "Saved") {
           response1 =
-                  api.readAttachment(
-                          appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
+              api.readAttachment(
+                  appUrl, serviceName, entityName, facetName, entityID, attachmentID2);
           response2 =
-                  api.readAttachment(
-                          appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
+              api.readAttachment(
+                  appUrl, serviceName, entityName, facetName, entityID, attachmentID3);
           if (response1.equals("Could not read Attachment")
-                  && response2.equals("Could not read Attachment")) {
+              && response2.equals("Could not read Attachment")) {
             testStatus = true;
           }
         }
@@ -691,8 +690,8 @@ class IntegrationTest_SingleFacet {
       postData.put("modifiedBy", "test@test.com");
 
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID1 = createResponse.get(1);
@@ -703,47 +702,47 @@ class IntegrationTest_SingleFacet {
         LocalDateTime secondaryPropertyDateTime = LocalDateTime.now();
         System.out.println("Renaming and updating secondary properties for attachment");
         String response1 =
-                api.renameAttachment(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
         String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
         String updateSecondaryPropertyResponse1 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
         // Update secondary properties for Integer
         RequestBody bodyInt =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
         String updateSecondaryPropertyResponse2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
         // Update secondary properties for DateTime
         RequestBody bodyDateTime =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
         String updateSecondaryPropertyResponse3 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
         // Update secondary properties for Boolean
         RequestBody bodyBoolean =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponse4 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
         if (response1 == "Renamed"
-                && updateSecondaryPropertyResponse1 == "Updated"
-                && updateSecondaryPropertyResponse2 == "Updated"
-                && updateSecondaryPropertyResponse3 == "Updated"
-                && updateSecondaryPropertyResponse4 == "Updated") {
+            && updateSecondaryPropertyResponse1 == "Updated"
+            && updateSecondaryPropertyResponse2 == "Updated"
+            && updateSecondaryPropertyResponse3 == "Updated"
+            && updateSecondaryPropertyResponse4 == "Updated") {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
           if (response.contains("The following secondary properties are not supported")) {
             System.out.println("Entity saved");
@@ -772,47 +771,47 @@ class IntegrationTest_SingleFacet {
       LocalDateTime secondaryPropertyDateTime = LocalDateTime.now();
       System.out.println("Renaming and updating secondary properties for attachment");
       String response1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
       String dropdownValue1 = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
       RequestBody bodyDropdown =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
       String updateSecondaryPropertyResponse1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
       // Update secondary properties for Integer
       RequestBody bodyInt =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
       String updateSecondaryPropertyResponse2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
       // Update secondary properties for DateTime
       RequestBody bodyDateTime =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
       String updateSecondaryPropertyResponse3 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
       // Update secondary properties for Boolean
       RequestBody bodyBoolean =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
       String updateSecondaryPropertyResponse4 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
       if (response1 == "Renamed"
-              && updateSecondaryPropertyResponse1 == "Updated"
-              && updateSecondaryPropertyResponse2 == "Updated"
-              && updateSecondaryPropertyResponse3 == "Updated"
-              && updateSecondaryPropertyResponse4 == "Updated") {
+          && updateSecondaryPropertyResponse1 == "Updated"
+          && updateSecondaryPropertyResponse2 == "Updated"
+          && updateSecondaryPropertyResponse3 == "Updated"
+          && updateSecondaryPropertyResponse4 == "Updated") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
         if (response.contains("The following secondary properties are not supported")) {
           System.out.println("Entity saved");
@@ -833,9 +832,9 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(19)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_singleAttachment()
-          throws IOException {
+      throws IOException {
     System.out.println(
-            "Test (19): Rename & Update invalid secondary property before entity is saved");
+        "Test (19): Rename & Update invalid secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -854,8 +853,8 @@ class IntegrationTest_SingleFacet {
       postData.put("modifiedBy", "test@test.com");
 
       List<String> createResponse =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData, file);
       String check = createResponse.get(0);
       if ("Attachment created".equals(check)) {
         attachmentID1 = createResponse.get(1);
@@ -873,75 +872,75 @@ class IntegrationTest_SingleFacet {
 
         System.out.println("Renaming and updating invalid secondary properties for attachment");
         String response1 =
-                api.renameAttachment(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
 
         // Update secondary properties for String using dropdown selected value as object with code
 
         String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown1 =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
         String updateSecondaryPropertyResponse1 =
-                api.updateSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID1,
-                        bodyDropdown1);
+            api.updateSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID1,
+                bodyDropdown1);
 
         // Update secondary properties for Integer
         RequestBody bodyInt =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
         String updateSecondaryPropertyResponse2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
 
         // Update secondary properties for DateTime
         RequestBody bodyDateTime =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
         String updateSecondaryPropertyResponse3 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
 
         // Update secondary properties for Boolean
         RequestBody bodyBoolean =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponse4 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
 
         // Update invalid secondary property
         String updateSecondaryPropertyResponse5 =
-                api.updateInvalidSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID1,
-                        invalidProperty);
+            api.updateInvalidSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID1,
+                invalidProperty);
 
         if ("Renamed".equals(response1)
-                && "Updated".equals(updateSecondaryPropertyResponse1)
-                && "Updated".equals(updateSecondaryPropertyResponse2)
-                && "Updated".equals(updateSecondaryPropertyResponse3)
-                && "Updated".equals(updateSecondaryPropertyResponse4)
-                && "Updated".equals(updateSecondaryPropertyResponse5)) {
+            && "Updated".equals(updateSecondaryPropertyResponse1)
+            && "Updated".equals(updateSecondaryPropertyResponse2)
+            && "Updated".equals(updateSecondaryPropertyResponse3)
+            && "Updated".equals(updateSecondaryPropertyResponse4)
+            && "Updated".equals(updateSecondaryPropertyResponse5)) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
           Map<String, Object> attachmentMetadata =
-                  api.fetchMetadata(
-                          appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
+              api.fetchMetadata(
+                  appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
           assertEquals("sample.pdf", attachmentMetadata.get("fileName"));
           assertNull(attachmentMetadata.get("customProperty3"));
           assertNull(attachmentMetadata.get("customProperty4"));
@@ -953,7 +952,7 @@ class IntegrationTest_SingleFacet {
             System.out.println("Entity saved");
             testStatus = true;
             System.out.println(
-                    "Rename & update secondary properties for attachment is unsuccessfull");
+                "Rename & update secondary properties for attachment is unsuccessfull");
           }
         }
       }
@@ -967,7 +966,7 @@ class IntegrationTest_SingleFacet {
   @Order(20)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_singleAttachment() throws IOException {
     System.out.println(
-            "Test (20): Rename & Update invalid secondary property after entity is saved");
+        "Test (20): Rename & Update invalid secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
@@ -979,60 +978,60 @@ class IntegrationTest_SingleFacet {
       String invalidProperty = "testidinvalid";
       System.out.println("Renaming and updating invalid secondary properties for attachment");
       String response1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       String dropdownValue = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
       RequestBody bodyDropdown =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
       String updateSecondaryPropertyResponse1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
       // Update secondary properties for Integer
       RequestBody bodyInt =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt + "\n}"));
       String updateSecondaryPropertyResponse2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
       // Update secondary properties for DateTime
       RequestBody bodyDateTime =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime + "\"\n}"));
       String updateSecondaryPropertyResponse3 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
       // Update secondary properties for Boolean
       RequestBody bodyBoolean =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
       String updateSecondaryPropertyResponse4 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
       // Update invalid secondary property
       String updateSecondaryPropertyResponse5 =
-              api.updateInvalidSecondaryProperty(
-                      appUrl,
-                      serviceName,
-                      entityName,
-                      facetName,
-                      entityID3,
-                      attachmentID1,
-                      invalidProperty);
+          api.updateInvalidSecondaryProperty(
+              appUrl,
+              serviceName,
+              entityName,
+              facetName,
+              entityID3,
+              attachmentID1,
+              invalidProperty);
       if (response1 == "Renamed"
-              && updateSecondaryPropertyResponse1 == "Updated"
-              && updateSecondaryPropertyResponse2 == "Updated"
-              && updateSecondaryPropertyResponse3 == "Updated"
-              && updateSecondaryPropertyResponse4 == "Updated"
-              && updateSecondaryPropertyResponse5 == "Updated") {
+          && updateSecondaryPropertyResponse1 == "Updated"
+          && updateSecondaryPropertyResponse2 == "Updated"
+          && updateSecondaryPropertyResponse3 == "Updated"
+          && updateSecondaryPropertyResponse4 == "Updated"
+          && updateSecondaryPropertyResponse5 == "Updated") {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
         Map<String, Object> attachmentMetadata =
-                api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
+            api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
         assertEquals("sample.pdf", attachmentMetadata.get("fileName"));
         assertNull(attachmentMetadata.get("customProperty3"));
         assertNull(attachmentMetadata.get("customProperty4"));
@@ -1044,7 +1043,7 @@ class IntegrationTest_SingleFacet {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println(
-                  "Rename & update secondary properties for attachment is unsuccessfull");
+              "Rename & update secondary properties for attachment is unsuccessfull");
         }
       }
       String deleteEntityResponse = api.deleteEntity(appUrl, serviceName, entityName, entityID3);
@@ -1060,9 +1059,9 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(21)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
-          throws IOException {
+      throws IOException {
     System.out.println(
-            "Test (21): Rename & Update valid secondary properties for multiple attachments before entity is saved");
+        "Test (21): Rename & Update valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1083,8 +1082,8 @@ class IntegrationTest_SingleFacet {
       postData1.put("modifiedBy", "test@test.com");
 
       List<String> createResponse1 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData1, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData1, file);
       if (createResponse1.get(0).equals("Attachment created")) {
         attachmentID1 = createResponse1.get(1);
         System.out.println("Attachment created");
@@ -1100,8 +1099,8 @@ class IntegrationTest_SingleFacet {
       postData2.put("modifiedBy", "test@test.com");
 
       List<String> createResponse2 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData2, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData2, file);
       if (createResponse2.get(0).equals("Attachment created")) {
         attachmentID2 = createResponse2.get(1);
         System.out.println("Attachment created");
@@ -1117,8 +1116,8 @@ class IntegrationTest_SingleFacet {
       postData3.put("modifiedBy", "test@test.com");
 
       List<String> createResponse3 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData3, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData3, file);
       if (createResponse3.get(0).equals("Attachment created")) {
         attachmentID3 = createResponse3.get(1);
         System.out.println("Attachment created");
@@ -1128,8 +1127,8 @@ class IntegrationTest_SingleFacet {
       String check2 = createResponse2.get(0);
       String check3 = createResponse3.get(0);
       if (check1.equals("Attachment created")
-              && check2.equals("Attachment created")
-              && check3.equals("Attachment created")) {
+          && check2.equals("Attachment created")
+          && check3.equals("Attachment created")) {
         Boolean attachment1Updated = false;
         Boolean attachment2Updated = false;
         Boolean attachment3Updated = false;
@@ -1139,47 +1138,47 @@ class IntegrationTest_SingleFacet {
         LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
         System.out.println("Renaming and updating secondary properties for attachment PDF");
         String responsePDF1 =
-                api.renameAttachment(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
         String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
         String updateSecondaryPropertyResponsePDF1 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
         // Update secondary properties for Integer
         RequestBody bodyInt =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
         String updateSecondaryPropertyResponsePDF2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
         // Update secondary properties for DateTime
         RequestBody bodyDateTime =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
         String updateSecondaryPropertyResponsePDF3 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
         // Update secondary properties for Boolean
         RequestBody bodyBoolean =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponsePDF4 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
         if (responsePDF1 == "Renamed"
-                && updateSecondaryPropertyResponsePDF1 == "Updated"
-                && updateSecondaryPropertyResponsePDF2 == "Updated"
-                && updateSecondaryPropertyResponsePDF3 == "Updated"
-                && updateSecondaryPropertyResponsePDF4 == "Updated") {
+            && updateSecondaryPropertyResponsePDF1 == "Updated"
+            && updateSecondaryPropertyResponsePDF2 == "Updated"
+            && updateSecondaryPropertyResponsePDF3 == "Updated"
+            && updateSecondaryPropertyResponsePDF4 == "Updated") {
           System.out.println("Renamed & updated Secondary properties for attachment PDF");
           attachment1Updated = true;
         }
@@ -1187,12 +1186,12 @@ class IntegrationTest_SingleFacet {
         System.out.println("Updating secondary properties for attachment TXT");
         // Update secondary properties for Boolean
         RequestBody bodyBool =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponseTXT1 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
         if (updateSecondaryPropertyResponseTXT1 == "Updated") {
           System.out.println("Updated Secondary properties for attachment TXT");
           attachment2Updated = true;
@@ -1204,44 +1203,44 @@ class IntegrationTest_SingleFacet {
         String dropdownValue1 = integrationTestUtils.getDropDownValue();
         String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
         RequestBody bodyDropdown1 =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
         String updateSecondaryPropertyResponseEXE1 =
-                api.updateSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID3,
-                        bodyDropdown1);
+            api.updateSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID3,
+                bodyDropdown1);
         // Update secondary properties for Integer
         RequestBody bodyInt3 =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
         String updateSecondaryPropertyResponseEXE2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
         // Update secondary properties for DateTime
         RequestBody bodyDateTime3 =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime3 + "\"\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime3 + "\"\n}"));
         String updateSecondaryPropertyResponseEXE3 =
-                api.updateSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID3,
-                        bodyDateTime3);
+            api.updateSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID3,
+                bodyDateTime3);
 
         if (updateSecondaryPropertyResponseEXE1 == "Updated"
-                && updateSecondaryPropertyResponseEXE2 == "Updated"
-                && updateSecondaryPropertyResponseEXE3 == "Updated") {
+            && updateSecondaryPropertyResponseEXE2 == "Updated"
+            && updateSecondaryPropertyResponseEXE3 == "Updated") {
           System.out.println("Updated Secondary properties for attachment EXE");
           attachment3Updated = true;
         }
@@ -1265,7 +1264,7 @@ class IntegrationTest_SingleFacet {
   @Order(22)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_multipleAttachments() {
     System.out.println(
-            "Test (22): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
+        "Test (22): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
@@ -1279,48 +1278,48 @@ class IntegrationTest_SingleFacet {
       LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
       System.out.println("Renaming and updating secondary properties for attachment PDF");
       String responsePDF1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
       String dropdownValue1 = integrationTestUtils.getDropDownValue();
       String jsonDropdown1 = "{ \"customProperty1_code\" : \"" + dropdownValue1 + "\" }";
       RequestBody bodyDropdown1 =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown1);
       String updateSecondaryPropertyResponsePDF1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown1);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown1);
       // Update secondary properties for Integer
       RequestBody bodyInt =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
       String updateSecondaryPropertyResponsePDF2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
       // Update secondary properties for DateTime
       RequestBody bodyDateTime =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
       String updateSecondaryPropertyResponsePDF3 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
       // Update secondary properties for Boolean
       RequestBody bodyBoolean =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
       String updateSecondaryPropertyResponsePDF4 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
 
       if (responsePDF1 == "Renamed"
-              && updateSecondaryPropertyResponsePDF1 == "Updated"
-              && updateSecondaryPropertyResponsePDF2 == "Updated"
-              && updateSecondaryPropertyResponsePDF3 == "Updated"
-              && updateSecondaryPropertyResponsePDF4 == "Updated") {
+          && updateSecondaryPropertyResponsePDF1 == "Updated"
+          && updateSecondaryPropertyResponsePDF2 == "Updated"
+          && updateSecondaryPropertyResponsePDF3 == "Updated"
+          && updateSecondaryPropertyResponsePDF4 == "Updated") {
         System.out.println("Renamed & updated Secondary properties for attachment PDF");
         attachment1Updated = true;
       }
@@ -1328,12 +1327,12 @@ class IntegrationTest_SingleFacet {
       System.out.println("Updating secondary properties for attachment TXT");
       // Update secondary properties for Boolean
       RequestBody bodyBool =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
       String updateSecondaryPropertyResponseTXT1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
       if (updateSecondaryPropertyResponseTXT1 == "Updated") {
         System.out.println("Updated Secondary properties for attachment TXT");
         attachment2Updated = true;
@@ -1346,32 +1345,32 @@ class IntegrationTest_SingleFacet {
       String dropdownValue2 = integrationTestUtils.getDropDownValue();
       String jsonDropdown2 = "{ \"customProperty1_code\" : \"" + dropdownValue2 + "\" }";
       RequestBody bodyDropdown2 =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown2);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown2);
       String updateSecondaryPropertyResponseEXE1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDropdown2);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDropdown2);
       // Update secondary properties for Integer
       RequestBody bodyInt3 =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
       String updateSecondaryPropertyResponseEXE2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
       // Update secondary properties for DateTime
       RequestBody bodyDateTime3 =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime3 + "\"\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime3 + "\"\n}"));
       String updateSecondaryPropertyResponseEXE3 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDateTime3);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDateTime3);
 
       if (updateSecondaryPropertyResponseEXE1 == "Updated"
-              && updateSecondaryPropertyResponseEXE2 == "Updated"
-              && updateSecondaryPropertyResponseEXE3 == "Updated") {
+          && updateSecondaryPropertyResponseEXE2 == "Updated"
+          && updateSecondaryPropertyResponseEXE3 == "Updated") {
         System.out.println("Updated Secondary properties for attachment EXE");
         attachment3Updated = true;
       }
@@ -1397,9 +1396,9 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(23)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
-          throws IOException {
+      throws IOException {
     System.out.println(
-            "Test (23): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
+        "Test (23): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1420,8 +1419,8 @@ class IntegrationTest_SingleFacet {
       postData1.put("modifiedBy", "test@test.com");
 
       List<String> createResponse1 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData1, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData1, file);
       if (createResponse1.get(0).equals("Attachment created")) {
         attachmentID1 = createResponse1.get(1);
         System.out.println("Attachment created");
@@ -1437,8 +1436,8 @@ class IntegrationTest_SingleFacet {
       postData2.put("modifiedBy", "test@test.com");
 
       List<String> createResponse2 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData2, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData2, file);
       if (createResponse2.get(0).equals("Attachment created")) {
         attachmentID2 = createResponse2.get(1);
         System.out.println("Attachment created");
@@ -1454,8 +1453,8 @@ class IntegrationTest_SingleFacet {
       postData3.put("modifiedBy", "test@test.com");
 
       List<String> createResponse3 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData3, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, srvpath, postData3, file);
       if (createResponse3.get(0).equals("Attachment created")) {
         attachmentID3 = createResponse3.get(1);
         System.out.println("Attachment created");
@@ -1465,8 +1464,8 @@ class IntegrationTest_SingleFacet {
       String check2 = createResponse2.get(0);
       String check3 = createResponse3.get(0);
       if (check1.equals("Attachment created")
-              && check2.equals("Attachment created")
-              && check3.equals("Attachment created")) {
+          && check2.equals("Attachment created")
+          && check3.equals("Attachment created")) {
         Boolean attachment1Updated = false;
         Boolean attachment2Updated = false;
         Boolean attachment3Updated = false;
@@ -1477,70 +1476,70 @@ class IntegrationTest_SingleFacet {
         String invalidPropertyPDF = "testidinvalidPDF";
         System.out.println("Renaming and updating invalid secondary properties for attachment PDF");
         String responsePDF1 =
-                api.renameAttachment(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
         // Update secondary properties for String
         String dropdownValue = integrationTestUtils.getDropDownValue();
         String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
         RequestBody bodyDropdown =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
         String updateSecondaryPropertyResponsePDF1 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
         // Update secondary properties for Integer
         RequestBody bodyint =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
         String updateSecondaryPropertyResponsePDF2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyint);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyint);
         // Update secondary properties for DateTime
         RequestBody bodyDateTime =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
         String updateSecondaryPropertyResponsePDF3 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
         // Update secondary properties for Boolean
         RequestBody bodyBoolean =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponsePDF4 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
         // Update invalid secondary property
         String updateSecondaryPropertyResponsePDF5 =
-                api.updateInvalidSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID1,
-                        invalidPropertyPDF);
+            api.updateInvalidSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID1,
+                invalidPropertyPDF);
         if (responsePDF1 == "Renamed"
-                && updateSecondaryPropertyResponsePDF1 == "Updated"
-                && updateSecondaryPropertyResponsePDF2 == "Updated"
-                && updateSecondaryPropertyResponsePDF3 == "Updated"
-                && updateSecondaryPropertyResponsePDF4 == "Updated"
-                && updateSecondaryPropertyResponsePDF5 == "Updated") {
+            && updateSecondaryPropertyResponsePDF1 == "Updated"
+            && updateSecondaryPropertyResponsePDF2 == "Updated"
+            && updateSecondaryPropertyResponsePDF3 == "Updated"
+            && updateSecondaryPropertyResponsePDF4 == "Updated"
+            && updateSecondaryPropertyResponsePDF5 == "Updated") {
           attachment1Updated = true;
         }
 
         System.out.println("Updating valid secondary properties for attachment TXT");
         // Update secondary properties for Boolean
         RequestBody bodyBool =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
         String updateSecondaryPropertyResponseTXT1 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
         if (updateSecondaryPropertyResponseTXT1 == "Updated") {
           System.out.println("Updated Secondary properties for attachment TXT");
           attachment2Updated = true;
@@ -1551,28 +1550,28 @@ class IntegrationTest_SingleFacet {
 
         // Update secondary properties for String
         RequestBody bodyDropdown1 =
-                RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+            RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
         String updateSecondaryPropertyResponseEXE1 =
-                api.updateSecondaryProperty(
-                        appUrl,
-                        serviceName,
-                        entityName,
-                        facetName,
-                        entityID3,
-                        attachmentID3,
-                        bodyDropdown1);
+            api.updateSecondaryProperty(
+                appUrl,
+                serviceName,
+                entityName,
+                facetName,
+                entityID3,
+                attachmentID3,
+                bodyDropdown1);
         // Update secondary properties for Integer
         RequestBody bodyInt3 =
-                RequestBody.create(
-                        MediaType.parse("application/json"),
-                        ByteString.encodeUtf8(
-                                "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
+            RequestBody.create(
+                MediaType.parse("application/json"),
+                ByteString.encodeUtf8(
+                    "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
         String updateSecondaryPropertyResponseEXE2 =
-                api.updateSecondaryProperty(
-                        appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
+            api.updateSecondaryProperty(
+                appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
 
         if (updateSecondaryPropertyResponseEXE1 == "Updated"
-                && updateSecondaryPropertyResponseEXE2 == "Updated") {
+            && updateSecondaryPropertyResponseEXE2 == "Updated") {
           System.out.println("Updated Secondary properties for attachment EXE");
           attachment3Updated = true;
         }
@@ -1580,8 +1579,8 @@ class IntegrationTest_SingleFacet {
         if (attachment1Updated && attachment2Updated && attachment3Updated) {
           response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
           Map<String, Object> attachmentMetadataPDF =
-                  api.fetchMetadata(
-                          appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
+              api.fetchMetadata(
+                  appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
           assertEquals("sample.pdf", attachmentMetadataPDF.get("fileName"));
           assertNull(attachmentMetadataPDF.get("customProperty3"));
           assertNull(attachmentMetadataPDF.get("customProperty4"));
@@ -1591,8 +1590,8 @@ class IntegrationTest_SingleFacet {
           assertNull(attachmentMetadataPDF.get("customProperty5"));
 
           Map<String, Object> attachmentMetadataTXT =
-                  api.fetchMetadata(
-                          appUrl, serviceName, entityName, facetName, entityID3, attachmentID2);
+              api.fetchMetadata(
+                  appUrl, serviceName, entityName, facetName, entityID3, attachmentID2);
           assertEquals("sample.txt", attachmentMetadataTXT.get("fileName"));
           assertNull(attachmentMetadataTXT.get("customProperty3"));
           assertNull(attachmentMetadataTXT.get("customProperty4"));
@@ -1602,8 +1601,8 @@ class IntegrationTest_SingleFacet {
           assertNull(attachmentMetadataTXT.get("customProperty5"));
 
           Map<String, Object> attachmentMetadataEXE =
-                  api.fetchMetadata(
-                          appUrl, serviceName, entityName, facetName, entityID3, attachmentID3);
+              api.fetchMetadata(
+                  appUrl, serviceName, entityName, facetName, entityID3, attachmentID3);
           assertEquals("sample.exe", attachmentMetadataEXE.get("fileName"));
           assertNull(attachmentMetadataEXE.get("customProperty3"));
           assertNull(attachmentMetadataEXE.get("customProperty4"));
@@ -1614,7 +1613,7 @@ class IntegrationTest_SingleFacet {
             System.out.println("Entity saved");
             testStatus = true;
             System.out.println(
-                    "Rename & update unsuccessfull for invalid Secondary properties and successfull for valid property attachments");
+                "Rename & update unsuccessfull for invalid Secondary properties and successfull for valid property attachments");
           }
         }
       }
@@ -1627,9 +1626,9 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(24)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_multipleAttachments()
-          throws IOException {
+      throws IOException {
     System.out.println(
-            "Test (24): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
+        "Test (24): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
@@ -1644,70 +1643,70 @@ class IntegrationTest_SingleFacet {
       String invalidPropertyPDF = "testidinvalidPDF";
       System.out.println("Renaming and updating invalid secondary properties for attachment PDF");
       String responsePDF1 =
-              api.renameAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
+          api.renameAttachment(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, name1);
       // Update secondary properties for String
       String dropdownValue = integrationTestUtils.getDropDownValue();
       String jsonDropdown = "{ \"customProperty1_code\" : \"" + dropdownValue + "\" }";
       RequestBody bodyDropdown =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
       String updateSecondaryPropertyResponsePDF1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDropdown);
       // Update secondary properties for Integer
       RequestBody bodyInt =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt1 + "\n}"));
       String updateSecondaryPropertyResponsePDF2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyInt);
       // Update secondary properties for DateTime
       RequestBody bodyDateTime =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty5\" : \"" + secondaryPropertyDateTime1 + "\"\n}"));
       String updateSecondaryPropertyResponsePDF3 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyDateTime);
       // Update secondary properties for Boolean
       RequestBody bodyBoolean =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + true + "\n}"));
       String updateSecondaryPropertyResponsePDF4 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID1, bodyBoolean);
       // Update invalid secondary property
       String updateSecondaryPropertyResponsePDF5 =
-              api.updateInvalidSecondaryProperty(
-                      appUrl,
-                      serviceName,
-                      entityName,
-                      facetName,
-                      entityID3,
-                      attachmentID1,
-                      invalidPropertyPDF);
+          api.updateInvalidSecondaryProperty(
+              appUrl,
+              serviceName,
+              entityName,
+              facetName,
+              entityID3,
+              attachmentID1,
+              invalidPropertyPDF);
       if (responsePDF1 == "Renamed"
-              && updateSecondaryPropertyResponsePDF1 == "Updated"
-              && updateSecondaryPropertyResponsePDF2 == "Updated"
-              && updateSecondaryPropertyResponsePDF3 == "Updated"
-              && updateSecondaryPropertyResponsePDF4 == "Updated"
-              && updateSecondaryPropertyResponsePDF5 == "Updated") {
+          && updateSecondaryPropertyResponsePDF1 == "Updated"
+          && updateSecondaryPropertyResponsePDF2 == "Updated"
+          && updateSecondaryPropertyResponsePDF3 == "Updated"
+          && updateSecondaryPropertyResponsePDF4 == "Updated"
+          && updateSecondaryPropertyResponsePDF5 == "Updated") {
         attachment1Updated = true;
       }
 
       System.out.println("Updating valid secondary properties for attachment TXT");
       // Update secondary properties for Boolean
       RequestBody bodyBool =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8("{\n    \"customProperty6\" : " + false + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8("{\n    \"customProperty6\" : " + false + "\n}"));
       String updateSecondaryPropertyResponseTXT1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID2, bodyBool);
       if (updateSecondaryPropertyResponseTXT1 == "Updated") {
         System.out.println("Updated Secondary properties for attachment TXT");
         attachment2Updated = true;
@@ -1718,22 +1717,22 @@ class IntegrationTest_SingleFacet {
 
       // Update secondary properties for String
       RequestBody bodyDropdown1 =
-              RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
+          RequestBody.create(MediaType.parse("application/json"), jsonDropdown);
       String updateSecondaryPropertyResponseEXE1 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDropdown1);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyDropdown1);
       // Update secondary properties for Integer
       RequestBody bodyInt3 =
-              RequestBody.create(
-                      MediaType.parse("application/json"),
-                      ByteString.encodeUtf8(
-                              "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
+          RequestBody.create(
+              MediaType.parse("application/json"),
+              ByteString.encodeUtf8(
+                  "{\n    \"customProperty2\" : " + secondaryPropertyInt3 + "\n}"));
       String updateSecondaryPropertyResponseEXE2 =
-              api.updateSecondaryProperty(
-                      appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
+          api.updateSecondaryProperty(
+              appUrl, serviceName, entityName, facetName, entityID3, attachmentID3, bodyInt3);
 
       if (updateSecondaryPropertyResponseEXE1 == "Updated"
-              && updateSecondaryPropertyResponseEXE2 == "Updated") {
+          && updateSecondaryPropertyResponseEXE2 == "Updated") {
         System.out.println("Updated Secondary properties for attachment EXE");
         attachment3Updated = true;
       }
@@ -1741,7 +1740,7 @@ class IntegrationTest_SingleFacet {
       if (attachment1Updated && attachment2Updated && attachment3Updated) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
         Map<String, Object> attachmentMetadataPDF =
-                api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
+            api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID1);
         assertEquals("sample.pdf", attachmentMetadataPDF.get("fileName"));
         assertNull(attachmentMetadataPDF.get("customProperty3"));
         assertNull(attachmentMetadataPDF.get("customProperty4"));
@@ -1751,7 +1750,7 @@ class IntegrationTest_SingleFacet {
         assertNull(attachmentMetadataPDF.get("customProperty5"));
 
         Map<String, Object> attachmentMetadataTXT =
-                api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID2);
+            api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID2);
         assertEquals("sample.txt", attachmentMetadataTXT.get("fileName"));
         assertNull(attachmentMetadataTXT.get("customProperty3"));
         assertNull(attachmentMetadataTXT.get("customProperty4"));
@@ -1761,7 +1760,7 @@ class IntegrationTest_SingleFacet {
         assertNull(attachmentMetadataTXT.get("customProperty5"));
 
         Map<String, Object> attachmentMetadataEXE =
-                api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID3);
+            api.fetchMetadata(appUrl, serviceName, entityName, facetName, entityID3, attachmentID3);
         assertEquals("sample.exe", attachmentMetadataEXE.get("fileName"));
         assertNull(attachmentMetadataEXE.get("customProperty3"));
         assertNull(attachmentMetadataEXE.get("customProperty4"));
@@ -1772,7 +1771,7 @@ class IntegrationTest_SingleFacet {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println(
-                  "Rename & update unsuccessfull for invalid Secondary properties and successfull for valid property attachments");
+              "Rename & update unsuccessfull for invalid Secondary properties and successfull for valid property attachments");
         }
         String deleteEntityResponse = api.deleteEntity(appUrl, serviceName, entityName, entityID3);
         if (deleteEntityResponse != "Entity Deleted") {
@@ -1789,7 +1788,7 @@ class IntegrationTest_SingleFacet {
   @Order(25)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-            "Test (25): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (25): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1810,8 +1809,8 @@ class IntegrationTest_SingleFacet {
       postData1.put("modifiedBy", "test@test.com");
 
       List<String> createResponse1 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData1, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData1, file);
       if (createResponse1.get(0).equals("Attachment created")) {
         attachmentID1 = createResponse1.get(1);
         System.out.println("Attachment created");
@@ -1827,8 +1826,8 @@ class IntegrationTest_SingleFacet {
       postData2.put("modifiedBy", "test@test.com");
 
       List<String> createResponse2 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData2, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData2, file);
       if (createResponse2.get(0).equals("Attachment created")) {
         attachmentID2 = createResponse2.get(1);
         System.out.println("Attachment created");
@@ -1844,8 +1843,8 @@ class IntegrationTest_SingleFacet {
       postData3.put("modifiedBy", "test@test.com");
 
       List<String> createResponse3 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
       if (createResponse3.get(0).equals("Attachment created")) {
         attachmentID3 = createResponse3.get(1);
         System.out.println("Attachment created");
@@ -1861,8 +1860,8 @@ class IntegrationTest_SingleFacet {
       postData4.put("modifiedBy", "test@test.com");
 
       List<String> createResponse4 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
       if (createResponse4.get(0).equals("Attachment created")) {
         attachmentID4 = createResponse4.get(1);
         System.out.println("Attachment created");
@@ -1878,8 +1877,8 @@ class IntegrationTest_SingleFacet {
       postData5.put("modifiedBy", "test@test.com");
 
       List<String> createResponse5 =
-              api.createAttachment(
-                      appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
+          api.createAttachment(
+              appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData3, file);
       if (createResponse5.get(0).equals("Only 4 attachments allowed.")) {
         testStatus = true;
         attachmentID5 = createResponse5.get(1);
@@ -1892,7 +1891,7 @@ class IntegrationTest_SingleFacet {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID4);
         if (response.equals("Saved")) {
           String expectedJson =
-                  "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(check);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -1933,15 +1932,15 @@ class IntegrationTest_SingleFacet {
         postData.put("modifiedBy", "test@test.com");
 
         List<String> createResponse =
-                api.createAttachment(
-                        appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData, tempFile);
+            api.createAttachment(
+                appUrl, serviceName, entityName, facetName, entityID4, srvpath, postData, tempFile);
 
         String resultMessage = createResponse.get(0);
         System.out.println("Result message for attachment " + i + ": " + resultMessage);
 
         if (resultMessage.contains("Only 4 attachments allowed")) {
           String expectedJson =
-                  "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
