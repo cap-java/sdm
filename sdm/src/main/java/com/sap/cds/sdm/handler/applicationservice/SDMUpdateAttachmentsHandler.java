@@ -33,10 +33,13 @@ import org.ehcache.Cache;
 public class SDMUpdateAttachmentsHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final TokenHandler tokenHandler;
 
-  public SDMUpdateAttachmentsHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMUpdateAttachmentsHandler(
+      PersistenceService persistenceService, SDMService sdmService, TokenHandler tokenHandler) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.tokenHandler = tokenHandler;
   }
 
   @Before
@@ -180,7 +183,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       AuthenticationInfo authInfo = context.getAuthenticationInfo();
       JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
       String jwtToken = jwtTokenInfo.getToken();
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       fileNameInDB = sdmService.getObject(jwtToken, objectId, sdmCredentials);
     }
     Map<String, String> propertiesInDB;
@@ -231,7 +234,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         int responseCode =
             sdmService.updateAttachments(
                 context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
-                TokenHandler.getSDMCredentials(),
+                tokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties,
                 secondaryPropertiesWithInvalidDefinitions);

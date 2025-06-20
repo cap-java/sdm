@@ -37,10 +37,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final TokenHandler tokenHandler;
 
-  public SDMCreateAttachmentsHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMCreateAttachmentsHandler(
+      PersistenceService persistenceService, SDMService sdmService, TokenHandler tokenHandler) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.tokenHandler = tokenHandler;
   }
 
   @Before
@@ -175,7 +178,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String fileNameInSDM =
         sdmService.getObject(
             jwtToken,

@@ -40,14 +40,17 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private final SDMService sdmService;
   private final DocumentUploadService documentService;
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
+  private final TokenHandler tokenHandler;
 
   public SDMAttachmentsServiceHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
-      DocumentUploadService documentService) {
+      DocumentUploadService documentService,
+      TokenHandler tokenHandler) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.documentService = documentService;
+    this.tokenHandler = tokenHandler;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
@@ -99,7 +102,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String jwtToken = jwtTokenInfo.getToken();
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     try {
       sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
     } catch (Exception e) {
@@ -249,7 +252,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     setCmisDocumentProperties(
         cmisDocument, data, attachmentIds, folderId, repositoryId, upIdKey, contentLen);
 
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
       createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
@@ -308,7 +311,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private void finalizeContext(
       AttachmentCreateEventContext eventContext, CmisDocument cmisDocument) {
     String subdomain =
-        TokenHandler.getSubdomainFromToken(
+        tokenHandler.getSubdomainFromToken(
             eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken());
     eventContext.setContentId(
         cmisDocument.getObjectId()

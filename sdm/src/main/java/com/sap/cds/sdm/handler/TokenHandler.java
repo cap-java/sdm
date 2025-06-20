@@ -55,9 +55,7 @@ public class TokenHandler {
 
   private static final ObjectMapper mapper = new ObjectMapper();
 
-  private TokenHandler() {
-    throw new IllegalStateException("TokenHandler class");
-  }
+  private TokenHandler() {}
 
   public static byte[] toBytes(String str) {
     return requireNonNull(str).getBytes(StandardCharsets.UTF_8);
@@ -71,8 +69,16 @@ public class TokenHandler {
   private static final String SDM_URL = "uri";
   private static final String CLIENT_ID = "clientid";
   private static final String CLIENT_SECRET = "clientsecret";
+  private static TokenHandler tokenHandlerInstance = new TokenHandler();
 
-  public static SDMCredentials getSDMCredentials() {
+  public static TokenHandler getInstance() {
+    if (tokenHandlerInstance == null) {
+      tokenHandlerInstance = new TokenHandler();
+    }
+    return tokenHandlerInstance;
+  }
+
+  public SDMCredentials getSDMCredentials() {
     Map<String, Object> uaaCredentials = getUaaCredentials();
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -83,7 +89,7 @@ public class TokenHandler {
     return sdmCredentials;
   }
 
-  public static Map<String, Object> getUaaCredentials() {
+  public Map<String, Object> getUaaCredentials() {
     List<ServiceBinding> allServiceBindings =
         DefaultServiceBindingAccessor.getInstance().getServiceBindings();
     // filter for a specific binding
@@ -96,7 +102,7 @@ public class TokenHandler {
     return sdmBinding.getCredentials();
   }
 
-  public static String getUserTokenFromAuthorities(
+  public String getUserTokenFromAuthorities(
       String email, String subdomain, SDMCredentials sdmCredentials) throws IOException {
     // Fetch the token from Cache if present use it else generate and store
     String cachedToken = null;
@@ -149,7 +155,7 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  public static String getDITokenUsingAuthorities(
+  public String getDITokenUsingAuthorities(
       SDMCredentials sdmCredentials, String email, String subdomain) throws IOException {
     TokenCacheKey cacheKey = new TokenCacheKey();
     cacheKey.setKey(email + "_" + subdomain);
@@ -160,7 +166,7 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
+  public String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
     JsonObject payloadObj = getTokenFields(token);
     String email = payloadObj.get("email").getAsString();
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
@@ -176,13 +182,13 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  public static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
+  public Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
     Map<String, String> parameters = new HashMap<>();
     parameters.put("assertion", token);
     return parameters;
   }
 
-  public static String generateDITokenFromTokenExchange(
+  public String generateDITokenFromTokenExchange(
       String token, SDMCredentials sdmCredentials, JsonObject payloadObj)
       throws OAuth2ServiceException {
     String cachedToken = null;
@@ -245,7 +251,7 @@ public class TokenHandler {
     return cachedToken;
   }
 
-  private static void safeClose(CloseableHttpClient httpClient) {
+  private void safeClose(CloseableHttpClient httpClient) {
     if (httpClient != null) {
       try {
         httpClient.close();
@@ -255,7 +261,7 @@ public class TokenHandler {
     }
   }
 
-  public static String extractResponseBodyAsString(HttpResponse response) throws IOException {
+  public String extractResponseBodyAsString(HttpResponse response) throws IOException {
     // Ensure that InputStream and BufferedReader are automatically closed
     try (InputStream inputStream = response.getEntity().getContent();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
@@ -263,7 +269,7 @@ public class TokenHandler {
     }
   }
 
-  public static JsonObject getTokenFields(String token) {
+  public JsonObject getTokenFields(String token) {
     String[] chunks = token.split("\\.");
     java.util.Base64.Decoder decoder = java.util.Base64.getUrlDecoder();
     String payload = new String(decoder.decode(chunks[1]));
@@ -271,7 +277,7 @@ public class TokenHandler {
     return jelement.getAsJsonObject();
   }
 
-  public static HttpClient getHttpClient(
+  public HttpClient getHttpClient(
       ServiceBinding binding,
       CdsProperties.ConnectionPool connectionPoolConfig,
       String subdomain,
@@ -280,7 +286,7 @@ public class TokenHandler {
     if (binding != null && !binding.getCredentials().isEmpty()) {
       uaaCredentials = binding.getCredentials();
     } else {
-      uaaCredentials = TokenHandler.getUaaCredentials();
+      uaaCredentials = TokenHandler.getInstance().getUaaCredentials();
     }
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
     ClientCredentials clientCredentials =
@@ -329,14 +335,14 @@ public class TokenHandler {
     return factory.createHttpClient(destination);
   }
 
-  public static String getSubdomainFromToken(String token) {
-    JsonObject payloadObj = TokenHandler.getTokenFields(token);
+  public String getSubdomainFromToken(String token) {
+    JsonObject payloadObj = TokenHandler.getInstance().getTokenFields(token);
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
     return tenantDetails.get("zdn").getAsString();
   }
 
-  public static String getGrantType(String token) {
-    JsonObject payloadObj = TokenHandler.getTokenFields(token);
+  public String getGrantType(String token) {
+    JsonObject payloadObj = TokenHandler.getInstance().getTokenFields(token);
     String grantType = payloadObj.get("grant_type").getAsString();
     if (grantType.equalsIgnoreCase("client_credentials")) {
       grantType = TECHNICAL_USER_FLOW;
@@ -346,7 +352,7 @@ public class TokenHandler {
     return grantType;
   }
 
-  public static String getTechnicalUserAccessToken(String subdomain, SDMCredentials sdmCredentials)
+  public String getTechnicalUserAccessToken(String subdomain, SDMCredentials sdmCredentials)
       throws IOException {
     String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
     if (subdomain != null && !subdomain.isEmpty()) {

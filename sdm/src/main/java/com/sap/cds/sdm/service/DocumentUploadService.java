@@ -30,13 +30,16 @@ public class DocumentUploadService {
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
+  private final TokenHandler tokenHandler;
 
   public DocumentUploadService(
-      ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     logger.info("DocumentUploadService is instantiated");
-
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   /*
@@ -111,10 +114,10 @@ public class DocumentUploadService {
     request.setEntity(entity);
     headers.forEach(request::addHeader);
 
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
+    String subdomain = tokenHandler.getSubdomainFromToken(jwtToken);
+    String grantType = tokenHandler.getGrantType(jwtToken);
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
 
@@ -143,10 +146,10 @@ public class DocumentUploadService {
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
 
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
+    String subdomain = tokenHandler.getSubdomainFromToken(jwtToken);
+    String grantType = tokenHandler.getGrantType(jwtToken);
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
@@ -164,10 +167,10 @@ public class DocumentUploadService {
     }
 
     // Prepare Multipart Request
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
+    String subdomain = tokenHandler.getSubdomainFromToken(jwtToken);
+    String grantType = tokenHandler.getGrantType(jwtToken);
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
