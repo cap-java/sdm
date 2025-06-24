@@ -61,13 +61,13 @@ class IntegrationTest_SingleFacet {
       clientId = credentialsProperties.getProperty("clientIDMT");
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
-      if (tenant.equals("SDC")) {
+      if (tenant.equals("TENANT1")) {
         System.out.println("Running integration tests | Multitenant Scenario | SDM DEV Consumer");
-        authUrl = credentialsProperties.getProperty("authUrlMTSDC");
-      } else if (tenant.equals("GWC")) {
+        authUrl = credentialsProperties.getProperty("authUrlMT1");
+      } else if (tenant.equals("TENANT2")) {
         System.out.println(
             "Running integration tests | Multitenant Scenario | Googleworkspace Consumer");
-        authUrl = credentialsProperties.getProperty("authUrlMTGWC");
+        authUrl = credentialsProperties.getProperty("authUrlMT2");
       } else {
         throw new IllegalArgumentException("Invalid tenant specified: " + tenant);
       }
