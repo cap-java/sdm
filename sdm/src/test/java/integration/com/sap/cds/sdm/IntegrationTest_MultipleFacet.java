@@ -33,8 +33,8 @@ class IntegrationTest_MultipleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String username2;
-  private static String password2;
+  private static String noSDMRoleUsername;
+  private static String noSDMRoleUserPassword;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String entityName2 = "author";
@@ -54,8 +54,8 @@ class IntegrationTest_MultipleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    username2 = credentialsProperties.getProperty("noSDMRoleUsername");
-    password2 = credentialsProperties.getProperty("noSDMRoleUserPassword");
+    noSDMRoleUsername = credentialsProperties.getProperty("noSDMRoleUsername");
+    noSDMRoleUserPassword = credentialsProperties.getProperty("noSDMRoleUserPassword");
     integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
@@ -100,9 +100,9 @@ class IntegrationTest_MultipleFacet {
             .url(
                 authUrl
                     + "/oauth/token?grant_type=password&username="
-                    + username2
+                    + noSDMRoleUsername
                     + "&password="
-                    + password2)
+                    + noSDMRoleUserPassword)
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();

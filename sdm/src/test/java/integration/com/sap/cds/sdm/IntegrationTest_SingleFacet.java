@@ -28,8 +28,8 @@ class IntegrationTest_SingleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String username2;
-  private static String password2;
+  private static String noSDMRoleUsername;
+  private static String noSDMRoleUserPassword;
   private static String serviceName = "UserService";
   private static String entityName = "Notebooks";
   private static String entityName2 = "writer";
@@ -54,8 +54,8 @@ class IntegrationTest_SingleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    username2 = credentialsProperties.getProperty("username2");
-    password2 = credentialsProperties.getProperty("password2");
+    noSDMRoleUsername = credentialsProperties.getProperty("noSDMRoleUsername");
+    noSDMRoleUserPassword = credentialsProperties.getProperty("noSDMRoleUserPassword");
     integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
@@ -100,9 +100,9 @@ class IntegrationTest_SingleFacet {
             .url(
                 authUrl
                     + "/oauth/token?grant_type=password&username="
-                    + username2
+                    + noSDMRoleUsername
                     + "&password="
-                    + password2)
+                    + noSDMRoleUserPassword)
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();
