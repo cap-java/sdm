@@ -54,8 +54,8 @@ class IntegrationTest_MultipleFacet {
     authUrl = credentialsProperties.getProperty("authUrl");
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    username2 = credentialsProperties.getProperty("username2");
-    password2 = credentialsProperties.getProperty("password2");
+    username2 = credentialsProperties.getProperty("noSDMRoleUsername");
+    password2 = credentialsProperties.getProperty("noSDMRoleUserPassword");
     integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
