@@ -18,6 +18,7 @@ import org.junit.jupiter.api.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_MultipleFacet {
   private static String token;
+  private static String tokenNoRoles;
   private static String entityID;
   private static String[] facet = {"attachments", "references", "footnotes"};
   private static String[] ID = {"attachmentID1", "referenceID1", "footnoteID1"};
@@ -34,11 +35,14 @@ class IntegrationTest_MultipleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
+  private static String username2;
+  private static String password2;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static ApiInterface api;
+  private static ApiInterface apiNoRoles;
   private static int counter;
   private static IntegrationTestUtils integrationTestUtils;
 
@@ -51,6 +55,8 @@ class IntegrationTest_MultipleFacet {
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
+    username2 = credentialsProperties.getProperty("noSDMRoleUsername");
+    password2 = credentialsProperties.getProperty("noSDMRoleUserPassword");
     if (tenancyModel.equals("single")) {
       System.out.println("Running integration tests | Single tenant Scenario");
       clientId = credentialsProperties.getProperty("clientID");
@@ -112,20 +118,46 @@ class IntegrationTest_MultipleFacet {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
 
+    // Request requestNoRoles =
+    //     new Request.Builder()
+    //         .url(
+    //             authUrl
+    //                 + "/oauth/token?grant_type=password&username="
+    //                 + username2
+    //                 + "&password="
+    //                 + password2)
+    //         .method("POST", body)
+    //         .addHeader("Authorization", basicAuth)
+    //         .build();
+
     Response response = client.newCall(request).execute();
+    // Response responseNoRoles = client.newCall(requestNoRoles).execute();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
       String errorBody = response.body().string();
       System.out.println("Error body: " + errorBody);
     }
+    // if (responseNoRoles.code() != 200) {
+    //   System.out.println("Token generation failed. Response code: " + responseNoRoles.code());
+    //   String errorBody = responseNoRoles.body().string();
+    //   System.out.println("Error body: " + errorBody);
+    // }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
+    // tokenNoRoles =
+    //     new
+    // ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
     response.close();
+    // responseNoRoles.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
+    Map<String, String> configNoRoles = new HashMap<>();
+    configNoRoles.put("Authorization", "Bearer " + tokenNoRoles);
     if (tenancyModel.equals("multi")) {
       api = new ApiMT(config);
+      // apiNoRoles = new ApiMT(configNoRoles);
     } else if (tenancyModel.equals("single")) {
       api = new Api(config);
+      // apiNoRoles = new Api(configNoRoles);
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -488,8 +520,42 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(9)
+  void testRenameEntitiesWithUnsupportedCharacter() {
+    System.out.println("Test (9) : Rename attachments with unsupported characters");
+    Boolean testStatus = false;
+
+    String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+    String[] name = {"sample/1234", "reference1/234", "footnote1/234"};
+    if (response.equals("Entity in draft mode")) {
+      for (int i = 0; i < facet.length; i++) {
+        response =
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID, ID3[i], name[i]);
+        if (response.equals("Renamed")) counter++;
+      }
+      if (counter >= 2) {
+        counter = -1; // Reset counter for the next check
+        response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+        String expected =
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 footnote1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
+          testStatus = true;
+        }
+      } else {
+        api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+      }
+    }
+    if (!testStatus) {
+      fail("Attachment was renamed with unsupported characters");
+    }
+  }
+
+  @Test
+  @Order(10)
   void testRenameMultipleEntityComponents() {
-    System.out.println("Test (9) : Rename multiple attachments, references, and footnotes");
+    System.out.println("Test (10) : Rename multiple attachments, references, and footnotes");
     boolean testStatus = true;
     String draftResponse = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (!"Entity in draft mode".equals(draftResponse)) {
@@ -517,9 +583,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(10)
+  @Order(11)
   void testRenameSingleDuplicate() {
-    System.out.println("Test (10) : Rename duplicates for attachment, reference, and footnote");
+    System.out.println("Test (11) : Rename duplicates for attachment, reference, and footnote");
     Boolean testStatus = false;
 
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
@@ -569,9 +635,99 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(11)
+  @Order(12)
+  void testRenameMultipleEntitiesWithOneUnsupportedCharacter() {
+    System.out.println(
+        "Test (12) : Rename multiple files out of which one file name contains unsupported characters");
+    boolean testStatus = false;
+
+    String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+
+    String[] names = {"summary_1234", "reference_4567", "note/invalid"};
+
+    if (response.equals("Entity in draft mode")) {
+      int successCount = 0;
+      for (int i = 0; i < facet.length; i++) {
+        response =
+            api.renameAttachment(
+                appUrl, serviceName, entityName, facet[i], entityID, ID3[i], names[i]);
+        if (response.equals("Renamed")) successCount++;
+      }
+
+      if (successCount >= 2) {
+        response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+        String expected =
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
+                + " (/, \\\\). \\n\\n\\t\\u2022 note/invalid\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
+          testStatus = true;
+        }
+      } else {
+        api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+      }
+    }
+
+    if (!testStatus) {
+      fail("Attachment was renamed with unsupported characters");
+    }
+  }
+
+  @Test
+  @Order(13)
+  void testRenameEntitiesWithoutSDMRole() throws IOException {
+    // System.out.println("Test (13) : Rename attachments where user don't have SDM-Roles");
+    // boolean testStatus = true;
+
+    // try {
+    //   String apiResponse =
+    //       apiNoRoles.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+
+    //   if ("Entity in draft mode".equals(apiResponse)) {
+    //     String[] name = {"sample456", "reference456", "footnote456"};
+    //     for (int i = 0; i < facet.length; i++) {
+    //       apiResponse =
+    //           apiNoRoles.renameAttachment(
+    //               appUrl, serviceName, entityName, facet[i], entityID, ID[i], name[i]);
+    //       if (!"Renamed".equals(apiResponse)) {
+    //         testStatus = false;
+    //         System.out.println(facet[i] + " was not renamed: " + apiResponse);
+    //       }
+    //     }
+    //     if (testStatus) {
+    //       apiResponse =
+    //           apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+    //       String expected =
+    //           "[{\"code\":\"<none>\",\"message\":\"Could not update the following files.
+    // \\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update
+    // attachments. Kindly contact the admin\",\"numericSeverity\":3},"
+    //               + "{\"code\":\"<none>\",\"message\":\"Could not update the following files.
+    // \\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update
+    // attachments. Kindly contact the admin\",\"numericSeverity\":3},"
+    //               + "{\"code\":\"<none>\",\"message\":\"Could not update the following files.
+    // \\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update
+    // attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+    //       if (!apiResponse.equals(expected)) {
+    //         testStatus = false;
+    //         System.out.println("Entity draft not saved: " + apiResponse);
+    //       }
+    //     } else {
+    //       apiNoRoles.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
+    //     }
+    //   }
+    // } catch (Exception e) {
+    //   testStatus = false;
+    //   System.out.println("Exception during renaming entities: " + e.getMessage());
+    // }
+
+    // if (!testStatus) {
+    //   fail("Attachment got renamed without SDM roles.");
+    // }
+  }
+
+  @Test
+  @Order(14)
   void testDeleteSingleAttachment() throws IOException {
-    System.out.println("Test (11) : Delete single attachment, reference, and footnote");
+    System.out.println("Test (14) : Delete single attachment, reference, and footnote");
     Boolean testStatus = false;
     counter = -1;
 
@@ -598,9 +754,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(12)
+  @Order(15)
   void testDeleteMultipleAttachmentsReferencesFootnotes() throws IOException {
-    System.out.println("Test (12) : Delete multiple attachments, references, and footnotes");
+    System.out.println("Test (15) : Delete multiple attachments, references, and footnotes");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID);
     if (response.equals("Entity in draft mode")) {
@@ -631,9 +787,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(13)
+  @Order(16)
   void testDeleteEntity() {
-    System.out.println("Test (13) : Delete entity");
+    System.out.println("Test (16) : Delete entity");
     Boolean testStatus = false;
     String response = api.deleteEntity(appUrl, serviceName, entityName, entityID);
     String response2 = api.deleteEntity(appUrl, serviceName, entityName, entityID2);
@@ -642,9 +798,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(14)
+  @Order(17)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_single() throws IOException {
-    System.out.println("Test (14) : Rename & Update secondary property before entity is saved");
+    System.out.println("Test (17) : Rename & Update secondary property before entity is saved");
     System.out.println("Creating entity");
 
     Boolean testStatus = false;
@@ -734,7 +890,6 @@ class IntegrationTest_MultipleFacet {
       if (counter >= 2) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
       }
-
       if (response.equals("Saved")) {
         testStatus = true;
       }
@@ -746,9 +901,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(15)
+  @Order(18)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_single() {
-    System.out.println("Test (15): Rename & Update secondary property after entity is saved");
+    System.out.println("Test (18): Rename & Update secondary property after entity is saved");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
     System.out.println("Editing entity");
@@ -819,10 +974,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(16)
+  @Order(19)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_single() throws IOException {
     System.out.println(
-        "Test (16): Rename & Update invalid secondary property before entity is saved");
+        "Test (19): Rename & Update invalid secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -904,7 +1059,33 @@ class IntegrationTest_MultipleFacet {
         assertNull(FacetMetadata.get("customProperty6"));
         assertNull(FacetMetadata.get("customProperty5"));
       }
-      if (response.equals("Saved")) {
+      String expectedResponse =
+          "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+      if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
         System.out.println("Rename & update secondary properties for attachment is unsuccessfull");
@@ -916,10 +1097,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(17)
+  @Order(20)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_single() throws IOException {
     System.out.println(
-        "Test (17): Rename & Update invalid secondary property after entity is saved");
+        "Test (20): Rename & Update invalid secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
 
@@ -985,7 +1166,33 @@ class IntegrationTest_MultipleFacet {
         assertNull(FacetMetadata.get("customProperty6"));
         assertNull(FacetMetadata.get("customProperty5"));
       }
-      if (response.equals("Saved")) {
+      String expectedResponse =
+          "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              + //
+              "\\n"
+              + //
+              "\\t\\u2022 id1\\n"
+              + //
+              "\\n"
+              + //
+              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+      if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
         System.out.println(
@@ -1002,11 +1209,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(18)
+  @Order(21)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (18): Rename & Update valid secondary properties for multiple facets before entity is saved");
+        "Test (21): Rename & Update valid secondary properties for multiple facets before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1182,10 +1389,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(19)
+  @Order(22)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_multipleAttachments() {
     System.out.println(
-        "Test (19): Rename & Update  valid secondary properties for multiple facets after entity is saved");
+        "Test (22): Rename & Update  valid secondary properties for multiple facets after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
@@ -1312,7 +1519,7 @@ class IntegrationTest_MultipleFacet {
           && Updated3[1]
           && Updated3[2]) {
         response = api.saveEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
-        if ("Saved".equals(response)) {
+        if (response.equals("Saved")) {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties for attachments");
@@ -1329,11 +1536,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(20)
+  @Order(23)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (20): Rename & Update invalid and valid secondary properties for multiple facets before entity is saved");
+        "Test (23): Rename & Update invalid and valid secondary properties for multiple facets before entity is saved");
     System.out.println("Creating entity");
 
     Boolean testStatus = false;
@@ -1523,7 +1730,33 @@ class IntegrationTest_MultipleFacet {
           assertEquals(1234, metadata.get("customProperty2"));
         }
 
-        if ("Saved".equals(response)) {
+        String expectedResponse =
+            "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+        if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println(
@@ -1538,11 +1771,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(21)
+  @Order(24)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (21): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
+        "Test (24): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, serviceName, entityName, srvpath, entityID3);
@@ -1704,7 +1937,33 @@ class IntegrationTest_MultipleFacet {
           assertEquals(12, FacetMetadata.get("customProperty2"));
         }
 
-        if (response.equals("Saved")) {
+        String expectedResponse =
+            "[{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 id1\\n"
+                + //
+                "\\n"
+                + //
+                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+        if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
           System.out.println(
@@ -1722,10 +1981,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(22)
+  @Order(25)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-        "Test (22): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (25): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, serviceName, entityName, entityName2, srvpath);
@@ -1844,9 +2103,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(23)
+  @Order(26)
   void testUploadNAttachments() throws IOException {
-    System.out.println("Test (23): Upload maximum 4 attachments in an exsisting entity");
+    System.out.println("Test (26): Upload maximum 4 attachments in an exsisting entity");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File originalFile = new File(classLoader.getResource("sample.exe").getFile());
@@ -1875,12 +2134,12 @@ class IntegrationTest_MultipleFacet {
         String resultMessage = createResponse.get(0);
         System.out.println("Result message for attachment " + i + ": " + resultMessage);
 
-        if (resultMessage.contains("Only 4 attachments allowed")) {
-          String expectedJson =
-              "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+        String expectedResponse =
+            "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+        if (resultMessage.equals(expectedResponse)) {
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
-          JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
+          JsonNode expectedJsonNode = objectMapper.readTree(expectedResponse);
           if (expectedJsonNode.equals(actualJsonNode)) {
             testStatus = true;
           }

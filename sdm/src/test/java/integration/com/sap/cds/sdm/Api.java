@@ -139,6 +139,10 @@ public class Api implements ApiInterface {
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
             return (draftResponseBodyString);
           }
+          String sapMessages = draftResponse.header("sap-messages");
+          if (sapMessages != null && !sapMessages.isEmpty()) {
+            return sapMessages;
+          }
           return "Saved";
         } catch (IOException e) {
           System.out.println("Could not save entity : " + e);
@@ -387,11 +391,11 @@ public class Api implements ApiInterface {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
         System.out.println(
-            "Read Attachnent failed in the"
+            "Read Attachment failed in the"
                 + facetName
                 + " section. Error :"
                 + response.body().string());
-        throw new IOException("Read Attachnent failed in the" + facetName + " section");
+        throw new IOException("Read Attachment failed in the" + facetName + " section");
       }
       return "OK";
     } catch (IOException e) {

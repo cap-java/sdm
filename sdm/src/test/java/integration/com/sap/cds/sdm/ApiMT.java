@@ -134,6 +134,11 @@ public class ApiMT implements ApiInterface {
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
             return (draftResponseBodyString);
           }
+          String sapMessages = draftResponse.header("sap-messages");
+          if (sapMessages != null && !sapMessages.isEmpty()) {
+            System.out.println("Save entity failed. SAP Messages: " + sapMessages);
+            return sapMessages;
+          }
           return "Saved";
         } catch (IOException e) {
           System.out.println("Could not save entity : " + e);
@@ -328,10 +333,10 @@ public class ApiMT implements ApiInterface {
         createResponse.add(ID);
         return createResponse;
       } catch (IOException e) {
-        System.out.println("Attachment was not created in section: " + facetName + " : " + e);
+        System.out.println("Attachment was not created in section1: " + facetName + " : " + e);
       }
     } catch (IOException e) {
-      System.out.println("Attachment was not created in section: " + facetName + " : " + e);
+      System.out.println("Attachment was not created in section2: " + facetName + " : " + e);
     }
     List<String> createResponse = new ArrayList<>();
     createResponse.add("Attachment was not created in section: " + facetName);
@@ -374,7 +379,7 @@ public class ApiMT implements ApiInterface {
                 + facetName
                 + " section. Error :"
                 + response.body().string());
-        throw new IOException("Read Attachnent failed in the" + facetName + " section");
+        throw new IOException("Read Attachment failed in the" + facetName + " section");
       }
       return "OK";
     } catch (IOException e) {
