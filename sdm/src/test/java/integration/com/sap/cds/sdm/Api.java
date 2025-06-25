@@ -11,15 +11,17 @@ public class Api implements ApiInterface {
   private final OkHttpClient httpClient;
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
+  private final String serviceName;
 
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
     this.httpClient = new OkHttpClient();
     this.token = this.config.get("Authorization");
+    this.serviceName = this.config.get("serviceName");
   }
 
   public String createEntityDraft(
-      String appUrl, String serviceName, String entityName, String entityName2, String srvpath) {
+      String appUrl, String entityName, String entityName2, String srvpath) {
     MediaType mediaType = MediaType.parse("application/json");
 
     // Creating the Entity (draft)
@@ -55,8 +57,7 @@ public class Api implements ApiInterface {
     return ("Could not create entity");
   }
 
-  public String editEntityDraft(
-      String appUrl, String serviceName, String entityName, String srvpath, String entityID) {
+  public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     MediaType mediaType = MediaType.parse("application/json");
     Request request =
         new Request.Builder()
@@ -88,8 +89,7 @@ public class Api implements ApiInterface {
     return "Could not edit entity";
   }
 
-  public String saveEntityDraft(
-      String appUrl, String serviceName, String entityName, String srvpath, String entityID) {
+  public String saveEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     Request request =
         new Request.Builder()
             .url(
@@ -155,8 +155,7 @@ public class Api implements ApiInterface {
     return "Could not save entity";
   }
 
-  public String deleteEntity(
-      String appUrl, String serviceName, String entityName, String entityID) {
+  public String deleteEntity(String appUrl, String entityName, String entityID) {
     Request request =
         new Request.Builder()
             .url(
@@ -185,7 +184,7 @@ public class Api implements ApiInterface {
     return ("Could not delete entity");
   }
 
-  public String checkEntity(String appUrl, String serviceName, String entityName, String entityID) {
+  public String checkEntity(String appUrl, String entityName, String entityID) {
     Request request =
         new Request.Builder()
             .url(
@@ -216,7 +215,6 @@ public class Api implements ApiInterface {
 
   public List<String> createAttachment(
       String appUrl,
-      String serviceName,
       String entityName,
       String facetName,
       String entityID,
@@ -358,12 +356,7 @@ public class Api implements ApiInterface {
   }
 
   public String readAttachment(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID)
+      String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
     Request request =
         new Request.Builder()
@@ -405,12 +398,7 @@ public class Api implements ApiInterface {
   }
 
   public String readAttachmentDraft(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID)
+      String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
     Request request =
         new Request.Builder()
@@ -448,12 +436,7 @@ public class Api implements ApiInterface {
   }
 
   public String deleteAttachment(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID) {
+      String appUrl, String entityName, String facetName, String entityID, String ID) {
     Request request =
         new Request.Builder()
             .url(
@@ -491,13 +474,7 @@ public class Api implements ApiInterface {
   }
 
   public String renameAttachment(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      String name) {
+      String appUrl, String entityName, String facetName, String entityID, String ID, String name) {
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
         RequestBody.create(
@@ -541,7 +518,6 @@ public class Api implements ApiInterface {
 
   public String updateSecondaryProperty(
       String appUrl,
-      String serviceName,
       String entityName,
       String facetName,
       String entityID,
@@ -584,7 +560,6 @@ public class Api implements ApiInterface {
 
   public String updateInvalidSecondaryProperty(
       String appUrl,
-      String serviceName,
       String entityName,
       String facetName,
       String entityID,
@@ -628,12 +603,7 @@ public class Api implements ApiInterface {
   }
 
   public Map<String, Object> fetchMetadata(
-      String appUrl,
-      String serviceName,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID)
+      String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
     // Construct the URL for fetching attachment metadata
     String url =
