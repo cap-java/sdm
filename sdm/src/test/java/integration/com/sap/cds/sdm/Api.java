@@ -1,8 +1,7 @@
 package integration.com.sap.cds.sdm;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import okhttp3.*;
 import okio.ByteString;
@@ -139,6 +138,10 @@ public class Api {
             String draftResponseBodyString = draftResponse.body().string();
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
             return (draftResponseBodyString);
+          }
+          String sapMessages = draftResponse.header("sap-messages");
+          if (sapMessages != null && !sapMessages.isEmpty()) {
+            return sapMessages;
           }
           return "Saved";
         } catch (IOException e) {
@@ -588,7 +591,7 @@ public class Api {
       String ID,
       String invalidSecondaryProperty) {
     MediaType mediaType = MediaType.parse("application/json");
-    String jsonPayload = "{\n    \"abc___myId1\": \"" + invalidSecondaryProperty + "\"\n}";
+    String jsonPayload = "{\n    \"customProperty3\": \"" + invalidSecondaryProperty + "\"\n}";
     RequestBody body = RequestBody.create(mediaType, ByteString.encodeUtf8(jsonPayload));
     Request request =
         new Request.Builder()
