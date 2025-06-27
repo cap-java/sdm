@@ -176,6 +176,8 @@ jobs:
           clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
+          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
           # Ensure all required variables are set
           if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
           if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
@@ -183,6 +185,8 @@ jobs:
           if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
           if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
           if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "Error: noSDMRoleUserPassword is not set"; exit 1; fi
           # Function to partially mask sensitive information for logging
           mask() {
             local value="$1"
@@ -200,10 +204,12 @@ jobs:
           clientSecret=$clientSecret
           username=$username
           password=$password
+          noSDMRoleUsername=$noSDMRoleUsername
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
     
       
 
