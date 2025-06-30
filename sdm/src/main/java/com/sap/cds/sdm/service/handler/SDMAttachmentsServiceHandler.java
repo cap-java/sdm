@@ -238,12 +238,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
 
     CmisDocument cmisDocument = new CmisDocument();
-    String jwtToken =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
+
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
-    String folderId = sdmService.getFolderId(result, persistenceService, folderName, jwtToken);
+    String folderId = sdmService.getFolderId(result, persistenceService, folderName);
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     setCmisDocumentProperties(
@@ -252,7 +251,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+      createResult = documentService.createDocument(cmisDocument, sdmCredentials);
       logger.info("Synchronous Response from documentService: {}", createResult);
       logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {

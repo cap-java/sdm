@@ -56,7 +56,7 @@ public class SDMServiceImpl implements SDMService {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -150,7 +150,7 @@ public class SDMServiceImpl implements SDMService {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
     List<String> secondaryTypes;
@@ -258,7 +258,7 @@ public class SDMServiceImpl implements SDMService {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -292,7 +292,7 @@ public class SDMServiceImpl implements SDMService {
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -323,7 +323,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String folderName, String token) {
+      Result result, PersistenceService persistenceService, String folderName) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
@@ -347,9 +347,9 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
 
     if (folderId == null) {
-      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+      folderId = getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials);
       if (folderId == null) {
-        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, token);
+        folderId = createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");
@@ -360,12 +360,12 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderIdByPath(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, String token) {
-    String subdomain = TokenHandler.getSubdomainFromToken(token);
-    String grantType = TokenHandler.getGrantType(token);
-    logger.info("This is a :" + grantType + " flow");
+      String parentId, String repositoryId, SDMCredentials sdmCredentials) {
+    //    String subdomain = TokenHandler.getSubdomainFromToken(token);
+    //    String grantType = TokenHandler.getGrantType(token);
+    //    logger.info("This is a :" + grantType + " flow");
     String folderId = null;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, "TOKEN_EXCHANGE");
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -393,12 +393,11 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String createFolder(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken) {
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
-    logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+  public String createFolder(String parentId, String repositoryId, SDMCredentials sdmCredentials) {
+    //    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    //    String grantType = TokenHandler.getGrantType(jwtToken);
+    //    logger.info("This is a :" + grantType + " flow");
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, "TOKEN_EXCHANGE");
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -461,8 +460,7 @@ public class SDMServiceImpl implements SDMService {
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials, String subdomain) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient =
-        TokenHandler.getHttpClient(
-            binding, connectionPool, subdomain, "TECHNICAL_CREDENTIALS_FLOW");
+        TokenHandler.getHttpClient(binding, connectionPool, null, "TECHNICAL_CREDENTIALS_FLOW");
 
     String getRepoInfoUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=repositoryInfo";
@@ -531,7 +529,7 @@ public class SDMServiceImpl implements SDMService {
       String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
       String grantType = TokenHandler.getGrantType(jwtToken);
       logger.info("This is a :" + grantType + " flow");
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       String sdmUrl =
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
@@ -579,7 +577,7 @@ public class SDMServiceImpl implements SDMService {
     if (validSecondaryProperties == null) {
       validSecondaryProperties = new ArrayList<>();
       Iterator<String> iterator = secondaryTypes.iterator();
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       while (iterator.hasNext()) {
         String value = iterator.next();
         String sdmUrl =

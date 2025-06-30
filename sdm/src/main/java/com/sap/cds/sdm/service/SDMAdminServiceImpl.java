@@ -51,6 +51,8 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     onboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(onboardingReq)) {
       String responseString = EntityUtils.toString(response.getEntity());
+      System.out.println(
+          "ON RES " + responseString + ":" + response.getStatusLine().getStatusCode());
       JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
       String repositoryId = jsonObject.get("id").getAsString();
       return String.format(

@@ -15,17 +15,14 @@ public interface SDMService {
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException;
 
-  public String createFolder(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken)
+  public String createFolder(String parentId, String repositoryId, SDMCredentials sdmCredentials)
       throws IOException;
 
-  public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, String jwtToken)
+  public String getFolderId(Result result, PersistenceService persistenceService, String upID)
       throws IOException;
 
   public String getFolderIdByPath(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, String jwtToken)
-      throws IOException;
+      String parentId, String repositoryId, SDMCredentials sdmCredentials) throws IOException;
 
   public String checkRepositoryType(String jwtToken, String repositoryId) throws IOException;
 
