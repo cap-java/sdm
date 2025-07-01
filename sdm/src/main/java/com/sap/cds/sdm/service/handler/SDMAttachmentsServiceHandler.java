@@ -58,6 +58,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             ? context.getParameterInfo().getHeaders().get("content-length")
             : null,
         System.currentTimeMillis());
+    System.out.println("IAS flow check...");
     // validateRepository(context);
     processEntities(context);
   }
