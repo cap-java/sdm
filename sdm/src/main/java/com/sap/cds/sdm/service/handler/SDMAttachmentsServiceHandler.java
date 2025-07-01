@@ -143,11 +143,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void validateRepository(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
-    JwtTokenAuthenticationInfo jwtTokenInfo =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
+    String repocheck = sdmService.checkRepositoryType(repositoryId);
     if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }

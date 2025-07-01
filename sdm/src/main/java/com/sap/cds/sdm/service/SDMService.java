@@ -24,10 +24,9 @@ public interface SDMService {
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials) throws IOException;
 
-  public String checkRepositoryType(String jwtToken, String repositoryId) throws IOException;
+  public String checkRepositoryType(String repositoryId) throws IOException;
 
-  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials, String subdomain)
-      throws IOException;
+  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) throws IOException;
 
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 

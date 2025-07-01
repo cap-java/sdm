@@ -1,10 +1,8 @@
 package com.sap.cds.sdm.service;
 
-import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
-import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -425,39 +423,39 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String checkRepositoryType(String jwttoken, String repositoryId) {
-    RepoKey repoKey = new RepoKey();
-    JsonObject payloadObj = TokenHandler.getTokenFields(jwttoken);
-    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
-    String subdomain = tenantDetails.get("zdn").getAsString();
-    repoKey.setSubdomain(subdomain);
-    repoKey.setRepoId(repositoryId);
-    String type = CacheConfig.getVersionedRepoCache().get(repoKey);
+  public String checkRepositoryType(String repositoryId) {
+    //    RepoKey repoKey = new RepoKey();
+    //    JsonObject payloadObj = TokenHandler.getTokenFields(jwttoken);
+    //    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
+    //    String subdomain = tenantDetails.get("zdn").getAsString();
+    //    repoKey.setSubdomain(subdomain);
+    //    repoKey.setRepoId(repositoryId);
+    //    String type = CacheConfig.getVersionedRepoCache().get(repoKey);
     Boolean isVersioned;
-    if (type == null) {
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      JSONObject repoInfo = getRepositoryInfo(sdmCredentials, subdomain);
-      isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
-    } else {
-      isVersioned = "Versioned".equals(type);
-    }
+    //    if (type == null) {
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
+    isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
+    //    } else {
+    //      isVersioned = "Versioned".equals(type);
+    //    }
 
     if (Boolean.TRUE.equals(isVersioned)) {
-      repoKey = new RepoKey();
-      repoKey.setSubdomain(subdomain);
-      repoKey.setRepoId(repositoryId);
-      CacheConfig.getVersionedRepoCache().put(repoKey, "Versioned");
+      //      repoKey = new RepoKey();
+      //      repoKey.setSubdomain(subdomain);
+      //      repoKey.setRepoId(repositoryId);
+      //      CacheConfig.getVersionedRepoCache().put(repoKey, "Versioned");
       return "Versioned";
     } else {
-      repoKey = new RepoKey();
-      repoKey.setSubdomain(subdomain);
-      repoKey.setRepoId(repositoryId);
-      CacheConfig.getVersionedRepoCache().put(repoKey, "Non Versioned");
+      //      repoKey = new RepoKey();
+      //      repoKey.setSubdomain(subdomain);
+      //      repoKey.setRepoId(repositoryId);
+      //      CacheConfig.getVersionedRepoCache().put(repoKey, "Non Versioned");
       return "Non Versioned";
     }
   }
 
-  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials, String subdomain) {
+  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient =
         TokenHandler.getHttpClient(binding, connectionPool, null, "TECHNICAL_CREDENTIALS_FLOW");
