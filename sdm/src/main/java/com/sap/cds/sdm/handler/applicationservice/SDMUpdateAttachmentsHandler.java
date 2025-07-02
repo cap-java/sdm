@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
-import static com.sap.cds.sdm.persistence.DBQuery.*;
-
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
@@ -34,12 +32,17 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
   public SDMUpdateAttachmentsHandler(
-      PersistenceService persistenceService, SDMService sdmService, TokenHandler tokenHandler) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @Before
@@ -175,9 +178,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
-    fileNameInDB =
-        DBQuery.getDBQueryInstance()
-            .getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    fileNameInDB = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     if (fileNameInDB
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
@@ -190,12 +191,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getDBQueryInstance()
-            .getPropertiesForID(
-                attachmentEntity.get(),
-                persistenceService,
-                id,
-                secondaryTypeProperties); // Fetching the values of the properties from the DB
+        dbQuery.getPropertiesForID(
+            attachmentEntity.get(),
+            persistenceService,
+            id,
+            secondaryTypeProperties); // Fetching the values of the properties from the DB
 
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(

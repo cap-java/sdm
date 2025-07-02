@@ -1,6 +1,5 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
-import static com.sap.cds.sdm.persistence.DBQuery.getAttachmentForID;
 import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,29 +52,22 @@ public class SDMUpdateAttachmentsHandlerTest {
   @Mock private CdsElement cdsElement;
   @Mock private CdsEntity targetEntity;
   @Mock private CdsAssociationType cdsAssociationType;
-
-  private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<DBQuery> dbQueryMockedStatic;
   private MockedStatic<SDMUtils> sdmUtilsMockedStatic;
+  @Mock private TokenHandler tokenHandler;
+  @Mock private DBQuery dbQuery;
 
   @BeforeEach
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     sdmService = mock(SDMServiceImpl.class);
-    tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
-    tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockCredentials);
-    handler = spy(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
+    handler =
+        spy(new SDMUpdateAttachmentsHandler(persistenceService, sdmService, tokenHandler, dbQuery));
     sdmUtilsMock = mock(SDMUtils.class);
   }
 
   @AfterEach
   public void tearDown() {
-    if (tokenHandlerMockedStatic != null) {
-      tokenHandlerMockedStatic.close();
-    }
-    if (dbQueryMockedStatic != null) {
-      dbQueryMockedStatic.close();
-    }
     if (sdmUtilsMockedStatic != null) {
       sdmUtilsMockedStatic.close();
     }
@@ -255,15 +247,10 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
     when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
 
-    when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
-
-    dbQueryMockedStatic = mockStatic(DBQuery.class);
-    dbQueryMockedStatic
-        .when(
-            () ->
-                getAttachmentForID(
-                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
-        .thenReturn("file123.txt"); // triggers rename
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+    when(dbQuery.getAttachmentForID(
+            any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("file123.txt");
 
     when(sdmService.updateAttachments(
             "jwtToken",
@@ -412,18 +399,6 @@ public class SDMUpdateAttachmentsHandlerTest {
     secondaryProperties.put("filename", "file1.txt");
     CmisDocument document = new CmisDocument();
     document.setFileName("file1.txt");
-
-    // Mock static method for DBQuery
-    dbQueryMockedStatic = mockStatic(DBQuery.class);
-
-    // Simulating the scenario where the attachment is not found in the database
-    dbQueryMockedStatic
-        .when(
-            () ->
-                getAttachmentForID(
-                    any(CdsEntity.class), any(PersistenceService.class), anyString()))
-        .thenReturn("file1.txt"); // Return the same file name to simulate unchanged state
-
     // Verify that updateAttachments is never called
     verify(sdmService, never())
         .updateAttachments(
