@@ -51,7 +51,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    // String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :{} flow", grantType);
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -145,7 +145,7 @@ public class SDMServiceImpl implements SDMService {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions)
       throws ServiceException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    // String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -167,8 +167,7 @@ public class SDMServiceImpl implements SDMService {
       }
     }
     List<String> validSecondaryProperties =
-        getValidSecondaryProperties(
-            secondaryTypes, subdomain, sdmCredentials, repositoryId, jwtToken);
+        getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, jwtToken);
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache()
@@ -253,7 +252,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public String getObject(String jwtToken, String objectId, SDMCredentials sdmCredentials)
       throws IOException {
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    // String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -287,7 +286,7 @@ public class SDMServiceImpl implements SDMService {
       SDMCredentials sdmCredentials,
       AttachmentReadEventContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
+    // String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = TokenHandler.getGrantType(jwtToken);
     logger.info("This is a :" + grantType + " flow");
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -563,7 +562,6 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public List<String> getValidSecondaryProperties(
       List<String> secondaryTypes,
-      String subdomain,
       SDMCredentials sdmCredentials,
       String repositoryId,
       String jwtToken) {

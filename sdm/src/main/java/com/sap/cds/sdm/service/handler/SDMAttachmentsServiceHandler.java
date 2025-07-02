@@ -304,17 +304,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void finalizeContext(
       AttachmentCreateEventContext eventContext, CmisDocument cmisDocument) {
-    String subdomain =
-        TokenHandler.getSubdomainFromToken(
-            eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken());
+    //    String subdomain =
+    //        TokenHandler.getSubdomainFromToken(
+    //
+    // eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken());
     eventContext.setContentId(
         cmisDocument.getObjectId()
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + eventContext.getAttachmentEntity()
-            + ":"
-            + subdomain);
+            + eventContext.getAttachmentEntity());
     eventContext.getData().setStatus("Clean");
     eventContext.getData().setContent(null);
     eventContext.setCompleted();

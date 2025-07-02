@@ -56,7 +56,6 @@ public interface SDMService {
 
   public List<String> getValidSecondaryProperties(
       List<String> secondaryTypes,
-      String subdomain,
       SDMCredentials sdmCredentials,
       String repositoryId,
       String jwtToken)
