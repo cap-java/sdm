@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.4.0
+
+### Added
+- Support technical user flow.
+- Support codelist for custom properties.
+
+### Fixed
+- An issue where attachments uploaded with one repository was visible when application is redeployed with another repository.
+
 ## Version 1.3.1
 
 ### Fixed
