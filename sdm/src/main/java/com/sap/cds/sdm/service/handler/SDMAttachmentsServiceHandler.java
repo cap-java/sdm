@@ -77,7 +77,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
-          DBQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
+          DBQuery.getDBQueryInstance()
+              .getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
@@ -164,7 +165,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String upID = (String) attachmentIds.get(upIdKey);
 
     Result result =
-        DBQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
+        DBQuery.getDBQueryInstance()
+            .getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
     checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
@@ -202,8 +204,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException {
     // Fetch the row count for current repository
     Result result =
-        DBQuery.getAttachmentsForUPIDAndRepository(
-            attachmentDraftEntity, persistenceService, upID, upIdKey);
+        DBQuery.getDBQueryInstance()
+            .getAttachmentsForUPIDAndRepository(
+                attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
@@ -302,8 +305,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
-        addAttachmentToDraft(
-            getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
+        DBQuery.getDBQueryInstance()
+            .addAttachmentToDraft(
+                getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);
     }
   }

@@ -175,7 +175,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
-    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    fileNameInDB =
+        DBQuery.getDBQueryInstance()
+            .getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     if (fileNameInDB
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
@@ -188,11 +190,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getPropertiesForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id,
-            secondaryTypeProperties); // Fetching the values of the properties from the DB
+        DBQuery.getDBQueryInstance()
+            .getPropertiesForID(
+                attachmentEntity.get(),
+                persistenceService,
+                id,
+                secondaryTypeProperties); // Fetching the values of the properties from the DB
 
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(

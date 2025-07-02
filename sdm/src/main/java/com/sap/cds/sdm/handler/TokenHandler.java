@@ -70,11 +70,14 @@ public class TokenHandler {
   private static final String CLIENT_ID = "clientid";
   private static final String CLIENT_SECRET = "clientsecret";
   private static TokenHandler tokenHandlerInstance = new TokenHandler();
+  private static int i = 0;
 
-  public static TokenHandler getInstance() {
+  public static TokenHandler getTokenHandlerInstance() {
     if (tokenHandlerInstance == null) {
       tokenHandlerInstance = new TokenHandler();
+      i++;
     }
+    System.out.println("Number of objects created for token handler: " + i);
     return tokenHandlerInstance;
   }
 
@@ -286,7 +289,7 @@ public class TokenHandler {
     if (binding != null && !binding.getCredentials().isEmpty()) {
       uaaCredentials = binding.getCredentials();
     } else {
-      uaaCredentials = TokenHandler.getInstance().getUaaCredentials();
+      uaaCredentials = TokenHandler.getTokenHandlerInstance().getUaaCredentials();
     }
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
     ClientCredentials clientCredentials =
@@ -336,13 +339,13 @@ public class TokenHandler {
   }
 
   public String getSubdomainFromToken(String token) {
-    JsonObject payloadObj = TokenHandler.getInstance().getTokenFields(token);
+    JsonObject payloadObj = TokenHandler.getTokenHandlerInstance().getTokenFields(token);
     JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
     return tenantDetails.get("zdn").getAsString();
   }
 
   public String getGrantType(String token) {
-    JsonObject payloadObj = TokenHandler.getInstance().getTokenFields(token);
+    JsonObject payloadObj = TokenHandler.getTokenHandlerInstance().getTokenFields(token);
     String grantType = payloadObj.get("grant_type").getAsString();
     if (grantType.equalsIgnoreCase("client_credentials")) {
       grantType = TECHNICAL_USER_FLOW;

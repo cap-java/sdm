@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 public class SDMAdminServiceImpl implements SDMAdminService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAdminServiceImpl.class);
   private static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
-  private final TokenHandler tokenHandler = TokenHandler.getInstance();
+  private final TokenHandler tokenHandler = TokenHandler.getTokenHandlerInstance();
 
   @java.lang.Override
   public String onboardRepository(Repository repository)

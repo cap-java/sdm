@@ -168,10 +168,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String id = (String) attachment.get("ID");
     String fileNameInDB;
     fileNameInDB =
-        DBQuery.getAttachmentForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id); // Fetching the name of the file from DB
+        DBQuery.getDBQueryInstance()
+            .getAttachmentForID(
+                attachmentEntity.get(),
+                persistenceService,
+                id); // Fetching the name of the file from DB
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
@@ -192,11 +193,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachment); // Fetching the secondary type properties from the attachment entity
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getPropertiesForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id,
-            secondaryTypeProperties); // Fetching the values of the properties from the DB
+        DBQuery.getDBQueryInstance()
+            .getPropertiesForID(
+                attachmentEntity.get(),
+                persistenceService,
+                id,
+                secondaryTypeProperties); // Fetching the values of the properties from the DB
 
     // Get the updated secondary properties
     Map<String, String> updatedSecondaryProperties =

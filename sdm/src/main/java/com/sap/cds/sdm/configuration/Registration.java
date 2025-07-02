@@ -56,20 +56,18 @@ public class Registration implements CdsRuntimeConfiguration {
 
     // get HTTP connection pool configuration
     var connectionPool = getConnectionPool(environment);
-
-    SDMService sdmService = new SDMServiceImpl(binding, connectionPool, TokenHandler.getInstance());
+    TokenHandler tokenHandlerInstance = TokenHandler.getTokenHandlerInstance();
+    SDMService sdmService = new SDMServiceImpl(binding, connectionPool, tokenHandlerInstance);
     DocumentUploadService documentService =
-        new DocumentUploadService(binding, connectionPool, TokenHandler.getInstance());
+        new DocumentUploadService(binding, connectionPool, tokenHandlerInstance);
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(
-        new SDMCreateAttachmentsHandler(
-            persistenceService, sdmService, TokenHandler.getInstance()));
+        new SDMCreateAttachmentsHandler(persistenceService, sdmService, tokenHandlerInstance));
     configurer.eventHandler(
-        new SDMUpdateAttachmentsHandler(
-            persistenceService, sdmService, TokenHandler.getInstance()));
+        new SDMUpdateAttachmentsHandler(persistenceService, sdmService, tokenHandlerInstance));
     configurer.eventHandler(
         new SDMAttachmentsServiceHandler(
-            persistenceService, sdmService, documentService, TokenHandler.getInstance()));
+            persistenceService, sdmService, documentService, tokenHandlerInstance));
   }
 
   private AttachmentService buildAttachmentService() {
