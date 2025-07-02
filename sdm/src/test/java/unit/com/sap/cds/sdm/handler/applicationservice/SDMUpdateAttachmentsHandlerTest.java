@@ -24,15 +24,13 @@ import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -250,10 +248,9 @@ public class SDMUpdateAttachmentsHandlerTest {
     when(model.findEntity("some.qualified.Name.composition"))
         .thenReturn(Optional.of(attachmentDraftEntity));
     when(context.getMessages()).thenReturn(messages);
-
-    when(context.getAuthenticationInfo()).thenReturn(authInfo);
-    when(authInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(jwtTokenInfo);
-    when(jwtTokenInfo.getToken()).thenReturn("jwtToken");
+    UserInfo userInfo = Mockito.mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
 
     when(TokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
 
@@ -266,11 +263,11 @@ public class SDMUpdateAttachmentsHandlerTest {
         .thenReturn("file123.txt"); // triggers rename
 
     when(sdmService.updateAttachments(
-            "jwtToken",
             mockCredentials,
             document,
             secondaryProperties,
-            secondaryPropertiesWithInvalidDefinitions))
+            secondaryPropertiesWithInvalidDefinitions,
+            false))
         .thenReturn(403); // Forbidden
 
     // Call the method
@@ -427,11 +424,11 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Verify that updateAttachments is never called
     verify(sdmService, never())
         .updateAttachments(
-            "jwtToken",
             mockCredentials,
             document,
             secondaryProperties,
-            secondaryPropertiesWithInvalidDefinitions);
+            secondaryPropertiesWithInvalidDefinitions,
+            false);
   }
 
   @Test
@@ -444,6 +441,7 @@ public class SDMUpdateAttachmentsHandlerTest {
     CmisDocument document = new CmisDocument();
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
+
     when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
 
     String expectedEntityName = "some.qualified.Name.attachments";
@@ -459,11 +457,11 @@ public class SDMUpdateAttachmentsHandlerTest {
     // Assert
     verify(sdmService, never())
         .updateAttachments(
-            anyString(),
             eq(mockCredentials),
             eq(document),
             eq(secondaryProperties),
-            eq(secondaryPropertiesWithInvalidDefinitions));
+            eq(secondaryPropertiesWithInvalidDefinitions),
+            eq(false));
   }
 
   //   @Test

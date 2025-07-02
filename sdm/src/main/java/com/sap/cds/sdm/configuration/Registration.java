@@ -11,7 +11,6 @@ import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
-import com.sap.cds.sdm.service.handler.SDMGenericServiceHandler;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -67,12 +66,6 @@ public class Registration implements CdsRuntimeConfiguration {
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(
         new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
-    configurer.eventHandler(new SDMGenericServiceHandler());
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    return super.equals(obj);
   }
 
   private AttachmentService buildAttachmentService() {
