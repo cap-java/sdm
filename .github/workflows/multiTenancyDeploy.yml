@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: cap-java
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout this repository
