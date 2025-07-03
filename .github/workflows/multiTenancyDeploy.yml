@@ -2,7 +2,7 @@ name: Build Cloud Cap Samples Java
 
 on:
   push:
-    branches: [ "Multiplenancy" ]
+    branches: [ "Multitenancy" ]
   workflow_dispatch:
     inputs:
       cf_space:
