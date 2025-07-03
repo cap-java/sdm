@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.gson.JsonObject;
-import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
@@ -56,16 +55,12 @@ import org.mockito.*;
 public class SDMAttachmentsServiceHandlerTest {
   @Mock private AttachmentCreateEventContext mockContext;
   @Mock private AttachmentReadEventContext mockReadContext;
-  @Mock private List<CdsData> mockData;
   @Mock private AuthenticationInfo mockAuthInfo;
   @Mock private JwtTokenAuthenticationInfo mockJwtTokenInfo;
-  @Mock private ParameterInfo mockParameterInfo;
   private SDMAttachmentsServiceHandler handlerSpy;
   private PersistenceService persistenceService;
   @Mock private AttachmentMarkAsDeletedEventContext attachmentMarkAsDeletedEventContext;
-  @Mock private MediaData mockMediaData;
   @Mock private CdsEntity mockDraftEntity;
-
   @Mock private AttachmentRestoreEventContext restoreEventContext;
   private SDMService sdmService;
   private DocumentUploadService documentUploadService;
@@ -73,8 +68,6 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private CdsEntity cdsEntity;
   @Mock private UserInfo userInfo;
   @Mock private Messages mockMessages;
-  @Mock private AttachmentCreateEventContext eventContext;
-
   String objectId = "objectId";
   String folderId = "folderId";
   String userEmail = "email";
@@ -87,6 +80,8 @@ public class SDMAttachmentsServiceHandlerTest {
   @Mock private DeletionUserInfo deletionUserInfo;
   Map<String, String> headers = new HashMap<>();
   @Mock ParameterInfo parameterInfo;
+  @Mock private DBQuery dbQuery;
+  @Mock private TokenHandler tokenHandler;
 
   @BeforeEach
   public void setUp() {
@@ -112,7 +107,7 @@ public class SDMAttachmentsServiceHandlerTest {
     handlerSpy =
         spy(
             new SDMAttachmentsServiceHandler(
-                persistenceService, sdmService, documentUploadService));
+                persistenceService, sdmService, documentUploadService, tokenHandler, dbQuery));
   }
 
   @Test
@@ -215,19 +210,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
 
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -296,25 +285,17 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
 
     // Mock DBQuery and TokenHandler
-    try (MockedStatic<DBQuery> DBQueryMockedStatic = mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      DBQueryMockedStatic.when(
-              () ->
-                  DBQuery.getAttachmentsForUPID(
-                      mockDraftEntity, persistenceService, "upid", "up__ID"))
+      when(dbQuery.getAttachmentsForUPID(mockDraftEntity, persistenceService, "upid", "up__ID"))
           .thenReturn(mockResult);
-      DBQueryMockedStatic.when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
 
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
       // Mock SDMUtils.isRestrictedCharactersInName
       sdmUtilsMockedStatic
@@ -386,25 +367,16 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
 
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
 
@@ -471,31 +443,17 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("message", "Failed due to a DI error");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
     when(documentUploadService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
-          .thenReturn(mockResult);
-      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
 
@@ -564,27 +522,18 @@ public class SDMAttachmentsServiceHandlerTest {
 
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
     }
@@ -639,11 +588,10 @@ public class SDMAttachmentsServiceHandlerTest {
       String upIdKey = "ew32332";
 
       dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(cdsEntity, persistenceService, null, ""))
+          .when(() -> dbQuery.getAttachmentsForUPID(cdsEntity, persistenceService, null, ""))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
       handlerSpy.createAttachment(mockContext);
@@ -696,12 +644,11 @@ public class SDMAttachmentsServiceHandlerTest {
       dbQueryMockedStatic
           .when(
               () ->
-                  DBQuery.getAttachmentsForUPID(
+                  dbQuery.getAttachmentsForUPID(
                       cdsEntity, persistenceService, anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
       handlerSpy.createAttachment(mockContext);
       verifyNoInteractions(mockMessages);
@@ -750,25 +697,16 @@ public class SDMAttachmentsServiceHandlerTest {
 
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = Mockito.mockStatic(SDMUtils.class)) {
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = Mockito.mockStatic(SDMUtils.class)) {
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
           .thenReturn(true);
@@ -790,67 +728,47 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @Test
   public void testDocumentDeletion() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId1");
-      cmisDocuments.add(cmisDocument);
-      cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId2");
-      cmisDocuments.add(cmisDocument);
-
-      mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(any(), any(), any(), any()))
-          .thenReturn(cmisDocuments);
-
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
-    }
+    when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+    List<CmisDocument> cmisDocuments = new ArrayList<>();
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setObjectId("objectId1");
+    cmisDocuments.add(cmisDocument);
+    cmisDocument = new CmisDocument();
+    cmisDocument.setObjectId("objectId2");
+    cmisDocuments.add(cmisDocument);
+    when(dbQuery.getAttachmentsForFolder(any(), any(), any(), any())).thenReturn(cmisDocuments);
+    handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+    verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
   }
 
   @Test
   public void testDocumentDeletionForObjectPresent() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      String entity = "Books.attachments";
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId");
-      cmisDocuments.add(cmisDocument);
-      cmisDocument = new CmisDocument();
-      cmisDocument.setObjectId("objectId2");
-      cmisDocuments.add(cmisDocument);
-
-      mockedDBQuery
-          .when(() -> DBQuery.getAttachmentsForFolder(any(), any(), any(), any()))
-          .thenReturn(cmisDocuments);
-
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-    }
+    when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+    List<CmisDocument> cmisDocuments = new ArrayList<>();
+    String entity = "Books.attachments";
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setObjectId("objectId");
+    cmisDocuments.add(cmisDocument);
+    cmisDocument = new CmisDocument();
+    cmisDocument.setObjectId("objectId2");
+    cmisDocuments.add(cmisDocument);
+    when(dbQuery.getAttachmentsForFolder(any(), any(), any(), any())).thenReturn(cmisDocuments);
+    handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
   }
 
   @Test
   public void testFolderDeletion() throws IOException {
-    try (MockedStatic<DBQuery> mockedDBQuery = mockStatic(DBQuery.class)) {
-
-      when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
-      when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
-      List<CmisDocument> cmisDocuments = new ArrayList<>();
-      String entity = "Books.attachments";
-      mockedDBQuery
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForFolder(
-                      entity, persistenceService, folderId, attachmentMarkAsDeletedEventContext))
-          .thenReturn(cmisDocuments);
-      handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
-    }
+    when(attachmentMarkAsDeletedEventContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.of(cdsEntity));
+    List<CmisDocument> cmisDocuments = new ArrayList<>();
+    String entity = "Books.attachments";
+    when(dbQuery.getAttachmentsForFolder(
+            entity, persistenceService, folderId, attachmentMarkAsDeletedEventContext))
+        .thenReturn(cmisDocuments);
+    handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
+    verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
   }
 
   @Test
@@ -905,7 +823,7 @@ public class SDMAttachmentsServiceHandlerTest {
       when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
 
       String filename = "sample.pdf";
-      String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
+      String fileid = "123"; // The fileid to check, same as attachment1, different fromattachment2
 
       // Checking for duplicate
       boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
@@ -953,17 +871,14 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
-    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
-      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
-          .thenReturn("NotVersioned");
-      when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
+        .thenReturn("NotVersioned");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    handlerSpy.readAttachment(mockReadContext);
 
-      handlerSpy.readAttachment(mockReadContext);
-
-      // Verify that readDocument method was called
-      verify(sdmService)
-          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
-    }
+    // Verify that readDocument method was called
+    verify(sdmService)
+        .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
   }
 
   @Test
@@ -972,23 +887,21 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
-    try (MockedStatic<TokenHandler> mockedStatic = mockStatic(TokenHandler.class)) {
-      when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
-          .thenReturn("NotVersioned");
-      when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
-      doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
-          .when(sdmService)
-          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+    when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token))
+        .thenReturn("NotVersioned");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
+        .when(sdmService)
+        .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
 
-      ServiceException exception =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                handlerSpy.readAttachment(mockReadContext);
-              });
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handlerSpy.readAttachment(mockReadContext);
+            });
 
-      assertEquals("Object not found in repository", exception.getMessage());
-    }
+    assertEquals("Object not found in repository", exception.getMessage());
   }
 
   @Test
@@ -1035,25 +948,17 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("1__Only 1 Attachment is allowed");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
 
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
@@ -1109,26 +1014,16 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
-    try (MockedStatic<DBQuery> dbQueryMockedStatic = Mockito.mockStatic(DBQuery.class);
-        MockedStatic<TokenHandler> tokenHandlerMockedStatic =
-            Mockito.mockStatic(TokenHandler.class);
-        MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("1__null");
-      dbQueryMockedStatic
-          .when(() -> DBQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
-      dbQueryMockedStatic
-          .when(
-              () ->
-                  DBQuery.getAttachmentsForUPIDAndRepository(
-                      any(), any(), anyString(), anyString()))
+      when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
-
-      tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockSdmCredentials);
-
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
