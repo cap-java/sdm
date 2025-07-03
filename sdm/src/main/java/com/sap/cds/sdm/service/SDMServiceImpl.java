@@ -281,7 +281,6 @@ public class SDMServiceImpl implements SDMService {
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    // String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     String grantType = context.getUserInfo().isSystemUser() ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
