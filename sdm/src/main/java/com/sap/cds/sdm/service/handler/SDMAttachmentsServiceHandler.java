@@ -58,7 +58,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             ? context.getParameterInfo().getHeaders().get("content-length")
             : null,
         System.currentTimeMillis());
-    System.out.println("IAS flow check..." + context.getUserInfo().getTenant());
     validateRepository(context);
     processEntities(context);
   }
@@ -236,7 +235,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     CmisDocument cmisDocument = new CmisDocument();
     Boolean isSystemUser = eventContext.getUserInfo().isSystemUser();
-    System.out.println("Is System User " + isSystemUser);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
