@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.persistence.DBQuery.*;
-
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -41,16 +39,19 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private final DocumentUploadService documentService;
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
   private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
   public SDMAttachmentsServiceHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
       DocumentUploadService documentService,
-      TokenHandler tokenHandler) {
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.documentService = documentService;
     this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
@@ -77,8 +78,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
-          DBQuery.getDBQueryInstance()
-              .getAttachmentsForFolder(entity, persistenceService, folderId, context);
+          dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
@@ -165,8 +165,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String upID = (String) attachmentIds.get(upIdKey);
 
     Result result =
-        DBQuery.getDBQueryInstance()
-            .getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
+        dbQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
     checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
@@ -204,9 +203,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException {
     // Fetch the row count for current repository
     Result result =
-        DBQuery.getDBQueryInstance()
-            .getAttachmentsForUPIDAndRepository(
-                attachmentDraftEntity, persistenceService, upID, upIdKey);
+        dbQuery.getAttachmentsForUPIDAndRepository(
+            attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
         SDMUtils.getAttachmentCountAndMessage(
@@ -305,9 +303,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
-        DBQuery.getDBQueryInstance()
-            .addAttachmentToDraft(
-                getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
+        dbQuery.addAttachmentToDraft(
+            getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);
     }
   }

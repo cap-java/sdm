@@ -70,14 +70,11 @@ public class TokenHandler {
   private static final String CLIENT_ID = "clientid";
   private static final String CLIENT_SECRET = "clientsecret";
   private static TokenHandler tokenHandlerInstance = new TokenHandler();
-  private static int i = 0;
 
   public static TokenHandler getTokenHandlerInstance() {
     if (tokenHandlerInstance == null) {
       tokenHandlerInstance = new TokenHandler();
-      i++;
     }
-    System.out.println("Number of objects created for token handler: " + i);
     return tokenHandlerInstance;
   }
 

@@ -16,7 +16,6 @@ import java.util.*;
 public class DBQuery {
 
   private static DBQuery dbQueryInstance = new DBQuery();
-  private static int i = 0;
 
   private DBQuery() {
     // Doesn't do anything
@@ -25,9 +24,7 @@ public class DBQuery {
   public static DBQuery getDBQueryInstance() {
     if (dbQueryInstance == null) {
       dbQueryInstance = new DBQuery();
-      i++;
     }
-    System.out.println("Number of objects created for db query: " + i);
     return dbQueryInstance;
   }
 
