@@ -8,6 +8,7 @@ on:
       cf_space:
         description: 'Specify the Cloud Foundry space to deploy to'
         required: true
+        default: 'developcap'
 
 jobs:
   build:
