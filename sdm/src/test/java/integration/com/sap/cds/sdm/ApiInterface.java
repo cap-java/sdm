@@ -61,4 +61,6 @@ public interface ApiInterface {
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
+
+  String deleteEntityDraft(String appUrl, String entityName, String tempEntityID);
 }
