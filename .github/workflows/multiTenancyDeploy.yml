@@ -38,17 +38,18 @@ jobs:
       working-directory: cloud-cap-samples-java
       run: pwd # Verifies that we're in the correct directory
 
-    - name: Run mbt build
-      working-directory: cloud-cap-samples-java
-      run: |
-          echo "java version"
-          java --version
-          mbt build
+    # - name: Run mbt build
+    #   working-directory: cloud-cap-samples-java
+    #   run: |
+    #       echo "java version"
+    #       java --version
+    #       mbt build
 
     - name: Deploy to Cloud Foundry
       working-directory: cloud-cap-samples-java
       run: | 
-          echo "Deploying to ${{ github.event.inputs.cf_space }}......"
+          # echo "Deploying to ${{ github.event.inputs.cf_space }}......"
+          echo "Deploying to ${{ secrets.CF_SPACE_RISHI }}......"
           
           # Install cf CLI plugin
           cf install-plugin multiapps -f
