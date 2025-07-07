@@ -1,4 +1,4 @@
-name: Build Cloud Cap Samples Java
+name: Multi Tenancy Deployment
 
 on:
   push:
