@@ -164,6 +164,7 @@ class IntegrationTest_SingleFacet {
       apiNoRoles = new ApiMT(configNoRoles);
     } else if (tenancyModel.equals("single")) {
       config.put("serviceName", serviceName);
+      configNoRoles.put("serviceName", serviceName);
       api = new Api(config);
       apiNoRoles = new Api(configNoRoles);
     } else {
@@ -333,39 +334,34 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(6)
   void testUploadAttachmentWithoutSDMRole() throws IOException {
-    //    System.out.println("Test (6) : Upload attachment with no SDM role");
-    //    Boolean testStatus = false;
-    //    String response = apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    //    System.out.println("response of createEntityDraft is " + response);
-    //    if (response != "Could not create entity") {
-    //      String tempEntityID2 = response;
-    //      ClassLoader classLoader = getClass().getClassLoader();
-    //      File file = new File(classLoader.getResource("sam.pdf").getFile());
-    //      System.out.println("file is created");
-    //
-    //      Map<String, Object> postData = new HashMap<>();
-    //      postData.put("up__ID", tempEntityID2);
-    //      postData.put("mimeType", "application/pdf");
-    //      postData.put("createdAt", new Date().toString());
-    //      postData.put("createdBy", "test@test.com");
-    //      postData.put("modifiedBy", "test@test.com");
-    //
-    //      List<String> createResponse =
-    //          apiNoRoles.createAttachment(
-    //              appUrl, entityName, facetName, tempEntityID2, srvpath, postData, file);
-    //      System.out.println("createResponse is " + createResponse);
-    //      String check = createResponse.get(0);
-    //      System.out.println("check: " + check);
-    //      String expectedString = "";
-    //      String attachmentID12 = createResponse.get(1);
-    //      if (check.equals("Attachment created")) {
-    //        testStatus = true;
-    //      }
-    //
-    //      if (!testStatus) {
-    //        fail("Attachment created without SDM role");
-    //      }
-    //    }
+    System.out.println("Test (6) : Upload attachment with no SDM role");
+    Boolean testStatus = false;
+    String response = apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (!response.equals("Could not create entity")) {
+      entityID4 = response;
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource("sample3.pdf").getFile());
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", entityID4);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      List<String> createResponse =
+          apiNoRoles.createAttachment(
+              appUrl, entityName, facetName, entityID4, srvpath, postData, file);
+      String check = createResponse.get(0);
+      String expectedString =
+          "{\"error\":{\"code\":\"500\",\"message\":\"You do not have the required permissions to upload attachments. Please contact your administrator for access.\"}}";
+      if (check.equals(expectedString)) {
+        testStatus = true;
+      }
+    }
+    if (!testStatus) {
+      fail("Attachment created without SDM role");
+    }
   }
 
   @Test
@@ -846,7 +842,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(21)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_singleAttachment() throws IOException {
-    System.out.println("Test (22): Rename & Update secondary property before entity is saved");
+    System.out.println("Test (21): Rename & Update secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -933,7 +929,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(22)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_singleAttachment() {
-    System.out.println("Test (23): Rename & Update secondary property after entity is saved");
+    System.out.println("Test (22): Rename & Update secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1006,7 +1002,7 @@ class IntegrationTest_SingleFacet {
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_singleAttachment()
       throws IOException {
     System.out.println(
-        "Test (24): Rename & Update invalid secondary property before entity is saved");
+        "Test (23): Rename & Update invalid secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1134,7 +1130,7 @@ class IntegrationTest_SingleFacet {
   @Order(24)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_singleAttachment() throws IOException {
     System.out.println(
-        "Test (25): Rename & Update invalid secondary property after entity is saved");
+        "Test (24): Rename & Update invalid secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1233,7 +1229,7 @@ class IntegrationTest_SingleFacet {
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (26): Rename & Update valid secondary properties for multiple attachments before entity is saved");
+        "Test (25): Rename & Update valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1420,7 +1416,7 @@ class IntegrationTest_SingleFacet {
   @Order(26)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_multipleAttachments() {
     System.out.println(
-        "Test (27): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
+        "Test (26): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1553,11 +1549,10 @@ class IntegrationTest_SingleFacet {
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (28): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
+        "Test (27): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    System.out.println("response 27: " + response);
     if (response != "Could not create entity") {
       entityID3 = response;
 
@@ -1775,7 +1770,7 @@ class IntegrationTest_SingleFacet {
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (29): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
+        "Test (28): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1938,7 +1933,7 @@ class IntegrationTest_SingleFacet {
   @Order(29)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-        "Test (30): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (29): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2054,7 +2049,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(30)
   void testUploadNAttachments() throws IOException {
-    System.out.println("Test (31): Upload maximum 4 attachments in an exsisting entity");
+    System.out.println("Test (30): Upload maximum 4 attachments in an exsisting entity");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File originalFile = new File(classLoader.getResource("sample.exe").getFile());

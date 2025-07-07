@@ -31,6 +31,7 @@ class IntegrationTest_MultipleFacet {
   private static String entityID4;
   private static String entityID5;
   private static String entityID6;
+  private static String entityID7;
   private static String clientId;
   private static String clientSecret;
   private static String appUrl;
@@ -158,6 +159,7 @@ class IntegrationTest_MultipleFacet {
       apiNoRoles = new ApiMT(configNoRoles);
     } else if (tenancyModel.equals("single")) {
       config.put("serviceName", serviceName);
+      configNoRoles.put("serviceName", serviceName);
       api = new Api(config);
       apiNoRoles = new Api(configNoRoles);
     } else {
@@ -2275,7 +2277,7 @@ class IntegrationTest_MultipleFacet {
     }
 
     if (!testStatus) {
-      fail("Failed to upload multiple facet entries, delete one per facet and create entity.");
+      fail("Failed to upload multiple facet entries, delete one per facet and create entity");
     }
   }
 
@@ -2316,7 +2318,44 @@ class IntegrationTest_MultipleFacet {
     }
 
     if (!testStatus) {
-      fail("Failed to update draft with new attachments for all facets.");
+      fail("Failed to update draft with new attachments for all facets");
+    }
+  }
+
+  @Test
+  @Order(32)
+  void testUploadAttachmentWithoutSDMRole_MultiFacet() throws IOException {
+    System.out.println("Test (32): Upload attachment across facets without SDM role");
+    boolean testStatus = true;
+
+    String response = apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (!response.equals("Could not create entity")) {
+      entityID7 = response;
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file =
+          new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", entityID7);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      for (int i = 0; i < facet.length; i++) {
+        List<String> createResponse =
+            apiNoRoles.createAttachment(
+                appUrl, entityName, facet[i], entityID7, srvpath, postData, file);
+        String check = createResponse.get(0);
+        String expectedError =
+            "{\"error\":{\"code\":\"500\",\"message\":\"You do not have the required permissions to upload attachments. Please contact your administrator for access.\"}}";
+        if (!expectedError.equals(check)) {
+          testStatus = false;
+        }
+      }
+    }
+
+    if (!testStatus) {
+      fail("Attachment uploaded without SDM role for one or more facets");
     }
   }
 }
