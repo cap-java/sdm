@@ -32,7 +32,7 @@ jobs:
       run: npm install -g mbt
 
     - name: Clone the cloud-cap-samples-java repo
-      run: git clone --depth 1 --branch main https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+      run: git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
 
     - name: Change directory to cloud-cap-samples-java
       working-directory: cloud-cap-samples-java
