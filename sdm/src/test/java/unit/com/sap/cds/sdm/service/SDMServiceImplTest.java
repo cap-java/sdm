@@ -392,9 +392,8 @@ public class SDMServiceImplTest {
       CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
 
       // Mock TokenHandler methods
-      when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+      when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(mockHttpClient);
       when(tokenHandler.getSubdomainFromToken(any())).thenReturn("test-subdomain");
-      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockSdmCredentials.getUrl()).thenReturn("http://example.com/");
 
       // Simulate IOException during HTTP call
@@ -924,7 +923,7 @@ public class SDMServiceImplTest {
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("https://example.com/");
-    when(tokenHandler.getDITokenUsingAuthorities(sdmCredentials, userEmail, subdomain))
+    when(tokenHandler.getDITokenUsingAuthorities(any(), eq(userEmail), eq(subdomain)))
         .thenThrow(new IOException("Could not delete the document."));
 
     // Since the exception is thrown before OkHttpClient is used, no need to mock httpClient
@@ -1069,16 +1068,8 @@ public class SDMServiceImplTest {
       String jwtToken = "testJwtToken";
       SDMCredentials sdmCredentials = new SDMCredentials();
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
-      when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-          .thenReturn(httpClient);
-
+      when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
-      when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(500);
-      when(response.getEntity()).thenReturn(entity);
-      InputStream inputStream =
-          new ByteArrayInputStream("{\"message\":\"Server error\"}".getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
@@ -1105,22 +1096,10 @@ public class SDMServiceImplTest {
       SDMCredentials sdmCredentials = new SDMCredentials();
       AttachmentReadEventContext mockContext = mock(AttachmentReadEventContext.class);
       MediaData mockData = mock(MediaData.class);
-      when(mockContext.getData()).thenReturn(mockData);
-      when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-          .thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
-      when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(500);
-      when(response.getEntity()).thenReturn(entity);
       InputStream inputStream = new ByteArrayInputStream(expectedContent.getBytes());
-      when(entity.getContent()).thenReturn(inputStream);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-
-      doThrow(new RuntimeException("Failed to set document stream in context"))
-          .when(mockData)
-          .setContent(any(InputStream.class));
 
       ServiceException exception =
           assertThrows(
@@ -1128,6 +1107,7 @@ public class SDMServiceImplTest {
               () -> {
                 sdmServiceImpl.readDocument(objectId, jwtToken, sdmCredentials, mockContext);
               });
+
       assertEquals("Failed to set document stream in context", exception.getMessage());
     }
   }
@@ -1307,9 +1287,8 @@ public class SDMServiceImplTest {
       when(tokenHandler.getGrantType("jwtToken")).thenReturn(grantType);
       when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
 
-      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
-      when(response.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(500);
+      when(httpClient.execute(any(HttpGet.class)))
+          .thenThrow(new IOException("Simulated HTTP failure"));
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       // Verify the response code

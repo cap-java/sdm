@@ -9,7 +9,6 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.sap.cds.feature.mt.lib.subscription.ServiceBinding;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.Repository;
 import com.sap.cds.sdm.model.RepositoryParams;
@@ -17,8 +16,6 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.SDMAdminService;
 import com.sap.cds.sdm.service.SDMAdminServiceImpl;
 import com.sap.cds.services.ServiceException;
-import com.sap.cloud.environment.servicebinding.api.DefaultServiceBindingAccessor;
-import com.sap.cloud.environment.servicebinding.api.ServiceBindingAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpClientFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,9 +23,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.http.HttpEntity;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -66,20 +61,27 @@ public class SDMAdminServiceImplTest {
   @BeforeEach
   public void setUp() {
     MockitoAnnotations.openMocks(this);
+
+    // Step 1: Mock TokenHandler static method first
+    tokenHandler = mock(TokenHandler.class);
+    tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+    tokenHandlerMockedStatic.when(TokenHandler::getTokenHandlerInstance).thenReturn(tokenHandler);
+
+    // Step 2: Now create the service
     sdmAdminService = new SDMAdminServiceImpl();
+
+    // Step 3: Mock all other stuff
     statusLine = mock(StatusLine.class);
     entity = mock(HttpEntity.class);
-    // Mock HttpClients static method
+
     httpClientsMockedStatic = mockStatic(HttpClients.class);
     httpClientsMockedStatic.when(HttpClients::createDefault).thenReturn(httpClient);
 
-    // Mock DefaultHttpClientFactory static builder
     defaultHttpClientFactoryMockedStatic = mockStatic(DefaultHttpClientFactory.class);
     defaultHttpClientFactoryMockedStatic
         .when(DefaultHttpClientFactory::builder)
         .thenReturn(mockHttpClientFactoryBuilder);
 
-    // Setup the builder method chain
     when(mockHttpClientFactoryBuilder.timeoutMilliseconds(anyInt()))
         .thenReturn(mockHttpClientFactoryBuilder);
     when(mockHttpClientFactoryBuilder.maxConnectionsPerRoute(anyInt()))
@@ -87,8 +89,6 @@ public class SDMAdminServiceImplTest {
     when(mockHttpClientFactoryBuilder.maxConnectionsTotal(anyInt()))
         .thenReturn(mockHttpClientFactoryBuilder);
     when(mockHttpClientFactoryBuilder.build()).thenReturn(mockHttpClientFactory);
-
-    // Finally, mock createHttpClient
     when(mockHttpClientFactory.createHttpClient(any())).thenReturn(httpClient);
   }
 
@@ -108,9 +108,13 @@ public class SDMAdminServiceImplTest {
   @Test
   public void testOnboardRepository_success()
       throws UnsupportedEncodingException, JsonProcessingException, IOException {
-    SDMCredentials sdmCredentials = new SDMCredentials();
-    sdmCredentials.setUrl("https://example.com/");
-    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://auth.example.com/");
+    when(mockSdmCredentials.getClientId()).thenReturn("client-id");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("client-secret");
+
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
         .thenReturn(httpClient);
     Repository repository = new Repository();
@@ -240,133 +244,57 @@ public class SDMAdminServiceImplTest {
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
-  //  @Test
-  //  public void testOffboardRepository_subdomainnull() throws Exception {
-  //    String subdomain = null;
-  //    SDMCredentials sdmCredentials = new SDMCredentials();
-  //    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
-  //    sdmCredentials.setClientId("clientID");
-  //    sdmCredentials.setClientSecret("clientSecret");
-  //    sdmCredentials.setUrl("url");
-  //    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
-  //    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
-  //    CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
-  //    HttpEntity mockGetEntity = mock(HttpEntity.class);
-  //    HttpEntity mockDeleteEntity = mock(HttpEntity.class);
-  //
-  //    String json =
-  //        """
-  // {
-  //  "repoAndConnectionInfos": [
-  //    {
-  //      "repository": {
-  //        "externalId": "repoid",
-  //        "id": "123"
-  //      }
-  //    }
-  //  ]
-  // }
-  // """;
-  //
-  //    InputStream getInputStream = new
-  // ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-  //    InputStream deleteInputStream =
-  //        new ByteArrayInputStream(
-  //            "{\"message\":\"Repository with id:123
-  // deleted\"}".getBytes(StandardCharsets.UTF_8));
-  //
-  //    when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
-  //    when(statusLine.getStatusCode()).thenReturn(200);
-  //    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
-  //    when(mockGetEntity.getContent()).thenReturn(getInputStream);
-  //
-  //    when(mockDeleteResponse.getStatusLine()).thenReturn(statusLine);
-  //    when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
-  //    when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
-  //
-  //    // Use class-level mocked httpClient here
-  //    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
-  //    when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
-  //
-  //    String result = sdmAdminService.offboardRepository(subdomain);
-  //    assertNotNull(result);
-  //    assertEquals("Repository <repoid> Offboarded", result);
-  //    verify(httpClient, atLeastOnce()).execute(any());
-  //  }
-
   @Test
   public void testOffboardRepository_subdomainnull() throws Exception {
     String subdomain = null;
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+    HttpEntity mockDeleteEntity = mock(HttpEntity.class);
 
-    // Step 1: Create fake UAA credentials map
-    Map<String, Object> uaa = new HashMap<>();
-    uaa.put("url", "https://subdomain.example.com/oauth/token");
-    uaa.put("clientid", "clientID");
-    uaa.put("clientsecret", "clientSecret");
-
-    Map<String, Object> uaaCredentials = new HashMap<>();
-    uaaCredentials.put("uaa", uaa);
-    uaaCredentials.put("uri", "url");
-
-    // Step 2: Mock ServiceBinding to return credentials
-    ServiceBinding mockBinding = mock(ServiceBinding.class);
-    when(mockBinding.getCredentials()).thenReturn(uaaCredentials);
-
-    // Step 3: Mock DefaultServiceBindingAccessor instance and static call
-    List<com.sap.cloud.environment.servicebinding.api.ServiceBinding> serviceBindings =
-        new ArrayList<>();
-    serviceBindings.add((com.sap.cloud.environment.servicebinding.api.ServiceBinding) mockBinding);
-    ServiceBindingAccessor mockAccessor = mock(ServiceBindingAccessor.class);
-    when(mockAccessor.getServiceBindings()).thenReturn(serviceBindings);
-
-    try (MockedStatic<DefaultServiceBindingAccessor> mockedStatic =
-        Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
-      mockedStatic.when(DefaultServiceBindingAccessor::getInstance).thenReturn(mockAccessor);
-
-      // Step 4: HTTP mocks
-      CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
-      CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
-      HttpEntity mockGetEntity = mock(HttpEntity.class);
-      HttpEntity mockDeleteEntity = mock(HttpEntity.class);
-
-      String json =
-          """
-                     {
-                       "repoAndConnectionInfos": [
-                         {
-                           "repository": {
-                             "externalId": "repoid",
-                             "id": "123"
-                           }
-                         }
-                       ]
-                     }
-                     """;
-
-      InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-      InputStream deleteInputStream =
-          new ByteArrayInputStream(
-              "{\"message\":\"Repository with id:123 deleted\"}".getBytes(StandardCharsets.UTF_8));
-
-      when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
-      when(statusLine.getStatusCode()).thenReturn(200);
-      when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
-      when(mockGetEntity.getContent()).thenReturn(getInputStream);
-
-      when(mockDeleteResponse.getStatusLine()).thenReturn(statusLine);
-      when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
-      when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
-
-      when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
-      when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
-
-      // Step 5: Invoke and verify
-      String result = sdmAdminService.offboardRepository(subdomain);
-
-      assertNotNull(result);
-      assertEquals("Repository <repoid> Offboarded", result);
-      verify(httpClient, atLeastOnce()).execute(any());
+    String json =
+        """
+ {
+  "repoAndConnectionInfos": [
+    {
+      "repository": {
+        "externalId": "some-other-id",
+        "id": "123"
+      }
     }
+  ]
+ }
+ """;
+
+    InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+
+    InputStream deleteInputStream =
+        new ByteArrayInputStream(
+            "{\"message\":\"Repository with id:123 deleted\"}".getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(mockDeleteResponse.getStatusLine()).thenReturn(statusLine);
+    when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
+    when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
+
+    // Use class-level mocked httpClient here
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+    when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
+
+    String result = sdmAdminService.offboardRepository(subdomain);
+    assertNotNull(result);
+    assertEquals("Repository <repoid> Offboarded", result);
+    verify(httpClient, atLeastOnce()).execute(any());
   }
 
   @Test
