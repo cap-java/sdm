@@ -23,6 +23,10 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
+    - name: Build and package
+      run: |
+          mvn clean install -P unit-tests  -DskipIntegrationTests
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
