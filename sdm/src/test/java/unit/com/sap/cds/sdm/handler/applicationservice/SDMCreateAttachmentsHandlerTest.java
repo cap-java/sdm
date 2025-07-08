@@ -20,6 +20,7 @@ import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.messages.Messages;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 public class SDMCreateAttachmentsHandlerTest {
@@ -168,7 +170,7 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data, "");
 
     // Assert that no updateAttachments calls were made, as there are no attachments
-    verify(sdmService, never()).updateAttachments(anyString(), any(), any(), any(), any());
+    verify(sdmService, never()).updateAttachments(any(), any(), any(), any(), any());
 
     // Assert that no error or warning messages were logged
     verify(messages, never()).error(anyString());
@@ -422,7 +424,9 @@ public class SDMCreateAttachmentsHandlerTest {
     // Mock findEntity to return an optional containing attachmentDraftEntity
     when(model.findEntity("some.qualified.Name" + "." + "composition"))
         .thenReturn(Optional.of(attachmentDraftEntity));
-
+    UserInfo userInfo = Mockito.mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
     // Mock authentication
     when(context.getMessages()).thenReturn(messages);
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
@@ -430,7 +434,7 @@ public class SDMCreateAttachmentsHandlerTest {
     when(jwtTokenInfo.getToken()).thenReturn("testJwtToken");
 
     // Mock getObject
-    when(sdmService.getObject("testJwtToken", "test-object-id", mockCredentials))
+    when(sdmService.getObject("test-object-id", mockCredentials, false))
         .thenReturn("fileInSDM.txt");
 
     // Mock getSecondaryTypeProperties
