@@ -181,7 +181,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
       String jwtToken = jwtTokenInfo.getToken();
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      fileNameInDB = sdmService.getObject(jwtToken, objectId, sdmCredentials);
+      fileNameInDB =
+          sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
@@ -230,11 +231,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       try {
         int responseCode =
             sdmService.updateAttachments(
-                context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
                 TokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties,
-                secondaryPropertiesWithInvalidDefinitions);
+                secondaryPropertiesWithInvalidDefinitions,
+                context.getUserInfo().isSystemUser());
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing
