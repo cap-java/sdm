@@ -3,7 +3,6 @@ package com.sap.cds.sdm.handler;
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static java.util.Objects.requireNonNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.environment.CdsProperties;
@@ -22,14 +21,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TokenHandler {
-  private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
-
-  private static final ObjectMapper mapper = new ObjectMapper();
-
   private TokenHandler() {
     throw new IllegalStateException("TokenHandler class");
   }
