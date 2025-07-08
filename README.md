@@ -314,7 +314,34 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
+
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. 
+
+Refer the below example to pass the SDM Service dependencies to SaaSRegistry so that SDM credentials are passed to subscribing tenant.
+```java
+//Set the SDM xsappname to SaaS Registry Dependency.
+@On(event = DeploymentService.EVENT_DEPENDENCIES)
+    public void onGetDependencies(DependenciesEventContext context) {
+
+        List<SaasRegistryDependency> dependencies = new ArrayList<>();
+        Map<String, Object> uaa = (Map<String, Object>) getSDMCredentials().get("uaa");
+        dependencies.add(SaasRegistryDependency.create(uaa.get("xsappname").toString()));
+        context.setResult(dependencies);
+    }
+    //Fetch the SDM service credentials
+ private Map<String, Object> getSDMCredentials() {
+    List<ServiceBinding> allServiceBindings =
+    DefaultServiceBindingAccessor.getInstance().getServiceBindings();
+ServiceBinding sdmBinding =
+    allServiceBindings.stream()
+        .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
+        .findFirst()
+        .get();
+return  sdmBinding.getCredentials();
+
+    }
+ ```
+Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
   
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
