@@ -62,5 +62,5 @@ public interface ApiInterface {
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
 
-  String deleteEntityDraft(String appUrl, String entityName, String tempEntityID);
+  String deleteEntityDraft(String appUrl, String entityName, String entityID);
 }

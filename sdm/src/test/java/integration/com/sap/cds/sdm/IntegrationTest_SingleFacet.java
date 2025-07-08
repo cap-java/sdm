@@ -33,12 +33,11 @@ class IntegrationTest_SingleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String username2;
-  private static String password2;
+  private static String noSDMRoleUsername;
+  private static String noSDMRoleUserPassword;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String entityName2 = "author";
-  private static String entityName3 = "price";
   private static String srvpath = "AdminService";
   private static ApiInterface api;
   private static ApiInterface apiNoRoles;
@@ -50,7 +49,6 @@ class IntegrationTest_SingleFacet {
   private static String attachmentID6 = "";
   private static String attachmentID7 = "";
   private static String attachmentID8 = "";
-  private static String attachmentID9 = "";
 
   private static IntegrationTestUtils integrationTestUtils;
 
@@ -63,8 +61,8 @@ class IntegrationTest_SingleFacet {
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    username2 = credentialsProperties.getProperty("noSDMRoleUsername");
-    password2 = credentialsProperties.getProperty("noSDMRoleUserPassword");
+    noSDMRoleUsername = credentialsProperties.getProperty("noSDMRoleUsername");
+    noSDMRoleUserPassword = credentialsProperties.getProperty("noSDMRoleUserPassword");
     if (tenancyModel.equals("single")) {
       System.out.println("Running integration tests | Single tenant Scenario");
       clientId = credentialsProperties.getProperty("clientID");
@@ -131,9 +129,9 @@ class IntegrationTest_SingleFacet {
             .url(
                 authUrl
                     + "/oauth/token?grant_type=password&username="
-                    + username2
+                    + noSDMRoleUsername
                     + "&password="
-                    + password2)
+                    + noSDMRoleUserPassword)
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();
@@ -475,7 +473,6 @@ class IntegrationTest_SingleFacet {
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
-    System.out.println("postData is created");
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response.equals("Entity in draft mode")) {
@@ -575,7 +572,6 @@ class IntegrationTest_SingleFacet {
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
-    System.out.println("postData is created");
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID5);
     if (response.equals("Entity in draft mode")) {
@@ -583,7 +579,6 @@ class IntegrationTest_SingleFacet {
           api.createAttachment(appUrl, entityName, facetName, entityID5, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
-        attachmentID9 = createResponse.get(1);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID5);
         if (response.equals("Saved")) {
           testStatus = true;

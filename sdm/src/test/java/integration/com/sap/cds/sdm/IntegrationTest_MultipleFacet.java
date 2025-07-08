@@ -38,8 +38,8 @@ class IntegrationTest_MultipleFacet {
   private static String authUrl;
   private static String username;
   private static String password;
-  private static String username2;
-  private static String password2;
+  private static String noSDMRoleUsername;
+  private static String noSDMRoleUserPassword;
   private static String serviceName = "AdminService";
   private static String entityName = "Books";
   private static String entityName2 = "author";
@@ -58,8 +58,8 @@ class IntegrationTest_MultipleFacet {
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    username2 = credentialsProperties.getProperty("noSDMRoleUsername");
-    password2 = credentialsProperties.getProperty("noSDMRoleUserPassword");
+    noSDMRoleUsername = credentialsProperties.getProperty("noSDMRoleUsername");
+    noSDMRoleUserPassword = credentialsProperties.getProperty("noSDMRoleUserPassword");
     if (tenancyModel.equals("single")) {
       System.out.println("Running integration tests | Single tenant Scenario");
       clientId = credentialsProperties.getProperty("clientID");
@@ -126,9 +126,9 @@ class IntegrationTest_MultipleFacet {
             .url(
                 authUrl
                     + "/oauth/token?grant_type=password&username="
-                    + username2
+                    + noSDMRoleUsername
                     + "&password="
-                    + password2)
+                    + noSDMRoleUserPassword)
             .method("POST", body)
             .addHeader("Authorization", basicAuth)
             .build();
@@ -556,7 +556,6 @@ class IntegrationTest_MultipleFacet {
 
     response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
 
-    System.out.println("response is " + response);
     String expected =
         "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported "
             + "characters (/, \\\\). \\n\\n\\t\\u2022 a/\\bc.pdf\\n\\nRename the files and try again.\",\"numericSeverity"
@@ -2190,7 +2189,6 @@ class IntegrationTest_MultipleFacet {
       postData.put("createdAt", new Date().toString());
       postData.put("createdBy", "test@test.com");
       postData.put("modifiedBy", "test@test.com");
-      boolean allCreated = true;
       for (int i = 0; i < facet.length; i++) {
         List<String> createResponse =
             api.createAttachment(appUrl, entityName, facet[i], entityID6, srvpath, postData, file);
@@ -2198,7 +2196,6 @@ class IntegrationTest_MultipleFacet {
           System.out.println("Attachment created in facet: " + facet[i]);
         } else {
           System.out.println("Attachment creation failed in facet: " + facet[i]);
-          allCreated = false;
         }
       }
       response = api.deleteEntityDraft(appUrl, entityName, entityID6);
@@ -2213,7 +2210,7 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(30)
-  void testDraftUpdate_UploadTwoDeleteOneAndCreate_MultiFacet() throws IOException {
+  void testDraftUpdateUploadTwoDeleteOneAndCreate() throws IOException {
     System.out.println("Test (30): Upload to all facets, delete one, and create entity");
 
     boolean testStatus = false;
@@ -2283,7 +2280,7 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(31)
-  void testUpdateEntityDraft_MultiFacet() throws IOException {
+  void testUpdateEntityDraft() throws IOException {
     System.out.println("Test (31): Update entity draft with new facet content");
     boolean testStatus = false;
 
@@ -2324,7 +2321,7 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(32)
-  void testUploadAttachmentWithoutSDMRole_MultiFacet() throws IOException {
+  void testUploadAttachmentWithoutSDMRole() throws IOException {
     System.out.println("Test (32): Upload attachment across facets without SDM role");
     boolean testStatus = true;
 
