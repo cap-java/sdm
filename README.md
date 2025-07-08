@@ -317,6 +317,8 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. 
 
+GetDependencies,subscribe and unsubscribe are the mandatory steps to be performed to support multitenancy.
+
 Refer the below example to pass the SDM Service dependencies to SaaSRegistry so that SDM credentials are passed to subscribing tenant.
 ```java
 //Set the SDM xsappname to SaaS Registry Dependency.
