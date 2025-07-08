@@ -7,6 +7,10 @@ on:
         description: 'Specify the Cloud Foundry space to run integration tests on'
         required: true
 
+      branch_name:
+        description: 'Specify the branch to use for integration tests'
+        required: true
+
 jobs:
   integration-test:
     runs-on: ubuntu-latest
@@ -14,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
