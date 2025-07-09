@@ -2,13 +2,13 @@ package com.sap.cds.sdm.service;
 
 import com.google.gson.JsonObject;
 import com.sap.cds.Result;
-import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.utilities.SDMUtils;
@@ -265,7 +265,7 @@ public class SDMServiceImpl implements SDMService {
       String objectId,
       String jwtToken,
       SDMCredentials sdmCredentials,
-      AttachmentReadEventContext context) {
+      AttachmentReadContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
     var httpClient =
@@ -282,6 +282,7 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getContentRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
+      System.out.println("Response Code " + responseCode);
       if (responseCode != 200) {
         response.close();
         if (responseCode == 404) {
@@ -294,7 +295,8 @@ public class SDMServiceImpl implements SDMService {
         context.getData().setContent(inputStream);
       }
     } catch (Exception e) {
-      throw new ServiceException("Failed to set document stream in context");
+      e.printStackTrace();
+      throw new ServiceException("Failed to set document stream in context", e.getMessage());
     }
   }
 

@@ -12,6 +12,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
@@ -19,7 +20,8 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SDMAttachmentsService extends ServiceDelegator implements AttachmentService {
+public class SDMAttachmentsService extends ServiceDelegator
+    implements AttachmentService, RegisterService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsService.class);
 
   public SDMAttachmentsService() {
@@ -82,5 +84,16 @@ public class SDMAttachmentsService extends ServiceDelegator implements Attachmen
     var deletionUserInfo = DeletionUserInfo.create();
     deletionUserInfo.setName(userInfo.getName());
     return deletionUserInfo;
+  }
+
+  @Override
+  public InputStream readSDMAttachment(String contentId) {
+    logger.info("Reading SDM attachment with document id: {}", contentId);
+
+    var readContext = AttachmentReadContext.create();
+    readContext.setContentId(contentId);
+    readContext.setData(MediaData.create());
+    emit(readContext);
+    return readContext.getData().getContent();
   }
 }

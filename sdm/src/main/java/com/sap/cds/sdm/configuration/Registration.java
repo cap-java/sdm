@@ -61,6 +61,7 @@ public class Registration implements CdsRuntimeConfiguration {
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
     VersioningService versioningService = new VersioningServiceImpl(binding, connectionPool);
     DocumentUploadService documentService = new DocumentUploadService();
+    AttachmentService attachmentService = new SDMAttachmentsService();
     configurer.eventHandler(buildReadHandler());
     configurer.eventHandler(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
@@ -68,7 +69,13 @@ public class Registration implements CdsRuntimeConfiguration {
         new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
     configurer.eventHandler(
         new SDMServiceGenericHandler(
-            persistenceService, sdmService, draftServiceList.get(0), versioningService));
+            persistenceService,
+            sdmService,
+            draftServiceList.get(0),
+            versioningService,
+            attachmentService));
+
+    // configurer.eventHandler(new SDMReadHandler(attachmentService));
   }
 
   private AttachmentService buildAttachmentService() {

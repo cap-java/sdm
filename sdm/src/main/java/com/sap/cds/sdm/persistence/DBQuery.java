@@ -45,7 +45,7 @@ public class DBQuery {
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("objectId", "folderId", "fileName", "mimeType", "linkUrl")
+            .columns("objectId", "folderId", "fileName", "mimeType", "linkUrl", "contentId")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     System.out.println("Result" + result.rowCount());
@@ -57,7 +57,8 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setFolderId(row.get("folderId").toString());
       cmisDocument.setMimeType(row.get("mimeType").toString());
-      cmisDocument.setUrl(row.get("linkUrl").toString());
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      cmisDocument.setContentId(row.get("contentId").toString());
     }
     return cmisDocument;
   }

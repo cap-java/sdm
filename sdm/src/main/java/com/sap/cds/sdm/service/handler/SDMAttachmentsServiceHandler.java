@@ -96,7 +96,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
-
+    System.out.println("In read Attachment under handler");
     AuthenticationInfo authInfo = context.getAuthenticationInfo();
     JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
     String jwtToken = jwtTokenInfo.getToken();
@@ -111,11 +111,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       context.getData().setContent(new ByteArrayInputStream(new byte[0]));
     } else {
       SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      try {
-        sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
-      } catch (Exception e) {
-        throw new ServiceException(e.getMessage());
-      }
+      //      try {
+      //        sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+      //      } catch (Exception e) {
+      //        throw new ServiceException(e.getMessage());
+      //      }
     }
     context.setCompleted();
   }

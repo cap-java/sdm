@@ -1,7 +1,7 @@
 package com.sap.cds.sdm.service;
 
 import com.sap.cds.Result;
-import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
@@ -41,7 +41,7 @@ public interface SDMService {
       String objectId,
       String jwtToken,
       SDMCredentials sdmCredentials,
-      AttachmentReadEventContext context)
+      AttachmentReadContext context)
       throws IOException;
 
   public JSONObject updateAttachments(

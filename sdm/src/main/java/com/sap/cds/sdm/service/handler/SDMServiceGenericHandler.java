@@ -1,6 +1,8 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
+import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
@@ -11,6 +13,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
@@ -25,10 +28,12 @@ import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.awt.*;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URLConnection;
-import java.rmi.ServerException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,16 +47,19 @@ public class SDMServiceGenericHandler implements EventHandler {
   private final SDMService sdmService;
   private final DraftService draftService;
   private final VersioningService versioningService;
+  private final AttachmentService attachmentService;
 
   public SDMServiceGenericHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
       DraftService draftService,
-      VersioningService versioningService) {
+      VersioningService versioningService,
+      AttachmentService attachmentService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.draftService = draftService;
     this.versioningService = versioningService;
+    this.attachmentService = attachmentService;
   }
 
   @On(event = "createLink")
@@ -85,11 +93,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     editLink(context);
   }
 
-  @On(event = "openLink")
-  public void openLink(EventContext context) throws IOException {
+  @On(event = "openAttachment")
+  public void openAttachment(AttachmentReadContext context) throws Exception {
+    System.out.println("I am in open Attachment method...");
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-
+    context.setData(MediaData.create());
     Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
     Map<String, Object> targetKeys =
@@ -99,11 +108,57 @@ public class SDMServiceGenericHandler implements EventHandler {
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
-    if (!cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
-      throw new ServerException("Not supported for Documents.");
+    if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+      // Runtime.getRuntime().exec(new String[] {"open", cmisDocument.getUrl()});
+      openUrlInBrowser(cmisDocument.getUrl());
+    } else {
+      // download as a inputstream
+      AuthenticationInfo authInfo = context.getAuthenticationInfo();
+      JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
+      String jwtToken = jwtTokenInfo.getToken();
+      String[] contentIdParts = cmisDocument.getContentId().split(":");
+      String objectId = contentIdParts[0];
+      // get the link url against objectId and open it
+      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      //      CdsDataProcessor.Converter converter = (path, element, value) -> {
+      //        System.out.println("Processing after read event for entityin SDM {}"+
+      // element.getName());
+      //
+      //          Supplier<InputStream> supplier = (Supplier<InputStream>)
+      // attachmentService.readSDMAttachment(
+      //                  cmisDocument.getContentId());
+      //          return new SDMInputStream(supplier);
+      //
+      //      };
+      //
+      //      CdsDataProcessor.create().addConverter(ApplicationHandlerHelper.MEDIA_CONTENT_FILTER,
+      // converter).process(data, context.getTarget());
+
+      try {
+        sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+      } catch (Exception e) {
+        throw new ServiceException(e.getMessage());
+      }
     }
-    Runtime.getRuntime().exec(new String[] {"open", cmisDocument.getUrl()});
     context.setCompleted();
+  }
+
+  private void openUrlInBrowser(String url) throws Exception {
+    if (Desktop.isDesktopSupported()) {
+      Desktop desktop = Desktop.getDesktop();
+      if (desktop.isSupported(Desktop.Action.BROWSE)) {
+        desktop.browse(new URI(url));
+      }
+    }
+  }
+
+  private void openFileInBrowser(File file) throws Exception {
+    if (Desktop.isDesktopSupported()) {
+      Desktop desktop = Desktop.getDesktop();
+      if (desktop.isSupported(Desktop.Action.BROWSE)) {
+        desktop.browse(file.toURI());
+      }
+    }
   }
 
   private void createLink(EventContext context) throws IOException {
@@ -172,11 +227,13 @@ public class SDMServiceGenericHandler implements EventHandler {
             + ":"
             + subdomain
             + ":"
-            + cmisDocument.getMimeType());
+            + cmisDocument.getMimeType()
+            + ":link");
     updatedFields.put("fileName", cmisDocument.getFileName());
     updatedFields.put("HasDraftEntity", false);
     updatedFields.put("HasActiveEntity", false);
     updatedFields.put("linkUrl", cmisDocument.getUrl());
+    updatedFields.put("linkName", cmisDocument.getFileName());
     var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
     draftService.newDraft(insert);
     context.setCompleted();
