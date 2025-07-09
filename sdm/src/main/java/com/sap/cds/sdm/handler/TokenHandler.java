@@ -13,7 +13,10 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OAuth2DestinationBuilder;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf;
 import com.sap.cloud.security.config.ClientCredentials;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -23,24 +26,34 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 
 public class TokenHandler {
-  private TokenHandler() {
-    throw new IllegalStateException("TokenHandler class");
-  }
-
-  public static byte[] toBytes(String str) {
-    return requireNonNull(str).getBytes(StandardCharsets.UTF_8);
-  }
-
-  public static String toString(byte[] bytes) {
-    return new String(requireNonNull(bytes), StandardCharsets.UTF_8);
-  }
-
   private static final String SDM_TOKEN_ENDPOINT = "url";
   private static final String SDM_URL = "uri";
   private static final String CLIENT_ID = "clientid";
   private static final String CLIENT_SECRET = "clientsecret";
 
-  public static SDMCredentials getSDMCredentials() {
+  private static TokenHandler instance;
+
+  private TokenHandler() {
+    // Allow instantiation
+    // throw new IllegalStateException("TokenHandler class");
+  }
+
+  public static TokenHandler getTokenHandlerInstance() {
+    if (instance == null) {
+      instance = new TokenHandler();
+    }
+    return instance;
+  }
+
+  public byte[] toBytes(String str) {
+    return requireNonNull(str).getBytes(StandardCharsets.UTF_8);
+  }
+
+  public String toString(byte[] bytes) {
+    return new String(requireNonNull(bytes), StandardCharsets.UTF_8);
+  }
+
+  public SDMCredentials getSDMCredentials() {
     Map<String, Object> uaaCredentials = getUaaCredentials();
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -51,50 +64,51 @@ public class TokenHandler {
     return sdmCredentials;
   }
 
-  public static Map<String, Object> getUaaCredentials() {
+  public Map<String, Object> getUaaCredentials() {
     List<ServiceBinding> allServiceBindings =
         DefaultServiceBindingAccessor.getInstance().getServiceBindings();
-    // filter for a specific binding
     ServiceBinding sdmBinding =
         allServiceBindings.stream()
             .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
             .findFirst()
-            .get();
-
+            .orElseThrow(() -> new IllegalStateException("SDM binding not found"));
     return sdmBinding.getCredentials();
   }
 
-  public static String extractResponseBodyAsString(HttpResponse response) throws IOException {
-    // Ensure that InputStream and BufferedReader are automatically closed
+  public String extractResponseBodyAsString(HttpResponse response) throws IOException {
     try (InputStream inputStream = response.getEntity().getContent();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
       return bufferedReader.lines().collect(Collectors.joining(System.lineSeparator()));
     }
   }
 
-  public static HttpClient getHttpClient(
+  public HttpClient getHttpClient(
       ServiceBinding binding,
       CdsProperties.ConnectionPool connectionPoolConfig,
       String subdomain,
       String type) {
+
     Map<String, Object> uaaCredentials;
     if (binding != null && !binding.getCredentials().isEmpty()) {
       uaaCredentials = binding.getCredentials();
     } else {
-      uaaCredentials = TokenHandler.getUaaCredentials();
+      uaaCredentials = getUaaCredentials();
     }
+
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
+
     ClientCredentials clientCredentials =
         new ClientCredentials(uaa.get(CLIENT_ID).toString(), uaa.get(CLIENT_SECRET).toString());
+
     String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
     if (subdomain != null && !subdomain.isEmpty()) {
-      String providersubdomain =
+      String providerSubdomain =
           baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
-      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+      baseTokenUrl = baseTokenUrl.replace(providerSubdomain, subdomain);
     }
 
     DefaultHttpDestination destination;
-    if (type.equals(NAMED_USER_FLOW)) {
+    if (NAMED_USER_FLOW.equals(type)) {
       destination =
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
@@ -115,6 +129,7 @@ public class TokenHandler {
 
     DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
         DefaultHttpClientFactory.builder();
+
     if (connectionPoolConfig == null) {
       Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
       builder.timeoutMilliseconds((int) timeout.toMillis());
@@ -125,8 +140,7 @@ public class TokenHandler {
       builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
       builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
     }
-    DefaultHttpClientFactory factory = builder.build();
 
-    return factory.createHttpClient(destination);
+    return builder.build().createHttpClient(destination);
   }
 }

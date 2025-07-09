@@ -35,10 +35,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
-  public SDMCreateAttachmentsHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMCreateAttachmentsHandler(
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @Before
@@ -163,14 +171,14 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String id = (String) attachment.get("ID");
     String fileNameInDB;
     fileNameInDB =
-        DBQuery.getAttachmentForID(
+        dbQuery.getAttachmentForID(
             attachmentEntity.get(),
             persistenceService,
             id); // Fetching the name of the file from DB
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String fileNameInSDM =
         sdmService.getObject(
             objectId,
@@ -186,7 +194,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachment); // Fetching the secondary type properties from the attachment entity
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getPropertiesForID(
+        dbQuery.getPropertiesForID(
             attachmentEntity.get(),
             persistenceService,
             id,

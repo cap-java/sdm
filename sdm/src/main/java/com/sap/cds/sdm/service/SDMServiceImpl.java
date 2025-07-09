@@ -45,16 +45,21 @@ public class SDMServiceImpl implements SDMService {
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
   private static final Logger logger = LoggerFactory.getLogger(SDMServiceImpl.class);
+  private final TokenHandler tokenHandler;
 
-  public SDMServiceImpl(ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+  public SDMServiceImpl(
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   @Override
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -147,7 +152,7 @@ public class SDMServiceImpl implements SDMService {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
     List<String> secondaryTypes;
@@ -253,7 +258,7 @@ public class SDMServiceImpl implements SDMService {
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -283,7 +288,7 @@ public class SDMServiceImpl implements SDMService {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = context.getUserInfo().isSystemUser() ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -338,7 +343,7 @@ public class SDMServiceImpl implements SDMService {
       }
     }
 
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     if (folderId == null) {
       folderId =
@@ -360,7 +365,7 @@ public class SDMServiceImpl implements SDMService {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     String folderId = null;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -392,7 +397,7 @@ public class SDMServiceImpl implements SDMService {
       String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -427,7 +432,7 @@ public class SDMServiceImpl implements SDMService {
     String type = CacheConfig.getVersionedRepoCache().get(repoKey);
     Boolean isVersioned;
     if (type == null) {
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
       isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
     } else {
@@ -451,7 +456,7 @@ public class SDMServiceImpl implements SDMService {
 
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
     String getRepoInfoUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=repositoryInfo";
@@ -481,8 +486,8 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public int deleteDocument(String cmisaction, String objectId) throws IOException {
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
@@ -510,7 +515,7 @@ public class SDMServiceImpl implements SDMService {
     if (secondaryTypes == null) {
       String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
       logger.info("This is a :" + grantType + " flow");
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+      var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       String sdmUrl =
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
@@ -557,7 +562,7 @@ public class SDMServiceImpl implements SDMService {
     if (validSecondaryProperties == null) {
       validSecondaryProperties = new ArrayList<>();
       Iterator<String> iterator = secondaryTypes.iterator();
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+      var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       while (iterator.hasNext()) {
         String value = iterator.next();
         String sdmUrl =

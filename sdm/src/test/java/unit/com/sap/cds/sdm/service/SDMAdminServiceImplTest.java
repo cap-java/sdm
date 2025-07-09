@@ -56,16 +56,18 @@ public class SDMAdminServiceImplTest {
   private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<HttpClients> httpClientsMockedStatic;
   private MockedStatic<DefaultHttpClientFactory> defaultHttpClientFactoryMockedStatic;
+  @Mock private TokenHandler tokenHandler;
 
   @BeforeEach
   public void setUp() {
     MockitoAnnotations.openMocks(this);
+    tokenHandler = mock(TokenHandler.class);
+    tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
+    tokenHandlerMockedStatic.when(TokenHandler::getTokenHandlerInstance).thenReturn(tokenHandler);
+
     sdmAdminService = new SDMAdminServiceImpl();
     statusLine = mock(StatusLine.class);
     entity = mock(HttpEntity.class);
-
-    tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
-    tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockCredentials);
 
     // Mock HttpClients static method
     httpClientsMockedStatic = mockStatic(HttpClients.class);
@@ -106,15 +108,15 @@ public class SDMAdminServiceImplTest {
   @Test
   public void testOnboardRepository_success()
       throws UnsupportedEncodingException, JsonProcessingException, IOException {
-    SDMCredentials sdmCredentials = new SDMCredentials();
-    sdmCredentials.setUrl("https://example.com/");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
-    tokenHandlerMockedStatic
-        .when(
-            () -> TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(mockSdmCredentials.getBaseTokenUrl()).thenReturn("https://auth.example.com/");
+    when(mockSdmCredentials.getClientId()).thenReturn("client-id");
+    when(mockSdmCredentials.getClientSecret()).thenReturn("client-secret");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
         .thenReturn(httpClient);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
     Repository repository = new Repository();
     repository.setSubdomain("testSubdomain");
     repository.setDisplayName("TestRepository");
@@ -171,12 +173,8 @@ public class SDMAdminServiceImplTest {
     // Arrange
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("https://example.com/");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
-    tokenHandlerMockedStatic
-        .when(
-            () -> TokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
         .thenReturn(httpClient);
     Repository repository = new Repository();
     repository.setSubdomain("testSubdomain");
@@ -202,9 +200,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientId("clientID");
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
     CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
@@ -257,9 +253,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientId("clientID");
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
     CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
@@ -272,7 +266,7 @@ public class SDMAdminServiceImplTest {
   "repoAndConnectionInfos": [
     {
       "repository": {
-        "externalId": "repoid",
+        "externalId": "some-other-id",
         "id": "123"
       }
     }
@@ -312,9 +306,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientId("clientID");
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
     CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
@@ -369,9 +361,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
 
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Simulate GET request failure
     when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("GET failed"));
@@ -395,9 +385,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
 
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
     HttpEntity mockGetEntity = mock(HttpEntity.class);
@@ -447,9 +435,7 @@ public class SDMAdminServiceImplTest {
     sdmCredentials.setClientId("clientID");
     sdmCredentials.setClientSecret("clientSecret");
     sdmCredentials.setUrl("url");
-    tokenHandlerMockedStatic
-        .when(() -> TokenHandler.getSDMCredentials())
-        .thenReturn(sdmCredentials);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
     CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);

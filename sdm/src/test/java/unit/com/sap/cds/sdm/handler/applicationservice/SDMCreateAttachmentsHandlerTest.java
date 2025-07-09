@@ -43,23 +43,20 @@ public class SDMCreateAttachmentsHandlerTest {
   @Mock private Messages messages;
   @Mock private CdsModel model;
   private SDMCreateAttachmentsHandler handler;
-  private MockedStatic<TokenHandler> tokenHandlerMockedStatic;
   private MockedStatic<SDMUtils> sdmUtilsMockedStatic;
-  private MockedStatic<DBQuery> dbQueryMockedStatic;
   @Mock private CdsElement cdsElement;
   @Mock private CdsAssociationType cdsAssociationType;
   @Mock private CdsStructuredType targetAspect;
+  @Mock private TokenHandler tokenHandler;
+  @Mock private DBQuery dbQuery;
 
   @BeforeEach
   public void setUp() {
     MockitoAnnotations.openMocks(this);
-    tokenHandlerMockedStatic = mockStatic(TokenHandler.class);
-    tokenHandlerMockedStatic.when(TokenHandler::getSDMCredentials).thenReturn(mockCredentials);
-
     sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
-    dbQueryMockedStatic = mockStatic(DBQuery.class);
 
-    handler = spy(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
+    handler =
+        spy(new SDMCreateAttachmentsHandler(persistenceService, sdmService, tokenHandler, dbQuery));
 
     when(context.getMessages()).thenReturn(messages);
     when(context.getAuthenticationInfo()).thenReturn(authInfo);
@@ -76,14 +73,8 @@ public class SDMCreateAttachmentsHandlerTest {
 
   @AfterEach
   public void tearDown() {
-    if (tokenHandlerMockedStatic != null) {
-      tokenHandlerMockedStatic.close();
-    }
     if (sdmUtilsMockedStatic != null) {
       sdmUtilsMockedStatic.close();
-    }
-    if (dbQueryMockedStatic != null) {
-      dbQueryMockedStatic.close();
     }
   }
 
@@ -414,12 +405,9 @@ public class SDMCreateAttachmentsHandlerTest {
 
     // Mock attachment entity
     CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
     when(context.getTarget()).thenReturn(attachmentDraftEntity);
     when(context.getModel()).thenReturn(model);
-    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-    dbQueryMockedStatic
-        .when(() -> DBQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "id"))
-        .thenReturn(null);
 
     // Mock findEntity to return an optional containing attachmentDraftEntity
     when(model.findEntity("some.qualified.Name" + "." + "composition"))
@@ -445,12 +433,6 @@ public class SDMCreateAttachmentsHandlerTest {
             () ->
                 SDMUtils.getSecondaryTypeProperties(Optional.of(attachmentDraftEntity), attachment))
         .thenReturn(secondaryTypeProperties);
-    dbQueryMockedStatic
-        .when(
-            () ->
-                DBQuery.getPropertiesForID(
-                    attachmentDraftEntity, persistenceService, "id", secondaryTypeProperties))
-        .thenReturn(updatedSecondaryProperties);
     sdmUtilsMockedStatic
         .when(
             () ->
@@ -463,10 +445,17 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(new HashMap<>());
 
     // Mock restricted character
-    String fileNameInRequest = "fileNameInRequest";
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isRestrictedCharactersInName(fileNameInRequest))
+        .when(() -> SDMUtils.isRestrictedCharactersInName("fileNameInRequest"))
         .thenReturn(false);
+
+    when(dbQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
+        .thenReturn(null);
+
+    // When getPropertiesForID is called
+    when(dbQuery.getPropertiesForID(
+            attachmentDraftEntity, persistenceService, "test-id", secondaryTypeProperties))
+        .thenReturn(updatedSecondaryProperties);
 
     // Act & Assert
     ServiceException exception =
