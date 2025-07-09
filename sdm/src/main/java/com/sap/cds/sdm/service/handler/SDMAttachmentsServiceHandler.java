@@ -69,18 +69,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
-      String userEmail = context.getDeletionUserInfo().getName();
       String entity = contextValues[2];
-      String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
           DBQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
-        sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
+        sdmService.deleteDocument("deleteTree", folderId);
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
-          sdmService.deleteDocument("delete", objectId, userEmail, subdomain);
+          sdmService.deleteDocument("delete", objectId);
         }
       }
     }
@@ -101,7 +99,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String objectId = contentIdParts[0];
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     try {
-      sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+      sdmService.readDocument(objectId, sdmCredentials, context);
     } catch (Exception e) {
       throw new ServiceException(e.getMessage());
     }
@@ -143,11 +141,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void validateRepository(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
-    JwtTokenAuthenticationInfo jwtTokenInfo =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
+    String repocheck =
+        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
@@ -238,12 +234,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
 
     CmisDocument cmisDocument = new CmisDocument();
-    String jwtToken =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
+    Boolean isSystemUser = eventContext.getUserInfo().isSystemUser();
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
-    String folderId = sdmService.getFolderId(result, persistenceService, folderName, jwtToken);
+    String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     setCmisDocumentProperties(
@@ -252,7 +247,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
       logger.info("Synchronous Response from documentService: {}", createResult);
       logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {
@@ -307,17 +302,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void finalizeContext(
       AttachmentCreateEventContext eventContext, CmisDocument cmisDocument) {
-    String subdomain =
-        TokenHandler.getSubdomainFromToken(
-            eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken());
     eventContext.setContentId(
         cmisDocument.getObjectId()
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + eventContext.getAttachmentEntity()
-            + ":"
-            + subdomain);
+            + eventContext.getAttachmentEntity());
     eventContext.getData().setStatus("Clean");
     eventContext.getData().setContent(null);
     eventContext.setCompleted();

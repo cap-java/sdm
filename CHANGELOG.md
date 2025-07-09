@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.4.1
+
+### Fixed
+
+- An issue related to IAS token fetch. Now plugin works with IAS flow as well.
+
 ## Version 1.4.0
 
 ### Added

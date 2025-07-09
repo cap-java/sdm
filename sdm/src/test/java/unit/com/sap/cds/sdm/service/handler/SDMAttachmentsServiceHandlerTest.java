@@ -807,7 +807,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn(cmisDocuments);
 
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("delete", objectId, userEmail, subdomain);
+      verify(sdmService).deleteDocument("delete", objectId);
     }
   }
 
@@ -849,7 +849,7 @@ public class SDMAttachmentsServiceHandlerTest {
                       entity, persistenceService, folderId, attachmentMarkAsDeletedEventContext))
           .thenReturn(cmisDocuments);
       handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-      verify(sdmService).deleteDocument("deleteTree", folderId, userEmail, subdomain);
+      verify(sdmService).deleteDocument("deleteTree", folderId);
     }
   }
 
@@ -961,8 +961,7 @@ public class SDMAttachmentsServiceHandlerTest {
       handlerSpy.readAttachment(mockReadContext);
 
       // Verify that readDocument method was called
-      verify(sdmService)
-          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+      verify(sdmService).readDocument(anyString(), any(SDMCredentials.class), eq(mockReadContext));
     }
   }
 
@@ -978,7 +977,7 @@ public class SDMAttachmentsServiceHandlerTest {
       when(TokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
       doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
           .when(sdmService)
-          .readDocument(anyString(), anyString(), any(SDMCredentials.class), eq(mockReadContext));
+          .readDocument(anyString(), any(SDMCredentials.class), eq(mockReadContext));
 
       ServiceException exception =
           assertThrows(
