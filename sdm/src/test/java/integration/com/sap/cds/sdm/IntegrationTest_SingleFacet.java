@@ -338,7 +338,10 @@ class IntegrationTest_SingleFacet {
     if (!response.equals("Could not create entity")) {
       entityID4 = response;
       ClassLoader classLoader = getClass().getClassLoader();
-      File file = new File(classLoader.getResource("sample3.pdf").getFile());
+      File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+      File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+      Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
       Map<String, Object> postData = new HashMap<>();
       postData.put("up__ID", entityID4);
@@ -349,7 +352,7 @@ class IntegrationTest_SingleFacet {
 
       List<String> createResponse =
           apiNoRoles.createAttachment(
-              appUrl, entityName, facetName, entityID4, srvpath, postData, file);
+              appUrl, entityName, facetName, entityID4, srvpath, postData, tempFile);
       String check = createResponse.get(0);
       String expectedString =
           "{\"error\":{\"code\":\"500\",\"message\":\"You do not have the required permissions to upload attachments. Please contact your administrator for access.\"}}";
@@ -465,7 +468,10 @@ class IntegrationTest_SingleFacet {
 
     boolean testStatus = false;
     ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+    File file = new File(Objects.requireNonNull(classLoader.getResource("sample.pdf")).getFile());
+
+    File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+    Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
     Map<String, Object> postData = new HashMap<>();
     postData.put("up__ID", entityID);
@@ -477,7 +483,8 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response.equals("Entity in draft mode")) {
       List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, entityName, facetName, entityID, srvpath, postData, tempFile);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID6 = createResponse.get(1);
@@ -564,7 +571,10 @@ class IntegrationTest_SingleFacet {
     System.out.println("Test (11): Update entity in draft");
     boolean testStatus = false;
     ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+    File file = new File(Objects.requireNonNull(classLoader.getResource("sample.pdf")).getFile());
+
+    File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+    Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
     Map<String, Object> postData = new HashMap<>();
     postData.put("up__ID", entityID5);
@@ -576,7 +586,8 @@ class IntegrationTest_SingleFacet {
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID5);
     if (response.equals("Entity in draft mode")) {
       List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facetName, entityID5, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, entityName, facetName, entityID5, srvpath, postData, tempFile);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID5);
@@ -588,6 +599,7 @@ class IntegrationTest_SingleFacet {
     if (!testStatus) {
       fail("update entity draft with uploading attachment failed");
     }
+    api.deleteEntity(appUrl, entityName, entityID5);
   }
 
   @Test
@@ -2130,7 +2142,6 @@ class IntegrationTest_SingleFacet {
     if (!response.equals("Could not create entity")) {
       entityID7 = response;
       ClassLoader classLoader = getClass().getClassLoader();
-      System.out.println("response of createEntityDraft is " + response);
       File file = new File(classLoader.getResource("sample.pdf").getFile());
 
       Map<String, Object> postData1 = new HashMap<>();

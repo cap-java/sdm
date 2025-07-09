@@ -523,7 +523,10 @@ class IntegrationTest_MultipleFacet {
     boolean testStatus = false;
 
     ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+    File file = new File(Objects.requireNonNull(classLoader.getResource("sample.pdf")).getFile());
+
+    File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+    Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
     Map<String, Object> postData = new HashMap<>();
     postData.put("mimeType", "application/pdf");
@@ -540,7 +543,7 @@ class IntegrationTest_MultipleFacet {
     for (int i = 0; i < facet.length; i++) {
       postData.put("up__ID", entityID);
       List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facet[i], entityID, srvpath, postData, file);
+          api.createAttachment(appUrl, entityName, facet[i], entityID, srvpath, postData, tempFile);
 
       String check = createResponse.get(0);
       if (!"Attachment created".equals(check)) {
@@ -2285,7 +2288,10 @@ class IntegrationTest_MultipleFacet {
     boolean testStatus = false;
 
     ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+    File file = new File(Objects.requireNonNull(classLoader.getResource("sample.pdf")).getFile());
+
+    File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+    Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
     Map<String, Object> postData = new HashMap<>();
     postData.put("up__ID", entityID5);
@@ -2300,7 +2306,8 @@ class IntegrationTest_MultipleFacet {
 
       for (int i = 0; i < facet.length; i++) {
         List<String> createResponse =
-            api.createAttachment(appUrl, entityName, facet[i], entityID5, srvpath, postData, file);
+            api.createAttachment(
+                appUrl, entityName, facet[i], entityID5, srvpath, postData, tempFile);
         if (!"Attachment created".equals(createResponse.get(0))) {
           allCreated = false;
         }
@@ -2329,8 +2336,11 @@ class IntegrationTest_MultipleFacet {
     if (!response.equals("Could not create entity")) {
       entityID7 = response;
       ClassLoader classLoader = getClass().getClassLoader();
-      File file =
-          new File(Objects.requireNonNull(classLoader.getResource("sample3.pdf")).getFile());
+      File file = new File(Objects.requireNonNull(classLoader.getResource("sample.pdf")).getFile());
+
+      File tempFile = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+      Files.copy(file.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
       Map<String, Object> postData = new HashMap<>();
       postData.put("up__ID", entityID7);
       postData.put("mimeType", "application/pdf");
@@ -2341,7 +2351,7 @@ class IntegrationTest_MultipleFacet {
       for (int i = 0; i < facet.length; i++) {
         List<String> createResponse =
             apiNoRoles.createAttachment(
-                appUrl, entityName, facet[i], entityID7, srvpath, postData, file);
+                appUrl, entityName, facet[i], entityID7, srvpath, postData, tempFile);
         String check = createResponse.get(0);
         String expectedError =
             "{\"error\":{\"code\":\"500\",\"message\":\"You do not have the required permissions to upload attachments. Please contact your administrator for access.\"}}";
@@ -2354,5 +2364,6 @@ class IntegrationTest_MultipleFacet {
     if (!testStatus) {
       fail("Attachment uploaded without SDM role for one or more facets");
     }
+    api.deleteEntity(appUrl, entityName, entityID7);
   }
 }
