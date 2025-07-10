@@ -2320,7 +2320,7 @@ class IntegrationTest_MultipleFacet {
         }
       }
     }
-
+    api.deleteEntity(appUrl, entityName, entityID5);
     if (!testStatus) {
       fail("Failed to update draft with new attachments for all facets");
     }
@@ -2364,6 +2364,5 @@ class IntegrationTest_MultipleFacet {
     if (!testStatus) {
       fail("Attachment uploaded without SDM role for one or more facets");
     }
-    api.deleteEntity(appUrl, entityName, entityID7);
   }
 }
