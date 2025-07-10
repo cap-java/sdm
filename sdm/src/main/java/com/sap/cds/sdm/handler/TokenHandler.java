@@ -33,8 +33,7 @@ public class TokenHandler {
 
   private static TokenHandler instance;
 
-  private TokenHandler() {
-  }
+  private TokenHandler() {}
 
   public static TokenHandler getTokenHandlerInstance() {
     if (instance == null) {
