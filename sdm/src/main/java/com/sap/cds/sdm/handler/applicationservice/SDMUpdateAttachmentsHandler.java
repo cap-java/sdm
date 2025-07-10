@@ -183,9 +183,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
       String objectId = (String) attachment.get("objectId");
-      AuthenticationInfo authInfo = context.getAuthenticationInfo();
-      JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-      String jwtToken = jwtTokenInfo.getToken();
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       fileNameInDB =
           sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());

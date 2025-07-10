@@ -34,8 +34,6 @@ public class TokenHandler {
   private static TokenHandler instance;
 
   private TokenHandler() {
-    // Allow instantiation
-    // throw new IllegalStateException("TokenHandler class");
   }
 
   public static TokenHandler getTokenHandlerInstance() {
