@@ -359,14 +359,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!noSDMRoles.isEmpty()) {
       context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update"));
-      if (!fileWithWhiteSpace.isEmpty()) {
-        context
-            .getMessages()
-            .warn(
-                String.format(
-                    SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE,
-                    String.join(", ", fileWithWhiteSpace)));
-      }
+    }
+    if (!fileWithWhiteSpace.isEmpty()) {
+      context
+          .getMessages()
+          .warn(
+              String.format(
+                  SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE,
+                  String.join(", ", fileWithWhiteSpace)));
     }
   }
 
