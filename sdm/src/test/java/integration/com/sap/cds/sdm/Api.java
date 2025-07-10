@@ -184,6 +184,35 @@ public class Api implements ApiInterface {
     return ("Could not delete entity");
   }
 
+  public String deleteEntityDraft(String appUrl, String entityName, String entityID) {
+    Request request =
+        new Request.Builder()
+            .url(
+                "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=false)")
+            .delete()
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        System.out.println("Delete entity failed. Error : " + response.body().string());
+        throw new IOException("Could not delete entity");
+      }
+      return "Entity Deleted";
+    } catch (IOException e) {
+      System.out.println("Could not delete entity : " + e);
+    }
+    return ("Could not delete entity");
+  }
+
   public String checkEntity(String appUrl, String entityName, String entityID) {
     Request request =
         new Request.Builder()
