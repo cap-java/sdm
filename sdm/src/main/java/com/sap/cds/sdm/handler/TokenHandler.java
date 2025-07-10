@@ -13,16 +13,10 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OAuth2DestinationBuilder;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf;
 import com.sap.cloud.security.config.ClientCredentials;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 
 public class TokenHandler {
@@ -70,13 +64,6 @@ public class TokenHandler {
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("SDM binding not found"));
     return sdmBinding.getCredentials();
-  }
-
-  public String extractResponseBodyAsString(HttpResponse response) throws IOException {
-    try (InputStream inputStream = response.getEntity().getContent();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-      return bufferedReader.lines().collect(Collectors.joining(System.lineSeparator()));
-    }
   }
 
   public HttpClient getHttpClient(

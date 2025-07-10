@@ -21,8 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.ehcache.Cache;
 import org.junit.jupiter.api.BeforeEach;
@@ -221,17 +219,5 @@ public class TokenHandlerTest {
   public void testToBytesWithNullInput() {
     assertThrows(
         NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toBytes(null));
-  }
-
-  @Test
-  public void testExtractResponseBodyAsString() throws IOException {
-    CloseableHttpResponse mockResponse = Mockito.mock(CloseableHttpResponse.class);
-    InputStream mockInputStream =
-        new ByteArrayInputStream("mockResponse".getBytes(StandardCharsets.UTF_8));
-    when(mockResponse.getEntity()).thenReturn(new InputStreamEntity(mockInputStream));
-
-    String result =
-        TokenHandler.getTokenHandlerInstance().extractResponseBodyAsString(mockResponse);
-    assertEquals("mockResponse", result);
   }
 }
