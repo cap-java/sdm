@@ -33,13 +33,17 @@ public class DocumentUploadService {
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
+  private final TokenHandler tokenHandler;
 
   public DocumentUploadService(
-      ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     logger.info("DocumentUploadService is instantiated");
 
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   /*
@@ -114,7 +118,7 @@ public class DocumentUploadService {
     request.setEntity(entity);
     headers.forEach(request::addHeader);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
 
@@ -144,7 +148,7 @@ public class DocumentUploadService {
     request.setEntity(entity);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
@@ -161,7 +165,7 @@ public class DocumentUploadService {
       throw new IOException("File stream is null!");
     }
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
