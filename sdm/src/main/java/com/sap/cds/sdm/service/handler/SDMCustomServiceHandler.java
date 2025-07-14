@@ -12,12 +12,9 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,13 +25,10 @@ import org.json.JSONObject;
 
 @ServiceName(value = "*", type = RegisterService.class)
 public class SDMCustomServiceHandler {
-  private final PersistenceService persistenceService;
   private final SDMService sdmService;
-  private final DraftService draftService;
+  private final List<DraftService> draftService;
 
-  public SDMCustomServiceHandler(
-      PersistenceService persistenceService, SDMService sdmService, DraftService draftService) {
-    this.persistenceService = persistenceService;
+  public SDMCustomServiceHandler(SDMService sdmService, List<DraftService> draftService) {
     this.sdmService = sdmService;
     this.draftService = draftService;
   }
@@ -45,17 +39,17 @@ public class SDMCustomServiceHandler {
     String upID = context.getUpId();
     String folderName = upID + "__" + facet;
     String repositoryId = SDMConstants.REPOSITORY_ID;
+    Boolean isSystemUser = context.getSystemUser();
+    Boolean folderExists = true;
 
     SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    AuthenticationInfo authInfo = context.getAuthenticationInfo();
-    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
-
     String folderId =
-        sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, jwtToken);
+        sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser);
     if (folderId == null) {
+      folderExists = false;
       folderId =
-          sdmService.createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, jwtToken);
+          sdmService.createFolder(
+              folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
       JSONObject jsonObject = new JSONObject(folderId);
       JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
       folderId = succinctProperties.getString("cmis:objectId");
@@ -64,24 +58,25 @@ public class SDMCustomServiceHandler {
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setFolderId(folderId);
     List<String> objectIds = context.getObjectIds();
-    Boolean flag = false;
     List<List<String>> attachmentsMetadata = new ArrayList<>();
     for (String objectId : objectIds) {
       cmisDocument.setObjectId(objectId);
       try {
-        attachmentsMetadata.add(sdmService.copyAttachment(cmisDocument, jwtToken, sdmCredentials));
-        System.out.println("Successful copy : " + attachmentsMetadata);
+        attachmentsMetadata.add(
+            sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
       } catch (ServiceException e) {
-        if (e.getMessage().equals("Failed to copy attachment")) {
-          flag = true;
-          break;
+        if (!folderExists) {
+          // deleteFolder
+          sdmService.deleteDocument("deleteTree", folderId);
+          throw new ServiceException(e.getMessage());
+        } else {
+          for (List<String> attachmentMetadata : attachmentsMetadata) {
+            // delete the copied attachments
+            sdmService.deleteDocument("delete", attachmentMetadata.get(2));
+          }
+          throw new ServiceException(e.getMessage());
         }
       }
-    }
-
-    if (flag) {
-      throw new ServiceException(
-          "Failed to copy attachment for UP ID: " + upID + " and facet: " + facet);
     }
 
     String upIdKey = "";
@@ -94,7 +89,7 @@ public class SDMCustomServiceHandler {
       List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     } else {
-      throw new ServiceException("Failed to fetch UP ID");
+      throw new ServiceException(SDMConstants.FAILED_TO_FETCH_UP_ID);
     }
     Map<String, Object> updatedFields = new HashMap<>();
     for (List<String> attachmentMetadata : attachmentsMetadata) {
@@ -109,22 +104,17 @@ public class SDMCustomServiceHandler {
       updatedFields.put("fileName", fileName);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
-      String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
       updatedFields.put(
-          "contentId",
-          newObjectId
-              + ":"
-              + folderId
-              + ":"
-              + context.getFacet()
-              + ":"
-              + subdomain
-              + ":"
-              + mimeType);
-      System.out.println("Facet " + context.getFacet() + ":" + upIdKey + ":" + upID);
+          "contentId", newObjectId + ":" + folderId + ":" + context.getFacet() + ":" + mimeType);
       updatedFields.put(upIdKey, upID);
+
       var insert = Insert.into(context.getFacet()).entry(updatedFields);
-      draftService.newDraft(insert);
+      for (DraftService draftS : draftService) {
+        // Check if the draft service name matches the context facet
+        if (context.getFacet().contains(draftS.getName())) {
+          draftS.newDraft(insert);
+        }
+      }
     }
     context.setCompleted();
   }

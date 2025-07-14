@@ -69,6 +69,8 @@ public class SDMConstants {
   public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
   public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
+  public static final String FAILED_TO_COPY_ATTACHMENT = "Failed to copy attachment";
+  public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

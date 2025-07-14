@@ -21,6 +21,7 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -588,20 +589,17 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public List<String> copyAttachment(
-      CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
       throws IOException {
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    Map<String, String> finalResponse = new HashMap<>();
 
     // Add additional form fields
-    System.out.println("ObjectId : " + cmisDocument.getObjectId());
-    System.out.println("SourceId : " + cmisDocument.getFolderId());
     builder.addTextBody("cmisaction", "createDocumentFromSource", ContentType.TEXT_PLAIN);
     builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
     builder.addTextBody("sourceId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
@@ -609,29 +607,30 @@ public class SDMServiceImpl implements SDMService {
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
-      System.out.println("Response Message : " + response.getStatusLine().getReasonPhrase());
-      System.out.println("Response Code : " + response.getStatusLine().getStatusCode());
+
+      // Handle response entity
+      HttpEntity entity = response.getEntity();
+      String responseBody =
+          entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+
       if (response.getStatusLine().getStatusCode() == 201) {
-        System.out.println("Inside else");
-        String responseBody = EntityUtils.toString(response.getEntity());
+        // Process successful response
+
         JSONObject jsonObject = new JSONObject(responseBody);
         JSONObject props = jsonObject.getJSONObject("succinctProperties");
         String fileName = props.optString("cmis:contentStreamFileName");
         String mimeType = props.optString("cmis:contentStreamMimeType");
         String objectId = props.optString("cmis:objectId");
-
-        System.out.println(List.of(fileName, mimeType));
         return List.of(fileName, mimeType, objectId);
-      } else {
-        throw new ServiceException("Failed to copy attachment");
       }
-      // formResponse(cmisDocument, finalResponse, response);
-      // if (!finalResponse.get("status").equals("success")) {
 
-      // }
+      // On error, throw exception with error information
+      JSONObject errorJson = new JSONObject(responseBody);
+      String exceptionType = errorJson.optString("exception");
+      String errorMessage = errorJson.optString("message");
+      throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
-      System.out.println("Error msg in copying attachment: " + e.getMessage());
-      throw new ServiceException("Failed to copy attachment");
+      throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
     }
   }
 }

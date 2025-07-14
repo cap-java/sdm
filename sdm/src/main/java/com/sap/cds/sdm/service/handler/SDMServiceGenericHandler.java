@@ -2,28 +2,19 @@ package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.service.RegisterService;
-import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
-import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 @ServiceName({"*"})
 public class SDMServiceGenericHandler implements EventHandler {
-  private final PersistenceService persistenceService;
-  private final SDMService sdmService;
   private final RegisterService attachmentService;
 
-  public SDMServiceGenericHandler(
-      PersistenceService persistenceService,
-      SDMService sdmService,
-      RegisterService attachmentService) {
-    this.persistenceService = persistenceService;
-    this.sdmService = sdmService;
+  public SDMServiceGenericHandler(RegisterService attachmentService) {
     this.attachmentService = attachmentService;
   }
 
@@ -34,7 +25,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     List<String> objectIds = Arrays.asList(objectIdsString.split(" "));
     var copyEventInput =
         new CopyAttachmentInput(up__ID, context.getTarget().getQualifiedName(), objectIds);
-    attachmentService.copyAttachments(copyEventInput);
+    attachmentService.copyAttachments(copyEventInput, false);
     context.setCompleted();
   }
 }

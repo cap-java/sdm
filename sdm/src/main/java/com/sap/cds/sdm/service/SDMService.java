@@ -61,5 +61,6 @@ public interface SDMService {
       throws IOException;
 
   public List<String> copyAttachment(
-      CmisDocument cmisDocument, String jwtToken, SDMCredentials sdmCredentials) throws IOException;
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      throws IOException;
 }

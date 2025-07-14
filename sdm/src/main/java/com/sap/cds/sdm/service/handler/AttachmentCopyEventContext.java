@@ -59,4 +59,16 @@ public interface AttachmentCopyEventContext extends AttachmentCreateEventContext
    * @param ids The key of the attachment entity which defines the content field
    */
   void setObjectIds(List<String> ids);
+
+  /**
+   * @return {@code true} if the user flow is used, {@code false} otherwise
+   */
+  Boolean getSystemUser();
+
+  /**
+   * Sets whether the system user flow is used.
+   *
+   * @param systemUser {@code true} if the system user flow is used, {@code false} otherwise
+   */
+  void setSystemUser(boolean systemUser);
 }
