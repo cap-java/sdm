@@ -5,6 +5,7 @@ extend aspect Attachments with {
     folderId : String ;
     repositoryId : String ;
     objectId : String ;
+    linkUrl: String;
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
