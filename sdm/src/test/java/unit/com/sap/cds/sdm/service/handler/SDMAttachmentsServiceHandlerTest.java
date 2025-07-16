@@ -808,11 +808,11 @@ public class SDMAttachmentsServiceHandlerTest {
       Map<String, Object> attachment1 = new HashMap<>();
       attachment1.put("fileName", "sample.pdf");
       attachment1.put("ID", "1234"); // Different ID, not a duplicate
-      attachment1.put("repositoryId", "repoid");
+      attachment1.put("repositoryId", SDMConstants.REPOSITORY_ID);
       Map<String, Object> attachment2 = new HashMap<>();
       attachment2.put("fileName", "sample.pdf");
       attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
-      attachment2.put("repositoryId", "repoid");
+      attachment2.put("repositoryId", SDMConstants.REPOSITORY_ID);
       mockedResultList.add((Map) attachment1);
       mockedResultList.add((Map) attachment2);
 

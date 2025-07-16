@@ -2,6 +2,7 @@ package unit.com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -37,6 +38,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.ehcache.Cache;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -801,14 +803,15 @@ public class SDMServiceImplTest {
     when(statusLine.getStatusCode()).thenReturn(500);
     when(response.getEntity()).thenReturn(entity);
 
-    // Mock the method `getFolderIdByPath`
+    // Use argument matchers to stub methods for any arguments
     SDMServiceImpl spyService = spy(sdmServiceImpl);
-    doReturn(null).when(spyService).getFolderIdByPath("parent", "repo", mockSdmCredentials, false);
+    doReturn(null)
+        .when(spyService)
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
-    // Mock the method `createFolder`
     doReturn("{\"succinctProperties\":{\"cmis:objectId\":\"newFolderId123\"}}")
         .when(spyService)
-        .createFolder("parent", "repo", mockSdmCredentials, false);
+        .createFolder(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     String folderId = spyService.getFolderId(result, persistenceService, up__ID, false);
     assertEquals("newFolderId123", folderId, "Expected folderId from result list");
@@ -1412,5 +1415,105 @@ public class SDMServiceImplTest {
     assertThrows(
         ServiceException.class,
         () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
+  }
+
+  @Test
+  public void testCopyAttachment_Success() throws Exception {
+    // Prepare mock response JSON
+    String responseBody =
+        "{\"succinctProperties\":{"
+            + "\"cmis:contentStreamFileName\":\"file1.pdf\","
+            + "\"cmis:contentStreamMimeType\":\"application/pdf\","
+            + "\"cmis:objectId\":\"obj123\"}}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test/");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repo1");
+    cmisDocument.setFolderId("folder1");
+    cmisDocument.setObjectId("source1");
+
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    when(entity.getContent())
+        .thenReturn(new ByteArrayInputStream(responseBody.getBytes(StandardCharsets.UTF_8)));
+    when(entity.getContentLength()).thenReturn((long) responseBody.length());
+
+    // EntityUtils.toString is used in the code, so mock it
+    try (MockedStatic<EntityUtils> entityUtilsMockedStatic =
+        Mockito.mockStatic(EntityUtils.class)) {
+      entityUtilsMockedStatic
+          .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
+          .thenReturn(responseBody);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      List<String> result = sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true);
+
+      assertEquals(List.of("file1.pdf", "application/pdf", "obj123"), result);
+    }
+  }
+
+  @Test
+  public void testCopyAttachment_ErrorResponse() throws Exception {
+    // Prepare error JSON
+    String errorJson = "{\"exception\":\"SomeException\",\"message\":\"Something went wrong\"}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test/");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repo1");
+    cmisDocument.setFolderId("folder1");
+    cmisDocument.setObjectId("source1");
+
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(400);
+    when(response.getEntity()).thenReturn(entity);
+    when(entity.getContent())
+        .thenReturn(new ByteArrayInputStream(errorJson.getBytes(StandardCharsets.UTF_8)));
+    when(entity.getContentLength()).thenReturn((long) errorJson.length());
+
+    try (MockedStatic<EntityUtils> entityUtilsMockedStatic =
+        Mockito.mockStatic(EntityUtils.class)) {
+      entityUtilsMockedStatic
+          .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
+          .thenReturn(errorJson);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      ServiceException ex =
+          assertThrows(
+              ServiceException.class,
+              () -> sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true));
+      assertTrue(ex.getMessage().contains("SomeException"));
+      assertTrue(ex.getMessage().contains("Something went wrong"));
+    }
+  }
+
+  @Test
+  public void testCopyAttachment_IOException() throws Exception {
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test/");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repo1");
+    cmisDocument.setFolderId("folder1");
+    cmisDocument.setObjectId("source1");
+
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("IO error"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true));
+    assertTrue(ex.getMessage().contains(SDMConstants.FAILED_TO_COPY_ATTACHMENT));
+    assertTrue(ex.getCause() instanceof IOException);
   }
 }

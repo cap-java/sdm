@@ -559,6 +559,9 @@
                         <exclude>
                             com/sap/cds/sdm/caching/**
                         </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/handler/AttachmentCopyEventContext.class
+                        </exclude>
                     </excludes>
                 </configuration>
                 <executions>

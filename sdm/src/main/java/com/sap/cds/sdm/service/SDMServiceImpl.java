@@ -92,8 +92,6 @@ public class SDMServiceImpl implements SDMService {
       Map<String, String> finalResponse)
       throws ServiceException {
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
-      System.out.println("Response Message : " + response.getStatusLine().getReasonPhrase());
-      System.out.println("Response Code : " + response.getStatusLine().getStatusCode());
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
       throw new ServiceException("Error in setting timeout", e.getMessage());
@@ -139,9 +137,7 @@ public class SDMServiceImpl implements SDMService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
-      System.out.println("Final Response : " + finalResponse);
     } catch (IOException e) {
-      System.out.println("Error in reading response entity: " + e.getMessage());
       throw new ServiceException(SDMConstants.getGenericError("upload"));
     }
   }
@@ -422,7 +418,6 @@ public class SDMServiceImpl implements SDMService {
       else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       } else {
-        System.out.println("Code : " + responseCode);
         throw new ServiceException("Failed to create folder. " + responseBody);
       }
     } catch (IOException e) {
@@ -599,7 +594,7 @@ public class SDMServiceImpl implements SDMService {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();

@@ -27,22 +27,29 @@ import org.json.JSONObject;
 public class SDMCustomServiceHandler {
   private final SDMService sdmService;
   private final List<DraftService> draftService;
+  private final TokenHandler tokenHandler;
 
-  public SDMCustomServiceHandler(SDMService sdmService, List<DraftService> draftService) {
+  public SDMCustomServiceHandler(
+      SDMService sdmService, List<DraftService> draftService, TokenHandler tokenHandler) {
     this.sdmService = sdmService;
     this.draftService = draftService;
+    this.tokenHandler = tokenHandler;
   }
 
   @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
-    String facet = context.getFacet().split("\\.")[2];
+    String[] splitFacet = context.getFacet().split("\\.");
+    if (splitFacet.length < 3) {
+      throw new ServiceException("Invalid facet format, unable to extract required information.");
+    }
+    String facet = splitFacet[2];
     String upID = context.getUpId();
     String folderName = upID + "__" + facet;
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
     Boolean folderExists = true;
 
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String folderId =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser);
     if (folderId == null) {
@@ -88,8 +95,6 @@ public class SDMCustomServiceHandler {
       CdsAssociationType assocType = association.getType();
       List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
-    } else {
-      throw new ServiceException(SDMConstants.FAILED_TO_FETCH_UP_ID);
     }
     Map<String, Object> updatedFields = new HashMap<>();
     for (List<String> attachmentMetadata : attachmentsMetadata) {
