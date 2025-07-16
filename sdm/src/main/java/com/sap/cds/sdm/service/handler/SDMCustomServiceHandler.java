@@ -40,7 +40,7 @@ public class SDMCustomServiceHandler {
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
     String[] splitFacet = context.getFacet().split("\\.");
     if (splitFacet.length < 3) {
-      throw new ServiceException("Invalid facet format, unable to extract required information.");
+      throw new ServiceException(SDMConstants.FAILED_TO_FETCH_FACET);
     }
     String facet = splitFacet[2];
     String upID = context.getUpId();
