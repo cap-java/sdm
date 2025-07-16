@@ -25,7 +25,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     List<String> objectIds = Arrays.asList(objectIdsString.split(" "));
     var copyEventInput =
         new CopyAttachmentInput(up__ID, context.getTarget().getQualifiedName(), objectIds);
-    attachmentService.copyAttachments(copyEventInput, false);
+    attachmentService.copyAttachments(copyEventInput, context.getUserInfo().isSystemUser());
     context.setCompleted();
   }
 }
