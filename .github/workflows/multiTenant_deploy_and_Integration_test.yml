@@ -1,4 +1,4 @@
-name: Multi Tenancy Deploy 🚀
+name: Multi Tenancy Deploy & Integration Test🚀
 
 on:
   pull_request:
