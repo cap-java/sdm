@@ -1,15 +1,20 @@
 name: Multi Tenancy Integration Test
 
 on:
+  push:
+   branches:
+      - multiTenancy_IntegrationTest
   workflow_dispatch:
     inputs:
       cf_space:
         description: 'Specify the Cloud Foundry space to run integration tests on'
         required: true
+        default: developcap
 
       branch_name:
         description: 'Specify the branch to use for integration tests'
         required: true
+        default: develop
 
 jobs:
   integration-test:
