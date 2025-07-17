@@ -1,4 +1,4 @@
-name: Single Tenant Integration Test
+name: Single Tenant Integration Test 🚀
 
 on:
   workflow_dispatch:
@@ -16,25 +16,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository 📁
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
-      - name: Set up Java 17
+      - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
         with:
           java-version: 17
           distribution: 'temurin'
 
-      - name: Install Cloud Foundry CLI and jq
+      - name: Install Cloud Foundry CLI and jq 🔧
         run: |
+          echo "🔄 Installing Cloud Foundry CLI and jq..."
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli jq
+          echo "✅ Installation complete!"
 
-      - name: Determine Cloud Foundry Space
+      - name: Determine Cloud Foundry Space 🌌
         id: determine_space
         run: |
           if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
@@ -42,22 +44,24 @@ jobs:
           else
             space="${{ github.event.inputs.cf_space }}"
           fi
-          echo "Space determined: $space"
+          echo "🌍 Space determined: $space"
           echo "::set-output name=space::$space"
 
-      - name: Login to Cloud Foundry
+      - name: Login to Cloud Foundry 🔑
         run: |
+          echo "🔄 Logging in to Cloud Foundry..."
           echo "Space Name: ${{ steps.determine_space.outputs.space }}"
           cf login -a ${{ secrets.CF_API }} \
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
+          echo "✅ Logged in successfully!"
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
         run: |
-          echo "Fetching client details for single tenant..."
+          echo "🔄 Fetching client details for single tenant..."
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
@@ -123,7 +127,7 @@ jobs:
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
-          echo "🎯 Running Maven integration tests"
+          echo "🎯 Running Maven integration tests..."
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Named User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Technical User Flow"; exit 1; }
