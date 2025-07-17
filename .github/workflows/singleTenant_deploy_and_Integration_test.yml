@@ -1,4 +1,4 @@
-name: Deploy and Integration Test
+name: Single Tenant Deploy and Integration Test
 
 on:
   pull_request:
