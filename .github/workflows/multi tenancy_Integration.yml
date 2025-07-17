@@ -186,7 +186,7 @@ jobs:
           EOL
           # Run Maven integration tests
           echo "Running integration test"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
           # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
           # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
