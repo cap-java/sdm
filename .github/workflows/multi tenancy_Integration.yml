@@ -65,19 +65,21 @@ jobs:
           if [ -z "$service_instance_guid" ]; then
             echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
+
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
             echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
+
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo "Error: clientSecret is not set or is null"; exit 1;
           fi
-          clientSecretMasked=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$clientSecretMasked"
+          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedClientSecret"
 
           clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
@@ -85,7 +87,7 @@ jobs:
           fi
           echo "::add-mask::$clientID"
 
-          echo "::set-output name=CLIENT_SECRET::$clientSecretMasked"
+          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
           echo "::set-output name=CLIENT_ID::$clientID"
 
       - name: Fetch and Escape Client Details for multi tenant
@@ -96,19 +98,21 @@ jobs:
           if [ -z "$service_instance_guid" ]; then
             echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
+
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
             echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
+
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
           clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
             echo "Error: clientSecret_mt is not set or is null"; exit 1;
           fi
-          clientSecretMasked_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$clientSecretMasked_mt"
+          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedClientSecret_mt"
 
           clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
@@ -116,9 +120,8 @@ jobs:
           fi
           echo "::add-mask::$clientID_mt"
 
-          echo "::set-output name=CLIENT_SECRET_MT::$clientSecretMasked_mt"
+          echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
           echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
-  
 
       - name: Run integration tests
         env:
@@ -128,60 +131,61 @@ jobs:
           CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
         run: |
           set -e
-  
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          
-          declare -A variables=( 
-            ["appUrl"]="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-            ["appUrlMT"]="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-            ["authUrl"]="${{ secrets.CAPAUTH_URL }}"
-            ["authUrlMT1"]="${{ secrets.AUTHURLMT1 }}"
-            ["authUrlMT2"]="${{ secrets.AUTHURLMT2 }}"
-            ["clientID"]="${{ env.CLIENT_ID }}"
-            ["clientSecret"]="${{ env.CLIENT_SECRET }}"
-            ["clientIDMT"]="${{ env.CLIENT_ID_MT }}"
-            ["clientSecretMT"]="${{ env.CLIENT_SECRET_MT }}"
-            ["username"]="${{ secrets.CF_USER }}"
-            ["password"]="${{ secrets.CF_PASSWORD }}"
-            ["noSDMRoleUsername"]="${{ secrets.NOSDMROLEUSERNAME }}"
-            ["noSDMRoleUserPassword"]="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          )
-  
-          mask() {
-            local value="$1"
-            if [ ${#value} -gt 6 ]; then
-              echo "${value:0:3}*****${value: -3}"
-            else
-              echo "${value:0:2}*****"
-            fi
-          }
-  
-          # Mask all secrets in logs
-          for key in "${!variables[@]}"; do
-            echo "::add-mask::${variables[$key]}"
-            if [ -z "${variables[$key]}" ]; then
-              echo "Error: $key is not set"
-              exit 1
-            fi
-          done
-  
-          # Write to the properties file
+          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="${{ secrets.CAPAUTH_URL }}"
+          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          clientIDMT="${{ env.CLIENT_ID_MT }}"
+          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+          username="${{ secrets.CF_USER }}"
+          password="${{ secrets.CF_PASSWORD }}"
+          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+
+          echo "::add-mask::$clientSecret"
+          echo "::add-mask::$clientID"
+          echo "::add-mask::$clientSecretMT"
+          echo "::add-mask::$clientIDMT"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          echo "::add-mask::$noSDMRoleUsername"
+          echo "::add-mask::$noSDMRoleUserPassword"
+
+          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
+          if [ -z "$appUrlMT" ]; then echo "Error: appUrlMT is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
+          if [ -z "$authUrlMT1" ]; then echo "Error: authUrlMT1 is not set"; exit 1; fi
+          if [ -z "$authUrlMT2" ]; then echo "Error: authUrlMT2 is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$clientIDMT" ]; then echo "Error: clientIDMT is not set"; exit 1; fi
+          if [ -z "$clientSecretMT" ]; then echo "Error: clientSecretMT is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "Error: noSDMRoleUserPassword is not set"; exit 1; fi
+
           cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=${variables["appUrl"]}
-          appUrlMT=${variables["appUrlMT"]}
-          authUrl=${variables["authUrl"]}
-          authUrlMT1=${variables["authUrlMT1"]}
-          authUrlMT2=${variables["authUrlMT2"]}
-          clientID=$(mask "${variables["clientID"]}")
-          clientSecret=$(mask "${variables["clientSecret"]}")
-          clientIDMT=$(mask "${variables["clientIDMT"]}")
-          clientSecretMT=$(mask "${variables["clientSecretMT"]}")
-          username=$(mask "${variables["username"]}")
-          password=$(mask "${variables["password"]}")
-          noSDMRoleUsername=$(mask "${variables["noSDMRoleUsername"]}")
-          noSDMRoleUserPassword=$(mask "${variables["noSDMRoleUserPassword"]}")
+          appUrl=$appUrl
+          appUrlMT=$appUrlMT
+          authUrl=$authUrl
+          authUrlMT1=$authUrlMT1
+          authUrlMT2=$authUrlMT2
+          clientID=$clientID
+          clientSecret=$clientSecret
+          clientIDMT=$clientIDMT
+          clientSecretMT=$clientSecretMT
+          username=$username
+          password=$password
+          noSDMRoleUsername=$noSDMRoleUsername
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
           # Run Maven integration tests
+          echo "Running integration test"
           mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
           # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
