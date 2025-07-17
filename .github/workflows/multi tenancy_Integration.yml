@@ -156,16 +156,18 @@ jobs:
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
 
           # Using clientID and clientSecret variables for operation
-          clientID="${{ env.ACTUAL_CLIENT_ID }}"
-          clientSecret="${{ env.ACTUAL_CLIENT_SECRET }}"
-          clientIDMT="${{ env.ACTUAL_CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.ACTUAL_CLIENT_SECRET_MT }}"
+          {
+            clientID="${{ env.ACTUAL_CLIENT_ID }}"
+            clientSecret="${{ env.ACTUAL_CLIENT_SECRET }}"
+            clientIDMT="${{ env.ACTUAL_CLIENT_ID_MT }}"
+            clientSecretMT="${{ env.ACTUAL_CLIENT_SECRET_MT }}"
+          } &> /dev/null
 
-          # Mask sensitive credentials for display purposes
-          maskedClientID="****${clientID: -4}"
-          maskedClientSecret="****${clientSecret: -4}"
-          maskedClientIDMT="****${clientIDMT: -4}"
-          maskedClientSecretMT="****${clientSecretMT: -4}"
+          # Masking values immediately after assignment
+          maskedClientID="********"
+          maskedClientSecret="********"
+          maskedClientIDMT="********"
+          maskedClientSecretMT="********"
 
           # Check if secrets and env variables are set before using them
           for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
@@ -192,16 +194,7 @@ jobs:
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
-
-          # Display properties file with masked sensitive information
-          echo -e "\033[34m📜 Properties File (Masked):\033[0m"
-          sed -e "s/clientID=.*/clientID=$maskedClientID/" \
-              -e "s/clientSecret=.*/clientSecret=$maskedClientSecret/" \
-              -e "s/clientIDMT=.*/clientIDMT=$maskedClientIDMT/" \
-              -e "s/clientSecretMT=.*/clientSecretMT=$maskedClientSecretMT/" \
-              -e 's/password=.*/password=****/' \
-              -e 's/noSDMRoleUserPassword=.*/noSDMRoleUserPassword=****/' "$PROPERTIES_FILE"
-
+          
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests > /dev/null || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
