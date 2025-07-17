@@ -62,10 +62,10 @@ jobs:
             -s ${{ secrets.CF_SPACE }} > /dev/null
           echo -e "\033[32m✔️ Login successful!\033[0m"
 
-      - name: Fetch and Mask Client Details for Single Tenant
+      - name: Fetch Client Details for Single Tenant
         id: fetch_credentials
         run: |
-          echo -e "\033[36m🚀 Fetching and Masking Client Details for Single Tenant...\033[0m"
+          echo -e "\033[36m🚀 Fetching Client Details for Single Tenant...\033[0m"
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
@@ -81,30 +81,33 @@ jobs:
           
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
+          # Fetch and store the actual client credentials
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo -e "\033[31m❌ Error: clientSecret is not set or is null\033[0m"
             exit 1
           fi
-          
+
           clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
             echo -e "\033[31m❌ Error: clientID is not set or is null\033[0m"
             exit 1
           fi
 
-          # Mask values by showing only the last 4 characters
+          # Create masked versions for logging
           maskedClientSecret="****${clientSecret: -4}"
           maskedClientID="****${clientID: -4}"
 
-          echo "::set-output name=CLIENT_SECRET::$maskedClientSecret"
-          echo "::set-output name=CLIENT_ID::$maskedClientID"
-          echo -e "\033[32m✔️ Client Details fetched and masked successfully!\033[0m"
+          echo "::set-output name=CLIENT_SECRET::$clientSecret"
+          echo "::set-output name=CLIENT_ID::$clientID"
+          echo -e "\033[32m✔️ Client Details fetched successfully!\033[0m"
+          echo -e "\033[34m⚠️ ClientID: $maskedClientID\033[0m"
+          echo -e "\033[34m⚠️ ClientSecret: $maskedClientSecret\033[0m"
 
-      - name: Fetch and Mask Client Details for Multi Tenant
+      - name: Fetch Client Details for Multi Tenant
         id: fetch_credentials_mt
         run: |
-            echo -e "\033[36m🚀 Fetching and Masking Client Details for Multi Tenant...\033[0m"
+            echo -e "\033[36m🚀 Fetching Client Details for Multi Tenant...\033[0m"
             service_instance_guid=$(cf service bookshop-mt-uaa --guid)
             if [ -z "$service_instance_guid" ]; then
               echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
@@ -120,6 +123,7 @@ jobs:
             
             binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
+            # Fetch and store the actual client credentials
             clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
             if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
               echo -e "\033[31m❌ Error: clientSecret_mt is not set or is null\033[0m"
@@ -132,13 +136,15 @@ jobs:
               exit 1
             fi
 
-            # Mask values by showing only the last 4 characters
+            # Create masked versions for logging
             maskedClientSecretMT="****${clientSecret_mt: -4}"
             maskedClientIDMT="****${clientID_mt: -4}"
 
-            echo "::set-output name=CLIENT_SECRET_MT::$maskedClientSecretMT"
-            echo "::set-output name=CLIENT_ID_MT::$maskedClientIDMT"
-            echo -e "\033[32m✔️ Multi Tenant Client Details fetched and masked successfully!\033[0m"
+            echo "::set-output name=CLIENT_SECRET_MT::$clientSecret_mt"
+            echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
+            echo -e "\033[32m✔️ Multi Tenant Client Details fetched successfully!\033[0m"
+            echo -e "\033[34m⚠️ ClientID_MT: $maskedClientIDMT\033[0m"
+            echo -e "\033[34m⚠️ ClientSecret_MT: $maskedClientSecretMT\033[0m"
 
       - name: Run integration tests
         env:
@@ -166,22 +172,26 @@ jobs:
           clientIDMT="${{ env.CLIENT_ID_MT }}"
           clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
 
-          # No need for further masking because it's handled during fetching
-          
+          # Write sensitive info to properties file for operational use, display masked versions only
+          maskedClientID="****${clientID: -4}"
+          maskedClientSecret="****${clientSecret: -4}"
+          maskedClientIDMT="****${clientIDMT: -4}"
+          maskedClientSecretMT="****${clientSecretMT: -4}"
+
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
           authUrl=$authUrl
           authUrlMT1=$authUrlMT1
           authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
+          clientID=$maskedClientID
+          clientSecret=$maskedClientSecret
+          clientIDMT=$maskedClientIDMT
+          clientSecretMT=$maskedClientSecretMT
           username=$username
-          password="*******"
+          password=$password
           noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword="*******"
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
 
           # Display properties file with masked sensitive information
@@ -189,6 +199,5 @@ jobs:
           cat "$PROPERTIES_FILE"
 
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
-          echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests > /dev/null || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
