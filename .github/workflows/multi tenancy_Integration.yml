@@ -60,10 +60,9 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
-            # -s ${{ steps.determine_space.outputs.space }}
           echo -e "\033[32m✔️ Login successful!\033[0m"
 
-      - name: Fetch and Escape Client Details for single tenant
+      - name: Fetch and Escape Client Details for Single Tenant
         id: fetch_credentials
         run: |
           echo -e "\033[36m🚀 Fetching Client Details for Single Tenant...\033[0m"
@@ -98,10 +97,8 @@ jobs:
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
           echo "::set-output name=CLIENT_ID::$clientID"
           echo -e "\033[32m✔️ Client Details fetched successfully!\033[0m"
-          echo -e "\033[34mClientID: ${clientID:0:3}****\033[0m"
-          echo -e "\033[34mClientSecret: ${clientSecret:0:3}****\033[0m"
 
-      - name: Fetch and Escape Client Details for multi tenant
+      - name: Fetch and Escape Client Details for Multi Tenant
         id: fetch_credentials_mt
         run: |
             echo -e "\033[36m🚀 Fetching Client Details for Multi Tenant...\033[0m"
@@ -136,8 +133,6 @@ jobs:
             echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
             echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
             echo -e "\033[32m✔️ Multi Tenant Client Details fetched successfully!\033[0m"
-            echo -e "\033[34mClientID_MT: ${clientID_mt:0:3}****\033[0m"
-            echo -e "\033[34mClientSecret_MT: ${clientSecret_mt:0:3}****\033[0m"
 
       - name: Run integration tests
         env:
@@ -154,18 +149,17 @@ jobs:
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}" 
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          clientIDMT="${{ env.CLIENT_ID_MT }}"
+          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-
-          clientID="<masked>"
-          clientSecret="<masked>"
-          clientIDMT="<masked>"
-          clientSecretMT="<masked>"
           
           # Check if variables are set before using them
-          for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 username password noSDMRoleUsername noSDMRoleUserPassword; do
+          for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
             if [ -z "${!var}" ]; then
               echo -e "\033[31m❌ Error: ${var} is not set\033[0m"
               exit 1
@@ -188,18 +182,18 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
 
-          # # Display properties file with masked sensitive information
-          # echo -e "\033[34m📜 Properties File (Masked):\033[0m"
-          # cat "$PROPERTIES_FILE" | sed -e 's/clientID=.*$/clientID=****/' \
-          #                              -e 's/clientSecret=.*$/clientSecret=****/' \
-          #                              -e 's/clientIDMT=.*$/clientIDMT=****/' \
-          #                              -e 's/clientSecretMT=.*$/clientSecretMT=****/' \
-          #                              -e 's/password=.*$/password=****/' \
-          #                              -e 's/noSDMRoleUserPassword=.*$/noSDMRoleUserPassword=****/'
+          # Display properties file with masked sensitive information
+          echo -e "\033[34m📜 Properties File (Masked):\033[0m"
+          cat "$PROPERTIES_FILE" | sed -e 's/clientID=.*$/clientID=****/' \
+                                       -e 's/clientSecret=.*$/clientSecret=****/' \
+                                       -e 's/clientIDMT=.*$/clientIDMT=****/' \
+                                       -e 's/clientSecretMT=.*$/clientSecretMT=****/' \
+                                       -e 's/password=.*$/password=****/' \
+                                       -e 's/noSDMRoleUserPassword=.*$/noSDMRoleUserPassword=****/'
 
           # Run Maven integration tests
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           # Uncomment these lines when needed for additional tests
           # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
