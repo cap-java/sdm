@@ -1,9 +1,6 @@
 name: Multi Tenancy Integration Test 🚀
 
 on:
-  push:
-    branches:
-      - multiTenancy_IntegrationTest
       
   workflow_dispatch:
     inputs:
