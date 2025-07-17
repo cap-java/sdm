@@ -1,6 +1,9 @@
 name: Multi Tenancy Deployment Local
 
 on:
+  push:
+    branches:
+      - multiTenancy_IntegrationTest
   workflow_dispatch:
     inputs:
       cf_space:
