@@ -148,7 +148,7 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      Boolean isSystemUser)
+      boolean isSystemUser)
       throws ServiceException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
@@ -255,7 +255,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String getObject(String objectId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -323,7 +323,7 @@ public class SDMServiceImpl implements SDMService {
       Result result,
       PersistenceService persistenceService,
       String folderName,
-      Boolean isSystemUser) {
+      boolean isSystemUser) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
@@ -362,7 +362,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderIdByPath(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     String folderId = null;
@@ -395,7 +395,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String createFolder(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -507,7 +507,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public List<String> getSecondaryTypes(
-      String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws ServiceException {
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
@@ -554,7 +554,7 @@ public class SDMServiceImpl implements SDMService {
       List<String> secondaryTypes,
       SDMCredentials sdmCredentials,
       String repositoryId,
-      Boolean isSystemUser) {
+      boolean isSystemUser) {
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     secondaryPropertiesKey.setRepositoryId(repositoryId);
@@ -589,7 +589,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public List<String> copyAttachment(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 

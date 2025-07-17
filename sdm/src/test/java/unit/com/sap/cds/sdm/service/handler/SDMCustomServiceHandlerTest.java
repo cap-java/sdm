@@ -167,12 +167,12 @@ public class SDMCustomServiceHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Simulate folder does not exist
-    when(sdmService.getFolderIdByPath(any(), any(), any(), any())).thenReturn(null);
-    when(sdmService.createFolder(any(), any(), any(), any()))
+    when(sdmService.getFolderIdByPath(any(), any(), any(), anyBoolean())).thenReturn(null);
+    when(sdmService.createFolder(any(), any(), any(), anyBoolean()))
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + FOLDER_ID + "\"}}");
 
     // Simulate copyAttachment throws ServiceException on first call
-    when(sdmService.copyAttachment(any(), any(), any()))
+    when(sdmService.copyAttachment(any(), any(), anyBoolean()))
         .thenThrow(new ServiceException("Copy failed"));
 
     AttachmentCopyEventContext context = createMockContext();
@@ -197,10 +197,10 @@ public class SDMCustomServiceHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Simulate folder exists
-    when(sdmService.getFolderIdByPath(any(), any(), any(), any())).thenReturn(FOLDER_ID);
+    when(sdmService.getFolderIdByPath(any(), any(), any(), anyBoolean())).thenReturn(FOLDER_ID);
 
     // First call succeeds, second call fails
-    when(sdmService.copyAttachment(any(), any(), any()))
+    when(sdmService.copyAttachment(any(), any(), anyBoolean()))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID))
         .thenThrow(new ServiceException("Copy failed"));
 

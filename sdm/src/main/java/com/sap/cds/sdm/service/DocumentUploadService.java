@@ -50,7 +50,7 @@ public class DocumentUploadService {
    * Implementation to create document.
    */
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     try {
       long totalSize = cmisDocument.getContentLength();
@@ -93,7 +93,7 @@ public class DocumentUploadService {
       int bytesRead,
       boolean isLastChunk,
       int chunkIndex,
-      Boolean isSystemUser)
+      boolean isSystemUser)
       throws IOException, ParseException {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -132,7 +132,7 @@ public class DocumentUploadService {
   }
 
   private JSONObject createEmptyDocument(
-      CmisDocument cmisDocument, String sdmUrl, Boolean isSystemUser) {
+      CmisDocument cmisDocument, String sdmUrl, boolean isSystemUser) {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "createDocument");
@@ -157,7 +157,7 @@ public class DocumentUploadService {
   }
 
   public JSONObject uploadSingleChunk(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
 
     InputStream originalStream = cmisDocument.getContent();
@@ -194,7 +194,7 @@ public class DocumentUploadService {
   }
 
   private JSONObject uploadLargeFileInChunks(
-      CmisDocument cmisDocument, String sdmUrl, int chunkSize, Boolean isSystemUser)
+      CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
       throws IOException {
 
     try (ReadAheadInputStream chunkedStream =

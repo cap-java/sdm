@@ -28,7 +28,7 @@ public class SDMAttachmentsService extends ServiceDelegator
   }
 
   @Override
-  public void copyAttachments(CopyAttachmentInput input, Boolean isSystemUser) {
+  public void copyAttachments(CopyAttachmentInput input, boolean isSystemUser) {
     logger.info(
         "Copying attachments for upId: {}, facet: {}, objectIds: {}, isSystemUser: {}",
         input.upId(),

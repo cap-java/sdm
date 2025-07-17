@@ -878,7 +878,7 @@ public class SDMServiceImplTest {
 
     doReturn("folderByPath123")
         .when(sdmServiceImpl)
-        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), any());
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     mockSdmCredentials.setUrl("mockUrl");
@@ -919,7 +919,7 @@ public class SDMServiceImplTest {
     // Mock the getFolderIdByPath method to return null (so that it will try to create a folder)
     doReturn(null)
         .when(sdmServiceImpl)
-        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), any());
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     // Mock the TokenHandler static method and SDMCredentials instantiation
     SDMCredentials mockSdmCredentials = new SDMCredentials();
@@ -952,7 +952,7 @@ public class SDMServiceImplTest {
 
     doReturn(jsonObject.toString())
         .when(sdmServiceImpl)
-        .createFolder(any(), any(), any(SDMCredentials.class), any());
+        .createFolder(any(), any(), any(SDMCredentials.class), anyBoolean());
 
     // Invoke the method
     String folderId = sdmServiceImpl.getFolderId(result, persistenceService, up__ID, false);
