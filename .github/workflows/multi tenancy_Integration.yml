@@ -60,61 +60,64 @@ jobs:
       - name: Fetch and Escape Client Details for single tenant
         id: fetch_credentials
         run: |
+          set -e
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
-          
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
           binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
             echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
-          
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          
+
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo "Error: clientSecret is not set or is null"; exit 1;
           fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          
+          clientSecretMasked=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$clientSecretMasked"
+
           clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
             echo "Error: clientID is not set or is null"; exit 1;
           fi
-          
-          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
+          echo "::add-mask::$clientID"
+
+          echo "::set-output name=CLIENT_SECRET::$clientSecretMasked"
           echo "::set-output name=CLIENT_ID::$clientID"
+
       - name: Fetch and Escape Client Details for multi tenant
         id: fetch_credentials_mt
         run: |
-            service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-            if [ -z "$service_instance_guid" ]; then
-              echo "Error: Unable to retrieve service instance GUID"; exit 1;
-            fi
-            
-            bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-            binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
-            if [ -z "$binding_guid" ]; then
-              echo "Error: Unable to retrieve binding GUID"; exit 1;
-            fi
-            
-            binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-            
-            clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-            if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-              echo "Error: clientSecret_mt is not set or is null"; exit 1;
-            fi
-            escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-            
-            clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-            if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-              echo "Error: clientID_mt is not set or is null"; exit 1;
-            fi
-            
-            echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
-            echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
+          set -e
+          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "Error: Unable to retrieve service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "Error: Unable to retrieve binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+
+          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+            echo "Error: clientSecret_mt is not set or is null"; exit 1;
+          fi
+          clientSecretMasked_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+          echo "::add-mask::$clientSecretMasked_mt"
+
+          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+            echo "Error: clientID_mt is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$clientID_mt"
+
+          echo "::set-output name=CLIENT_SECRET_MT::$clientSecretMasked_mt"
+          echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
   
 
       - name: Run integration tests
