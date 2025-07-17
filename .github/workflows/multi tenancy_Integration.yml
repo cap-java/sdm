@@ -145,24 +145,22 @@ jobs:
           echo -e "\033[36m🧪 Running Integration Tests...\033[0m"
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          # appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          # appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}" 
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+          clientID="<hidden>"
+          clientSecret="<hidden>"
+          clientIDMT="<hidden>"
+          clientSecretMT="<hidden>"
           username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
+          password="<hidden>"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          noSDMRoleUserPassword="<hidden>"
           
-          # Check for missing variables
-          for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
+          # Check if variables are set before using them
+          for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 username password noSDMRoleUsername noSDMRoleUserPassword; do
             if [ -z "${!var}" ]; then
               echo -e "\033[31m❌ Error: ${var} is not set\033[0m"
               exit 1
@@ -185,16 +183,19 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
 
-          # Display properties file
+          # Display properties file without sensitive information
           echo -e "\033[34m📜 Properties File:\033[0m"
-          cat "$PROPERTIES_FILE"
+          cat "$PROPERTIES_FILE" | grep -v -e "clientID=" -e "clientSecret=" -e "password=" -e "clientIDMT=" -e "clientSecretMT=" -e "noSDMRoleUserPassword="
           
           # Run Maven integration tests
+          echo -e "\033[34m🧪 Running Maven tests for Single Tenancy...\033[0m"
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Single Tenancy)\033[0m"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Single Tenancy)\033[0m"; exit 1; }
 
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
           mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
 
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
