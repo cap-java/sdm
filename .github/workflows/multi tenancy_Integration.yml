@@ -59,36 +59,36 @@ jobs:
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
+            -s ${{ secrets.CF_SPACE }} > /dev/null
           echo -e "\033[32m✔️ Login successful!\033[0m"
 
       - name: Fetch and Escape Client Details for Single Tenant
         id: fetch_credentials
         run: |
           echo -e "\033[36m🚀 Fetching Client Details for Single Tenant...\033[0m"
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+          service_instance_guid=$(cf service demoappjava-public-uaa --guid) > /dev/null
           if [ -z "$service_instance_guid" ]; then
             echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
             exit 1
           fi
           
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}") > /dev/null
+          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid') > /dev/null
           if [ -z "$binding_guid" ]; then
             echo -e "\033[31m❌ Error: Unable to retrieve binding GUID\033[0m"
             exit 1
           fi
           
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details") > /dev/null
 
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret') > /dev/null
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
             echo -e "\033[31m❌ Error: clientSecret is not set or is null\033[0m"
             exit 1
           fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g') > /dev/null
 
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid') > /dev/null
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
             echo -e "\033[31m❌ Error: clientID is not set or is null\033[0m"
             exit 1
@@ -102,29 +102,29 @@ jobs:
         id: fetch_credentials_mt
         run: |
             echo -e "\033[36m🚀 Fetching Client Details for Multi Tenant...\033[0m"
-            service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+            service_instance_guid=$(cf service bookshop-mt-uaa --guid) > /dev/null
             if [ -z "$service_instance_guid" ]; then
               echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
               exit 1
             fi
             
-            bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-            binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+            bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}") > /dev/null
+            binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid') > /dev/null
             if [ -z "$binding_guid" ]; then
               echo -e "\033[31m❌ Error: Unable to retrieve binding GUID\033[0m"
               exit 1
             fi
             
-            binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+            binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details") > /dev/null
 
-            clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+            clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret') > /dev/null
             if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
               echo -e "\033[31m❌ Error: clientSecret_mt is not set or is null\033[0m"
               exit 1
             fi
-            escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+            escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g') > /dev/null
 
-            clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+            clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid') > /dev/null
             if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
               echo -e "\033[31m❌ Error: clientID_mt is not set or is null\033[0m"
               exit 1
@@ -136,10 +136,10 @@ jobs:
 
       - name: Run integration tests
         env:
-          ACTUAL_CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          ACTUAL_CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          ACTUAL_CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          ACTUAL_CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
         run: |
           echo -e "\033[36m🧪 Running Integration Tests...\033[0m"
           set -e
@@ -149,15 +149,17 @@ jobs:
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.ACTUAL_CLIENT_ID }}"
-          clientSecret="${{ env.ACTUAL_CLIENT_SECRET }}"
-          clientIDMT="${{ env.ACTUAL_CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.ACTUAL_CLIENT_SECRET_MT }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          
+
+          # Using clientID and clientSecret variables for operation but masking their visibility
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          clientIDMT="${{ env.CLIENT_ID_MT }}"
+          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+
           # Check if secrets and env variables are set before using them
           for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
             if [ -z "${!var}" ]; then
@@ -165,6 +167,14 @@ jobs:
               exit 1
             fi
           done
+
+          echo Masking and setting properties
+
+          # Only mask while logging
+          maskedClientID="${clientID:0:3}****"
+          maskedClientSecret="${clientSecret:0:3}****"
+          maskedClientIDMT="${clientIDMT:0:3}****"
+          maskedClientSecretMT="${clientSecretMT:0:3}****"
 
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
@@ -192,5 +202,5 @@ jobs:
               -e 's/noSDMRoleUserPassword=.*/noSDMRoleUserPassword=****/' "$PROPERTIES_FILE"
 
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
-          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests > /dev/null || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
