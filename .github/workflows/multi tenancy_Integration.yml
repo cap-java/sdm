@@ -62,10 +62,10 @@ jobs:
             -s ${{ secrets.CF_SPACE }} > /dev/null
           echo -e "\033[32m✔️ Login successful!\033[0m"
 
-      - name: Fetch and Escape Client Details for Single Tenant
+      - name: Fetch and Mask Client Details for Single Tenant
         id: fetch_credentials
         run: |
-          echo -e "\033[36m🚀 Fetching Client Details for Single Tenant...\033[0m"
+          echo -e "\033[36m🚀 Fetching and Masking Client Details for Single Tenant...\033[0m"
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
             echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
@@ -86,22 +86,23 @@ jobs:
             echo -e "\033[31m❌ Error: clientSecret is not set or is null\033[0m"
             exit 1
           fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          maskedClientSecret="****$(echo "$clientSecret" | sed 's/.*\(....\)$/\1/')"
 
           clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
             echo -e "\033[31m❌ Error: clientID is not set or is null\033[0m"
             exit 1
           fi
+          maskedClientID="****$(echo "$clientID" | sed 's/.*\(....\)$/\1/')"
           
-          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-          echo "::set-output name=CLIENT_ID::$clientID"
-          echo -e "\033[32m✔️ Client Details fetched successfully!\033[0m"
+          echo "::set-output name=CLIENT_SECRET::$maskedClientSecret"
+          echo "::set-output name=CLIENT_ID::$maskedClientID"
+          echo -e "\033[32m✔️ Client Details fetched and masked successfully!\033[0m"
 
-      - name: Fetch and Escape Client Details for Multi Tenant
+      - name: Fetch and Mask Client Details for Multi Tenant
         id: fetch_credentials_mt
         run: |
-            echo -e "\033[36m🚀 Fetching Client Details for Multi Tenant...\033[0m"
+            echo -e "\033[36m🚀 Fetching and Masking Client Details for Multi Tenant...\033[0m"
             service_instance_guid=$(cf service bookshop-mt-uaa --guid)
             if [ -z "$service_instance_guid" ]; then
               echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
@@ -122,24 +123,25 @@ jobs:
               echo -e "\033[31m❌ Error: clientSecret_mt is not set or is null\033[0m"
               exit 1
             fi
-            escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+            maskedClientSecretMT="****$(echo "$clientSecret_mt" | sed 's/.*\(....\)$/\1/')"
 
             clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
             if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
               echo -e "\033[31m❌ Error: clientID_mt is not set or is null\033[0m"
               exit 1
             fi
-            
-            echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
-            echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
-            echo -e "\033[32m✔️ Multi Tenant Client Details fetched successfully!\033[0m"
+            maskedClientIDMT="****$(echo "$clientID_mt" | sed 's/.*\(....\)$/\1/')"
+
+            echo "::set-output name=CLIENT_SECRET_MT::$maskedClientSecretMT"
+            echo "::set-output name=CLIENT_ID_MT::$maskedClientIDMT"
+            echo -e "\033[32m✔️ Multi Tenant Client Details fetched and masked successfully!\033[0m"
 
       - name: Run integration tests
         env:
-          ACTUAL_CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          ACTUAL_CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          ACTUAL_CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          ACTUAL_CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
         run: |
           echo -e "\033[36m🧪 Running Integration Tests...\033[0m"
           set -e
@@ -155,30 +157,11 @@ jobs:
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
 
-          # Using clientID and clientSecret variables for operation
-          {
-            clientID="${{ env.ACTUAL_CLIENT_ID }}"
-            clientSecret="${{ env.ACTUAL_CLIENT_SECRET }}"
-            clientIDMT="${{ env.ACTUAL_CLIENT_ID_MT }}"
-            clientSecretMT="${{ env.ACTUAL_CLIENT_SECRET_MT }}"
-          } &> /dev/null
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          clientIDMT="${{ env.CLIENT_ID_MT }}"
+          clientSecretMT="${{ env.CLIENT_SECRET_MT }}
 
-          # Masking values immediately after assignment
-          maskedClientID="********"
-          maskedClientSecret="********"
-          maskedClientIDMT="********"
-          maskedClientSecretMT="********"
-
-          # Check if secrets and env variables are set before using them
-          for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
-            if [ -z "${!var}" ]; then
-              echo -e "\033[31m❌ Error: ${var} is not set\033[0m"
-              exit 1
-            fi
-          done
-
-          echo "Masking and setting properties"
-          
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
@@ -190,11 +173,15 @@ jobs:
           clientIDMT=$clientIDMT
           clientSecretMT=$clientSecretMT
           username=$username
-          password=$password
+          password="*******"
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
-          
+
+          # Display properties file with already masked sensitive information
+          echo -e "\033[34m📜 Properties File:\033[0m"
+          cat "$PROPERTIES_FILE"
+
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests > /dev/null || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
