@@ -9,7 +9,7 @@ on:
         default: 'developcap'
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -71,3 +71,157 @@ jobs:
           ls -lrth
           echo "Running cf deploy"
           cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
+
+  integration-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Install Cloud Foundry CLI and jq
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli jq
+          
+      - name: Login to Cloud Foundry
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ secrets.CF_SPACE }}
+      - name: Fetch and Escape Client Details for single tenant
+        id: fetch_credentials
+        run: |
+          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "Error: Unable to retrieve service instance GUID"; exit 1;
+          fi
+          
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "Error: Unable to retrieve binding GUID"; exit 1;
+          fi
+          
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          
+          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+            echo "Error: clientSecret is not set or is null"; exit 1;
+          fi
+          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "Error: clientID is not set or is null"; exit 1;
+          fi
+          
+          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
+          echo "::set-output name=CLIENT_ID::$clientID"
+      - name: Fetch and Escape Client Details for multi tenant
+        id: fetch_credentials_mt
+        run: |
+            service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+            if [ -z "$service_instance_guid" ]; then
+              echo "Error: Unable to retrieve service instance GUID"; exit 1;
+            fi
+            
+            bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+            binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+            if [ -z "$binding_guid" ]; then
+              echo "Error: Unable to retrieve binding GUID"; exit 1;
+            fi
+            
+            binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+            
+            clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+            if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+              echo "Error: clientSecret_mt is not set or is null"; exit 1;
+            fi
+            escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+            
+            clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+            if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+              echo "Error: clientID_mt is not set or is null"; exit 1;
+            fi
+            
+            echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
+            echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
+  
+
+      - name: Run integration tests
+        env:
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+        run: |
+          set -e
+          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="${{ secrets.CAPAUTH_URL }}"
+          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+          authUrlMT2="${{ secrets.AUTHURLMT2 }}" 
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          clientIDMT="${{ env.CLIENT_ID_MT }}"
+          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+          username="${{ secrets.CF_USER }}"
+          password="${{ secrets.CF_PASSWORD }}"
+          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
+          if [ -z "$appUrlMT" ]; then echo "Error: appUrlMT is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
+          if [ -z "$authUrlMT1" ]; then echo "Error: authUrlMT1 is not set"; exit 1; fi
+          if [ -z "$authUrlMT2" ]; then echo "Error: authUrlMT2 is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$clientIDMT" ]; then echo "Error: clientIDMT is not set"; exit 1; fi
+          if [ -z "$clientSecretMT" ]; then echo "Error: clientSecretMT is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "Error: noSDMRoleUserPassword is not set"; exit 1; fi
+          mask() {
+            local value="$1"
+            if [ ${#value} -gt 6 ]; then
+              echo "${value:0:3}*****${value: -3}"
+            else
+              echo "${value:0:2}*****"
+            fi
+          }
+          cat > "$PROPERTIES_FILE" <<EOL
+          appUrl=$appUrl
+          appUrlMT=$appUrlMT
+          authUrl=$authUrl
+          authUrlMT1=$authUrlMT1
+          authUrlMT2=$authUrlMT2
+          clientID=$clientID
+          clientSecret=$clientSecret
+          clientIDMT=$clientIDMT
+          clientSecretMT=$clientSecretMT
+          username=$username
+          password=$password
+          noSDMRoleUsername=$noSDMRoleUsername
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
+          EOL
+          # Run Maven integration tests
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
