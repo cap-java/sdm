@@ -46,7 +46,9 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setFolderId(row.get("folderId").toString());
       cmisDocument.setMimeType(row.get("mimeType").toString());
-      cmisDocument.setContentId(row.get("contentId").toString());
+      cmisDocument.setContentId(
+          row.get("contentId") != null ? row.get("contentId").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
     }
     return cmisDocument;
   }

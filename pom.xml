@@ -23,14 +23,14 @@
     </developers>
 
     <properties>
-        <revision>1.4.1-SNAPSHOT</revision>
+        <revision>1.4.2-SNAPSHOT</revision>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <excluded.generation.package>sdm/generated/</excluded.generation.package>
-        <cds.services.version>3.5.0</cds.services.version>
+        <cds.services.version>4.1.1</cds.services.version>
 
         <generation-folder>src/gen</generation-folder>
 

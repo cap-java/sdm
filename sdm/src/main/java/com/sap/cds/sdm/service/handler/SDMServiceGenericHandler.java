@@ -14,7 +14,6 @@ import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
-import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.draft.DraftService;
@@ -35,17 +34,14 @@ public class SDMServiceGenericHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final List<DraftService> draftService;
-  private final RegisterService attachmentService;
 
   public SDMServiceGenericHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
-      List<DraftService> draftService,
-      RegisterService attachmentService) {
+      List<DraftService> draftService) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.draftService = draftService;
-    this.attachmentService = attachmentService;
   }
 
   @On(event = "createLink")
@@ -83,12 +79,9 @@ public class SDMServiceGenericHandler implements EventHandler {
       context.setUrl(cmisDocument.getUrl());
 
     } else {
-      // attachmentService.readSDMAttachment(cmisDocument.getContentId());
-      context.setUrl("Document");
-      cmisDocument.setUrl("Doc Url");
+      cmisDocument.setUrl("None");
     }
     context.setResult(cmisDocument.getUrl());
-    // context.setCompleted();
   }
 
   private void createLink(EventContext context) throws IOException {
@@ -143,24 +136,32 @@ public class SDMServiceGenericHandler implements EventHandler {
         String.format(
             "<Link text=\"%s\" target=\"_blank\" href=\"%s\" />",
             cmisDocument.getFileName(), cmisDocument.getUrl());
-    // updatedFields.put("content", cmisDocument.getUrl());
+    // updatedFields.put("content", cmisDocument.getFileName());
     updatedFields.put(upIdKey, cmisDocument.getParentId());
     updatedFields.put("mimeType", cmisDocument.getMimeType());
-    updatedFields.put(
-        "contentId",
-        cmisDocument.getObjectId()
-            + ":"
-            + cmisDocument.getFolderId()
-            + ":"
-            + context.getTarget()
-            + ":"
-            + subdomain
-            + ":"
-            + cmisDocument.getMimeType());
+    //    updatedFields.put(
+    //        "contentId",
+    //        cmisDocument.getObjectId()
+    //            + ":"
+    //            + cmisDocument.getFolderId()
+    //            + ":"
+    //            + context.getTarget()
+    //            + ":"
+    //            + subdomain
+    //            + ":"
+    //            + cmisDocument.getMimeType());
     updatedFields.put("fileName", cmisDocument.getFileName());
     updatedFields.put("HasDraftEntity", false);
     updatedFields.put("HasActiveEntity", false);
     updatedFields.put("linkUrl", cmisDocument.getUrl());
+    //    Insert insert = null;
+    //    for (CdsEntity cdsEntity : context.getModel().entities().toList()) {
+    //      if (SDMUtils.isRelatedEntity(context.getTarget(), cdsEntity)) {
+    //        insert = Insert.into(cdsEntity.getQualifiedName()).entry(updatedFields);
+    //      }
+    //    }
+    // Insert.into(context., o -> o.matching(Map.of("ID", 1001))).items()).entry(Map.of("book",
+    // Map.of("ID", 251), "amount", 1));
     var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
     for (DraftService draftS : draftService) {
       // Process each draftService object
@@ -168,8 +169,8 @@ public class SDMServiceGenericHandler implements EventHandler {
           "Draft Service " + context.getTarget().getQualifiedName().contains(draftS.getName()));
       if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
         System.out.println("yes");
-        draftS.run(insert);
-        // draftS.newDraft(insert);
+        // draftS.run(insert);
+        draftS.newDraft(insert);
       }
       // You can call methods or perform operations on draftService here
     }
