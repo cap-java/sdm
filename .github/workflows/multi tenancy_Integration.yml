@@ -1,9 +1,6 @@
 name: Multi Tenancy Integration Test
 
 on:
-  push:
-   branches:
-      - multiTenancy_IntegrationTest
   workflow_dispatch:
     inputs:
       cf_space:
@@ -57,8 +54,7 @@ jobs:
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
-            # -s ${{ steps.determine_space.outputs.space }}
+            -s ${{ steps.determine_space.outputs.space }}
 
       - name: Fetch and Escape Client Details for single tenant
         id: fetch_credentials
@@ -130,8 +126,8 @@ jobs:
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}" 
