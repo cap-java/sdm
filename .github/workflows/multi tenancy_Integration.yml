@@ -187,9 +187,9 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
 
-          # Display properties file without sensitive information
-          echo -e "\033[34m📜 Properties File (Masked):\033[0m"
-          cat "$PROPERTIES_FILE" | sed -e 's/=\w\+/=****/g' -e 's/=/=/'
+          # # Display properties file without sensitive information
+          # echo -e "\033[34m📜 Properties File (Masked):\033[0m"
+          # cat "$PROPERTIES_FILE" | sed -e 's/=\w\+/=****/g' -e 's/=/=/'
 
           # Run Maven integration tests
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
