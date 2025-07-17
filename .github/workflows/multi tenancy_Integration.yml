@@ -185,9 +185,9 @@ jobs:
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
           mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
-          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
           # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests
           # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests
