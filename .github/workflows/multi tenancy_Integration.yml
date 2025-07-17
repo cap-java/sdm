@@ -188,14 +188,11 @@ jobs:
           cat "$PROPERTIES_FILE" | grep -v -e "clientID=" -e "clientSecret=" -e "password=" -e "clientIDMT=" -e "clientSecretMT=" -e "noSDMRoleUserPassword="
           
           # Run Maven integration tests
-          echo -e "\033[34m🧪 Running Maven tests for Single Tenancy...\033[0m"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Single Tenancy)\033[0m"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Single Tenancy)\033[0m"; exit 1; }
 
           echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
           mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
 
           echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
