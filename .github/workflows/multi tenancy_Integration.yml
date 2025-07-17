@@ -34,12 +34,12 @@ jobs:
 
       - name: Install Cloud Foundry CLI and jq
         run: |
-          echo -e "\033[36mInstalling Cloud Foundry CLI and jq...\033[0m"
+          echo -e "\033[36m🔧 Installing Cloud Foundry CLI and jq...\033[0m"
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install -y cf8-cli jq
-          echo -e "\033[32mInstallation complete!\033[0m"
+          echo -e "\033[32m✔️ Installation complete!\033[0m"
 
       - name: Determine Cloud Foundry Space
         id: determine_space
@@ -49,33 +49,34 @@ jobs:
           else
             space="${{ github.event.inputs.cf_space }}"
           fi
-          echo -e "\033[34mSpace determined: \033[1m$space\033[22m\033[0m"
+          echo -e "\033[34m🌐 Space determined: \033[1m$space\033[22m\033[0m"
           echo "::set-output name=space::$space"
 
       - name: Login to Cloud Foundry
         run: |
-          echo -e "\033[36mLogging in to Cloud Foundry...\033[0m"
+          echo -e "\033[36m🔑 Logging in to Cloud Foundry...\033[0m"
           cf login -a ${{ secrets.CF_API }} \
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
-          echo -e "\033[32mLogin successful!\033[0m"
+            -s ${{ secrets.CF_SPACE }}
+            # -s ${{ steps.determine_space.outputs.space }}
+          echo -e "\033[32m✔️ Login successful!\033[0m"
 
       - name: Fetch and Escape Client Details for single tenant
         id: fetch_credentials
         run: |
-          echo -e "\033[36mFetching Client Details for Single Tenant...\033[0m"
+          echo -e "\033[36m🚀 Fetching Client Details for Single Tenant...\033[0m"
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
-            echo -e "\033[31mError: Unable to retrieve service instance GUID\033[0m"
+            echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
             exit 1
           fi
           
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
           binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
-            echo -e "\033[31mError: Unable to retrieve binding GUID\033[0m"
+            echo -e "\033[31m❌ Error: Unable to retrieve binding GUID\033[0m"
             exit 1
           fi
           
@@ -83,35 +84,35 @@ jobs:
           
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo -e "\033[31mError: clientSecret is not set or is null\033[0m"
+            echo -e "\033[31m❌ Error: clientSecret is not set or is null\033[0m"
             exit 1
           fi
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
           
           clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
           if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo -e "\033[31mError: clientID is not set or is null\033[0m"
+            echo -e "\033[31m❌ Error: clientID is not set or is null\033[0m"
             exit 1
           fi
           
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
           echo "::set-output name=CLIENT_ID::$clientID"
-          echo -e "\033[32mClient Details fetched successfully!\033[0m"
+          echo -e "\033[32m✔️ Client Details fetched successfully!\033[0m"
 
       - name: Fetch and Escape Client Details for multi tenant
         id: fetch_credentials_mt
         run: |
-            echo -e "\033[36mFetching Client Details for Multi Tenant...\033[0m"
+            echo -e "\033[36m🚀 Fetching Client Details for Multi Tenant...\033[0m"
             service_instance_guid=$(cf service bookshop-mt-uaa --guid)
             if [ -z "$service_instance_guid" ]; then
-              echo -e "\033[31mError: Unable to retrieve service instance GUID\033[0m"
+              echo -e "\033[31m❌ Error: Unable to retrieve service instance GUID\033[0m"
               exit 1
             fi
             
             bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
             binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
             if [ -z "$binding_guid" ]; then
-              echo -e "\033[31mError: Unable to retrieve binding GUID\033[0m"
+              echo -e "\033[31m❌ Error: Unable to retrieve binding GUID\033[0m"
               exit 1
             fi
             
@@ -119,20 +120,20 @@ jobs:
             
             clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
             if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-              echo -e "\033[31mError: clientSecret_mt is not set or is null\033[0m"
+              echo -e "\033[31m❌ Error: clientSecret_mt is not set or is null\033[0m"
               exit 1
             fi
             escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
             
             clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
             if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-              echo -e "\033[31mError: clientID_mt is not set or is null\033[0m"
+              echo -e "\033[31m❌ Error: clientID_mt is not set or is null\033[0m"
               exit 1
             fi
             
             echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
             echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
-            echo -e "\033[32mMulti Tenant Client Details fetched successfully!\033[0m"
+            echo -e "\033[32m✔️ Multi Tenant Client Details fetched successfully!\033[0m"
 
       - name: Run integration tests
         env:
@@ -141,11 +142,13 @@ jobs:
           CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
           CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
         run: |
-          echo -e "\033[36mRunning Integration Tests...\033[0m"
+          echo -e "\033[36m🧪 Running Integration Tests...\033[0m"
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          # appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          # appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}" 
@@ -161,7 +164,7 @@ jobs:
           # Check for missing variables
           for var in appUrl appUrlMT authUrl authUrlMT1 authUrlMT2 clientID clientSecret clientIDMT clientSecretMT username password noSDMRoleUsername noSDMRoleUserPassword; do
             if [ -z "${!var}" ]; then
-              echo -e "\033[31mError: ${var} is not set\033[0m"
+              echo -e "\033[31m❌ Error: ${var} is not set\033[0m"
               exit 1
             fi
           done
@@ -183,15 +186,15 @@ jobs:
           EOL
 
           # Display properties file
-          echo -e "\033[34mProperties File:\033[0m"
+          echo -e "\033[34m📜 Properties File:\033[0m"
           cat "$PROPERTIES_FILE"
           
           # Run Maven integration tests
 
-          echo -e "\033[34mRunning Maven tests for Multi Tenancy...\033[0m"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31mMaven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31mMaven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31mMaven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
-          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31mMaven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          echo -e "\033[34m🧪 Running Maven tests for Multi Tenancy...\033[0m"
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 1)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Named User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
+          # mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests || { echo -e "\033[31m❌ Maven tests failed for Technical User Flow (Multi Tenancy, Tenant 2)\033[0m"; exit 1; }
 
-          echo -e "\033[32mIntegration tests completed successfully!\033[0m"
+          echo -e "\033[32m✔️ Integration tests completed successfully!\033[0m"
