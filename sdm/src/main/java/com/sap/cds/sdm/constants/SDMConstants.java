@@ -147,21 +147,6 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String removeWhiteSpace(List<String> noWhiteSpace) {
-    // Create the base message
-    String prefixMessage = "File name cannot start with Space. \n\n";
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
-
-    // Append each file name and its error message to the StringBuilder
-    for (String file : noWhiteSpace) {
-      bulletPoints.append(String.format("\t• %s%n", file));
-    }
-    bulletPoints.append(System.lineSeparator());
-    return bulletPoints.toString();
-  }
-
   public static String unsupportedPropertiesMessage(List<String> propertiesList) {
     // Create the base message
     String prefixMessage = "The following secondary properties are not supported.\n\n";
