@@ -52,6 +52,49 @@ annotate my.Books with @(UI : {HeaderInfo : {
   Description   : { Value: author.name }
 }, });
 
+////////////////////////////////////////////////////////////////////////////
+//
+//	Attachments Details
+//
+
+annotate my.Books.attachments with @UI: {
+  HeaderInfo: {
+        $Type         : 'UI.HeaderInfoType',
+        TypeName      : '{i18n>Attachment}',
+        TypeNamePlural: '{i18n>Attachments}',
+  },
+  LineItem  : [
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+      $Type : 'UI.DataFieldForAction',
+      Label : 'Copy Attachments',
+      Action: 'AdminService.copyAttachments',
+    }
+  ]
+} 
+{
+  note       @(title: '{i18n>Note}');
+  fileName  @(title: '{i18n>Filename}');
+  modifiedAt @(odata.etag: null);
+  content
+    @Core.ContentDisposition: { Filename: fileName }
+    @(title: '{i18n>Attachment}');
+  folderId @UI.Hidden;
+  repositoryId  @UI.Hidden ;
+  objectId  @UI.Hidden ;
+  mimeType @UI.Hidden;
+  status @UI.Hidden;
+}
+annotate Attachments with @Common: {SideEffects #ContentChanged: {
+  SourceProperties: [content],
+  TargetProperties: ['status'],
+  TargetEntities : [Books.attachments]
+}}{};
+
 
 ////////////////////////////////////////////////////////////////////////////
 //
