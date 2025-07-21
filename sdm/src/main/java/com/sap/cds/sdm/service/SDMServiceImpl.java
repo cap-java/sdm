@@ -165,8 +165,18 @@ public class SDMServiceImpl implements SDMService {
         return 500;
       }
     }
-    List<String> validSecondaryProperties =
-        getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    List<String> validSecondaryProperties;
+    try {
+      validSecondaryProperties =
+          getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    } catch (Exception e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.length() >= 3) {
+        return (Integer.parseInt(errorMessage.substring(0, 3)));
+      } else {
+        return 500;
+      }
+    }
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache()
@@ -566,6 +576,11 @@ public class SDMServiceImpl implements SDMService {
                 sdmCredentials.getUrl(), repositoryId, value);
         HttpGet getTypesRequest = new HttpGet(sdmUrl);
         try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          int statusCode = response.getStatusLine().getStatusCode();
+          if (statusCode != 200) {
+            String reasonPhrase = response.getStatusLine().getReasonPhrase();
+            throw new ServiceException(statusCode + " : " + reasonPhrase);
+          }
           HttpEntity responseEntity = response.getEntity();
           if (responseEntity != null
               && Boolean.FALSE.equals(
