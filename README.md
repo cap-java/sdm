@@ -536,18 +536,19 @@ This plugin provides capability to copy attachments from one entity to another. 
 2. **OData API to copy attachments from one entity to another**
    
    You can also use an OData API call to trigger the copy operation.
+   `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.copyAttachments` . This request expects the following request body:
+   ```json
+   {
+      "up__ID" : "<up__ID>",  // ID of the new entity
+      "objectIds" : "abc","xyz" // objectIds corresponding to attachments that are to be copied
+   }
+   ```
 
    Example usage:  
    ```
    HTTP Method: POST
    Request URL:
    <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
-
-   Request Body:
-   {
-      "up__ID" : "<up__ID>",
-      "objectIds" : "abc","xyz"
-   }
    ```
 
 ## Known Restrictions
