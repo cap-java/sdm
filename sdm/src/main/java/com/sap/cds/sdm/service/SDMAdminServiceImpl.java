@@ -30,13 +30,14 @@ import org.slf4j.LoggerFactory;
 public class SDMAdminServiceImpl implements SDMAdminService {
   private static final Logger logger = LoggerFactory.getLogger(SDMAdminServiceImpl.class);
   private static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  private final TokenHandler tokenHandler = TokenHandler.getTokenHandlerInstance();
 
   @java.lang.Override
   public String onboardRepository(Repository repository)
       throws JsonProcessingException, UnsupportedEncodingException {
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     var httpClient =
-        TokenHandler.getHttpClient(
+        tokenHandler.getHttpClient(
             null, null, repository.getSubdomain(), "TECHNICAL_CREDENTIALS_FLOW");
     String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES;
     HttpPost onboardingReq = new HttpPost(sdmUrl);
@@ -64,7 +65,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
   @java.lang.Override
   public String offboardRepository(String subdomain) {
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     ClientCredentials clientCredentials =
         new ClientCredentials(sdmCredentials.getClientId(), sdmCredentials.getClientSecret());
     String baseTokenUrl = sdmCredentials.getBaseTokenUrl();

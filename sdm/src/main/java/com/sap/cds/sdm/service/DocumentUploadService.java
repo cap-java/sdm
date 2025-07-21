@@ -1,5 +1,8 @@
 package com.sap.cds.sdm.service;
 
+import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
+import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
+
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -30,20 +33,24 @@ public class DocumentUploadService {
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
+  private final TokenHandler tokenHandler;
 
   public DocumentUploadService(
-      ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     logger.info("DocumentUploadService is instantiated");
 
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   /*
    * Implementation to create document.
    */
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     try {
       long totalSize = cmisDocument.getContentLength();
@@ -51,12 +58,12 @@ public class DocumentUploadService {
 
       if (totalSize <= 400 * 1024 * 1024) {
         // Upload directly if file is ≤ 400MB
-        return uploadSingleChunk(cmisDocument, sdmCredentials, jwtToken);
+        return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > 400MB
-        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, jwtToken);
+        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
       }
     } catch (Exception e) {
       throw new IOException("Error uploading document: " + e.getMessage(), e);
@@ -86,7 +93,7 @@ public class DocumentUploadService {
       int bytesRead,
       boolean isLastChunk,
       int chunkIndex,
-      String jwtToken)
+      boolean isSystemUser)
       throws IOException, ParseException {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -110,11 +117,8 @@ public class DocumentUploadService {
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
     headers.forEach(request::addHeader);
-
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
-    logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
 
@@ -127,8 +131,8 @@ public class DocumentUploadService {
     }
   }
 
-  private JSONObject createEmptyDocument(CmisDocument cmisDocument, String sdmUrl, String jwtToken)
-      throws IOException, ParseException {
+  private JSONObject createEmptyDocument(
+      CmisDocument cmisDocument, String sdmUrl, boolean isSystemUser) {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "createDocument");
@@ -142,11 +146,9 @@ public class DocumentUploadService {
     HttpEntity entity = builder.build();
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
-
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
@@ -155,19 +157,15 @@ public class DocumentUploadService {
   }
 
   public JSONObject uploadSingleChunk(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
 
     InputStream originalStream = cmisDocument.getContent();
     if (originalStream == null) {
       throw new IOException("File stream is null!");
     }
-
-    // Prepare Multipart Request
-    String subdomain = TokenHandler.getSubdomainFromToken(jwtToken);
-    String grantType = TokenHandler.getGrantType(jwtToken);
-    logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, subdomain, grantType);
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -196,7 +194,8 @@ public class DocumentUploadService {
   }
 
   private JSONObject uploadLargeFileInChunks(
-      CmisDocument cmisDocument, String sdmUrl, int chunkSize, String jwtToken) throws IOException {
+      CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
+      throws IOException {
 
     try (ReadAheadInputStream chunkedStream =
         new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
@@ -206,7 +205,7 @@ public class DocumentUploadService {
 
       // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
       // set in every chunk appendContent
-      JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, jwtToken);
+      JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
       logger.info("Response Body: {}", responseBody);
 
       String objectId = responseBody.getString("objectId");
@@ -251,7 +250,7 @@ public class DocumentUploadService {
         // Step 7: Append Chunk. Call cmis api to append content stream
         if (bytesRead > 0) {
           appendContentStream(
-              cmisDocument, sdmUrl, chunkBuffer, bytesRead, isLastChunk, chunkIndex, jwtToken);
+              cmisDocument, sdmUrl, chunkBuffer, bytesRead, isLastChunk, chunkIndex, isSystemUser);
         }
 
         long endChunkUploadTime = System.currentTimeMillis();

@@ -15,6 +15,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
+- Technical user support: Provides the capability to consume the plugin using technical user.
+- Copy attachments: Provides the capability to copy attachments from one entity to another entity.
 
 ## Table of Contents
 
@@ -26,6 +28,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
+- [Support for Technical user](#support-for-technical-user)
+- [Support for Copy attachments](#support-for-copy-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -312,7 +316,35 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. 
+
+GetDependencies, subscribe and unsubscribe are the mandatory steps to be performed to support multitenancy.
+
+Refer the below example to pass the SDM Service dependencies to SaaSRegistry so that SDM credentials are passed to subscribing tenant.
+```java
+//Set the SDM xsappname to SaaS Registry Dependency.
+@On(event = DeploymentService.EVENT_DEPENDENCIES)
+    public void onGetDependencies(DependenciesEventContext context) {
+
+        List<SaasRegistryDependency> dependencies = new ArrayList<>();
+        Map<String, Object> uaa = (Map<String, Object>) getSDMCredentials().get("uaa");
+        dependencies.add(SaasRegistryDependency.create(uaa.get("xsappname").toString()));
+        context.setResult(dependencies);
+    }
+    //Fetch the SDM service credentials
+ private Map<String, Object> getSDMCredentials() {
+    List<ServiceBinding> allServiceBindings =
+    DefaultServiceBindingAccessor.getInstance().getServiceBindings();
+ServiceBinding sdmBinding =
+    allServiceBindings.stream()
+        .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
+        .findFirst()
+        .get();
+return  sdmBinding.getCredentials();
+
+    }
+ ```
+Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
   
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
@@ -464,6 +496,65 @@ Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the fo
    > **Note**
    >
    > Once a facet or section name is defined in the CDS file, it is strongly recommended not to modify it. For instance, in the example provided, section names such as attachments, references, and footnotes should remain unchanged after initial configuration. Renaming these sections will result in the creation of new tables, causing any data associated with the original sections to become inaccessible in the UI.
+
+## Support for technical user
+The CAP OData operations can be performed on attachments using a technical user. This flow can be used for machine-to-machine (M2M) interactions, where user involvement is not necessary.
+
+A leading CAP application's service should add the requires with annotation "system-user". For more detailed information on "system-user" within the SAP CAP framework, refer to the [Capire documentation](https://cap.cloud.sap/docs/guides/security/authorization#pseudo-roles). Here is an [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app demonstrating the implementation.
+```cds
+service AdminService @(requires: ['admin', 'system-user'])
+```
+
+The plugin supports technical users using oAuth 2.0 client credentials flow. Refer the following [example](https://github.com/cap-java/sdm/blob/a1bd1a0d829e6f25e4db349143b621757e0274d1/sdm/src/test/java/integration/com/sap/cds/sdm/IntegrationTest_SingleFacet.java#L80) of an OData call.
+```java
+request =
+   new Request.Builder()
+      .url(authUrl + "/oauth/token?grant_type=client_credentials")
+      .method("POST", body)
+      .addHeader("Authorization", basicAuth)
+      .build();
+```
+
+## Support for copy attachments
+
+This plugin provides capability to copy attachments from one entity to another. This capability will copy attachments metadata on CAP as well as actual content on the SAP Document Management service repository. This feature can be used in following two ways.
+
+1. **A helper method to copy attachments from one entity to another**
+   
+   The `AttachmentService` instance can be used to call `copyAttachments` method. This method expects an object of `CopyAttachmentInput` which requires new entity's Id (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be copied.
+
+   Example usage:
+   ```java
+      String up__ID = "123";
+      List<String> objectIds = ["abc", "xyz"];
+      String facet = "AdminService.Books.attachments" // Target facet. This can be usually obtained from context.getTarget().getQualifiedName()
+      boolean isSystemUser = false;
+      var copyEventInput =
+         new CopyAttachmentInput(up__ID, facet, objectIds);
+      attachmentService.copyAttachments(copyEventInput, isSystemUser);
+   ```
+2. **OData API to copy attachments from one entity to another**
+   
+   You can also use an OData API call to trigger the copy operation.
+   `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.copyAttachments` . This request expects the following request body:
+   ```json
+   {
+      "up__ID" : "<up__ID>",  // ID of the new entity
+      "objectIds" : "abc","xyz" // objectIds corresponding to attachments that are to be copied
+   }
+   ```
+
+   Example usage:  
+   ```
+   HTTP Method: POST
+   Request URL:
+   <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
+   Request Body:
+   {
+      "up__ID": "<up__ID>",
+      "objectIds": "abc","xyz"
+   }
+   ```
 
 ## Known Restrictions
 

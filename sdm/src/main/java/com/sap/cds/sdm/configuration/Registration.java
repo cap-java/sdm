@@ -3,14 +3,16 @@ package com.sap.cds.sdm.configuration;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
-import com.sap.cds.sdm.service.DocumentUploadService;
-import com.sap.cds.sdm.service.SDMAttachmentsService;
-import com.sap.cds.sdm.service.SDMService;
-import com.sap.cds.sdm.service.SDMServiceImpl;
+import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.service.*;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
+import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
+import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.environment.CdsEnvironment;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.handler.EventHandler;
@@ -49,23 +51,45 @@ public class Registration implements CdsRuntimeConfiguration {
             .getCdsRuntime()
             .getServiceCatalog()
             .getService(PersistenceService.class, PersistenceService.DEFAULT_NAME);
+    var attachmentService =
+        configurer
+            .getCdsRuntime()
+            .getServiceCatalog()
+            .getService(RegisterService.class, RegisterService.SDM_NAME);
     List<ServiceBinding> bindings =
         environment
             .getServiceBindings()
             .filter(b -> ServiceBindingUtils.matches(b, SDMConstants.SDM_ENV_NAME))
             .toList();
     var binding = !bindings.isEmpty() ? bindings.get(0) : null;
+    List<DraftService> draftServiceList =
+        configurer.getCdsRuntime().getServiceCatalog().getServices(DraftService.class).toList();
 
     // get HTTP connection pool configuration
     var connectionPool = getConnectionPool(environment);
 
-    SDMService sdmService = new SDMServiceImpl(binding, connectionPool);
-    DocumentUploadService documentService = new DocumentUploadService(binding, connectionPool);
+    TokenHandler tokenHandlerInstance = TokenHandler.getTokenHandlerInstance();
+    DBQuery dbQueryInstance = DBQuery.getDBQueryInstance();
+    SDMService sdmService = new SDMServiceImpl(binding, connectionPool, tokenHandlerInstance);
+    DocumentUploadService documentService =
+        new DocumentUploadService(binding, connectionPool, tokenHandlerInstance);
     configurer.eventHandler(buildReadHandler());
-    configurer.eventHandler(new SDMCreateAttachmentsHandler(persistenceService, sdmService));
-    configurer.eventHandler(new SDMUpdateAttachmentsHandler(persistenceService, sdmService));
     configurer.eventHandler(
-        new SDMAttachmentsServiceHandler(persistenceService, sdmService, documentService));
+        new SDMCreateAttachmentsHandler(
+            persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));
+    configurer.eventHandler(
+        new SDMUpdateAttachmentsHandler(
+            persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));
+    configurer.eventHandler(
+        new SDMAttachmentsServiceHandler(
+            persistenceService,
+            sdmService,
+            documentService,
+            tokenHandlerInstance,
+            dbQueryInstance));
+    configurer.eventHandler(new SDMServiceGenericHandler(attachmentService));
+    configurer.eventHandler(
+        new SDMCustomServiceHandler(sdmService, draftServiceList, tokenHandlerInstance));
   }
 
   private AttachmentService buildAttachmentService() {

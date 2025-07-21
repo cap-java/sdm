@@ -19,8 +19,6 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -40,14 +38,20 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private final SDMService sdmService;
   private final DocumentUploadService documentService;
   private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsServiceHandler.class);
+  private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
   public SDMAttachmentsServiceHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
-      DocumentUploadService documentService) {
+      DocumentUploadService documentService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.documentService = documentService;
+    this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
@@ -69,18 +73,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
-      String userEmail = context.getDeletionUserInfo().getName();
       String entity = contextValues[2];
-      String subdomain = contextValues[3];
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
-          DBQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
+          dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
-        sdmService.deleteDocument("deleteTree", folderId, userEmail, subdomain);
+        sdmService.deleteDocument("deleteTree", folderId);
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
-          sdmService.deleteDocument("delete", objectId, userEmail, subdomain);
+          sdmService.deleteDocument("delete", objectId);
         }
       }
     }
@@ -94,14 +96,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_READ_ATTACHMENT)
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
-    AuthenticationInfo authInfo = context.getAuthenticationInfo();
-    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     try {
-      sdmService.readDocument(objectId, jwtToken, sdmCredentials, context);
+      sdmService.readDocument(objectId, sdmCredentials, context);
     } catch (Exception e) {
       throw new ServiceException(e.getMessage());
     }
@@ -143,11 +142,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void validateRepository(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
-    JwtTokenAuthenticationInfo jwtTokenInfo =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck = sdmService.checkRepositoryType(jwtToken, repositoryId);
+    String repocheck =
+        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
@@ -161,7 +158,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String upID = (String) attachmentIds.get(upIdKey);
 
     Result result =
-        DBQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
+        dbQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
     checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
@@ -199,7 +196,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException {
     // Fetch the row count for current repository
     Result result =
-        DBQuery.getAttachmentsForUPIDAndRepository(
+        dbQuery.getAttachmentsForUPIDAndRepository(
             attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
     String errorMessageCount =
@@ -238,21 +235,20 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
 
     CmisDocument cmisDocument = new CmisDocument();
-    String jwtToken =
-        eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken();
+    Boolean isSystemUser = eventContext.getUserInfo().isSystemUser();
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String entityName = eventContext.getAttachmentEntity().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
-    String folderId = sdmService.getFolderId(result, persistenceService, folderName, jwtToken);
+    String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     setCmisDocumentProperties(
         cmisDocument, data, attachmentIds, folderId, repositoryId, upIdKey, contentLen);
 
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, jwtToken);
+      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
       logger.info("Synchronous Response from documentService: {}", createResult);
       logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {
@@ -299,7 +295,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
-        addAttachmentToDraft(
+        dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);
     }
@@ -307,17 +303,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void finalizeContext(
       AttachmentCreateEventContext eventContext, CmisDocument cmisDocument) {
-    String subdomain =
-        TokenHandler.getSubdomainFromToken(
-            eventContext.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken());
     eventContext.setContentId(
         cmisDocument.getObjectId()
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + eventContext.getAttachmentEntity()
-            + ":"
-            + subdomain);
+            + eventContext.getAttachmentEntity());
     eventContext.getData().setStatus("Clean");
     eventContext.getData().setContent(null);
     eventContext.setCompleted();

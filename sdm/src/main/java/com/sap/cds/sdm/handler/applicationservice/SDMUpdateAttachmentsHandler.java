@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
-import static com.sap.cds.sdm.persistence.DBQuery.*;
-
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
@@ -16,8 +14,6 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsUpdateEventContext;
 import com.sap.cds.services.handler.EventHandler;
@@ -33,10 +29,18 @@ import org.ehcache.Cache;
 public class SDMUpdateAttachmentsHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
-  public SDMUpdateAttachmentsHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMUpdateAttachmentsHandler(
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @Before
@@ -178,20 +182,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
-    fileNameInDB = DBQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    fileNameInDB = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     if (fileNameInDB
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
       String objectId = (String) attachment.get("objectId");
-      AuthenticationInfo authInfo = context.getAuthenticationInfo();
-      JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-      String jwtToken = jwtTokenInfo.getToken();
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-      fileNameInDB = sdmService.getObject(jwtToken, objectId, sdmCredentials);
+      SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+      fileNameInDB =
+          sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getPropertiesForID(
+        dbQuery.getPropertiesForID(
             attachmentEntity.get(),
             persistenceService,
             id,
@@ -238,11 +240,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       try {
         int responseCode =
             sdmService.updateAttachments(
-                context.getAuthenticationInfo().as(JwtTokenAuthenticationInfo.class).getToken(),
-                TokenHandler.getSDMCredentials(),
+                tokenHandler.getSDMCredentials(),
                 cmisDocument,
                 updatedSecondaryProperties,
-                secondaryPropertiesWithInvalidDefinitions);
+                secondaryPropertiesWithInvalidDefinitions,
+                context.getUserInfo().isSystemUser());
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing

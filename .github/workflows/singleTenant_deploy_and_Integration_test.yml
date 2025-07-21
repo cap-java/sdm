@@ -1,4 +1,4 @@
-name: Deploy and Integration Test
+name: Single Tenant Deploy and Integration Test
 
 on:
   pull_request:
@@ -137,62 +137,64 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
-      - name: Fetch and Escape Client Secret
-        id: fetch_secret
+      - name: Fetch and Escape Client Details for single tenant 🔍
+        id: fetch_credentials
         run: |
-          # Fetch the service instance GUID
+          echo "Fetching client details for single tenant..."
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
-            echo "Error: Unable to retrieve service instance GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
           fi
-          # Fetch the binding GUID
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          
-          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
-            echo "Error: Unable to retrieve binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
           fi
-          
-          # Fetch the clientSecret
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "Error: clientSecret is not set or is null"; exit 1;
+            echo "❌ Error: clientSecret is not set or is null"; exit 1;
           fi
-          
-          # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedClientSecret"
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "❌ Error: clientID is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$clientID"
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-      - name: Run integration tests
+          echo "::set-output name=CLIENT_ID::$clientID"
+          echo "✅ Client details fetched successfully!"
+      - name: Run integration tests 🎯
         env:
-          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
         run: |
-          set -e  # Enable error checking
+          echo "🚀 Starting integration tests..."
+          set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          # Gather secrets and other values
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
+          clientID="${{ env.CLIENT_ID }}"
           clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
-          # Ensure all required variables are set
-          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
-          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
-          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
-          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
-          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
-          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
-          # Function to partially mask sensitive information for logging
-          mask() {
-            local value="$1"
-            if [ ${#value} -gt 6 ]; then
-              echo "${value:0:3}*****${value: -3}"
-            else
-              echo "${value:0:2}*****"
-            fi
-          }
-          # Update properties file with real values
+          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          echo "::add-mask::$clientSecret"
+          echo "::add-mask::$clientID"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          echo "::add-mask::$noSDMRoleUsername"
+          echo "::add-mask::$noSDMRoleUserPassword"
+          if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "❌ Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "❌ Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           authUrl=$authUrl
@@ -200,10 +202,13 @@ jobs:
           clientSecret=$clientSecret
           username=$username
           password=$password
+          noSDMRoleUsername=$noSDMRoleUsername
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
+          echo "🎯 Running Maven integration tests"
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
+          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
     
       
 

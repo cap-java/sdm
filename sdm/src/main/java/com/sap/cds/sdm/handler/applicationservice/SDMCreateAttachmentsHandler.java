@@ -14,8 +14,6 @@ import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.handler.EventHandler;
@@ -37,10 +35,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
+  private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
-  public SDMCreateAttachmentsHandler(PersistenceService persistenceService, SDMService sdmService) {
+  public SDMCreateAttachmentsHandler(
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
+    this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @Before
@@ -171,22 +177,21 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String id = (String) attachment.get("ID");
     String fileNameInDB;
     fileNameInDB =
-        DBQuery.getAttachmentForID(
+        dbQuery.getAttachmentForID(
             attachmentEntity.get(),
             persistenceService,
             id); // Fetching the name of the file from DB
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
-    AuthenticationInfo authInfo = context.getAuthenticationInfo();
-    JwtTokenAuthenticationInfo jwtTokenInfo = authInfo.as(JwtTokenAuthenticationInfo.class);
-    String jwtToken = jwtTokenInfo.getToken();
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String fileNameInSDM =
         sdmService.getObject(
-            jwtToken,
             objectId,
-            sdmCredentials); // Fetch original filename from SDM since it's null in attachments
+            sdmCredentials,
+            context
+                .getUserInfo()
+                .isSystemUser()); // Fetch original filename from SDM since it's null in attachments
     // table until save; needed to revert UI-modified names on error.
 
     Map<String, String> secondaryTypeProperties =
@@ -195,7 +200,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachment); // Fetching the secondary type properties from the attachment entity
     Map<String, String> propertiesInDB;
     propertiesInDB =
-        DBQuery.getPropertiesForID(
+        dbQuery.getPropertiesForID(
             attachmentEntity.get(),
             persistenceService,
             id,
@@ -245,11 +250,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       try {
         int responseCode =
             sdmService.updateAttachments(
-                jwtToken,
                 sdmCredentials,
                 cmisDocument,
                 updatedSecondaryProperties,
-                secondaryPropertiesWithInvalidDefinitions);
+                secondaryPropertiesWithInvalidDefinitions,
+                context.getUserInfo().isSystemUser());
         switch (responseCode) {
           case 403:
             // SDM Roles for user are missing

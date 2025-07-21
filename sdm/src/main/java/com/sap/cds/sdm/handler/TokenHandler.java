@@ -1,17 +1,8 @@
 package com.sap.cds.sdm.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
-import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 import static java.util.Objects.requireNonNull;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.sap.cds.sdm.caching.CacheConfig;
-import com.sap.cds.sdm.caching.CacheKey;
-import com.sap.cds.sdm.caching.TokenCacheKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.environment.CdsProperties;
@@ -22,57 +13,38 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OAuth2DestinationBuilder;
 import com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf;
 import com.sap.cloud.security.config.ClientCredentials;
-import com.sap.cloud.security.xsuaa.client.OAuth2ServiceException;
-import com.sap.cloud.security.xsuaa.http.HttpHeaders;
-import com.sap.cloud.security.xsuaa.http.MediaType;
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TokenHandler {
-  private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
-
-  private static final ObjectMapper mapper = new ObjectMapper();
-
-  private TokenHandler() {
-    throw new IllegalStateException("TokenHandler class");
-  }
-
-  public static byte[] toBytes(String str) {
-    return requireNonNull(str).getBytes(StandardCharsets.UTF_8);
-  }
-
-  public static String toString(byte[] bytes) {
-    return new String(requireNonNull(bytes), StandardCharsets.UTF_8);
-  }
-
   private static final String SDM_TOKEN_ENDPOINT = "url";
   private static final String SDM_URL = "uri";
   private static final String CLIENT_ID = "clientid";
   private static final String CLIENT_SECRET = "clientsecret";
 
-  public static SDMCredentials getSDMCredentials() {
+  private static TokenHandler instance;
+
+  private TokenHandler() {}
+
+  public static TokenHandler getTokenHandlerInstance() {
+    if (instance == null) {
+      instance = new TokenHandler();
+    }
+    return instance;
+  }
+
+  public byte[] toBytes(String str) {
+    return requireNonNull(str).getBytes(StandardCharsets.UTF_8);
+  }
+
+  public String toString(byte[] bytes) {
+    return new String(requireNonNull(bytes), StandardCharsets.UTF_8);
+  }
+
+  public SDMCredentials getSDMCredentials() {
     Map<String, Object> uaaCredentials = getUaaCredentials();
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -83,217 +55,44 @@ public class TokenHandler {
     return sdmCredentials;
   }
 
-  public static Map<String, Object> getUaaCredentials() {
+  public Map<String, Object> getUaaCredentials() {
     List<ServiceBinding> allServiceBindings =
         DefaultServiceBindingAccessor.getInstance().getServiceBindings();
-    // filter for a specific binding
     ServiceBinding sdmBinding =
         allServiceBindings.stream()
             .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
             .findFirst()
-            .get();
-
+            .orElseThrow(() -> new IllegalStateException("SDM binding not found"));
     return sdmBinding.getCredentials();
   }
 
-  public static String getUserTokenFromAuthorities(
-      String email, String subdomain, SDMCredentials sdmCredentials) throws IOException {
-    // Fetch the token from Cache if present use it else generate and store
-    String cachedToken = null;
-    String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
-    String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
-    // Define the authorities (JSON) and URL encode it
-    String authoritiesJson =
-        "{\"az_attr\":{\"X-EcmUserEnc\":" + email + ",\"X-EcmAddPrincipals\":" + email + "}}";
-    String encodedAuthorities =
-        URLEncoder.encode(authoritiesJson, StandardCharsets.UTF_8.toString());
-
-    // Create body parameters including the grant type and authorities
-    String bodyParams = "grant_type=client_credentials&authorities=" + encodedAuthorities;
-    byte[] postData = bodyParams.getBytes(StandardCharsets.UTF_8);
-    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
-    if (subdomain != null && !subdomain.equals("")) {
-      String providersubdomain =
-          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
-      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
-    }
-    // Create the URL for the token endpoint
-    String authUrl = baseTokenUrl + "/oauth/token";
-    URL url = new URL(authUrl);
-
-    // Open the connection and set the properties
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.setRequestProperty("Authorization", authHeaderValue);
-    conn.setRequestMethod("POST");
-    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-    conn.setRequestProperty("charset", "utf-8");
-    conn.setRequestProperty("Content-Length", String.valueOf(postData.length));
-    conn.setUseCaches(false);
-    conn.setDoInput(true);
-    conn.setDoOutput(true);
-
-    // Write the POST data to the output stream
-    try (DataOutputStream os = new DataOutputStream(conn.getOutputStream())) {
-      os.write(postData);
-    }
-    String resp;
-    try (DataInputStream is = new DataInputStream(conn.getInputStream());
-        BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-      resp = br.lines().collect(Collectors.joining("\n"));
-    }
-    conn.disconnect();
-    cachedToken = mapper.readValue(resp, JsonNode.class).get("access_token").asText();
-    TokenCacheKey cacheKey = new TokenCacheKey();
-    cacheKey.setKey(email + "_" + subdomain);
-    CacheConfig.getUserAuthoritiesTokenCache().put(cacheKey, cachedToken);
-    return cachedToken;
-  }
-
-  public static String getDITokenUsingAuthorities(
-      SDMCredentials sdmCredentials, String email, String subdomain) throws IOException {
-    TokenCacheKey cacheKey = new TokenCacheKey();
-    cacheKey.setKey(email + "_" + subdomain);
-    String cachedToken = CacheConfig.getUserAuthoritiesTokenCache().get(cacheKey);
-    if (cachedToken == null) {
-      cachedToken = getUserTokenFromAuthorities(email, subdomain, sdmCredentials);
-    }
-    return cachedToken;
-  }
-
-  public static String getDIToken(String token, SDMCredentials sdmCredentials) throws IOException {
-    JsonObject payloadObj = getTokenFields(token);
-    String email = payloadObj.get("email").getAsString();
-    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
-    String subdomain = tenantDetails.get("zdn").getAsString();
-    String tokenexpiry = payloadObj.get("exp").getAsString();
-    CacheKey cacheKey = new CacheKey();
-    cacheKey.setKey(email + "_" + subdomain);
-    cacheKey.setExpiration(tokenexpiry);
-    String cachedToken = CacheConfig.getUserTokenCache().get(cacheKey);
-    if (cachedToken == null) {
-      cachedToken = generateDITokenFromTokenExchange(token, sdmCredentials, payloadObj);
-    }
-    return cachedToken;
-  }
-
-  public static Map<String, String> fillTokenExchangeBody(String token, SDMCredentials sdmEnv) {
-    Map<String, String> parameters = new HashMap<>();
-    parameters.put("assertion", token);
-    return parameters;
-  }
-
-  public static String generateDITokenFromTokenExchange(
-      String token, SDMCredentials sdmCredentials, JsonObject payloadObj)
-      throws OAuth2ServiceException {
-    String cachedToken = null;
-    CloseableHttpClient httpClient = null;
-    try {
-      httpClient = HttpClients.createDefault();
-      if (sdmCredentials.getClientId() == null) {
-        throw new IOException(SDMConstants.NO_SDM_BINDING);
-      }
-      Map<String, String> parameters = fillTokenExchangeBody(token, sdmCredentials);
-      HttpPost httpPost =
-          new HttpPost(sdmCredentials.getBaseTokenUrl() + SDMConstants.DI_TOKEN_EXCHANGE_PARAMS);
-      httpPost.setHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON.value());
-      httpPost.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED.value());
-      httpPost.setHeader("X-zid", getTokenFields(token).get("zid").getAsString());
-
-      String encoded =
-          java.util.Base64.getEncoder()
-              .encodeToString(
-                  (sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret())
-                      .getBytes());
-      httpPost.setHeader("Authorization", "Basic " + encoded);
-
-      List<BasicNameValuePair> basicNameValuePairs =
-          parameters.entrySet().stream()
-              .map(entry -> new BasicNameValuePair(entry.getKey(), entry.getValue()))
-              .collect(Collectors.toList());
-      httpPost.setEntity(new UrlEncodedFormEntity(basicNameValuePairs));
-
-      HttpResponse response = httpClient.execute(httpPost);
-      String responseBody = extractResponseBodyAsString(response);
-      if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-        logger.error("Error fetching token with JWT bearer : " + responseBody);
-        throw new OAuth2ServiceException(
-            String.format(SDMConstants.DI_TOKEN_EXCHANGE_ERROR, responseBody));
-      }
-      Map<String, Object> accessTokenMap = new JSONObject(responseBody).toMap();
-      cachedToken = String.valueOf(accessTokenMap.get("access_token"));
-      String expiryTime = payloadObj.get("exp").getAsString();
-      CacheKey cacheKey = new CacheKey();
-      JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
-      String subdomain = tenantDetails.get("zdn").getAsString();
-      cacheKey.setKey(payloadObj.get("email").getAsString() + "_" + subdomain);
-      cacheKey.setExpiration(expiryTime);
-      CacheConfig.getUserTokenCache().put(cacheKey, cachedToken);
-    } catch (UnsupportedEncodingException e) {
-      throw new OAuth2ServiceException("Unexpected error parsing URI: " + e.getMessage());
-    } catch (ClientProtocolException e) {
-      throw new OAuth2ServiceException(
-          "Unexpected error while fetching client protocol: " + e.getMessage());
-    } catch (IOException e) {
-      logger.error(
-          "Error in POST request while fetching token with JWT bearer \n"
-              + Arrays.toString(e.getStackTrace()));
-      throw new OAuth2ServiceException(
-          "Error in POST request while fetching token with JWT bearer: " + e.getMessage());
-    } finally {
-      safeClose(httpClient);
-    }
-    return cachedToken;
-  }
-
-  private static void safeClose(CloseableHttpClient httpClient) {
-    if (httpClient != null) {
-      try {
-        httpClient.close();
-      } catch (IOException ex) {
-        logger.error("Failed to close httpclient \n" + Arrays.toString(ex.getStackTrace()));
-      }
-    }
-  }
-
-  public static String extractResponseBodyAsString(HttpResponse response) throws IOException {
-    // Ensure that InputStream and BufferedReader are automatically closed
-    try (InputStream inputStream = response.getEntity().getContent();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-      return bufferedReader.lines().collect(Collectors.joining(System.lineSeparator()));
-    }
-  }
-
-  public static JsonObject getTokenFields(String token) {
-    String[] chunks = token.split("\\.");
-    java.util.Base64.Decoder decoder = java.util.Base64.getUrlDecoder();
-    String payload = new String(decoder.decode(chunks[1]));
-    JsonElement jelement = new JsonParser().parse(payload);
-    return jelement.getAsJsonObject();
-  }
-
-  public static HttpClient getHttpClient(
+  public HttpClient getHttpClient(
       ServiceBinding binding,
       CdsProperties.ConnectionPool connectionPoolConfig,
       String subdomain,
       String type) {
+
     Map<String, Object> uaaCredentials;
     if (binding != null && !binding.getCredentials().isEmpty()) {
       uaaCredentials = binding.getCredentials();
     } else {
-      uaaCredentials = TokenHandler.getUaaCredentials();
+      uaaCredentials = getUaaCredentials();
     }
+
     Map<String, Object> uaa = (Map<String, Object>) uaaCredentials.get("uaa");
+
     ClientCredentials clientCredentials =
         new ClientCredentials(uaa.get(CLIENT_ID).toString(), uaa.get(CLIENT_SECRET).toString());
+
     String baseTokenUrl = uaa.get(SDM_TOKEN_ENDPOINT).toString();
     if (subdomain != null && !subdomain.isEmpty()) {
-      String providersubdomain =
+      String providerSubdomain =
           baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
-      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
+      baseTokenUrl = baseTokenUrl.replace(providerSubdomain, subdomain);
     }
 
     DefaultHttpDestination destination;
-    if (type.equals("TOKEN_EXCHANGE")) {
+    if (NAMED_USER_FLOW.equals(type)) {
       destination =
           OAuth2DestinationBuilder.forTargetUrl(uaaCredentials.get(SDM_URL).toString())
               .withTokenEndpoint(baseTokenUrl)
@@ -314,6 +113,7 @@ public class TokenHandler {
 
     DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
         DefaultHttpClientFactory.builder();
+
     if (connectionPoolConfig == null) {
       Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
       builder.timeoutMilliseconds((int) timeout.toMillis());
@@ -324,60 +124,7 @@ public class TokenHandler {
       builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
       builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
     }
-    DefaultHttpClientFactory factory = builder.build();
 
-    return factory.createHttpClient(destination);
-  }
-
-  public static String getSubdomainFromToken(String token) {
-    JsonObject payloadObj = TokenHandler.getTokenFields(token);
-    JsonObject tenantDetails = payloadObj.get("ext_attr").getAsJsonObject();
-    return tenantDetails.get("zdn").getAsString();
-  }
-
-  public static String getGrantType(String token) {
-    JsonObject payloadObj = TokenHandler.getTokenFields(token);
-    String grantType = payloadObj.get("grant_type").getAsString();
-    if (grantType.equalsIgnoreCase("client_credentials")) {
-      grantType = TECHNICAL_USER_FLOW;
-    } else {
-      grantType = NAMED_USER_FLOW;
-    }
-    return grantType;
-  }
-
-  public static String getTechnicalUserAccessToken(String subdomain, SDMCredentials sdmCredentials)
-      throws IOException {
-    String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
-    if (subdomain != null && !subdomain.isEmpty()) {
-      String providersubdomain =
-          baseTokenUrl.substring(baseTokenUrl.indexOf("/") + 2, baseTokenUrl.indexOf("."));
-      baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
-    }
-    String userCredentials = sdmCredentials.getClientId() + ":" + sdmCredentials.getClientSecret();
-    String authHeaderValue = "Basic " + Base64.encodeBase64String(toBytes(userCredentials));
-    String bodyParams = "grant_type=client_credentials";
-    byte[] postData = toBytes(bodyParams);
-    String authurl = baseTokenUrl + "/oauth/token";
-    URL url = new URL(authurl);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.setRequestProperty("Authorization", authHeaderValue);
-    conn.setRequestMethod("POST");
-    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-    conn.setRequestProperty("charset", "utf-8");
-    conn.setRequestProperty("Content-Length", "" + postData.length);
-    conn.setUseCaches(false);
-    conn.setDoInput(true);
-    conn.setDoOutput(true);
-    try (DataOutputStream os = new DataOutputStream(conn.getOutputStream())) {
-      os.write(postData);
-    }
-    String resp;
-    try (DataInputStream is = new DataInputStream(conn.getInputStream());
-        BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-      resp = br.lines().collect(Collectors.joining("\n"));
-    }
-    conn.disconnect();
-    return mapper.readValue(resp, JsonNode.class).get("access_token").asText();
+    return builder.build().createHttpClient(destination);
   }
 }
