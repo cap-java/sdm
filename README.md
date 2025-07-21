@@ -517,31 +517,38 @@ request =
 
 ## Support for copy attachments
 
-This plugin provides helper method to copy attachments from one entity to another. Copy attachments operation can also be triggered using OData API call.
+This plugin provides capability to copy attachments from one entity to another. This capability will copy attachments metadata on CAP as well as actual content on the SAP Document Management service repository. This feature can be used in following two ways.
 
+1. **A helper method to copy attachments from one entity to another**
+   
+   The `AttachmentService` instance can be used to call `copyAttachments` method. This method expects an object of `CopyAttachmentInput` which requires new entity's Id (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be copied.
 
-Refer the below example of copyAttachment method usage.
-```java
-   String up__ID = "123";
-   List<String> objectIds = ["abc", "xyz"];
-   String facet = "AdminService.Books.attachments" // Target facet. This can be usually obtained from context.getTarget().getQualifiedName()
-   boolean isSystemUser = false;
-   var copyEventInput =
-      new CopyAttachmentInput(up__ID, facet, objectIds);
-   attachmentService.copyAttachments(copyEventInput, isSystemUser);
- ```
-Refer the below example of copyAttachment OData API usage.  
-```
-HTTP Method: POST
-Request URL:
-<app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
+   Example usage:
+   ```java
+      String up__ID = "123";
+      List<String> objectIds = ["abc", "xyz"];
+      String facet = "AdminService.Books.attachments" // Target facet. This can be usually obtained from context.getTarget().getQualifiedName()
+      boolean isSystemUser = false;
+      var copyEventInput =
+         new CopyAttachmentInput(up__ID, facet, objectIds);
+      attachmentService.copyAttachments(copyEventInput, isSystemUser);
+   ```
+2. **OData API to copy attachments from one entity to another**
+   
+   You can also use an OData API call to trigger the copy operation.
 
-Request Body:
-{
-   "up__ID" : "<up__ID>",
-   "objectIds" : "abc","xyz"
-}
-```
+   Example usage:  
+   ```
+   HTTP Method: POST
+   Request URL:
+   <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
+
+   Request Body:
+   {
+      "up__ID" : "<up__ID>",
+      "objectIds" : "abc","xyz"
+   }
+   ```
 
 ## Known Restrictions
 
