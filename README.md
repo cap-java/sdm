@@ -549,6 +549,11 @@ This plugin provides capability to copy attachments from one entity to another. 
    HTTP Method: POST
    Request URL:
    <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
+   Request Body:
+   {
+      "up__ID": "<up__ID>",
+      "objectIds": "abc","xyz"
+   }
    ```
 
 ## Known Restrictions
