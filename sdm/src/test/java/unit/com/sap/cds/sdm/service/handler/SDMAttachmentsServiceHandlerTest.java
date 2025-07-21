@@ -281,12 +281,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "duplicate");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
@@ -360,12 +361,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "virus");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");
@@ -443,12 +445,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "fail");
     mockResponse.put("message", "Failed due to a DI error");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
@@ -518,12 +521,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "success");
     mockResponse.put("objectId", "123");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");
@@ -685,7 +689,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");
@@ -808,11 +812,11 @@ public class SDMAttachmentsServiceHandlerTest {
       Map<String, Object> attachment1 = new HashMap<>();
       attachment1.put("fileName", "sample.pdf");
       attachment1.put("ID", "1234"); // Different ID, not a duplicate
-      attachment1.put("repositoryId", "repoid");
+      attachment1.put("repositoryId", SDMConstants.REPOSITORY_ID);
       Map<String, Object> attachment2 = new HashMap<>();
       attachment2.put("fileName", "sample.pdf");
       attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
-      attachment2.put("repositoryId", "repoid");
+      attachment2.put("repositoryId", SDMConstants.REPOSITORY_ID);
       mockedResultList.add((Map) attachment1);
       mockedResultList.add((Map) attachment2);
 
@@ -945,7 +949,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
@@ -1009,7 +1013,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
-    when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);

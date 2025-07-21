@@ -3,6 +3,7 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -161,7 +162,7 @@ public class SDMCreateAttachmentsHandlerTest {
     handler.updateName(context, data, "");
 
     // Assert that no updateAttachments calls were made, as there are no attachments
-    verify(sdmService, never()).updateAttachments(any(), any(), any(), any(), any());
+    verify(sdmService, never()).updateAttachments(any(), any(), any(), any(), anyBoolean());
 
     // Assert that no error or warning messages were logged
     verify(messages, never()).error(anyString());
