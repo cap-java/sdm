@@ -14,11 +14,21 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
 public class DBQuery {
+
+  private static DBQuery dbQueryInstance = new DBQuery();
+
   private DBQuery() {
-    // Doesn't do anything
+    // Singleton pattern
   }
 
-  public static Result getAttachmentsForUPID(
+  public static DBQuery getDBQueryInstance() {
+    if (dbQueryInstance == null) {
+      dbQueryInstance = new DBQuery();
+    }
+    return dbQueryInstance;
+  }
+
+  public Result getAttachmentsForUPID(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String upID,
@@ -30,7 +40,7 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
-  public static Result getAttachmentsForUPIDAndRepository(
+  public Result getAttachmentsForUPIDAndRepository(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String upID,
@@ -46,18 +56,15 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
-  public static String getAttachmentForID(
+  public String getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity).columns("fileName").where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
-    if (result.rowCount() == 0) {
-      return null;
-    }
     return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
   }
 
-  public static void addAttachmentToDraft(
+  public void addAttachmentToDraft(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       CmisDocument cmisDocument) {
@@ -75,7 +82,7 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  public static List<CmisDocument> getAttachmentsForFolder(
+  public List<CmisDocument> getAttachmentsForFolder(
       String entity,
       PersistenceService persistenceService,
       String folderId,
@@ -116,7 +123,7 @@ public class DBQuery {
     return cmisDocuments;
   }
 
-  public static Map<String, String> getPropertiesForID(
+  public Map<String, String> getPropertiesForID(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String id,
@@ -128,7 +135,6 @@ public class DBQuery {
     Result result = persistenceService.run(q);
     Map<String, String> propertyValueMap = new HashMap<>();
 
-    // Ensure all keys from the properties list are included in the map
     for (String property : properties) {
       Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
       propertyValueMap.put(property, value != null ? value.toString() : null);
@@ -137,7 +143,7 @@ public class DBQuery {
     return propertyValueMap;
   }
 
-  public static Map<String, String> getPropertiesForID(
+  public Map<String, String> getPropertiesForID(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String id,
@@ -149,7 +155,6 @@ public class DBQuery {
     Result result = persistenceService.run(q);
     Map<String, String> propertyValueMap = new HashMap<>();
 
-    // Iterate through the map and populate propertyValueMap
     for (Map.Entry<String, String> entry : properties.entrySet()) {
       String property = entry.getKey();
       String mapKey = entry.getValue();
