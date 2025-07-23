@@ -20,7 +20,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   @On(event = "copyAttachments")
   public void copyAttachments(EventContext context) throws IOException {
-    String upID = context.get("upID").toString();
+    String upID = context.get("up__ID").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
     var copyEventInput =
