@@ -63,21 +63,18 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   @On(event = "openAttachment")
   public void openAttachment(AttachmentReadContext context) throws Exception {
-    System.out.println("I am in open Attachment method...");
     CdsModel cdsModel = context.getModel();
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
     Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
-    System.out.println("Target Keys " + targetKeys + ":" + targetKeys.size());
     // get the objectId against the Id
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
       context.setUrl(cmisDocument.getUrl());
-
     } else {
       cmisDocument.setUrl("None");
     }
@@ -85,9 +82,6 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void createLink(EventContext context) throws IOException {
-    String entityName = "";
-
-    String subdomain = "";
     String repositoryId = SDMConstants.REPOSITORY_ID;
     CqnSelect select = (CqnSelect) context.get("cqn");
     CdsModel cdsModel = context.getModel();
@@ -132,6 +126,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    updatedFields.put("type", "sap-icon://internet-browser");
     String content =
         String.format(
             "<Link text=\"%s\" target=\"_blank\" href=\"%s\" />",
