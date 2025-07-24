@@ -2,7 +2,6 @@ package com.sap.cds.sdm.service;
 
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
-import static com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT;
 
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
@@ -19,13 +18,11 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
-import com.sap.cloud.environment.servicebinding.api.ServiceIdentifier;
 import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
@@ -46,11 +43,6 @@ public class SDMServiceImpl implements SDMService {
   private final CdsProperties.ConnectionPool connectionPool;
   private static final Logger logger = LoggerFactory.getLogger(SDMServiceImpl.class);
   private final TokenHandler tokenHandler;
-
-  static {
-    OAuth2ServiceBindingDestinationLoader.registerPropertySupplier(
-        ServiceIdentifier.of("sdm"), SDMPropertySupplier::new);
-  }
 
   public SDMServiceImpl(
       ServiceBinding binding,
@@ -492,9 +484,14 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public int deleteDocument(String cmisaction, String objectId, String user) {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    // var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null,
-    // TECHNICAL_USER_FLOW);
-    var httpClient = getHttpClient(connectionPool, user);
+    HttpClient httpClient;
+    System.out.println("USER " + user);
+    if (user.equals(SDMConstants.SYSTEM_USER)) {
+      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
+    } else {
+      httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    }
+
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -637,48 +634,5 @@ public class SDMServiceImpl implements SDMService {
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
     }
-  }
-
-  private Optional<HttpDestination> getHttpDestination(String userName) {
-    HttpDestination httpDestination;
-    try {
-      httpDestination =
-          ServiceBindingDestinationLoader.defaultLoaderChain()
-              .getDestination(getSDMDestinationOptions(userName));
-    } catch (Exception exception) {
-      System.out.println("Error with httpdestination " + exception);
-      httpDestination = null;
-    }
-    return Optional.ofNullable(httpDestination);
-  }
-
-  public static ServiceBindingDestinationOptions getSDMDestinationOptions(String userName) {
-    System.out.println(
-        "Retrieving destination for ECM service via client credentials for user " + userName);
-    return ServiceBindingDestinationOptions.forService(ServiceIdentifier.of("sdm"))
-        .onBehalfOf(TECHNICAL_USER_CURRENT_TENANT)
-        .withOption(SDMUser.of(userName))
-        .build();
-  }
-
-  public HttpClient getHttpClient(
-      CdsProperties.ConnectionPool connectionPoolConfig, String username) {
-
-    HttpDestination destination = getHttpDestination(username).get();
-    DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
-        DefaultHttpClientFactory.builder();
-
-    if (connectionPoolConfig == null) {
-      Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
-      builder.timeoutMilliseconds((int) timeout.toMillis());
-      builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS);
-      builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS);
-    } else {
-      builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
-      builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
-      builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
-    }
-
-    return builder.build().createHttpClient(destination);
   }
 }

@@ -9,6 +9,7 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = "MY_REPO";
+  public static final String SYSTEM_USER = "system-internal";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
