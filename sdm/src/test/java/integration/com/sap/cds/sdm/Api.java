@@ -670,6 +670,9 @@ public class Api implements ApiInterface {
             "Could not copy attachments: " + response.code() + " - " + response.body().string());
       }
       return "Attachments copied successfully";
+    } catch (IOException e) {
+      System.out.println("Error while copying attachments: " + e.getMessage());
+      throw new IOException(e);
     }
   }
 
