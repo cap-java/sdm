@@ -157,7 +157,7 @@ public class SDMCustomServiceHandlerTest {
     try {
       sdmCustomServiceHandler.copyAttachments(context);
     } catch (ServiceException e) {
-      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class));
+      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class), any());
     }
   }
 
@@ -186,7 +186,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the folder
-    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
@@ -215,7 +215,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the copied attachment
-    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 

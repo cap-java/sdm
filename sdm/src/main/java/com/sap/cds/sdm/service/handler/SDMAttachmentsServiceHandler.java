@@ -77,12 +77,13 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
           dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
+      System.out.println("Delete flow " + context.getDeletionUserInfo().getName());
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
-        sdmService.deleteDocument("deleteTree", folderId);
+        sdmService.deleteDocument("deleteTree", folderId, context.getDeletionUserInfo().getName());
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
-          sdmService.deleteDocument("delete", objectId);
+          sdmService.deleteDocument("delete", objectId, context.getDeletionUserInfo().getName());
         }
       }
     }
