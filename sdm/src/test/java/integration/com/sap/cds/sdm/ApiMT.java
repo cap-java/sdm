@@ -612,24 +612,21 @@ public class ApiMT implements ApiInterface {
     String url =
         "https://"
             + appUrl
-            + "/odata/v4/"
-            // + serviceName
-            + "/"
+            + "/api/admin/"
             + entityName
             + "(ID="
             + entityID
             + ",IsActiveEntity=false)/"
             + facetName
             + "/"
-            // + serviceName
-            + ".copyAttachments";
+            + "AdminService.copyAttachments";
 
-    RequestBody body =
-        new MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("up__ID", entityID)
-            .addFormDataPart("objectIds", objectIds)
-            .build();
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"up__ID\": \"" + entityID + "\"," + "\"objectIds\": \"" + objectIds + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
 
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
@@ -689,9 +686,7 @@ public class ApiMT implements ApiInterface {
     String url =
         "https://"
             + appUrl
-            + "/odata/v4/"
-            // + serviceName
-            + "/"
+            + "/api/admin/"
             + entityName
             + "(ID="
             + entityID
