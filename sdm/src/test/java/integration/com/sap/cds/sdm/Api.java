@@ -413,11 +413,11 @@ public class Api implements ApiInterface {
       Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
         System.out.println(
-            "Read Attachment failed in the"
+            "Read Attachment failed in the "
                 + facetName
                 + " section. Error :"
                 + response.body().string());
-        throw new IOException("Read Attachment failed in the" + facetName + " section");
+        throw new IOException("Read Attachment failed in the " + facetName + " section");
       }
       return "OK";
     } catch (IOException e) {
@@ -489,7 +489,7 @@ public class Api implements ApiInterface {
     try (Response deleteResponse = httpClient.newCall(request).execute()) {
       if (deleteResponse.code() != 204) {
         System.out.println(
-            "Delete Attachment failed in the"
+            "Delete Attachment failed in the "
                 + facetName
                 + " section. Error :"
                 + deleteResponse.body().string());
@@ -532,7 +532,7 @@ public class Api implements ApiInterface {
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
         System.out.println(
-            "Rename Attachment failed in the"
+            "Rename Attachment failed in the "
                 + facetName
                 + " section. Error : "
                 + renameResponse.body().string());
@@ -631,6 +631,48 @@ public class Api implements ApiInterface {
     }
   }
 
+  public String copyAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      List<String> sourceObjectIds)
+      throws IOException {
+    String objectIds = String.join(",", sourceObjectIds);
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + serviceName
+            + ".copyAttachments";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"up__ID\": \"" + entityID + "\"," + "\"objectIds\": \"" + objectIds + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not copy attachments: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachments copied successfully";
+    }
+  }
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
@@ -668,6 +710,50 @@ public class Api implements ApiInterface {
         return objectMapper.readValue(
             response.body().string(),
             new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+      }
+    }
+  }
+
+  public List<Map<String, Object>> fetchEntityMetadata(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
+            + facetName;
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println(
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
+      } else {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> entityData =
+            objectMapper.readValue(
+                response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        Object value = entityData.get("value");
+        List<Map<String, Object>> result =
+            objectMapper.convertValue(
+                value,
+                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+        return result;
       }
     }
   }
