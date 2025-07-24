@@ -487,9 +487,9 @@ public class SDMServiceImpl implements SDMService {
     HttpClient httpClient;
     System.out.println("USER " + user);
     if (user.equals(SDMConstants.SYSTEM_USER)) {
-      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
-    } else {
       httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    } else {
+      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
     }
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
