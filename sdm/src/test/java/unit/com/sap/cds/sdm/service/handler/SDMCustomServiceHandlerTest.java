@@ -18,6 +18,7 @@ import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -206,7 +207,9 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID, "mockObjectId2"));
-
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
     ServiceException ex =
         assertThrows(
             ServiceException.class,
