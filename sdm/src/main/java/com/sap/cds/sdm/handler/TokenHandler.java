@@ -32,7 +32,6 @@ public class TokenHandler {
   private static TokenHandler instance;
 
   private TokenHandler() {}
-  ;
 
   private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
 
