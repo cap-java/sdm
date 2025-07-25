@@ -52,6 +52,7 @@ class IntegrationTest_SingleFacet {
   private static String attachmentID8 = "";
   private static String copyAttachmentSourceEntity;
   private static String copyAttachmentTargetEntity;
+  private static String copyAttachmentTargetEntityEmpty;
   private static List<String> sourceObjectIds = new ArrayList<>();
   private static List<String> targetAttachmentIds = new ArrayList<>();
 
@@ -2275,22 +2276,26 @@ class IntegrationTest_SingleFacet {
     System.out.println("Test (34): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
-    String editResponse2 =
-        api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+    copyAttachmentTargetEntityEmpty =
+        api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (editResponse1.equals("Entity in draft mode")
-        && editResponse2.equals("Entity in draft mode")) {
+        && !copyAttachmentTargetEntityEmpty.equals("Could not create entity")) {
       sourceObjectIds.add("incorrectObjectId");
       if (sourceObjectIds.size() == 3) {
         try {
           api.copyAttachment(
-              appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
+              appUrl, entityName, facetName, copyAttachmentTargetEntityEmpty, sourceObjectIds);
           fail("Copy attachments did not throw an error");
         } catch (IOException e) {
           String saveEntityResponse1 =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
           String saveEntityResponse2 =
-              api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
-          if (!saveEntityResponse1.equals("Saved") && !saveEntityResponse2.equals("Saved")) {
+              api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntityEmpty);
+          String deleteResponse =
+              api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntityEmpty);
+          if (!saveEntityResponse1.equals("Saved")
+              || !saveEntityResponse2.equals("Saved")
+              || !deleteResponse.equals("Entity Deleted")) {
             fail("Could not save entities");
           }
         }

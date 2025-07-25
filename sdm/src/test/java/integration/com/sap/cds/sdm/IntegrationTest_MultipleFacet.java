@@ -51,6 +51,7 @@ class IntegrationTest_MultipleFacet {
   private static IntegrationTestUtils integrationTestUtils;
   private static String copyAttachmentSourceEntity;
   private static String copyAttachmentTargetEntity;
+  private static String copyAttachmentTargetEntityEmpty;
   private static List<String> sourceObjectIds = new ArrayList<>();
   private static List<String> targetAttachmentIds = new ArrayList<>();
 
@@ -2501,10 +2502,10 @@ class IntegrationTest_MultipleFacet {
         "Test (34): Copy incorrect attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
-    String editResponse2 =
-        api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+    copyAttachmentTargetEntityEmpty =
+        api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (editResponse1.equals("Entity in draft mode")
-        && editResponse2.equals("Entity in draft mode")) {
+        && !copyAttachmentTargetEntityEmpty.equals("Could not create entity")) {
       if (sourceObjectIds.size() == 6) {
         int i = 0;
         for (String facet : facet) {
@@ -2516,7 +2517,7 @@ class IntegrationTest_MultipleFacet {
               fail("Not enough object IDs to copy attachments for facet: " + facet);
             }
             api.copyAttachment(
-                appUrl, entityName, facet, copyAttachmentTargetEntity, currentFacetObjectIds);
+                appUrl, entityName, facet, copyAttachmentTargetEntityEmpty, currentFacetObjectIds);
             fail("Copy attachments did not throw an error");
           } catch (IOException e) {
             i += 2;
@@ -2525,8 +2526,12 @@ class IntegrationTest_MultipleFacet {
         String saveEntityResponse1 =
             api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
         String saveEntityResponse2 =
-            api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
-        if (!saveEntityResponse1.equals("Saved") && !saveEntityResponse2.equals("Saved")) {
+            api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntityEmpty);
+        String deleteResponse =
+            api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntityEmpty);
+        if (!saveEntityResponse1.equals("Saved")
+            || !saveEntityResponse2.equals("Saved")
+            || !deleteResponse.equals("Entity Deleted")) {
           fail("Could not save entities");
         }
       } else {
