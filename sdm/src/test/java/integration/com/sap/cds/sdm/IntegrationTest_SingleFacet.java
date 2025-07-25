@@ -758,32 +758,35 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(17)
   void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
-    //    System.out.println("Test (17) : Rename attachments where user don't have SDM-Roles");
-    //    boolean testStatus = false;
-    //    String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    //    String name = "sample123";
-    //    if (apiResponse == "Entity in draft mode") {
-    //      apiResponse =
-    //          apiNoRoles.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1,
-    // name);
-    //      if (apiResponse.equals("Renamed")) {
-    //        apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-    //        System.out.println("response from apiNoRoles.saveEntityDraft() is " + apiResponse);
-    //        String expected =
-    //            "[{\"code\":\"<none>\",\"message\":\"Could not update the following
-    // files.\\n\\n\\t\\u2022 valid_attachment1.pdf"
-    //                + "\\n\\nYou do not have the required permissions to update attachments.
-    // Kindly contact the admin\",\"numericSeverity\":3}]";
-    //        if (apiResponse.equals(expected)) {
-    //          testStatus = true;
-    //        }
-    //      } else {
-    //        apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-    //      }
-    //    }
-    //    if (!testStatus) {
-    //      fail("Attachment was renamed");
-    //    }
+    System.out.println("Test (17) : Rename attachments where user don't have SDM-Roles");
+    boolean testStatus = false;
+    String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    String name = "sample123";
+    if (apiResponse == "Entity in draft mode") {
+      apiResponse =
+          apiNoRoles.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, name);
+      if (apiResponse.equals("Renamed")) {
+        apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        String expected =
+            "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
+                + //
+                "\\n"
+                + //
+                "\\t\\u2022 valid_attachment1.pdf\\n"
+                + //
+                "\\n"
+                + //
+                "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+        if (apiResponse.equals(expected)) {
+          testStatus = true;
+        }
+      } else {
+        apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+      }
+    }
+    if (!testStatus) {
+      fail("Attachment got renamed without SDM roles.");
+    }
   }
 
   @Test
