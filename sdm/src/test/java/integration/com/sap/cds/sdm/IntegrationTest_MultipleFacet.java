@@ -726,49 +726,60 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(14)
   void testRenameEntitiesWithoutSDMRole() throws IOException {
-    //    System.out.println("Test (14) : Rename attachments where user don't have SDM-Roles");
-    //    boolean testStatus = true;
-    //    try {
-    //      String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    //      if ("Entity in draft mode".equals(apiResponse)) {
-    //        String[] name = {"sample456", "reference456", "footnote456"};
-    //        for (int i = 0; i < facet.length; i++) {
-    //          apiResponse =
-    //              apiNoRoles.renameAttachment(appUrl, entityName, facet[i], entityID, ID[i],
-    // name[i]);
-    //          if (!"Renamed".equals(apiResponse)) {
-    //            testStatus = false;
-    //            System.out.println(facet[i] + " was not renamed: " + apiResponse);
-    //          }
-    //        }
-    //        if (testStatus) {
-    //          apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-    //          System.out.println("response is " + apiResponse);
-    //          String expected =
-    //              "[{\"code\":\"<none>\",\"message\":\"Could not update the following
-    // files.\\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update
-    // attachments. Kindly contact the admin\",\"numericSeverity\":3},"
-    //                  + "{\"code\":\"<none>\",\"message\":\"Could not update the following
-    // files.\\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update
-    // attachments. Kindly contact the admin\",\"numericSeverity\":3},"
-    //                  + "{\"code\":\"<none>\",\"message\":\"Could not update the following
-    // files.\\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update
-    // attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
-    //          if (!apiResponse.equals(expected)) {
-    //            testStatus = false;
-    //            System.out.println("Entity draft not saved: " + apiResponse);
-    //          }
-    //        } else {
-    //          apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-    //        }
-    //      }
-    //    } catch (Exception e) {
-    //      testStatus = false;
-    //      System.out.println("Exception during renaming entities: " + e.getMessage());
-    //    }
-    //    if (!testStatus) {
-    //      fail("Attachment got renamed without SDM roles.");
-    //    }
+    System.out.println("Test (14) : Rename attachments where user don't have SDM-Roles");
+    boolean testStatus = true;
+    try {
+      String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
+      if ("Entity in draft mode".equals(apiResponse)) {
+        String[] name = {"sample456", "reference456", "footnote456"};
+        for (int i = 0; i < facet.length; i++) {
+          apiResponse =
+              apiNoRoles.renameAttachment(appUrl, entityName, facet[i], entityID, ID[i], name[i]);
+          if (!"Renamed".equals(apiResponse)) {
+            testStatus = false;
+          }
+        }
+        if (testStatus) {
+          apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+          String expected =
+              "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
+                  + //
+                  "\\n"
+                  + //
+                  "\\t\\u2022 sample123\\n"
+                  + //
+                  "\\n"
+                  + //
+                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
+                  + //
+                  "\\n"
+                  + //
+                  "\\t\\u2022 reference123\\n"
+                  + //
+                  "\\n"
+                  + //
+                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
+                  + //
+                  "\\n"
+                  + //
+                  "\\t\\u2022 footnote123\\n"
+                  + //
+                  "\\n"
+                  + //
+                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+          if (!apiResponse.equals(expected)) {
+            testStatus = false;
+          }
+        } else {
+          apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        }
+      }
+    } catch (Exception e) {
+      testStatus = false;
+    }
+    if (!testStatus) {
+      fail("Attachment got renamed without SDM roles.");
+    }
   }
 
   @Test
