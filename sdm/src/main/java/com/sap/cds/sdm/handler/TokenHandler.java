@@ -178,8 +178,6 @@ public class TokenHandler {
   }
 
   public static ServiceBindingDestinationOptions getSDMDestinationOptions(String userName) {
-    System.out.println(
-        "Retrieving destination for ECM service via client credentials for user " + userName);
     return ServiceBindingDestinationOptions.forService(ServiceIdentifier.of("sdm"))
         .onBehalfOf(TECHNICAL_USER_CURRENT_TENANT)
         .withOption(SDMUser.of(userName))
