@@ -47,7 +47,7 @@ public class SDMCustomServiceHandler {
     String folderName = upID + "__" + facet;
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
-    Boolean folderExists = true;
+    boolean folderExists = true;
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String folderId =
