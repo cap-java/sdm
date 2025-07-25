@@ -178,7 +178,9 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
-
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
     ServiceException ex =
         assertThrows(
             ServiceException.class,
