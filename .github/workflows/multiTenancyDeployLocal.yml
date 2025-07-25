@@ -33,6 +33,7 @@ jobs:
     steps:
 
       - name: Checkout this repository 📁
+        uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.deploy_branch }}
 
