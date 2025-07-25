@@ -3,10 +3,23 @@ name: Multi Tenancy Deployment Local
 on:
   workflow_dispatch:
     inputs:
+      workflow_choice:
+        description: 'Select the workflow to run'
+        required: true
+        type: choice
+        options:
+          - Deploy
+          - Snapshot Deploy
       cf_space:
         description: 'Specify the Cloud Foundry space to deploy to'
         required: true
         default: 'developcap'
+      deploy_branch:
+        description: 'Specify the branch to deploy from (only for Deploy workflow)'
+        required: false
+      repository_id:
+        description: 'Specify the Repository ID (leave blank if deploying to developcap)'
+        required: false
 
 permissions:
   pull-requests: read
@@ -15,11 +28,13 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.workflow_choice == 'Deploy' }}
 
     steps:
 
       - name: Checkout this repository 📁
-        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.deploy_branch }}
 
       - name: Set up JDK 21 ☕
         uses: actions/setup-java@v3
