@@ -79,7 +79,8 @@ public class SDMCustomServiceHandler {
         } else {
           for (List<String> attachmentMetadata : attachmentsMetadata) {
             // delete the copied attachments
-            sdmService.deleteDocument("delete", attachmentMetadata.get(2), "edewd");
+            sdmService.deleteDocument(
+                "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
           }
           throw new ServiceException(e.getMessage());
         }
