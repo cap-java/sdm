@@ -65,11 +65,11 @@ jobs:
             echo "🔧 Installing CDS..."
             npm install -g @sap/cds@8.9.4
             echo "✅ CDS installation complete!"
-            echo "Path after install:"
-            echo $PATH
-            ls /home/runner/.npm/_npx/
-            echo "Check cds-dk version.."
-            cds -v
+            # echo "Path after install:"
+            # echo $PATH
+            # ls /home/runner/.npm/_npx/
+            # echo "Check cds-dk version.."
+            # cds -v
 
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
