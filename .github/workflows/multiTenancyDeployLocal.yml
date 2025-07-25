@@ -43,28 +43,31 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build and package 📦
-        run: |
-            echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
-            echo "✅ Build completed successfully!"
+      # - name: Build and package 📦
+      #   run: |
+      #       echo "🔨 Building and packaging..."
+      #       mvn clean install -P unit-tests -DskipIntegrationTests
+      #       echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢
         uses: actions/setup-node@v3
         with:
           node-version: '18' # Ensure to use at least version 18
 
-      - name: Install MBT ⚙️
-        run: |
-            echo "🔧 Installing MBT..."
-            npm install -g mbt
-            echo "✅ MBT installation complete!"
+      # - name: Install MBT ⚙️
+      #   run: |
+      #       echo "🔧 Installing MBT..."
+      #       npm install -g mbt
+      #       echo "✅ MBT installation complete!"
 
       - name: Install cds ⚙️
         run: |
             echo "🔧 Installing CDS..."
             npm install -g @sap/cds@8.9.4
             echo "✅ CDS installation complete!"
+            echo "Path after install:"
+            echo $PATH
+            ls /home/runner/.npm/_npx/
             echo "Check cds-dk version.."
             cds -v
 
