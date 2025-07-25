@@ -60,6 +60,14 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
+      - name: Install cds ⚙️
+        run: |
+            echo "🔧 Installing CDS..."
+            npm i @sap/cds@8.9.4
+            echo "✅ CDS installation complete!"
+            echo "Check cds-dk version.."
+            cds -v
+
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
             echo "🔄 Cloning repository..."
@@ -75,8 +83,6 @@ jobs:
       - name: Run mbt build 🔨
         working-directory: cloud-cap-samples-java
         run: |
-            echo "Check cds-dk version.."
-            cds -v
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
