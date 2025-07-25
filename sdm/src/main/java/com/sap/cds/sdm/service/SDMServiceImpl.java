@@ -485,7 +485,6 @@ public class SDMServiceImpl implements SDMService {
   public int deleteDocument(String cmisaction, String objectId, String user) {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
-    System.out.println("USER " + user);
     if (user.equals(SDMConstants.SYSTEM_USER)) {
       httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
     } else {

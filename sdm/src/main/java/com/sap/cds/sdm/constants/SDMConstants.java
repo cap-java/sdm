@@ -10,6 +10,9 @@ public class SDMConstants {
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String SYSTEM_USER = "system-internal";
+  public static final String DESTINATION_EXCEPTION =
+      "Unable to get the destination for sdm service binding";
+
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =

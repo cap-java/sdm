@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.http.client.HttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TokenHandler {
   private static final String SDM_TOKEN_ENDPOINT = "url";
@@ -30,6 +32,9 @@ public class TokenHandler {
   private static TokenHandler instance;
 
   private TokenHandler() {}
+  ;
+
+  private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
 
   public static TokenHandler getTokenHandlerInstance() {
     if (instance == null) {
@@ -138,22 +143,25 @@ public class TokenHandler {
   public HttpClient getHttpClientForAuthoritiesFlow(
       CdsProperties.ConnectionPool connectionPoolConfig, String user) {
 
-    HttpDestination destination = getHttpDestination(user).get();
-    DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
-        DefaultHttpClientFactory.builder();
+    Optional<HttpDestination> destinations = getHttpDestination(user);
+    if (destinations.isPresent()) {
+      DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
+          DefaultHttpClientFactory.builder();
 
-    if (connectionPoolConfig == null) {
-      Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
-      builder.timeoutMilliseconds((int) timeout.toMillis());
-      builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS);
-      builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS);
-    } else {
-      builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
-      builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
-      builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
+      if (connectionPoolConfig == null) {
+        Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
+        builder.timeoutMilliseconds((int) timeout.toMillis());
+        builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS);
+        builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS);
+      } else {
+        builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
+        builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
+        builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
+      }
+
+      return builder.build().createHttpClient(destinations.get());
     }
-
-    return builder.build().createHttpClient(destination);
+    return null;
   }
 
   private Optional<HttpDestination> getHttpDestination(String userName) {
@@ -163,7 +171,7 @@ public class TokenHandler {
           ServiceBindingDestinationLoader.defaultLoaderChain()
               .getDestination(getSDMDestinationOptions(userName));
     } catch (Exception exception) {
-      System.out.println("Error with httpdestination " + exception);
+      logger.error("Error with fetching httpdestination " + exception.getCause());
       httpDestination = null;
     }
     return Optional.ofNullable(httpDestination);
