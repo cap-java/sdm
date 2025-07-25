@@ -63,56 +63,56 @@ jobs:
       - name: Install cds ⚙️
         run: |
             echo "🔧 Installing CDS..."
-            npm i @sap/cds@8.9.4
+            npm install -g @sap/cds@8.9.4
             echo "✅ CDS installation complete!"
             echo "Check cds-dk version.."
             cds -v
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
+      # - name: Clone the cloud-cap-samples-java repo 🌐
+      #   run: |
+      #       echo "🔄 Cloning repository..."
+      #       git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+      #       echo "✅ Repository cloned!"
 
-      - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
-        run: |
-            pwd
-            echo "✔️ Directory changed!"
+      # - name: Change directory to cloud-cap-samples-java 📂
+      #   working-directory: cloud-cap-samples-java
+      #   run: |
+      #       pwd
+      #       echo "✔️ Directory changed!"
 
-      - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
-        run: |
-            echo "🚀 Running MBT build..."
-            echo "java version:"
-            java --version
-            mbt build
-            echo "✅ MBT build completed!"
+      # - name: Run mbt build 🔨
+      #   working-directory: cloud-cap-samples-java
+      #   run: |
+      #       echo "🚀 Running MBT build..."
+      #       echo "java version:"
+      #       java --version
+      #       mbt build
+      #       echo "✅ MBT build completed!"
 
-      - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
-        run: | 
-            echo "🚀 Deploying to -s ${{ steps.determine_space.outputs.space }}..."
-            echo "🔧 Installing Cloud Foundry CLI and plugins..."
+      # - name: Deploy to Cloud Foundry ☁️
+      #   working-directory: cloud-cap-samples-java
+      #   run: | 
+      #       echo "🚀 Deploying to -s ${{ steps.determine_space.outputs.space }}..."
+      #       echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
-            # Install cf CLI plugin
-            wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
-            echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-            sudo apt update
-            sudo apt install cf-cli
+      #       # Install cf CLI plugin
+      #       wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
+      #       echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+      #       sudo apt update
+      #       sudo apt install cf-cli
             
-            cf install-plugin multiapps -f
-            echo "✅ Cloud Foundry CLI setup complete!"
+      #       cf install-plugin multiapps -f
+      #       echo "✅ Cloud Foundry CLI setup complete!"
 
-            # Login to Cloud Foundry again to ensure session is active
-            echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${ secrets.CF_API } -u ${ secrets.CF_USER } -p ${ secrets.CF_PASSWORD } -o ${ secrets.CF_ORG } -s -s ${{ steps.determine_space.outputs.space }}
-            echo "✅ Logged in successfully!"
+      #       # Login to Cloud Foundry again to ensure session is active
+      #       echo "🔑 Logging in to Cloud Foundry..."
+      #       cf login -a ${ secrets.CF_API } -u ${ secrets.CF_USER } -p ${ secrets.CF_PASSWORD } -o ${ secrets.CF_ORG } -s -s ${{ steps.determine_space.outputs.space }}
+      #       echo "✅ Logged in successfully!"
 
-            # Deploy the application
-            echo "📂 Current directory.."
-            pwd
-            ls -lrth
-            echo "▶️ Running cf deploy..."
-            cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
-            echo "✅ Deployment complete!"
+      #       # Deploy the application
+      #       echo "📂 Current directory.."
+      #       pwd
+      #       ls -lrth
+      #       echo "▶️ Running cf deploy..."
+      #       cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
+      #       echo "✅ Deployment complete!"
