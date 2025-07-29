@@ -47,7 +47,7 @@ public class SDMCustomServiceHandler {
     String folderName = upID + "__" + facet;
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
-    Boolean folderExists = true;
+    boolean folderExists = true;
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String folderId =
@@ -74,12 +74,13 @@ public class SDMCustomServiceHandler {
       } catch (ServiceException e) {
         if (!folderExists) {
           // deleteFolder
-          sdmService.deleteDocument("deleteTree", folderId);
+          sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
           throw new ServiceException(e.getMessage());
         } else {
           for (List<String> attachmentMetadata : attachmentsMetadata) {
             // delete the copied attachments
-            sdmService.deleteDocument("delete", attachmentMetadata.get(2));
+            sdmService.deleteDocument(
+                "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
           }
           throw new ServiceException(e.getMessage());
         }

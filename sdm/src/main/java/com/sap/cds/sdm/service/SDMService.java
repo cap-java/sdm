@@ -33,7 +33,7 @@ public interface SDMService {
 
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
-  public int deleteDocument(String cmisaction, String objectId) throws IOException;
+  public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)

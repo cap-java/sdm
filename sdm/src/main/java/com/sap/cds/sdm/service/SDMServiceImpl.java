@@ -18,16 +18,12 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
+import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -171,8 +167,18 @@ public class SDMServiceImpl implements SDMService {
         return 500;
       }
     }
-    List<String> validSecondaryProperties =
-        getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    List<String> validSecondaryProperties;
+    try {
+      validSecondaryProperties =
+          getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    } catch (Exception e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.length() >= 3) {
+        return (Integer.parseInt(errorMessage.substring(0, 3)));
+      } else {
+        return 500;
+      }
+    }
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache()
@@ -486,9 +492,14 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int deleteDocument(String cmisaction, String objectId) throws IOException {
+  public int deleteDocument(String cmisaction, String objectId, String user) {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    HttpClient httpClient;
+    if (user.equals(SDMConstants.SYSTEM_USER)) {
+      httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    } else {
+      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
+    }
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
@@ -572,6 +583,11 @@ public class SDMServiceImpl implements SDMService {
                 sdmCredentials.getUrl(), repositoryId, value);
         HttpGet getTypesRequest = new HttpGet(sdmUrl);
         try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          int statusCode = response.getStatusLine().getStatusCode();
+          if (statusCode != 200) {
+            String reasonPhrase = response.getStatusLine().getReasonPhrase();
+            throw new ServiceException(statusCode + " : " + reasonPhrase);
+          }
           HttpEntity responseEntity = response.getEntity();
           if (responseEntity != null
               && Boolean.FALSE.equals(

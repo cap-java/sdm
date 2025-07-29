@@ -9,6 +9,10 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String SYSTEM_USER = "system-internal";
+  public static final String DESTINATION_EXCEPTION =
+      "Unable to get the destination for sdm service binding";
+
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
@@ -73,6 +77,8 @@ public class SDMConstants {
   public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
+  public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
+      "The following file(s) could not be updated because the filename(s) cannot be empty.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
