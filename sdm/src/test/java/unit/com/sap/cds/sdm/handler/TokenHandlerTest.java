@@ -1,6 +1,7 @@
 package unit.com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -92,6 +93,14 @@ public class TokenHandlerTest {
             .getHttpClient(binding, connectionPoolConfig, "subdomain", "TECHNICAL_USER");
 
     assertNotNull(client);
+  }
+
+  @Test
+  public void testGetHttpClientForAuthorities() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClientForAuthoritiesFlow(connectionPoolConfig, "testUser");
+    assertNull(client);
   }
 
   @Test

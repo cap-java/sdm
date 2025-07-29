@@ -736,10 +736,15 @@ public class SDMAttachmentsServiceHandlerTest {
     cmisDocument = new CmisDocument();
     cmisDocument.setObjectId("objectId2");
     cmisDocuments.add(cmisDocument);
-
+    when(attachmentMarkAsDeletedEventContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("system-internal");
     when(dbQuery.getAttachmentsForFolder(any(), any(), any(), any())).thenReturn(cmisDocuments);
     handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-    verify(sdmService).deleteDocument("delete", objectId);
+    verify(sdmService)
+        .deleteDocument(
+            "delete",
+            objectId,
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName());
   }
 
   @Test
@@ -768,8 +773,14 @@ public class SDMAttachmentsServiceHandlerTest {
     when(dbQuery.getAttachmentsForFolder(
             entity, persistenceService, folderId, attachmentMarkAsDeletedEventContext))
         .thenReturn(cmisDocuments);
+    when(attachmentMarkAsDeletedEventContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("system-internal");
     handlerSpy.markAttachmentAsDeleted(attachmentMarkAsDeletedEventContext);
-    verify(sdmService).deleteDocument("deleteTree", folderId);
+    verify(sdmService)
+        .deleteDocument(
+            "deleteTree",
+            folderId,
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName());
   }
 
   @Test

@@ -18,6 +18,7 @@ import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -157,7 +158,7 @@ public class SDMCustomServiceHandlerTest {
     try {
       sdmCustomServiceHandler.copyAttachments(context);
     } catch (ServiceException e) {
-      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class));
+      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class), any());
     }
   }
 
@@ -177,7 +178,9 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
-
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
     ServiceException ex =
         assertThrows(
             ServiceException.class,
@@ -186,7 +189,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the folder
-    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
@@ -206,7 +209,9 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID, "mockObjectId2"));
-
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
     ServiceException ex =
         assertThrows(
             ServiceException.class,
@@ -215,7 +220,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the copied attachment
-    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
