@@ -8,4 +8,14 @@ service AdminService @(requires: ['admin','system-user']) {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self,up__ID:String,objectIds:String);
   }
+  entity Books.references as projection on my.Books.references
+  actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self,up__ID:String,objectIds:String);
+  }
+  entity Books.footnotes as projection on my.Books.footnotes
+  actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self,up__ID:String,objectIds:String);
+  }
 }
