@@ -71,7 +71,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesNotFound = new ArrayList<>();
       List<String> filesWithUnsupportedProperties = new ArrayList<>();
       Map<String, String> badRequest = new HashMap<>();
-      List<String> fileWithWhiteSpace = new ArrayList<>();
       List<String> noSDMRoles = new ArrayList<>();
       for (Map<String, Object> entity : data) {
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
@@ -96,8 +95,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             composition,
             attachmentEntity,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles,
-            fileWithWhiteSpace);
+            noSDMRoles);
         handleWarnings(
             context,
             fileNameWithRestrictedCharacters,
@@ -106,7 +104,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesWithUnsupportedProperties,
             badRequest,
             propertyTitles,
-            fileWithWhiteSpace,
             noSDMRoles);
       }
     }
@@ -133,8 +130,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String composition,
       Optional<CdsEntity> attachmentEntity,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles,
-      List<String> fileWithWhiteSpace)
+      List<String> noSDMRoles)
       throws IOException {
     List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
     if (attachments != null) {
@@ -150,8 +146,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             composition,
             attachmentEntity,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles,
-            fileWithWhiteSpace);
+            noSDMRoles);
       }
       SecondaryPropertiesKey secondaryPropertiesKey =
           new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
@@ -171,7 +166,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String composition,
       Optional<CdsEntity> attachmentEntity,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> fileWithWhiteSpace,
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
@@ -236,11 +230,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           throw new ServiceException("Filename cannot be empty");
         }
       } else {
-        if (filenameInRequest == null || filenameInRequest.trim().length() == 0) {
-          fileWithWhiteSpace.add(fileNameInDB);
-          replacePropertiesInAttachment(
-              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
-
+        if (filenameInRequest == null) {
+          throw new ServiceException("Filename cannot be empty");
         } else if (!fileNameInDB.equals(
             filenameInRequest)) { // If the file name in DB is not equal to the file name in
           // request, it means that the file name has been modified
@@ -331,7 +322,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
-      List<String> fileWithWhiteSpace,
       List<String> noSDMRoles) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
@@ -372,14 +362,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
     if (!noSDMRoles.isEmpty()) {
       context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create"));
-    }
-    if (!fileWithWhiteSpace.isEmpty()) {
-      context
-          .getMessages()
-          .warn(
-              String.format(
-                  SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE,
-                  String.join(", ", fileWithWhiteSpace)));
     }
   }
 

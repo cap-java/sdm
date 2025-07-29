@@ -77,8 +77,6 @@ public class SDMConstants {
   public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
-  public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
-      "The following file(s) could not be updated because the filename(s) cannot be empty.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
