@@ -357,8 +357,12 @@ public void onSubscribe(SubscribeEventContext context) {
    // Create repository instance and initialise params
    Repository repository = new Repository();
    repository.setDescription("Onboarding Repo Demo");
-   repository.setDisplayName(" Test Onboarding repo");
+   repository.setDisplayName("Test Onboarding repo");
    repository.setSubdomain(subdomain);
+    repository.setHashAlgorithms("SHA-256"); // needed during creation. possible value: MD5, SHA-1, SHA-256
+    repository.setIsVirusScanEnabled(true);
+    repository.setSkipVirusScanForLargeFile(false);
+    repository.setIsVersionEnabled(false);
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
    SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
