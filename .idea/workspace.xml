@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="aa4b8926-839c-4b63-aae9-b2e6df04e02e" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/target/spotless-index" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="2seh2DqTlyCaLxnOyDyjcHNv8Tq" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="JUnit.SDMCustomServiceHandlerTest">
+    <configuration name="SDMCustomServiceHandlerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.handler.SDMCustomServiceHandlerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMCustomServiceHandlerTest.testCopyAttachments_AttachmentCopyFails_FolderExists_AttachmentsDeleted" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.handler.SDMCustomServiceHandlerTest" />
+      <option name="METHOD_NAME" value="testCopyAttachments_AttachmentCopyFails_FolderExists_AttachmentsDeleted" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMPropertySupplierTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.SDMPropertySupplierTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMPropertySupplierTest.writeEndpointIsReturnedAsServiceUri" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.SDMPropertySupplierTest" />
+      <option name="METHOD_NAME" value="writeEndpointIsReturnedAsServiceUri" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TokenHandlerTest.testGetHttpClientForAuthorities" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.handler.TokenHandlerTest" />
+      <option name="METHOD_NAME" value="testGetHttpClientForAuthorities" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="sdm" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="sdm" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.SDMCustomServiceHandlerTest" />
+        <item itemvalue="JUnit.SDMCustomServiceHandlerTest.testCopyAttachments_AttachmentCopyFails_FolderExists_AttachmentsDeleted" />
+        <item itemvalue="JUnit.TokenHandlerTest.testGetHttpClientForAuthorities" />
+        <item itemvalue="JUnit.SDMPropertySupplierTest" />
+        <item itemvalue="JUnit.SDMPropertySupplierTest.writeEndpointIsReturnedAsServiceUri" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="aa4b8926-839c-4b63-aae9-b2e6df04e02e" name="Changes" comment="" />
+      <created>1738821738405</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1738821738405</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/SDMServiceImplTest.java</url>
+          <line>884</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/TokenHandler.java</url>
+          <line>161</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/TokenHandler.java</url>
+          <line>183</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/TokenHandlerTest.java</url>
+          <line>104</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMCustomServiceHandlerTest.java</url>
+          <line>214</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMCustomServiceHandler.java</url>
+          <line>67</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMCustomServiceHandler.java</url>
+          <line>83</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

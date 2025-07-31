@@ -87,7 +87,9 @@ public class Registration implements CdsRuntimeConfiguration {
             documentService,
             tokenHandlerInstance,
             dbQueryInstance));
-    configurer.eventHandler(new SDMServiceGenericHandler(attachmentService));
+    configurer.eventHandler(
+        new SDMServiceGenericHandler(
+            attachmentService, persistenceService, sdmService, tokenHandlerInstance));
     configurer.eventHandler(
         new SDMCustomServiceHandler(sdmService, draftServiceList, tokenHandlerInstance));
   }

@@ -56,6 +56,26 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
+  public static CmisDocument getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("objectId", "folderId", "fileName", "mimeType")
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    System.out.println("Result" + result.rowCount());
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+    }
+    return cmisDocument;
+  }
+
   public String getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =

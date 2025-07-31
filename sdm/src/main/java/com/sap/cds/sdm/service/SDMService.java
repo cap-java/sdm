@@ -7,6 +7,7 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import org.json.JSONObject;
@@ -38,6 +39,9 @@ public interface SDMService {
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
       throws IOException;
+
+  public InputStream getContent(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public int updateAttachments(
       SDMCredentials sdmCredentials,

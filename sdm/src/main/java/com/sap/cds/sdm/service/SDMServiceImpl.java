@@ -325,6 +325,39 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
+  public InputStream getContent(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+
+    String sdmUrl =
+        sdmCredentials.getUrl()
+            + "browser/"
+            + repositoryId
+            + "/root?objectID="
+            + objectId
+            + "&cmisselector=content";
+
+    HttpGet getContentRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode != 200) {
+        response.close();
+        if (responseCode == 404) {
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        }
+        throw new ServiceException("Unexpected code");
+      }
+      byte[] responseBody = EntityUtils.toByteArray(response.getEntity());
+      return new ByteArrayInputStream(responseBody);
+    } catch (Exception e) {
+      throw new ServiceException("Failed to set document stream in context");
+    }
+  }
+
+  @Override
   public String getFolderId(
       Result result,
       PersistenceService persistenceService,
