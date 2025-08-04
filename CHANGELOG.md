@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.5.0
+
+### Added
+- Ability to copy attachments between entities
+
+### Fixed
+- Added authorities to token to improve logging during deletion of attachment
+- Improved error handling for cases where the user lacks SDM roles
+
 ## Version 1.4.1
 
 ### Fixed
