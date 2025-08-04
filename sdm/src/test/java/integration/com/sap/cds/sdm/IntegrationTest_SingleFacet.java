@@ -610,8 +610,34 @@ class IntegrationTest_SingleFacet {
 
   @Test
   @Order(12)
+  void testRenameWhitespaceInAttachment() throws IOException {
+    System.out.println("Test (13) : Rename attachment with whitespace");
+    Boolean testStatus = false;
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    if (response.equals("Entity in draft mode")) {
+      String name = "      ";
+      response = api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, name);
+      if (response.equals("Renamed")) {
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        String expected =
+            "[{\"code\":\"<none>\",\"message\":\"The following file(s) could not be updated because the filename(s) cannot be empty.\","
+                + "\"numericSeverity\":3}]";
+        if (response.equals(expected)) {
+          testStatus = true;
+        }
+      } else {
+        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+      }
+    }
+    if (!testStatus) {
+      fail("Attachment was renamed with whitespace");
+    }
+  }
+
+  @Test
+  @Order(13)
   void testRenameSingleAttachment() {
-    System.out.println("Test (12) : Rename single attachment");
+    System.out.println("Test (13) : Rename single attachment");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name = "sample123";
@@ -632,9 +658,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(13)
+  @Order(14)
   void testRenameAttachmentWithUnsupportedCharacter() {
-    System.out.println("Test (13) : Rename single attachment with unsupported characters");
+    System.out.println("Test (14) : Rename single attachment with unsupported characters");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name = "invalid/name";
@@ -658,9 +684,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(14)
+  @Order(15)
   void testRenameMultipleAttachments() {
-    System.out.println("Test (14) : Rename multiple attachments");
+    System.out.println("Test (15) : Rename multiple attachments");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name1 = "sample1234";
@@ -685,9 +711,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(15)
+  @Order(16)
   void testRenameSingleAttachmentDuplicate() {
-    System.out.println("Test (15) : Rename single attachment duplicate");
+    System.out.println("Test (16) : Rename single attachment duplicate");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name = "sample123";
@@ -719,10 +745,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(16)
+  @Order(17)
   void testRenameMultipleAttachmentsWithOneUnsupportedCharacter() {
     System.out.println(
-        "Test (16) : Rename multiple attachments where one name has unsupported characters");
+        "Test (17) : Rename multiple attachments where one name has unsupported characters");
     Boolean testStatus = false;
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
@@ -756,9 +782,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(17)
+  @Order(18)
   void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
-    System.out.println("Test (17) : Rename attachments where user don't have SDM-Roles");
+    System.out.println("Test (18) : Rename attachments where user don't have SDM-Roles");
     boolean testStatus = false;
     String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name = "sample123";
@@ -790,9 +816,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(18)
+  @Order(19)
   void testDeleteSingleAttachment() throws IOException {
-    System.out.println("Test (18) : Delete single attachment");
+    System.out.println("Test (19) : Delete single attachment");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
@@ -813,9 +839,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(19)
+  @Order(20)
   void testDeleteMultipleAttachments() throws IOException {
-    System.out.println("Test (19) : Delete multiple attachments");
+    System.out.println("Test (20) : Delete multiple attachments");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
@@ -841,9 +867,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(20)
+  @Order(21)
   void testDeleteEntity() {
-    System.out.println("Test (20) : Delete entity");
+    System.out.println("Test (21) : Delete entity");
     Boolean testStatus = false;
     String response = api.deleteEntity(appUrl, entityName, entityID);
     String response2 = api.deleteEntity(appUrl, entityName, entityID2);
@@ -856,9 +882,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(21)
+  @Order(22)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_singleAttachment() throws IOException {
-    System.out.println("Test (21): Rename & Update secondary property before entity is saved");
+    System.out.println("Test (22): Rename & Update secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -943,9 +969,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(22)
+  @Order(23)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_singleAttachment() {
-    System.out.println("Test (22): Rename & Update secondary property after entity is saved");
+    System.out.println("Test (23): Rename & Update secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1014,11 +1040,11 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(23)
+  @Order(24)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_singleAttachment()
       throws IOException {
     System.out.println(
-        "Test (23): Rename & Update invalid secondary property before entity is saved");
+        "Test (24): Rename & Update invalid secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1143,10 +1169,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(24)
+  @Order(25)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_singleAttachment() throws IOException {
     System.out.println(
-        "Test (24): Rename & Update invalid secondary property after entity is saved");
+        "Test (25): Rename & Update invalid secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1241,11 +1267,11 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(25)
+  @Order(26)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (25): Rename & Update valid secondary properties for multiple attachments before entity is saved");
+        "Test (26): Rename & Update valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1429,10 +1455,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(26)
+  @Order(27)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_multipleAttachments() {
     System.out.println(
-        "Test (26): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
+        "Test (27): Rename & Update  valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1561,11 +1587,11 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(27)
+  @Order(28)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (27): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
+        "Test (28): Rename & Update invalid and valid secondary properties for multiple attachments before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1782,11 +1808,11 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(28)
+  @Order(29)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (28): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
+        "Test (29): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1946,10 +1972,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(29)
+  @Order(30)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-        "Test (29): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (30): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2063,9 +2089,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(30)
+  @Order(31)
   void testUploadNAttachments() throws IOException {
-    System.out.println("Test (30): Upload maximum 4 attachments in an exsisting entity");
+    System.out.println("Test (31): Upload maximum 4 attachments in an exsisting entity");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File originalFile = new File(classLoader.getResource("sample.exe").getFile());
@@ -2122,9 +2148,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(31)
+  @Order(32)
   void testDiscardDraftWithoutAttachments() {
-    System.out.println("Test (31) : Discard draft without adding attachments");
+    System.out.println("Test (32) : Discard draft without adding attachments");
     boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2143,9 +2169,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(32)
+  @Order(33)
   void testDiscardDraftWithAttachments() throws IOException {
-    System.out.println("Test (32) : Discard draft with attachments");
+    System.out.println("Test (34) : Discard draft with attachments");
     boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
@@ -2179,9 +2205,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(33)
+  @Order(34)
   void testCopyAttachmentsSuccessNewEntity() throws IOException {
-    System.out.println("Test (33): Copy attachments from one entity to another new entity");
+    System.out.println("Test (34): Copy attachments from one entity to another new entity");
     List<String> attachments = new ArrayList<>();
     copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2274,9 +2300,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(34)
+  @Order(35)
   void testCopyAttachmentsUnsuccessfulNewEntity() throws IOException {
-    System.out.println("Test (34): Copy attachments from one entity to another new entity");
+    System.out.println("Test (35): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     copyAttachmentTargetEntityEmpty =
@@ -2311,9 +2337,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(35)
+  @Order(36)
   void testCopyAttachmentsSuccessExistingEntity() throws IOException {
-    System.out.println("Test (35): Copy attachments from one entity to another existing entity");
+    System.out.println("Test (36): Copy attachments from one entity to another existing entity");
     List<String> attachments = new ArrayList<>();
     ClassLoader classLoader = getClass().getClassLoader();
     List<File> files = new ArrayList<>();
@@ -2419,9 +2445,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(36)
+  @Order(37)
   void testCopyAttachmentsUnsuccessfulExistingEntity() throws IOException {
-    System.out.println("Test (36): Copy attachments from one entity to another new entity");
+    System.out.println("Test (37): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     String editResponse2 =
