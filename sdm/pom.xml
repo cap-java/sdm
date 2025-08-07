@@ -41,7 +41,7 @@
         <token-client-version>3.5.7</token-client-version>
         <jackson-databind-version>2.18.2</jackson-databind-version>
         <json-version>20250107</json-version>
-        <commons-codec-version>1.19.0</commons-codec-version>
+        <commons-codec-version>1.18.0</commons-codec-version>
         <jackson-core-version>2.18.2</jackson-core-version>
         <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
         <httpclient5-version>5.4.4</httpclient5-version>
@@ -207,6 +207,10 @@
             <scope>test</scope>
             <exclusions>
                 <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>commons-io</groupId>
                     <artifactId>commons-io</artifactId>
                 </exclusion>
@@ -331,7 +335,16 @@
                     <groupId>commons-io</groupId>
                     <artifactId>commons-io</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.18.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
