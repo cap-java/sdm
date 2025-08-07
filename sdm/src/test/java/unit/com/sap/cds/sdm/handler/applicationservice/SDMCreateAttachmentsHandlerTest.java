@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.*;
+import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -25,6 +27,7 @@ import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
+import org.ehcache.Cache;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +46,8 @@ public class SDMCreateAttachmentsHandlerTest {
   @Mock private SDMCredentials mockCredentials;
   @Mock private Messages messages;
   @Mock private CdsModel model;
+  private MockedStatic<CacheConfig> cacheConfigMockedStatic;
+  private Cache<Object, Object> mockCache;
   private SDMCreateAttachmentsHandler handler;
   private MockedStatic<SDMUtils> sdmUtilsMockedStatic;
   @Mock private CdsElement cdsElement;
@@ -55,6 +60,9 @@ public class SDMCreateAttachmentsHandlerTest {
   public void setUp() {
     MockitoAnnotations.openMocks(this);
     sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    cacheConfigMockedStatic = mockStatic(CacheConfig.class);
+    mockCache = mock(Cache.class);
+    cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
     handler =
         spy(new SDMCreateAttachmentsHandler(persistenceService, sdmService, tokenHandler, dbQuery));
@@ -76,6 +84,9 @@ public class SDMCreateAttachmentsHandlerTest {
   public void tearDown() {
     if (sdmUtilsMockedStatic != null) {
       sdmUtilsMockedStatic.close();
+    }
+    if (cacheConfigMockedStatic != null) {
+      cacheConfigMockedStatic.close();
     }
   }
 
@@ -167,6 +178,110 @@ public class SDMCreateAttachmentsHandlerTest {
     // Assert that no error or warning messages were logged
     verify(messages, never()).error(anyString());
     verify(messages, never()).warn(anyString());
+  }
+
+  @Test
+  public void testRenameWithWhitespaceFilename() throws IOException {
+    // Arrange
+    List<CdsData> data = new ArrayList<>();
+
+    // Create entity with attachment that has whitespace-only filename
+    Map<String, Object> entity = new HashMap<>();
+
+    // Create attachments list with whitespace-only filename
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    // Attachment with whitespace-only filename
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "id1");
+    attachment.put("fileName", "   "); // Only whitespace
+    attachment.put("objectId", "objId1");
+    attachments.add(attachment);
+
+    // Add attachments to entity
+    entity.put("attachments", attachments);
+
+    // Wrap entity in CdsData and add to data list
+    CdsData cdsDataEntity = CdsData.create(entity);
+    data.add(cdsDataEntity);
+
+    // Mock the attachment entity
+    CdsEntity attachmentEntity = mock(CdsEntity.class);
+    when(model.findEntity("some.qualified.Name.attachments"))
+        .thenReturn(Optional.of(attachmentEntity));
+
+    // Mock utility methods
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "attachments"))
+        .thenReturn(Collections.emptySet());
+
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.getPropertyTitles(any(Optional.class), any(Map.class)))
+        .thenReturn(new HashMap<>());
+
+    sdmUtilsMockedStatic
+        .when(
+            () ->
+                SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                    any(Optional.class), any(Map.class)))
+        .thenReturn(new HashMap<>());
+
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.getSecondaryTypeProperties(any(Optional.class), any(Map.class)))
+        .thenReturn(new HashMap<>());
+
+    sdmUtilsMockedStatic
+        .when(
+            () ->
+                SDMUtils.getUpdatedSecondaryProperties(
+                    any(Optional.class), any(Map.class), any(), any(Map.class), any(Map.class)))
+        .thenReturn(new HashMap<>());
+
+    // Mock that the whitespace filename does NOT have restricted characters
+    sdmUtilsMockedStatic.when(() -> SDMUtils.isRestrictedCharactersInName(" ")).thenReturn(false);
+
+    // Mock database queries
+    when(dbQuery.getAttachmentForID(any(CdsEntity.class), any(PersistenceService.class), eq("id1")))
+        .thenReturn("existingFile.txt"); // Existing filename in DB
+
+    // Mock properties query to return empty map
+    Map<String, String> emptyProperties = new HashMap<>();
+    when(dbQuery.getPropertiesForID(
+            any(CdsEntity.class), any(PersistenceService.class), eq("id1"), any(Map.class)))
+        .thenReturn(emptyProperties);
+
+    // Mock SDM service calls - CRITICAL: Prevent any exceptions
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+    when(sdmService.getObject("objId1", mockCredentials, false)).thenReturn("originalFile.txt");
+
+    // IMPORTANT: Mock the updateAttachments to return success to avoid permission
+    // errors
+    when(sdmService.updateAttachments(any(), any(), any(), any(), anyBoolean()))
+        .thenReturn(200); // Return HTTP 200 success
+
+    // Mock UserInfo
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Act
+    handler.updateName(context, data, "attachments");
+
+    // Assert
+    // Verify that the warning message for whitespace filename was called
+    // Check if the exact warning message matches what's in SDMConstants
+    verify(messages, times(1)).warn(anyString());
+
+    // Verify that the attachment filename was reverted to the DB value
+    assertEquals("existingFile.txt", attachment.get("fileName"));
+
+    // Verify no error messages were called (only warnings)
+    verify(messages, never()).error(anyString());
+
+    // Verify that SDM service updateAttachments was called (since whitespace
+    // doesn't prevent the call)
+    // The key is that it should succeed (return 200) instead of throwing exceptions
+    verify(sdmService, times(1)).updateAttachments(any(), any(), any(), any(), anyBoolean());
   }
 
   //   @Test

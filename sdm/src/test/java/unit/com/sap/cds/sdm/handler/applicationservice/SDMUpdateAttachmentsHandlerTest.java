@@ -122,6 +122,82 @@ public class SDMUpdateAttachmentsHandlerTest {
             "The file(s) file1.txt, file2.txt have been added multiple times. Please rename and try again.");
   }
 
+  @Test
+  public void testRenameWithWhitespaceFilename() throws IOException {
+    // Mock the data structure to simulate the attachments
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = spy(new HashMap<>());
+
+    attachment.put("fileName", "   "); // Whitespace filename
+    attachment.put("objectId", "test-object-id");
+    attachment.put("ID", "test-id");
+    attachments.add(attachment);
+
+    entity.put("composition", attachments);
+    CdsData mockCdsData = mock(CdsData.class);
+    when(mockCdsData.get("composition")).thenReturn(attachments);
+    data.add(mockCdsData);
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    when(context.getTarget()).thenReturn(attachmentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+    when(model.findEntity("some.qualified.Name.composition"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(context.getMessages()).thenReturn(messages);
+
+    // Mock database query to return the original filename from DB
+    when(dbQuery.getAttachmentForID(
+            any(CdsEntity.class), any(PersistenceService.class), anyString()))
+        .thenReturn("original-file.pdf");
+
+    // Mock secondary type properties
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    secondaryTypeProperties.put("prop1", "secondary1");
+
+    // Mock properties from DB
+    Map<String, String> propertiesInDB = new HashMap<>();
+    propertiesInDB.put("prop1", "value1");
+    when(dbQuery.getPropertiesForID(
+            eq(attachmentDraftEntity),
+            eq(persistenceService),
+            eq("test-id"),
+            eq(secondaryTypeProperties)))
+        .thenReturn(propertiesInDB);
+
+    // Mock static SDMUtils methods
+    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    sdmUtilsMockedStatic
+        .when(() -> isFileNameDuplicateInDrafts(data, "composition"))
+        .thenReturn(new HashSet<>());
+
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.getSecondaryTypeProperties(any(Optional.class), any()))
+        .thenReturn(secondaryTypeProperties);
+
+    sdmUtilsMockedStatic
+        .when(() -> SDMUtils.getPropertyTitles(any(), any()))
+        .thenReturn(new HashMap<>());
+
+    // Call the method
+    handler.updateName(context, data, "composition");
+
+    // Verify that the attachment's fileName was replaced with the original filename
+    // from DB
+    verify(attachment).replace("fileName", "original-file.pdf");
+
+    // Capture and assert the warning message for whitespace filename
+    ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
+    verify(messages).warn(warningCaptor.capture());
+    String warningMessage = warningCaptor.getValue();
+
+    String expectedMessage =
+        String.format(SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE, "original-file.pdf");
+    assertEquals(expectedMessage, warningMessage);
+  }
+
   //   @Test
   //   public void testRenameWithUniqueFilenames() throws IOException {
   //     List<CdsData> data = prepareMockAttachmentData("file1.txt");
