@@ -314,7 +314,7 @@
             <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
             <artifactId>connectivity-oauth</artifactId>
             <version>5.21.0</version>
-            <exclusions>
+            <!-- <exclusions>
                 <exclusion>
                     <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
                     <artifactId>resilience4j</artifactId>
@@ -331,7 +331,7 @@
                     <groupId>commons-io</groupId>
                     <artifactId>commons-io</artifactId>
                 </exclusion>
-            </exclusions>
+            </exclusions> -->
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
