@@ -117,6 +117,15 @@
                     "route": "AuthorsDetails"
                   }
                 }
+              },
+              "controlConfiguration": {
+                "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable",
+                    "selectionMode": "Auto",
+                    "rowPress": ".extension.demoapp.admin-books.controller.custom.onRowPress"
+                  }
+                }
               }
             }
           }
@@ -130,6 +139,15 @@
               "entitySet": "Authors"
             }
           }
+        }
+      }
+    },
+    "extends": {
+      "extensions": {
+        "sap.ui.controllerExtensions": {
+          "sap.fe.templates.ObjectPage.ObjectPageController#demoapp.admin-books::BooksDetailsList": {
+              "controllerName": "demoapp.admin-books.controller.custom"
+          }       
         }
       }
     },
