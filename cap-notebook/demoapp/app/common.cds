@@ -64,17 +64,37 @@ annotate my.Books.attachments with @UI: {
         TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
+    },
+    {
+      $Type  : 'UI.DataFieldForActionGroup',
+      ID     : 'TableActionGroup',
+      Label  : 'Link',
+      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
+      Actions: [
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Create Link',
+          Action: 'AdminService.createLink',
+        },
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Edit Link',
+          Action: 'AdminService.editLink',
+             
+        }
+      ]
     }
-  ]
+  ],
 } 
 {
   note       @(title: '{i18n>Note}');
