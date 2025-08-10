@@ -17,5 +17,9 @@ service AdminService @(requires: ['admin','system-user']) {
   actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self,up__ID:String,objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createLink(in:many $self,name:String,url:String);    
+    action editLink(url:String);     
+    action openAttachment() returns String;
   }
 }
