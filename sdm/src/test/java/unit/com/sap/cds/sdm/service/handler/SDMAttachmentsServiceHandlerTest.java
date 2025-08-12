@@ -586,7 +586,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), any())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(sdmService.createDocument(any(), any())).thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
     mockHeaders.put("content-length", "12345");
@@ -961,7 +961,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(sdmService.createDocument(any(), any())).thenReturn(mockCreateResult);
 
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
       sdmUtilsMockedStatic
@@ -1025,7 +1025,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
-    when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
+    when(sdmService.createDocument(any(), any())).thenReturn(mockCreateResult);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {

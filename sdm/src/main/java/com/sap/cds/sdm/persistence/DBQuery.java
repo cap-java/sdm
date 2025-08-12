@@ -35,9 +35,32 @@ public class DBQuery {
       String upIdKey) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
             .where(doc -> doc.get(upIdKey).eq(upID));
     return persistenceService.run(q);
+  }
+
+  public CmisDocument getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl")
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    System.out.println("Result" + result.rowCount());
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setContentId(
+          row.get("contentId") != null ? row.get("contentId").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    }
+    return cmisDocument;
   }
 
   public Result getAttachmentsForUPIDAndRepository(
@@ -74,12 +97,39 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    String icon = getIconforMimeType(cmisDocument.getMimeType());
+    updatedFields.put("type", icon);
 
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
+  }
+
+  private static String getIconforMimeType(String mimeType) {
+    String type = "sap-icon://document";
+    if ((mimeType.contains("vnd.ms-excel")
+        || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet")))
+      type = "sap-icon://excel-attachment";
+    else if ((mimeType.contains("image"))) {
+      type = "sap-icon://attachment-photo";
+    } else if ((mimeType.contains("text"))) {
+      type = "sap-icon://attachment-text-file";
+    } else if ((mimeType.contains("pdf"))) {
+      type = "sap-icon://pdf-attachment";
+    } else if ((mimeType.contains("powerpoint")) || (mimeType.contains("presentation"))) {
+      type = "sap-icon://ppt-attachment";
+    } else if ((mimeType.contains("video"))) {
+      type = "sap-icon://attachment-video";
+    } else if ((mimeType.contains("audio"))) {
+      type = "sap-icon://attachment-audio";
+    } else if ((mimeType.contains("zip"))) {
+      type = " sap-icon://attachment-zip-file";
+    } else if ((mimeType.contains("html"))) {
+      type = "sap-icon://attachment-html";
+    }
+    return type;
   }
 
   public List<CmisDocument> getAttachmentsForFolder(

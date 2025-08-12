@@ -5,6 +5,8 @@ extend aspect Attachments with {
     folderId : String ;
     repositoryId : String ;
     objectId : String ;
+    linkUrl: String;
+    type: String @(UI: {IsImageURL: true});
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
@@ -13,8 +15,9 @@ annotate Attachments with @UI: {
         TypeNamePlural: '{i18n>Attachments}',
     },
     LineItem  : [
+        {Value: type, @HTML5.CssDefaults: {width: '20%'}},
         {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
-         {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+         {Value: content, @HTML5.CssDefaults: {width: '0%'}},
           {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
           {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
           {Value: note, @HTML5.CssDefaults: {width: '20%'}}

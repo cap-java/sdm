@@ -594,8 +594,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse =
-        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+    JSONObject actualResponse = sdmServiceImpl.createDocument(cmisDocument, sdmCredentials);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -633,8 +632,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse =
-        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+    JSONObject actualResponse = sdmServiceImpl.createDocument(cmisDocument, sdmCredentials);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -674,8 +672,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse =
-        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+    JSONObject actualResponse = sdmServiceImpl.createDocument(cmisDocument, sdmCredentials);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -713,8 +710,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse =
-        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+    JSONObject actualResponse = sdmServiceImpl.createDocument(cmisDocument, sdmCredentials);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -752,7 +748,7 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     try {
-      sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+      sdmServiceImpl.createDocument(cmisDocument, sdmCredentials);
     } catch (ServiceException e) {
       // Expected exception to be thrown
       assertEquals("Error in setting timeout", e.getMessage());
@@ -1498,8 +1494,7 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     assertThrows(
-        ServiceException.class,
-        () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
+        ServiceException.class, () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials));
   }
 
   @Test

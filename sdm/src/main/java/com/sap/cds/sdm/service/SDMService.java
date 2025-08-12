@@ -12,8 +12,8 @@ import java.util.Map;
 import org.json.JSONObject;
 
 public interface SDMService {
-  public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException;
+  public JSONObject createDocument(CmisDocument cmisDocument, SDMCredentials sdmCredentials)
+      throws IOException;
 
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)

@@ -24,4 +24,6 @@ public class CmisDocument {
   private String mimeType;
   private long contentLength;
   private String subdomain;
+  private String url;
+  private String contentId;
 }
