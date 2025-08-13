@@ -92,6 +92,31 @@ public class SDMServiceImpl implements SDMService {
     return new JSONObject(finalResponse);
   }
 
+  @Override
+  public JSONObject editLink(CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
+    Map<String, String> finalResponse = new HashMap<>();
+    String sdmUrl =
+        sdmCredentials.getUrl()
+            + "browser/"
+            + cmisDocument.getRepositoryId()
+            + "/root?objectId="
+            + cmisDocument.getObjectId();
+
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyId[0]", "sap:linkExternalURL", ContentType.TEXT_PLAIN);
+    builder.addTextBody("propertyValue[0]", cmisDocument.getUrl(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    return new JSONObject(finalResponse);
+  }
+
   private void executeHttpPost(
       HttpClient httpClient,
       HttpPost uploadFile,

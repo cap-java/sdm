@@ -3,6 +3,7 @@ package com.sap.cds.sdm.service.handler;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsAssociationType;
@@ -22,6 +23,8 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.authentication.AuthenticationInfo;
+import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
@@ -35,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName({"*"})
 public class SDMServiceGenericHandler implements EventHandler {
@@ -45,6 +50,7 @@ public class SDMServiceGenericHandler implements EventHandler {
   private final List<DraftService> draftService;
   private final DBQuery dbQuery;
   private final TokenHandler tokenHandler;
+  private static final Logger logger = LoggerFactory.getLogger(SDMServiceGenericHandler.class);
 
   public SDMServiceGenericHandler(
       RegisterService attachmentService,
@@ -83,6 +89,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     validateRepository(context);
     // processEntities(context);
     createLink(context);
+  }
+
+  @On(event = "editLink")
+  public void edit(EventContext context) throws IOException {
+    logger.info("Handling event " + context.getEvent());
+    editLink(context);
   }
 
   @On(event = "openAttachment")
@@ -170,6 +182,37 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
     System.out.println("createResult" + createResult);
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
+  }
+
+  private void editLink(EventContext context) throws IOException {
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+    Optional<CdsEntity> attachmentDraftEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+        dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    cmisDocument.setUrl(context.get("url").toString());
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    cmisDocument.setRepositoryId(SDMConstants.REPOSITORY_ID);
+    JSONObject response = sdmService.editLink(cmisDocument, sdmCredentials);
+    String status = response.get("status").toString();
+    if (status.equals("success")) {
+      Map<String, Object> updatedFields = new HashMap<>();
+      updatedFields.put("linkUrl", cmisDocument.getUrl());
+      var update =
+          Update.entity(attachmentDraftEntity.get())
+              .data(updatedFields)
+              .where(doc -> doc.get("ID").eq(ID));
+      persistenceService.run(update);
+      logger.info("Succefully edited link");
+    } else {
+      throw new ServiceException(
+          "Failed to edit link");
+    }
+    context.setCompleted();
   }
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
