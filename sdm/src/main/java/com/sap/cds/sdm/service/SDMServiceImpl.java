@@ -95,7 +95,6 @@ public class SDMServiceImpl implements SDMService {
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 
-    // Add additional form fields
     builder.addTextBody("cmisaction", "update", ContentType.TEXT_PLAIN);
     builder.addTextBody("propertyId[0]", "sap:linkExternalURL", ContentType.TEXT_PLAIN);
     builder.addTextBody("propertyValue[0]", cmisDocument.getUrl(), ContentType.TEXT_PLAIN);
