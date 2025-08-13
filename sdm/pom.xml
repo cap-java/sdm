@@ -163,7 +163,7 @@
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
             <artifactId>java-core-api</artifactId>
-            <version>0.10.5</version>
+            <version>0.21.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
