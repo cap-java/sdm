@@ -23,8 +23,6 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.authentication.AuthenticationInfo;
-import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
@@ -209,8 +207,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       persistenceService.run(update);
       logger.info("Succefully edited link");
     } else {
-      throw new ServiceException(
-          "Failed to edit link");
+      throw new ServiceException("Failed to edit link");
     }
     context.setCompleted();
   }

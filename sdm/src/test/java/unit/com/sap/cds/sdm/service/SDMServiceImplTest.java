@@ -1596,4 +1596,35 @@ public class SDMServiceImplTest {
     assertTrue(ex.getMessage().contains(SDMConstants.FAILED_TO_COPY_ATTACHMENT));
     assertTrue(ex.getCause() instanceof IOException);
   }
+
+  @Test
+  public void testEditLink() throws IOException {
+    String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId");
+    cmisDocument.setUrl("url");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    String grantType = "TOKEN_EXCHANGE";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials);
+
+    JSONObject expectedResponse = new JSONObject();
+    expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
+    expectedResponse.put("status", "success");
+    assertEquals(expectedResponse.toString(), actualResponse.toString());
+  }
 }
