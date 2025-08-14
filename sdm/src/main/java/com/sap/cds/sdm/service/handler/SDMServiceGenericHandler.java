@@ -195,7 +195,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     cmisDocument.setUrl(context.get("url").toString());
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     cmisDocument.setRepositoryId(SDMConstants.REPOSITORY_ID);
-    JSONObject response = sdmService.editLink(cmisDocument, sdmCredentials);
+    Boolean isSystemUser = context.getUserInfo().isSystemUser();
+    JSONObject response = sdmService.editLink(cmisDocument, sdmCredentials, isSystemUser);
     String status = response.get("status").toString();
     if (status.equals("success")) {
       Map<String, Object> updatedFields = new HashMap<>();
