@@ -59,4 +59,7 @@ public interface SDMService {
       String repositoryId,
       Boolean isSystemUser)
       throws IOException;
+
+  public JSONObject getChangeLog(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser);
 }
