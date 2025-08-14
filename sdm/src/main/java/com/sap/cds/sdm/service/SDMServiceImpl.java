@@ -82,8 +82,10 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public JSONObject editLink(CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
-    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
+  public JSONObject editLink(CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws ServiceException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl =
         sdmCredentials.getUrl()
