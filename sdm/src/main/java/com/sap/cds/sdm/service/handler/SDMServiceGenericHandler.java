@@ -10,6 +10,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.AttachmentLogContext;
 import com.sap.cds.sdm.model.AttachmentReadContext;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -59,6 +60,27 @@ public class SDMServiceGenericHandler implements EventHandler {
     String eventName = context.getEvent();
     System.out.println("Download event");
     context.setCompleted();
+  }
+
+  @On(event = "changelog")
+  public void changelog(AttachmentLogContext context) throws IOException {
+    CdsModel cdsModel = context.getModel();
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+    Optional<CdsEntity> attachmentDraftEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    // get the objectId against the Id
+    String ID = targetKeys.get("ID").toString();
+    CmisDocument cmisDocument =
+        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+
+    JSONObject jsonObject =
+        sdmService.getChangeLog(
+            cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+    jsonObject.put("filename", cmisDocument.getFileName());
+    context.setResult(jsonObject);
   }
 
   @On(event = "openAttachment")
@@ -134,17 +156,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     // updatedFields.put("content", cmisDocument.getFileName());
     updatedFields.put(upIdKey, cmisDocument.getParentId());
     updatedFields.put("mimeType", cmisDocument.getMimeType());
-    //    updatedFields.put(
-    //        "contentId",
-    //        cmisDocument.getObjectId()
-    //            + ":"
-    //            + cmisDocument.getFolderId()
-    //            + ":"
-    //            + context.getTarget()
-    //            + ":"
-    //            + subdomain
-    //            + ":"
-    //            + cmisDocument.getMimeType());
+    updatedFields.put(
+        "contentId",
+        cmisDocument.getObjectId() + ":" + cmisDocument.getFolderId() + ":" + context.getTarget());
     updatedFields.put("fileName", cmisDocument.getFileName());
     updatedFields.put("HasDraftEntity", false);
     updatedFields.put("HasActiveEntity", false);

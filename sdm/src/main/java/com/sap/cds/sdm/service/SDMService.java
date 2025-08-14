@@ -63,4 +63,7 @@ public interface SDMService {
   public List<String> copyAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
+
+  public JSONObject getChangeLog(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser);
 }
