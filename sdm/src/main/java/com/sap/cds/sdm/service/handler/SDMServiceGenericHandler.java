@@ -89,15 +89,15 @@ public class SDMServiceGenericHandler implements EventHandler {
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     // get the objectId against the Id
-    String ID = targetKeys.get("ID").toString();
+    String id = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, ID);
+        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
       cmisDocument =
-          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, ID);
+          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
       context.setUrl(cmisDocument.getUrl());
@@ -174,7 +174,6 @@ public class SDMServiceGenericHandler implements EventHandler {
       List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
-    // return upIdKey.replaceFirst("^up__", "");
     return upIdKey;
   }
 
