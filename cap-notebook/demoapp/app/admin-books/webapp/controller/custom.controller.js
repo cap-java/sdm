@@ -8,7 +8,6 @@ sap.ui.define(
     
         return ControllerExtension.extend("books.controller.custom", {
             onRowPress: function(oContext) {
-                console.log(oContext);
                 this.base.editFlow
                 .invokeAction("AdminService.openAttachment", {
                     contexts: oContext.getParameter("bindingContext")
