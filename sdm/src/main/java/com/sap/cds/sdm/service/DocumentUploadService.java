@@ -54,7 +54,7 @@ public class DocumentUploadService {
       throws IOException {
     try {
       if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
-        System.out.println("LinkType detected, uploading as single chunk");
+        logger.info("LinkType detected, uploading as single chunk");
         return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       }
       long totalSize = cmisDocument.getContentLength();
@@ -167,7 +167,6 @@ public class DocumentUploadService {
     InputStream originalStream = cmisDocument.getContent();
     if (!cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")
         && originalStream == null) {
-      System.out.println("File stream is null!");
       throw new IOException("File stream is null!");
     }
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;

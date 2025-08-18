@@ -8,7 +8,6 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  //public static final String REPOSITORY_ID = "7b9b33a9-0606-4caf-bb61-1d810de9a6b2";
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
