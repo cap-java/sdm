@@ -6,8 +6,7 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 10
     allow:
-      - dependency-name: "cds.services.version"
-      - dependency-name: "sdk-bom-version"
+      - dependency-name: "com.sap.cds:cds-services-bom"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
