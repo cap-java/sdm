@@ -153,18 +153,15 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private void processEntities(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
     Map<String, Object> attachmentIds = eventContext.getAttachmentIds();
-    System.out.println("Attachment IDs: " + attachmentIds);
     CdsEntity attachmentDraftEntity = getAttachmentDraftEntity(eventContext);
     String upIdKey = getUpIdKey(attachmentDraftEntity);
     String upID = (String) attachmentIds.get(upIdKey);
 
     Result result =
         dbQuery.getAttachmentsForUPID(attachmentDraftEntity, persistenceService, upID, upIdKey);
-    System.out.println("Result: " + result);
     checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
-    System.out.println("MediaData: " + data);
     validateFileName(data.getFileName(), result, attachmentIds);
     createDocumentInSDM(data, result, eventContext, attachmentIds, upIdKey, upID);
   }

@@ -80,12 +80,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   @On(event = "createLink")
   public void create(EventContext context) throws IOException {
-    // Check the action name and handle accordingly
-    String eventName = context.getEvent();
-    System.out.println(
-        "Handling event: " + eventName + ":" + context.getTarget() + ":" + context.get("cqn"));
     validateRepository(context);
-    // processEntities(context);
     createLink(context);
   }
 
@@ -104,15 +99,15 @@ public class SDMServiceGenericHandler implements EventHandler {
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     // get the objectId against the Id
-    String ID = targetKeys.get("ID").toString();
+    String id = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, ID);
+        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
       cmisDocument =
-          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, ID);
+          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
       context.setUrl(cmisDocument.getUrl());
@@ -122,45 +117,42 @@ public class SDMServiceGenericHandler implements EventHandler {
     context.setResult(cmisDocument.getUrl());
   }
 
+  private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    String repocheck =
+        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
+    if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
+      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+    }
+  }
+
   private void createLink(EventContext context) throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     CdsModel cdsModel = context.getModel();
-    System.out.println("Model: " + cdsModel);
 
     Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
-    System.out.println("Entity:" + context.getTarget().getQualifiedName());
 
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
-    System.out.println("UpIdKey: " + upIdKey);
-
     CqnSelect select = (CqnSelect) context.get("cqn");
-    System.out.println("Select query: " + select);
-
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-    System.out.println("CqnAnalyzer: " + cqnAnalyzer);
-
-    System.out.println("IDs: " + cqnAnalyzer.analyze(select).rootKeys().toString());
     String id = upIdKey.replaceFirst("^up__", "");
     String upID = cqnAnalyzer.analyze(select).rootKeys().get(id).toString();
     String filenameInRequest = context.get("name").toString();
-    System.out.println("UPID " + upID);
 
     Result result =
         dbQuery.getAttachmentsForUPID(
             attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-    System.out.println("Result: \n" + result);
 
     checkAttachmentConstraints(context, attachmentDraftEntity.get(), upID, upIdKey);
-    validateFileName(filenameInRequest, result);
+    validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
     String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
     String folderName = upID + "__" + entityName;
 
     String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
-    System.out.println("folderId: " + folderId);
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFolderId(folderId);
@@ -178,7 +170,6 @@ public class SDMServiceGenericHandler implements EventHandler {
       throw new ServiceException(
           SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
     }
-    System.out.println("createResult" + createResult);
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
 
@@ -213,60 +204,38 @@ public class SDMServiceGenericHandler implements EventHandler {
     context.setCompleted();
   }
 
-  private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
-    String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck =
-        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
-    System.out.println("Repository check: " + repocheck);
-    if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-    }
-  }
-
   private String getUpIdKey(CdsEntity attachmentDraftEntity) {
     String upIdKey = "";
     Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
-    System.out.println("Up Association: " + upAssociation);
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
-      System.out.println("Association: " + association);
       // get association type
       CdsAssociationType assocType = association.getType();
-      System.out.println("Association Type: " + assocType);
       // get the refs of the association
       List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-      System.out.println("FK Elements: " + fkElements);
       upIdKey = fkElements.get(0);
-      System.out.println("UpIdKey: " + upIdKey);
     }
-    // return upIdKey.replaceFirst("^up__", "");
     return upIdKey;
   }
 
   private void checkAttachmentConstraints(
       EventContext context, CdsEntity attachmentDraftEntity, String upID, String upIdKey)
       throws ServiceException {
-    // Fetch the row count for current repository
     CdsModel cdsModel = context.getModel();
-    Optional<CdsEntity> attachmentEntityOpt =
-        cdsModel.findEntity(context.getTarget().getQualifiedName());
-    if (attachmentEntityOpt.isEmpty()) {
-      throw new ServiceException(
-          "Target entity not found: " + context.getTarget().getQualifiedName());
-    }
-    CdsEntity attachmentEntity = attachmentEntityOpt.get();
+    CdsEntity attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName()).get();
 
+    // Fetch the row count for current repository
     Result result =
         dbQuery.getAttachmentsForUPIDAndRepository(
             attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
-    String errorMessageCount =
+    String errorMessageAndCount =
         SDMUtils.getAttachmentCountAndMessage(
             context.getModel().entities().toList(), attachmentEntity);
-    String[] maxCountArr = errorMessageCount.split("__");
+    String[] maxCountArr = errorMessageAndCount.split("__");
     long maxCount = Long.parseLong(maxCountArr[0]);
+    String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
-      String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
         throw new ServiceException(message);
       }
@@ -274,14 +243,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private void validateFileName(String filename, Result result) throws ServiceException {
-    System.out.println("Validating file name: " + filename);
+  private void validateLinkName(String filename, Result result) throws ServiceException {
     if (SDMUtils.isRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
     }
     if (duplicateCheck(filename, result)) {
-      System.out.println("Duplicate file found: " + filename);
       throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
     }
   }
@@ -289,7 +256,6 @@ public class SDMServiceGenericHandler implements EventHandler {
   public boolean duplicateCheck(String filenameToCheck, Result result) {
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream().map(m -> (Map<String, Object>) m).toList();
-    System.out.println("Result List: " + resultList);
     return resultList.stream()
         .anyMatch(
             attachment ->
@@ -341,18 +307,11 @@ public class SDMServiceGenericHandler implements EventHandler {
         var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
         for (DraftService draftS : draftService) {
           // Process each draftService object
-          System.out.println(
-              "Draft Service " + context.getTarget().getQualifiedName() + " : " + draftS.getName());
           if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
-            System.out.println("yes");
             draftS.newDraft(insert);
-            System.out.println("DraftService called for: " + draftS.getName());
           }
-          // You can call methods or perform operations on draftService here
         }
-        System.out.println("Draft updated successfully.");
         context.setCompleted();
-        System.out.println("Handle create link result completed for UPID: " + upID);
     }
   }
 }

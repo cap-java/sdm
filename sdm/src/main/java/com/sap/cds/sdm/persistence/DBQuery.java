@@ -47,7 +47,6 @@ public class DBQuery {
             .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
-    System.out.println("Result" + result.rowCount());
     Optional<Row> res = result.first();
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
