@@ -103,7 +103,7 @@ public class SDMServiceGenericHandlerTest {
 
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
-    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class)))
+    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), true))
         .thenReturn(successResponse);
 
     // Act
@@ -139,7 +139,7 @@ public class SDMServiceGenericHandlerTest {
 
     JSONObject failureResponse = new JSONObject();
     failureResponse.put("status", "error");
-    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class)))
+    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), true))
         .thenReturn(failureResponse);
 
     // Act & Assert
