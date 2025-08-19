@@ -1624,7 +1624,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, true);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("message", "");
