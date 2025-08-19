@@ -6,8 +6,8 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 10
     allow:
-      - dependency-name: "cds-services-bom"
-      - dependency-name: "cds-feature-attachments"
+      - dependency-name: "com.sap.cds:cds-services-bom"
+      - dependency-name: "com.sap.cloud.sdk:sdk-bom"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
