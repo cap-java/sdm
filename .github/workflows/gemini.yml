@@ -1,7 +1,16 @@
-name: Run Gemini CLI
+name: Gemini CLI Automation
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manual trigger
+  pull_request:      # Trigger on pull request events
+    types:
+      - opened
+      - synchronize
+      - reopened
+  issues:            # Trigger on issue events
+    types:
+      - opened
+      - edited
 
 jobs:
   run-gemini-cli:
@@ -14,7 +23,11 @@ jobs:
       - name: Install Gemini CLI
         run: npm install -g @google/gemini-cli
 
-      - name: Run Gemini CLI Command
+      - name: Run Gemini --help
+        run: gemini --help
+
+      - name: Review Pull Request with Gemini
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: gemini --help
+        run: gemini -p "Review this pull request"
