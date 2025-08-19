@@ -6,8 +6,8 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 10
     allow:
-      - dependency-name: "cds.services.version"
-      - dependency-name: "sdk-bom-version"
+      - dependency-name: "cds-services-bom"
+      - dependency-name: "cds-feature-attachments"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
