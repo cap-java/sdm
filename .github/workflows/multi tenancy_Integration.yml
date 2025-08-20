@@ -1,110 +1,28 @@
-name: Multi Tenancy Deploy & Integration Test🚀
+name: Multi Tenancy Integration Test 🚀
 
 on:
-  pull_request:
-    types: [closed]
-    branches:
-      - develop
+      
   workflow_dispatch:
+    inputs:
+      cf_space:
+        description: 'Specify the Cloud Foundry space to run integration tests on'
+        required: true
+        default: developcap
 
-permissions:
-  pull-requests: read
-  packages: read  # Added permission to read packages
+      branch_name:
+        description: 'Specify the branch to use for integration tests'
+        required: true
+        default: develop
 
 jobs:
-  deploy:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-
-    steps:
-    
-      - name: Wait for 5 minutes ⏳
-        run: |
-          sleep 300
-          echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
-
-      - name: Checkout this repository 📁
-        uses: actions/checkout@v2
-
-      - name: Set up JDK 21 ☕
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Build and package 📦
-        run: |
-            echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
-            echo "✅ Build completed successfully!"
-
-      - name: Setup Node.js 🟢
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18' # Ensure to use at least version 18
-
-      - name: Install MBT ⚙️
-        run: |
-            echo "🔧 Installing MBT..."
-            npm install -g mbt
-            echo "✅ MBT installation complete!"
-
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-
-      - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
-        run: |
-            pwd
-            echo "✔️ Directory changed!"
-
-      - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
-        run: |
-            echo "🚀 Running MBT build..."
-            echo "java version:"
-            java --version
-            mbt build
-            echo "✅ MBT build completed!"
-
-      - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
-        run: | 
-            echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
-            echo "🔧 Installing Cloud Foundry CLI and plugins..."
-
-            # Install cf CLI plugin
-            wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
-            echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-            sudo apt update
-            sudo apt install cf-cli
-            
-            cf install-plugin multiapps -f
-            echo "✅ Cloud Foundry CLI setup complete!"
-
-            # Login to Cloud Foundry again to ensure session is active
-            echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
-            echo "✅ Logged in successfully!"
-
-            # Deploy the application
-            echo "📂 Current directory.."
-            pwd
-            ls -lrth
-            echo "▶️ Running cf deploy..."
-            cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
-            echo "✅ Deployment complete!"
-
   integration-test:
-    needs: deploy
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository ✅
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -139,6 +57,7 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
+            # -s ${{ steps.determine_space.outputs.space }}
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials

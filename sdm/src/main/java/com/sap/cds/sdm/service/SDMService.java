@@ -16,15 +16,15 @@ public interface SDMService {
       throws IOException;
 
   public String createFolder(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public String getFolderId(
-      Result result, PersistenceService persistenceService, String upID, Boolean isSystemUser)
+      Result result, PersistenceService persistenceService, String upID, boolean isSystemUser)
       throws IOException;
 
   public String getFolderIdByPath(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public String checkRepositoryType(String repositoryId, String tenant) throws IOException;
@@ -33,7 +33,7 @@ public interface SDMService {
 
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
-  public int deleteDocument(String cmisaction, String objectId) throws IOException;
+  public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
@@ -44,20 +44,24 @@ public interface SDMService {
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      Boolean isSystemUser)
+      boolean isSystemUser)
       throws ServiceException;
 
-  public String getObject(String objectId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public List<String> getSecondaryTypes(
-      String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) throws IOException;
+      String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public List<String> getValidSecondaryProperties(
       List<String> secondaryTypes,
       SDMCredentials sdmCredentials,
       String repositoryId,
-      Boolean isSystemUser)
+      boolean isSystemUser)
+      throws IOException;
+
+  public List<String> copyAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public JSONObject getChangeLog(

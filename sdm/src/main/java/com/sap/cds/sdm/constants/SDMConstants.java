@@ -7,8 +7,10 @@ public class SDMConstants {
   private SDMConstants() {
     // Doesn't do anything
   }
-
-  public static final String REPOSITORY_ID = "MY_REPO";
+  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String SYSTEM_USER = "system-internal";
+  public static final String DESTINATION_EXCEPTION =
+      "Unable to get the destination for sdm service binding";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
@@ -69,6 +71,10 @@ public class SDMConstants {
   public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
   public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
+  public static final String FAILED_TO_COPY_ATTACHMENT = "Failed to copy attachment";
+  public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
+  public static final String FAILED_TO_FETCH_FACET =
+      "Invalid facet format, unable to extract required information.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

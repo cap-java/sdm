@@ -33,20 +33,24 @@ public class DocumentUploadService {
   private static final Logger logger = LoggerFactory.getLogger(DocumentUploadService.class);
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
+  private final TokenHandler tokenHandler;
 
   public DocumentUploadService(
-      ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     logger.info("DocumentUploadService is instantiated");
 
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   /*
    * Implementation to create document.
    */
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     try {
       long totalSize = cmisDocument.getContentLength();
@@ -89,7 +93,7 @@ public class DocumentUploadService {
       int bytesRead,
       boolean isLastChunk,
       int chunkIndex,
-      Boolean isSystemUser)
+      boolean isSystemUser)
       throws IOException, ParseException {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -114,7 +118,7 @@ public class DocumentUploadService {
     request.setEntity(entity);
     headers.forEach(request::addHeader);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
 
@@ -128,7 +132,7 @@ public class DocumentUploadService {
   }
 
   private JSONObject createEmptyDocument(
-      CmisDocument cmisDocument, String sdmUrl, Boolean isSystemUser) {
+      CmisDocument cmisDocument, String sdmUrl, boolean isSystemUser) {
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "createDocument");
@@ -144,7 +148,7 @@ public class DocumentUploadService {
     request.setEntity(entity);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :{} flow", grantType);
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
@@ -153,7 +157,7 @@ public class DocumentUploadService {
   }
 
   public JSONObject uploadSingleChunk(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
 
     InputStream originalStream = cmisDocument.getContent();
@@ -161,7 +165,7 @@ public class DocumentUploadService {
       throw new IOException("File stream is null!");
     }
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -190,7 +194,7 @@ public class DocumentUploadService {
   }
 
   private JSONObject uploadLargeFileInChunks(
-      CmisDocument cmisDocument, String sdmUrl, int chunkSize, Boolean isSystemUser)
+      CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
       throws IOException {
 
     try (ReadAheadInputStream chunkedStream =

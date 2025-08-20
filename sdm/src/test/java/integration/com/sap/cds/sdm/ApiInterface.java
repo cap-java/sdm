@@ -58,7 +58,20 @@ public interface ApiInterface {
       String ID,
       String invalidSecondaryProperty);
 
+  public String copyAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      List<String> sourceObjectIds)
+      throws IOException;
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
+
+  public List<Map<String, Object>> fetchEntityMetadata(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException;
+
+  String deleteEntityDraft(String appUrl, String entityName, String entityID);
 }

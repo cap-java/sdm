@@ -16,6 +16,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
+- Copy attachments: Provides the capability to copy attachments from one entity to another entity.
 
 ## Table of Contents
 
@@ -28,6 +29,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
+- [Support for Copy attachments](#support-for-copy-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -314,10 +316,9 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-
 This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. 
 
-GetDependencies,subscribe and unsubscribe are the mandatory steps to be performed to support multitenancy.
+GetDependencies, subscribe and unsubscribe are the mandatory steps to be performed to support multitenancy.
 
 Refer the below example to pass the SDM Service dependencies to SaaSRegistry so that SDM credentials are passed to subscribing tenant.
 ```java
@@ -513,6 +514,47 @@ request =
       .addHeader("Authorization", basicAuth)
       .build();
 ```
+
+## Support for copy attachments
+
+This plugin provides capability to copy attachments from one entity to another. This capability will copy attachments metadata on CAP as well as actual content on the SAP Document Management service repository. This feature can be used in following two ways.
+
+1. **A helper method to copy attachments from one entity to another**
+   
+   The `AttachmentService` instance can be used to call `copyAttachments` method. This method expects an object of `CopyAttachmentInput` which requires new entity's Id (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be copied.
+
+   Example usage:
+   ```java
+      String up__ID = "123";
+      List<String> objectIds = ["abc", "xyz"];
+      String facet = "AdminService.Books.attachments" // Target facet. This can be usually obtained from context.getTarget().getQualifiedName()
+      boolean isSystemUser = false;
+      var copyEventInput =
+         new CopyAttachmentInput(up__ID, facet, objectIds);
+      attachmentService.copyAttachments(copyEventInput, isSystemUser);
+   ```
+2. **OData API to copy attachments from one entity to another**
+   
+   You can also use an OData API call to trigger the copy operation.
+   `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.copyAttachments` . This request expects the following request body:
+   ```json
+   {
+      "up__ID" : "<up__ID>",  // ID of the new entity
+      "objectIds" : "abc","xyz" // objectIds corresponding to attachments that are to be copied
+   }
+   ```
+
+   Example usage:  
+   ```
+   HTTP Method: POST
+   Request URL:
+   <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.copyAttachments
+   Request Body:
+   {
+      "up__ID": "<up__ID>",
+      "objectIds": "abc","xyz"
+   }
+   ```
 
 ## Known Restrictions
 

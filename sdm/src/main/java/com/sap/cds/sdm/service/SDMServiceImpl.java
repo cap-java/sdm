@@ -20,15 +20,12 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
+import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -47,15 +44,21 @@ public class SDMServiceImpl implements SDMService {
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
   private static final Logger logger = LoggerFactory.getLogger(SDMServiceImpl.class);
+  private final TokenHandler tokenHandler;
 
-  public SDMServiceImpl(ServiceBinding binding, CdsProperties.ConnectionPool connectionPool) {
+  public SDMServiceImpl(
+      ServiceBinding binding,
+      CdsProperties.ConnectionPool connectionPool,
+      TokenHandler tokenHandler) {
     this.connectionPool = connectionPool;
     this.binding = binding;
+    this.tokenHandler = tokenHandler;
   }
 
   @Override
-  public JSONObject createDocument(CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
+  public JSONObject createDocument(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
@@ -157,12 +160,12 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument,
       Map<String, String> secondaryProperties,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      Boolean isSystemUser)
+      boolean isSystemUser)
       throws ServiceException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
     List<String> secondaryTypes;
@@ -180,8 +183,18 @@ public class SDMServiceImpl implements SDMService {
         return 500;
       }
     }
-    List<String> validSecondaryProperties =
-        getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    List<String> validSecondaryProperties;
+    try {
+      validSecondaryProperties =
+          getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    } catch (Exception e) {
+      String errorMessage = e.getMessage();
+      if (errorMessage != null && errorMessage.length() >= 3) {
+        return (Integer.parseInt(errorMessage.substring(0, 3)));
+      } else {
+        return 500;
+      }
+    }
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     CacheConfig.getSecondaryTypesCache()
@@ -264,10 +277,11 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String getObject(String objectId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
+  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -297,7 +311,7 @@ public class SDMServiceImpl implements SDMService {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = context.getUserInfo().isSystemUser() ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
         sdmCredentials.getUrl()
@@ -331,7 +345,7 @@ public class SDMServiceImpl implements SDMService {
       Result result,
       PersistenceService persistenceService,
       String folderName,
-      Boolean isSystemUser) {
+      boolean isSystemUser) {
 
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
@@ -352,7 +366,7 @@ public class SDMServiceImpl implements SDMService {
       }
     }
 
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     if (folderId == null) {
       folderId =
@@ -370,11 +384,11 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String getFolderIdByPath(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     String folderId = null;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl =
         sdmCredentials.getUrl()
             + "browser/"
@@ -403,10 +417,10 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public String createFolder(
-      String parentId, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser) {
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -441,7 +455,7 @@ public class SDMServiceImpl implements SDMService {
     String type = CacheConfig.getVersionedRepoCache().get(repoKey);
     Boolean isVersioned;
     if (type == null) {
-      SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+      SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
       isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
     } else {
@@ -465,7 +479,7 @@ public class SDMServiceImpl implements SDMService {
 
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
     String getRepoInfoUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=repositoryInfo";
@@ -494,9 +508,14 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int deleteDocument(String cmisaction, String objectId) throws IOException {
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+  public int deleteDocument(String cmisaction, String objectId, String user) {
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    HttpClient httpClient;
+    if (user.equals(SDMConstants.SYSTEM_USER)) {
+      httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    } else {
+      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
+    }
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
@@ -515,7 +534,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public List<String> getSecondaryTypes(
-      String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws ServiceException {
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
@@ -524,7 +543,7 @@ public class SDMServiceImpl implements SDMService {
     if (secondaryTypes == null) {
       String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
       logger.info("This is a :" + grantType + " flow");
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+      var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       String sdmUrl =
           sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=typeDescendants";
       HttpGet getTypesRequest = new HttpGet(sdmUrl);
@@ -562,7 +581,7 @@ public class SDMServiceImpl implements SDMService {
       List<String> secondaryTypes,
       SDMCredentials sdmCredentials,
       String repositoryId,
-      Boolean isSystemUser) {
+      boolean isSystemUser) {
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     secondaryPropertiesKey.setRepositoryId(repositoryId);
@@ -571,7 +590,7 @@ public class SDMServiceImpl implements SDMService {
     if (validSecondaryProperties == null) {
       validSecondaryProperties = new ArrayList<>();
       Iterator<String> iterator = secondaryTypes.iterator();
-      var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+      var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
       while (iterator.hasNext()) {
         String value = iterator.next();
         String sdmUrl =
@@ -580,6 +599,11 @@ public class SDMServiceImpl implements SDMService {
                 sdmCredentials.getUrl(), repositoryId, value);
         HttpGet getTypesRequest = new HttpGet(sdmUrl);
         try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
+          int statusCode = response.getStatusLine().getStatusCode();
+          if (statusCode != 200) {
+            String reasonPhrase = response.getStatusLine().getReasonPhrase();
+            throw new ServiceException(statusCode + " : " + reasonPhrase);
+          }
           HttpEntity responseEntity = response.getEntity();
           if (responseEntity != null
               && Boolean.FALSE.equals(
@@ -620,7 +644,7 @@ public class SDMServiceImpl implements SDMService {
       String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
-    var httpClient = TokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/";
     HttpGet getRepos = new HttpGet(sdmUrl);
     String repoId = "";
@@ -647,6 +671,52 @@ public class SDMServiceImpl implements SDMService {
 
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
+
+    }}
+  @Override
+  public List<String> copyAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+
+    logger.info("This is a :{} flow", grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+    // Add additional form fields
+    builder.addTextBody("cmisaction", "createDocumentFromSource", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("sourceId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true");
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+    try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+
+      // Handle response entity
+      HttpEntity entity = response.getEntity();
+      String responseBody =
+          entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+
+      if (response.getStatusLine().getStatusCode() == 201) {
+        // Process successful response
+
+        JSONObject jsonObject = new JSONObject(responseBody);
+        JSONObject props = jsonObject.getJSONObject("succinctProperties");
+        String fileName = props.optString("cmis:contentStreamFileName");
+        String mimeType = props.optString("cmis:contentStreamMimeType");
+        String objectId = props.optString("cmis:objectId");
+        return List.of(fileName, mimeType, objectId);
+      }
+
+      // On error, throw exception with error information
+      JSONObject errorJson = new JSONObject(responseBody);
+      String exceptionType = errorJson.optString("exception");
+      String errorMessage = errorJson.optString("message");
+      throw new ServiceException(exceptionType + " : " + errorMessage);
+    } catch (IOException e) {
+      throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
     }
   }
 }

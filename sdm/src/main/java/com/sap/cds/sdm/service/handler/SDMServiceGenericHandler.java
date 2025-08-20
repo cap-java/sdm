@@ -35,14 +35,18 @@ public class SDMServiceGenericHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final List<DraftService> draftService;
+  private final TokenHandler tokenHandler;
+  private final DBQuery dbQuery;
 
   public SDMServiceGenericHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
-      List<DraftService> draftService) {
+      List<DraftService> draftService,TokenHandler tokenHandler,DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.draftService = draftService;
+    this.tokenHandler =tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   @On(event = "createLink")
@@ -74,7 +78,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     JSONObject jsonObject =
         sdmService.getChangeLog(
@@ -127,7 +131,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       upIdKey = fkElements.get(0);
     }
     Result result =
-        DBQuery.getAttachmentsForUPID(
+        dbQuery.getAttachmentsForUPID(
             attachmentDraftEntity.get(), persistenceService, up__ID, upIdKey);
     String folderId = sdmService.getFolderId(result, persistenceService, up__ID, false);
     System.out.println("folderId" + folderId);
@@ -137,7 +141,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     cmisDocument.setMimeType("application/internet-shortcut");
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setUrl(context.get("url").toString());
-    SDMCredentials sdmCredentials = TokenHandler.getSDMCredentials();
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     JSONObject createResult = sdmService.createDocument(cmisDocument, sdmCredentials);
     System.out.println("createResult" + createResult);
     cmisDocument.setObjectId(createResult.get("objectId").toString());

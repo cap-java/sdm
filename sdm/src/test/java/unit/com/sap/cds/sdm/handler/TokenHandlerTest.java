@@ -1,7 +1,7 @@
 package unit.com.sap.cds.sdm.handler;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,14 +18,10 @@ import com.sap.cloud.environment.servicebinding.api.ServiceBindingAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpClientFactory;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
 import java.io.*;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.ehcache.Cache;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,7 +80,8 @@ public class TokenHandlerTest {
   @Test
   public void testGetHttpClientForTokenExchange() {
     HttpClient client =
-        TokenHandler.getHttpClient(binding, connectionPoolConfig, "subdomain", "TOKEN_EXCHANGE");
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "subdomain", "TOKEN_EXCHANGE");
 
     assertNotNull(client);
   }
@@ -92,15 +89,25 @@ public class TokenHandlerTest {
   @Test
   public void testGetHttpClientForTechnicalUser() {
     HttpClient client =
-        TokenHandler.getHttpClient(binding, connectionPoolConfig, "subdomain", "TECHNICAL_USER");
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "subdomain", "TECHNICAL_USER");
 
     assertNotNull(client);
   }
 
   @Test
+  public void testGetHttpClientForAuthorities() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClientForAuthoritiesFlow(connectionPoolConfig, "testUser");
+    assertNull(client);
+  }
+
+  @Test
   public void testGetHttpClientWithNullSubdomain() {
     HttpClient client =
-        TokenHandler.getHttpClient(binding, connectionPoolConfig, null, "TOKEN_EXCHANGE");
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, null, "TOKEN_EXCHANGE");
 
     assertNotNull(client);
   }
@@ -108,7 +115,8 @@ public class TokenHandlerTest {
   @Test
   public void testGetHttpClientWithEmptySubdomain() {
     HttpClient client =
-        TokenHandler.getHttpClient(binding, connectionPoolConfig, "", "TOKEN_EXCHANGE");
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "", "TOKEN_EXCHANGE");
 
     assertNotNull(client);
   }
@@ -138,7 +146,7 @@ public class TokenHandlerTest {
       List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
       Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
 
-      SDMCredentials result = TokenHandler.getSDMCredentials();
+      SDMCredentials result = TokenHandler.getTokenHandlerInstance().getSDMCredentials();
 
       assertNotNull(result);
       assertEquals("https://mock.uaa.url", result.getBaseTokenUrl());
@@ -148,30 +156,31 @@ public class TokenHandlerTest {
     }
   }
 
-  @Test
-  void testPrivateConstructor() {
-    // Use reflection to access the private constructor
-    Constructor<TokenHandler> constructor = null;
-    try {
-      constructor = TokenHandler.class.getDeclaredConstructor();
-      constructor.setAccessible(true);
-      assertThrows(InvocationTargetException.class, constructor::newInstance);
-    } catch (NoSuchMethodException e) {
-      fail("Exception occurred during test: " + e.getMessage());
-    }
-  }
+  // @Test
+  // void testPrivateConstructor() {
+  //   // Use reflection to access the private constructor
+  //   Constructor<TokenHandler> constructor = null;
+  //   try {
+  //     constructor = TokenHandler.class.getDeclaredConstructor();
+  //     constructor.setAccessible(true);
+  //     assertThrows(InvocationTargetException.class, constructor::newInstance);
+  //   } catch (NoSuchMethodException e) {
+  //     fail("Exception occurred during test: " + e.getMessage());
+  //   }
+  // }
 
   @Test
   void testToString() {
     byte[] input = "Hello, World!".getBytes(StandardCharsets.UTF_8);
     String expected = new String(input, StandardCharsets.UTF_8);
-    String actual = TokenHandler.toString(input);
+    String actual = TokenHandler.getTokenHandlerInstance().toString(input);
     assertEquals(expected, actual);
   }
 
   @Test
   void testToStringWithNullInput() {
-    assertThrows(NullPointerException.class, () -> TokenHandler.toString(null));
+    assertThrows(
+        NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toString(null));
   }
 
   @Test
@@ -200,35 +209,24 @@ public class TokenHandlerTest {
       Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
 
       HttpClient client =
-          TokenHandler.getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
+          TokenHandler.getTokenHandlerInstance()
+              .getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
 
       assertNotNull(client);
     }
   }
 
-  // Additional tests for uncovered methods
-
   @Test
   public void testToBytes() {
     String input = "Hello, World!";
     byte[] expected = input.getBytes(StandardCharsets.UTF_8);
-    byte[] actual = TokenHandler.toBytes(input);
+    byte[] actual = TokenHandler.getTokenHandlerInstance().toBytes(input);
     assertArrayEquals(expected, actual);
   }
 
   @Test
   public void testToBytesWithNullInput() {
-    assertThrows(NullPointerException.class, () -> TokenHandler.toBytes(null));
-  }
-
-  @Test
-  public void testExtractResponseBodyAsString() throws IOException {
-    CloseableHttpResponse mockResponse = Mockito.mock(CloseableHttpResponse.class);
-    InputStream mockInputStream =
-        new ByteArrayInputStream("mockResponse".getBytes(StandardCharsets.UTF_8));
-    when(mockResponse.getEntity()).thenReturn(new InputStreamEntity(mockInputStream));
-
-    String result = TokenHandler.extractResponseBodyAsString(mockResponse);
-    assertEquals("mockResponse", result);
+    assertThrows(
+        NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toBytes(null));
   }
 }
