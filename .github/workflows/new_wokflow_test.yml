@@ -1,0 +1,25 @@
+name: Check Release Branch Names
+
+on:
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  check_release_branches:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: List Release branches
+      run: |
+        # Fetch all branches
+        branches=$(git branch -r | grep 'origin/Release')
+        
+        # Check if any branches were found
+        if [ -n "$branches" ]; then
+          echo "Branches starting with 'Release':"
+          echo "$branches"
+        else
+          echo "No branches starting with 'Release' found."
+        fi
