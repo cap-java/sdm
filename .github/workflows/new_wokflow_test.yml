@@ -26,21 +26,17 @@ jobs:
       - name: Get latest SAPUI5 version
         id: get_latest_version
         run: |
-          # The command you provided to fetch the latest version.
-          # We store the output in an environment variable.
           LATEST_VERSION=$(curl -s "https://sapui5.hana.ondemand.com/resources/sap-ui-version.json" | grep "version" | head -n 1 | awk '{print $2}' | tr -d '", ')
           
-          # Set the output for the next steps to use.
           echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
           echo "Latest SAPUI5 version found: $LATEST_VERSION"
 
       - name: Get current version from file
         id: get_current_version
         run: |
-          # The existing version is extracted using a combination of grep and sed for broader compatibility.
+          
           CURRENT_VERSION=$(grep 'sap-ui-core' cap-notebook/demoapp/app/index.html | sed -e 's/.*hana.ondemand.com\///' -e 's/\/resources.*//')
           
-          # Set the output for the next steps to use.
           echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Current SAPUI5 version in file: $CURRENT_VERSION"
 
@@ -51,17 +47,14 @@ jobs:
         run: |
           echo "A newer version of SAPUI5 is available. Updating..."
           
-          # Use sed to find and replace the old version with the new one.
           sed -i "s|${{ steps.get_current_version.outputs.current_version }}|${{ steps.get_latest_version.outputs.latest_version }}|g" cap-notebook/demoapp/app/index.html
           
           echo "Update successful."
 
       - name: Create Pull Request
-        # This step only runs if the 'update_version_file' step was successful (i.e., versions were different).
         if: steps.update_version_file.outcome == 'success'
         uses: peter-evans/create-pull-request@v4
         with:
-          # A token is automatically provided for the workflow.
           token: ${{ secrets.GIT_TOKEN }}
           commit-message: 'chore: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
           title: 'Automated: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
