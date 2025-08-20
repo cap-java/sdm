@@ -1,36 +1,28 @@
-# This workflow automates checking for the latest SAPUI5 version
-# and updating the `index.html` file if a newer version is available.
 
 name: Daily SAPUI5 Version Update
 
 on:
   schedule:
-    # This runs at 8 AM UTC every day. You can change the time as needed.
     - cron: '0 8 * * *'
   workflow_dispatch:
-    # This allows you to manually run the workflow from the GitHub UI.
 
 jobs:
   update-version:
-    # The name of the job
     name: Check and Update SAPUI5 Version
-    
-    # The runner environment
     runs-on: ubuntu-latest
 
-    # Permissions needed for the create-pull-request action
     permissions:
       contents: write
       pull-requests: write
 
     steps:
-      # Step 1: Checkout the repository.
+  
       - name: Checkout the develop_deploy branch
         uses: actions/checkout@v3
         with:
           ref: develop_deploy
 
-      # Step 2: Get the latest SAPUI5 version from the CDN.
+    
       - name: Get latest SAPUI5 version
         id: get_latest_version
         run: |
@@ -42,7 +34,6 @@ jobs:
           echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
           echo "Latest SAPUI5 version found: $LATEST_VERSION"
 
-      # Step 3: Check the existing version in the index.html file.
       - name: Get current version from file
         id: get_current_version
         run: |
@@ -53,11 +44,9 @@ jobs:
           echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Current SAPUI5 version in file: $CURRENT_VERSION"
 
-      # Step 4: Compare the versions and update if necessary.
       - name: Compare and update version
         id: update_version_file
-        # This condition checks if the latest version is lexicographically
-        # greater than the current version. This works for semantic versioning.
+    
         if: steps.get_latest_version.outputs.latest_version > steps.get_current_version.outputs.current_version
         run: |
           echo "A newer version of SAPUI5 is available. Updating..."
@@ -66,20 +55,3 @@ jobs:
           sed -i "s|${{ steps.get_current_version.outputs.current_version }}|${{ steps.get_latest_version.outputs.latest_version }}|g" cap-notebook/demoapp/app/index.html
           
           echo "Update successful."
-
-      # Step 5: Create a new branch and a pull request.
-      - name: Create Pull Request
-        # This step only runs if the 'update_version_file' step was successful (i.e., versions were different).
-        if: steps.update_version_file.outcome == 'success'
-        uses: peter-evans/create-pull-request@v4
-        with:
-          # A token is automatically provided for the workflow.
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
-          title: 'Automated: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
-          body: |
-            This is an automated pull request to update the SAPUI5 version in `index.html`.
-            - Current Version: ${{ steps.get_current_version.outputs.current_version }}
-            - Latest Version: ${{ steps.get_latest_version.outputs.latest_version }}
-          branch: 'update-sapui5-version'
-          base: develop_deploy
