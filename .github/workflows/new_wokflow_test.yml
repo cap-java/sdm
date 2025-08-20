@@ -62,7 +62,7 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           # A token is automatically provided for the workflow.
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN }}
           commit-message: 'chore: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
           title: 'Automated: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
           body: |
