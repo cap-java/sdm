@@ -10,7 +10,6 @@ import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.*;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
-
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
 import com.sap.cds.services.draft.DraftService;
@@ -75,8 +74,13 @@ public class Registration implements CdsRuntimeConfiguration {
     DocumentUploadService documentService =
         new DocumentUploadService(binding, connectionPool, tokenHandlerInstance);
     configurer.eventHandler(buildReadHandler());
-        configurer.eventHandler(
-        new SDMServiceGenericHandler(persistenceService, sdmService, draftServiceList,tokenHandlerInstance,dbQueryInstance));
+    configurer.eventHandler(
+        new SDMServiceGenericHandler(
+            persistenceService,
+            sdmService,
+            draftServiceList,
+            tokenHandlerInstance,
+            dbQueryInstance));
     configurer.eventHandler(
         new SDMCreateAttachmentsHandler(
             persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));

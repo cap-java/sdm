@@ -40,7 +40,7 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
-  public  static CmisDocument getObjectIdForAttachmentID(
+  public CmisDocument getObjectIdForAttachmentID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity)
@@ -107,7 +107,7 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  private static String getIconforMimeType(String mimeType) {
+  private String getIconforMimeType(String mimeType) {
     String type = "sap-icon://document";
     if ((mimeType.contains("vnd.ms-excel")
         || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet")))
@@ -172,8 +172,6 @@ public class DBQuery {
     }
     return cmisDocuments;
   }
-
-
 
   public Map<String, String> getPropertiesForID(
       CdsEntity attachmentEntity,

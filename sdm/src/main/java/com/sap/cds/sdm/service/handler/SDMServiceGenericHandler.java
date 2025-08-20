@@ -41,11 +41,13 @@ public class SDMServiceGenericHandler implements EventHandler {
   public SDMServiceGenericHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
-      List<DraftService> draftService,TokenHandler tokenHandler,DBQuery dbQuery) {
+      List<DraftService> draftService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.draftService = draftService;
-    this.tokenHandler =tokenHandler;
+    this.tokenHandler = tokenHandler;
     this.dbQuery = dbQuery;
   }
 
@@ -77,7 +79,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     // get the objectId against the Id
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
-        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+        dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     JSONObject jsonObject =
@@ -98,7 +100,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     // get the objectId against the Id
     String ID = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
-        DBQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+        dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
       context.setUrl(cmisDocument.getUrl());
     } else {

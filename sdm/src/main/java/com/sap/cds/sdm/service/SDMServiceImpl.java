@@ -56,8 +56,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
+  public JSONObject createDocument(CmisDocument cmisDocument, SDMCredentials sdmCredentials) {
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
@@ -671,8 +670,9 @@ public class SDMServiceImpl implements SDMService {
 
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
+    }
+  }
 
-    }}
   @Override
   public List<String> copyAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)

@@ -7,6 +7,7 @@ public class SDMConstants {
   private SDMConstants() {
     // Doesn't do anything
   }
+
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
