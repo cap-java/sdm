@@ -41,6 +41,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          # The script is now saved to a file and then executed with 'node'.
+          # This is the correct way to run a Node.js script in a GitHub Action.
+          cat <<EOF > gemini-reviewer.js
           const { context, getOctokit } = require('@actions/github');
           const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -110,3 +113,7 @@ jobs:
           }
 
           run();
+          EOF
+          
+          # Execute the script using node.
+          node gemini-reviewer.js
