@@ -41,34 +41,72 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # This script is a placeholder. You would replace it with your
-          # actual JavaScript code to fetch PR/issue data, call the Gemini API,
-          # and post a comment.
-          echo "Running Gemini PR and Issue Reviewer..."
-          
-          # Placeholder for the actual script logic.
-          # Here's what the script would conceptually do:
-          # 1. Get the GitHub context (PR or issue data) using @actions/github.
-          #    const { context, getOctokit } = require('@actions/github');
-          #    const issueNumber = context.payload.issue.number;
-          #    const octokit = getOctokit(process.env.GITHUB_TOKEN);
-          #
-          # 2. Extract the content to be reviewed (e.g., PR diff, issue body).
-          #
-          # 3. Call the Gemini API with the content and a prompt.
-          #    const { GoogleGenerativeAI } = require('@google/generative-ai');
-          #    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          #    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-          #    const prompt = `Review this code: ${prDiff}`;
-          #    const result = await model.generateContent(prompt);
-          #    const reviewComment = result.response.text();
-          #
-          # 4. Post the Gemini's response as a comment on the PR or issue.
-          #    await octokit.rest.issues.createComment({
-          #        owner: context.repo.owner,
-          #        repo: context.repo.repo,
-          #        issue_number: issueNumber,
-          #        body: reviewComment
-          #    });
-          
-          echo "Review complete."
+          const { context, getOctokit } = require('@actions/github');
+          const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+          async function run() {
+            try {
+              const octokit = getOctokit(process.env.GITHUB_TOKEN);
+              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+              const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+              let contentToReview = '';
+              let issueNumber = 0;
+              let commentBody = '';
+
+              if (context.eventName === 'pull_request') {
+                issueNumber = context.payload.pull_request.number;
+                const pr = await octokit.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: issueNumber,
+                });
+                const prDiff = await octokit.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: issueNumber,
+                  mediaType: { format: 'diff' }
+                });
+
+                contentToReview = prDiff.data;
+                const prompt = `Review the following code diff for best practices, potential bugs, and provide a summary of changes.
+                
+                Code Diff:
+                ${contentToReview}
+                `;
+                
+                const result = await model.generateContent(prompt);
+                commentBody = result.response.text();
+
+              } else if (context.eventName === 'issues') {
+                issueNumber = context.payload.issue.number;
+                contentToReview = context.payload.issue.body;
+                const prompt = `Review the following issue description and provide an initial analysis and potential solution.
+                
+                Issue:
+                ${contentToReview}
+                `;
+
+                const result = await model.generateContent(prompt);
+                commentBody = result.response.text();
+              }
+
+              if (commentBody) {
+                await octokit.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: `## Gemini Automated Review\n\n${commentBody}`
+                });
+                console.log('Gemini review comment posted successfully.');
+              } else {
+                console.log('No content to review or API response was empty.');
+              }
+
+            } catch (error) {
+              console.error(`An error occurred: ${error.message}`);
+              throw error;
+            }
+          }
+
+          run();
