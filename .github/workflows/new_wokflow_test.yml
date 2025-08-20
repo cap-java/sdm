@@ -3,7 +3,7 @@ name: Daily SAPUI5 Version Update
 
 on:
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '45 11 * * *'
   workflow_dispatch:
 
 jobs:
