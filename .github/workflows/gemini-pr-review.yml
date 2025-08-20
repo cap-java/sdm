@@ -72,11 +72,11 @@ jobs:
                 });
 
                 contentToReview = prDiff.data;
-                const prompt = `Review the following code diff for best practices, potential bugs, and provide a summary of changes.
+                const prompt = \`Review the following code diff for best practices, potential bugs, and provide a summary of changes.
                 
                 Code Diff:
-                ${contentToReview}
-                `;
+                \${contentToReview}
+                \`;
                 
                 const result = await model.generateContent(prompt);
                 commentBody = result.response.text();
@@ -84,11 +84,11 @@ jobs:
               } else if (context.eventName === 'issues') {
                 issueNumber = context.payload.issue.number;
                 contentToReview = context.payload.issue.body;
-                const prompt = `Review the following issue description and provide an initial analysis and potential solution.
+                const prompt = \`Review the following issue description and provide an initial analysis and potential solution.
                 
                 Issue:
-                ${contentToReview}
-                `;
+                \${contentToReview}
+                \`;
 
                 const result = await model.generateContent(prompt);
                 commentBody = result.response.text();
@@ -99,7 +99,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: issueNumber,
-                  body: `## Gemini Automated Review\n\n${commentBody}`
+                  body: \`## Gemini Automated Review\n\n\${commentBody}\`
                 });
                 console.log('Gemini review comment posted successfully.');
               } else {
@@ -107,7 +107,7 @@ jobs:
               }
 
             } catch (error) {
-              console.error(`An error occurred: ${error.message}`);
+              console.error(\`An error occurred: \${error.message}\`);
               throw error;
             }
           }
