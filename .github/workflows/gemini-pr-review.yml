@@ -51,7 +51,7 @@ jobs:
             try {
               const octokit = getOctokit(process.env.GITHUB_TOKEN);
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
               let contentToReview = '';
               let issueNumber = 0;
