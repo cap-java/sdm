@@ -17,10 +17,10 @@ jobs:
 
     steps:
   
-      - name: Checkout the develop_deploy branch
+      - name: Checkout the develop_deploy_ui5 branch
         uses: actions/checkout@v3
         with:
-          ref: develop_deploy
+          ref: develop_deploy_ui5
 
     
       - name: Get latest SAPUI5 version
