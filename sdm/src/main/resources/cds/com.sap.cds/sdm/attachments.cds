@@ -8,7 +8,9 @@ extend aspect Attachments with {
     linkUrl: String;
     type: String @(UI: {IsImageURL: true});
 }
-
+extend aspect Attachments with actions{
+action changelog() returns String;
+}
 annotate Attachments with @UI: {
      HeaderInfo: {
          $Type         : 'UI.HeaderInfoType',
