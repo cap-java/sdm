@@ -13,10 +13,15 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Virus scanning : Provides the capability to support virus scan for virus scan enabled repositories.
 - Draft functionality : Provides the capability of working with draft attachments.
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
+- Custom properties : Provides the capability to define custom properties for attachments.
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
+- Create link: Provides the capability to create a link type of attachment.
+- Open link: Provides the capability the open link.
+- Rename link: Provides the capability to rename links.
+- Delete link: Provides the capability to remove links.
 
 ## Table of Contents
 
@@ -30,6 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
+- [Support for Link type attachments](#support-for-link-type-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -555,6 +561,183 @@ This plugin provides capability to copy attachments from one entity to another. 
       "objectIds": "abc","xyz"
    }
    ```
+
+## Support for link type attachments
+
+This plugin provides the capability to create, open, rename and delete attachments of link type. 
+
+### Steps to Enable Create Link Feature in CAP Application
+
+1. **Add the `createLink` action to application's service definition** 
+   
+   See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L12) from a sample Bookshop app:
+
+   ```cds
+   action createLink(
+         in:many $self,
+         @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+         @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$'
+         @Common.Label:'URL' url: String @UI.Placeholder: 'Enter the link URL'
+      ); 
+   ```
+   - Purpose: Enables users to create links with name and URL.
+   - Validation: Ensures only valid HTTP(S) URLs are accepted.
+   - UI Support: Provides labels and placeholders for better user experience.
+
+### Steps to Enable Row-Press for Open Link
+
+1. **Add the `openAttachment` action to application's service definition**
+   
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app.
+
+   ```cds
+   action openAttachment() returns String;
+   ```
+
+2. **Add a custom controller extension** 
+
+   In webapp/controller/custom.controller.js, copy and paste below content.
+   
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
+   
+   ```js
+   sap.ui.define(
+      [
+      "sap/ui/core/mvc/ControllerExtension",
+      "sap/m/library"
+      ], 
+      function (ControllerExtension,library) {
+         "use strict";
+      
+         return ControllerExtension.extend("books.controller.custom", {
+               onRowPress: function(oContext) {
+                  this.base.editFlow
+                  .invokeAction("AdminService.openAttachment", {
+                     contexts: oContext.getParameter("bindingContext")
+                  })
+                  .then(function (res) {
+                     let odataurl = "";
+                     if(res.getObject().value == "None") {
+                           const lastSlashIndex = res.oModel.getServiceUrl().lastIndexOf('/');
+                           let str = res.oModel.getServiceUrl();
+                           if (lastSlashIndex !== -1) {
+                              str = str.substring(0, lastSlashIndex)  + str.substring(lastSlashIndex + 1);
+                           }
+                           odataurl = str+res.oBinding.oContext.sPath+"/content";
+                     } else {
+                           odataurl = res.getObject().value;
+                     }
+                     library.URLHelper.redirect(odataurl, true);
+                              
+                  });
+               }
+         });
+      }
+   );
+   ```
+   
+   - Replace `books` in `ControllerExtension.extend` with the `SAPUI5.Component` name from your `app/appconfig/fioriSandboxConfig.json` file. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86).
+   - Replace `AdminService` in `invokeAction("AdminService.openAttachment")` with the name of your service.
+
+3. **Add controlConfiguration for Row Press**
+
+   In your `sap.ui5.routing.targets` section, under the relevant Object Page (e.g., `BooksDetails`), add or extend the `controlConfiguration` for the facet you want to enhance by copy and pasting below content:
+
+   ```json
+   "controlConfiguration": {
+      "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+         "tableSettings": {
+            "type": "ResponsiveTable",
+            "selectionMode": "Auto",
+            "rowPress": ".extension.books.controller.custom.onRowPress"
+         }
+      }
+   }
+   ```
+   - Replace `attachments` with your entity’s facet name as needed.
+   - Repeat for other facets's if required.
+   - Replace `books` in `"rowPress": ".extension.books.controller.custom.onRowPress"` with the SAPUI5.Component name from your 
+   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+
+4. **Register the Custom Controller Extension**
+   
+   In the root of your `sap.ui5` section, add or extend the `extends` property to register your custom controller by copy and pasting below content:
+
+   ```json
+   "extends": {
+      "extensions": {
+         "sap.ui.controllerExtensions": {
+            "sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList": {
+            "controllerName": "books.controller.custom"
+            }
+         }
+      }
+   }
+   ```
+   - Replace `books` in `"sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList"` with the SAPUI5.Component name from your 
+   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+   - Replace `BooksDetailsList` in `"sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList"` with id of the relevant Object Page (e.g., BooksDetails). Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L109) from a sample Bookshop app.
+   - Replace `books` in `"controllerName": "books.controller.custom"` with the SAPUI5.Component name from your 
+   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+
+### UI Annotation Setup**
+
+To enable Create and Link button on the toolbar, add the following annotation block to your app/common.cds file:
+
+```cds
+annotate my.Books.attachments with @UI: {
+  HeaderInfo: {
+    $Type         : 'UI.HeaderInfoType',
+    TypeName      : '{i18n>Attachment}',
+    TypeNamePlural: '{i18n>Attachments}',
+  },
+  LineItem  : [
+    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {
+      $Type  : 'UI.DataFieldForActionGroup',
+      ID     : 'TableActionGroup',
+      Label  : 'Create',
+      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
+      Actions: [
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Link',
+          Action: 'AdminService.createLink',
+        }
+      ]
+    },
+  ],
+} 
+{
+  note       @(title: '{i18n>Note}');
+  type       @(title: '{i18n>Type}');
+  linkUrl       @(title: '{i18n>LinkURL}');
+  fileName  @(title: '{i18n>Filename}');
+  modifiedAt @(odata.etag: null);
+  content
+    @Core.ContentDisposition: { Filename: fileName }
+    @(title: '{i18n>Attachment}');
+  folderId @UI.Hidden;
+  repositoryId  @UI.Hidden ;
+  objectId  @UI.Hidden ;
+  mimeType @UI.Hidden;
+  status @UI.Hidden;
+}
+annotate Attachments with @Common: {SideEffects #ContentChanged: {
+  SourceProperties: [content],
+  TargetProperties: ['status'],
+  TargetEntities : [Books.attachments]
+}}{};
+```
+
+- Replace `my.Books.attachments` with the correct path for your entity and element (for example, `my.YourEntity.yourElement`) where you have defined `composition of many Attachments`.
+- Replace `AdminService` in `Action: 'AdminService.createLink'` with the name of your service.
+- Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
 ## Known Restrictions
 

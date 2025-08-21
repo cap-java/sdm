@@ -100,11 +100,10 @@ public class SDMServiceGenericHandler implements EventHandler {
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
-      context.setUrl(cmisDocument.getUrl());
+      context.setResult(cmisDocument.getUrl());
     } else {
-      cmisDocument.setUrl("None");
+      context.setResult("None");
     }
-    context.setResult(cmisDocument.getUrl());
   }
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {

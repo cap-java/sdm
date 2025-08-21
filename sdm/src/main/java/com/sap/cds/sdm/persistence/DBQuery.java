@@ -96,7 +96,7 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
-    String icon = getIconforMimeType(cmisDocument.getMimeType());
+    String icon = getIconForMimeType(cmisDocument.getMimeType());
     updatedFields.put("type", icon);
 
     CqnUpdate updateQuery =
@@ -106,29 +106,64 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  private static String getIconforMimeType(String mimeType) {
-    String type = "sap-icon://document";
-    if ((mimeType.contains("vnd.ms-excel")
-        || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet")))
-      type = "sap-icon://excel-attachment";
-    else if ((mimeType.contains("image"))) {
-      type = "sap-icon://attachment-photo";
-    } else if ((mimeType.contains("text"))) {
-      type = "sap-icon://attachment-text-file";
-    } else if ((mimeType.contains("pdf"))) {
-      type = "sap-icon://pdf-attachment";
-    } else if ((mimeType.contains("powerpoint")) || (mimeType.contains("presentation"))) {
-      type = "sap-icon://ppt-attachment";
-    } else if ((mimeType.contains("video"))) {
-      type = "sap-icon://attachment-video";
-    } else if ((mimeType.contains("audio"))) {
-      type = "sap-icon://attachment-audio";
-    } else if ((mimeType.contains("zip"))) {
-      type = " sap-icon://attachment-zip-file";
-    } else if ((mimeType.contains("html"))) {
-      type = "sap-icon://attachment-html";
+  private static String getIconForMimeType(String mimeType) {
+    if (isExcel(mimeType)) {
+      return "sap-icon://excel-attachment";
+    } else if (isImage(mimeType)) {
+      return "sap-icon://attachment-photo";
+    } else if (isText(mimeType)) {
+      return "sap-icon://attachment-text-file";
+    } else if (isPdf(mimeType)) {
+      return "sap-icon://pdf-attachment";
+    } else if (isPowerPoint(mimeType)) {
+      return "sap-icon://ppt-attachment";
+    } else if (isVideo(mimeType)) {
+      return "sap-icon://attachment-video";
+    } else if (isAudio(mimeType)) {
+      return "sap-icon://attachment-audio";
+    } else if (isZip(mimeType)) {
+      return "sap-icon://attachment-zip-file";
+    } else if (isHtml(mimeType)) {
+      return "sap-icon://attachment-html";
     }
-    return type;
+    return "sap-icon://document";
+  }
+
+  private static boolean isExcel(String mimeType) {
+    return mimeType.contains("vnd.ms-excel")
+        || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+
+  private static boolean isImage(String mimeType) {
+    return mimeType.contains("image");
+  }
+
+  private static boolean isText(String mimeType) {
+    return mimeType.contains("text");
+  }
+
+  private static boolean isPdf(String mimeType) {
+    return mimeType.contains("pdf");
+  }
+
+  private static boolean isPowerPoint(String mimeType) {
+    return mimeType.contains("powerpoint") || mimeType.contains("presentation");
+  }
+
+  private static boolean isVideo(String mimeType) {
+    return mimeType.contains("video");
+  }
+
+  private static boolean isAudio(String mimeType) {
+    return mimeType.contains("audio");
+  }
+
+  private static boolean isZip(String mimeType) {
+    return mimeType.contains("zip");
+  }
+
+  private static boolean isHtml(String mimeType) {
+    return mimeType.contains("html");
   }
 
   public List<CmisDocument> getAttachmentsForFolder(

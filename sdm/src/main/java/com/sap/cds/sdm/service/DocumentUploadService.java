@@ -53,7 +53,7 @@ public class DocumentUploadService {
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     try {
-      if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+      if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
         logger.info("LinkType detected, uploading as single chunk");
         return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       }

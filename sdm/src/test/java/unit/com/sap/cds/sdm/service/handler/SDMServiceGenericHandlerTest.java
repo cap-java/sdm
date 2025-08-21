@@ -755,7 +755,6 @@ public class SDMServiceGenericHandlerTest {
     sdmServiceGenericHandler.openAttachment(context);
 
     // Assert
-    verify(context).setUrl("http://shortcut-url");
     verify(context).setResult("http://shortcut-url");
   }
 
@@ -802,7 +801,6 @@ public class SDMServiceGenericHandlerTest {
     sdmServiceGenericHandler.openAttachment(context);
 
     // Assert
-    verify(context, never()).setUrl(anyString());
     verify(context).setResult("None");
   }
 
@@ -841,7 +839,6 @@ public class SDMServiceGenericHandlerTest {
     sdmServiceGenericHandler.openAttachment(context);
 
     // Assert
-    verify(context, never()).setUrl(anyString());
     verify(context).setResult("None");
   }
 }
