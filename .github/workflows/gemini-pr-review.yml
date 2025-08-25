@@ -33,14 +33,15 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        # In a real-world scenario, you might have a package.json
-        # and would install dependencies here. For this script,
-        # we're just installing the required packages.
         run: |
           npm install @actions/github @google/generative-ai
 
       - name: Run Gemini Reviewer Script
-        # Corrected: Use 'node -e' to explicitly execute the script with Node.js.
+        # Pass the GitHub Token and Gemini API key as environment variables
+        # so the script can access them.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           node -e '
           const { context, getOctokit } = require("@actions/github");
@@ -75,7 +76,7 @@ jobs:
                 owner,
                 repo,
                 path,
-                ref, // ref is the branch name (e.g., 'master' or 'main')
+                ref, // ref is the branch name (e.g., "master" or "main")
               });
               // Decode the Base64 content to a string.
               return Buffer.from(data.content, "base64").toString("utf-8");
