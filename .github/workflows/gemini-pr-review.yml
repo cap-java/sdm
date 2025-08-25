@@ -40,12 +40,11 @@ jobs:
           npm install @actions/github @google/generative-ai
 
       - name: Run Gemini Reviewer Script
-        # This is where the magic happens! We use the pipe (|)
-        # to tell YAML that the following content is a multi-line string.
+        # Corrected: Use 'node -e' to explicitly execute the script with Node.js.
         run: |
-          // gemini-reviewer.js
-          const { context, getOctokit } = require('@actions/github');
-          const { GoogleGenerativeAI } = require('@google/generative-ai');
+          node -e '
+          const { context, getOctokit } = require("@actions/github");
+          const { GoogleGenerativeAI } = require("@google/generative-ai");
           
           // Function to handle exponential backoff for API calls.
           function sleep(ms) {
@@ -66,7 +65,7 @@ jobs:
                 }
               }
             }
-            throw new Error('Max retries exceeded.');
+            throw new Error("Max retries exceeded.");
           }
           
           // Function to get the file content from a pull request.
@@ -79,7 +78,7 @@ jobs:
                 ref, // ref is the branch name (e.g., 'master' or 'main')
               });
               // Decode the Base64 content to a string.
-              return Buffer.from(data.content, 'base64').toString('utf-8');
+              return Buffer.from(data.content, "base64").toString("utf-8");
             } catch (error) {
               console.error(`Error fetching file content for ${path}: ${error.message}`);
               return null;
@@ -92,7 +91,7 @@ jobs:
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
               const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
           
-              if (context.eventName === 'pull_request') {
+              if (context.eventName === "pull_request") {
                 const pr = context.payload.pull_request;
                 const issueNumber = pr.number;
                 const { owner, repo } = context.repo;
@@ -109,7 +108,7 @@ jobs:
                 const comments = [];
           
                 for (const file of files.data) {
-                  if (file.status === 'added' || file.status === 'modified') {
+                  if (file.status === "added" || file.status === "modified") {
                     console.log(`Reviewing file: ${file.filename}`);
           
                     // Create a detailed prompt for each file.
@@ -150,21 +149,21 @@ jobs:
                     owner,
                     repo,
                     pull_number: issueNumber,
-                    event: 'COMMENT', // 'COMMENT' posts comments without approving or requesting changes
+                    event: "COMMENT", // "COMMENT" posts comments without approving or requesting changes
                     comments,
                   });
-                  console.log('Gemini review comments posted successfully.');
+                  console.log("Gemini review comments posted successfully.");
                 } else {
                   await octokit.rest.issues.createComment({
                     owner,
                     repo,
                     issue_number: issueNumber,
-                    body: `## Gemini Automated Review\n\nLooks good! I found no immediate issues with this pull request.`
+                    body: "## Gemini Automated Review\n\nLooks good! I found no immediate issues with this pull request."
                   });
-                  console.log('Gemini review: No issues found. A final summary comment was posted.');
+                  console.log("Gemini review: No issues found. A final summary comment was posted.");
                 }
           
-              } else if (context.eventName === 'issues') {
+              } else if (context.eventName === "issues") {
                 const issue = context.payload.issue;
                 const issueNumber = issue.number;
                 const { owner, repo } = context.repo;
@@ -195,9 +194,9 @@ jobs:
                     issue_number: issueNumber,
                     body: `## Gemini Automated Review\n\n${commentBody}`
                   });
-                  console.log('Gemini review comment posted successfully.');
+                  console.log("Gemini review comment posted successfully.");
                 } else {
-                  console.log('No content to review or API response was empty.');
+                  console.log("No content to review or API response was empty.");
                 }
               }
           
@@ -208,3 +207,4 @@ jobs:
           }
           
           run();
+          '
