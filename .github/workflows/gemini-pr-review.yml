@@ -1,107 +1,210 @@
-name: Gemini PR Reviewer
+# .github/workflows/gemini-reviewer.yml
+name: Gemini AI Code & Issue Reviewer
 
 on:
   pull_request:
-    types: [opened, reopened, edited, synchronize]
+    types:
+      - opened
+      - reopened
+      - synchronize
   issues:
-    types: [opened, reopened]
+    types:
+      - opened
+      - reopened
 
 jobs:
   review:
+    # Ensure this job only runs if a `GITHUB_TOKEN` is available
+    # and the event is from a pull request or issue.
+    if: github.event_name == 'pull_request' || github.event_name == 'issues'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       issues: write
-
+    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: npm install @actions/github @google/generative-ai
-      - name: Run Gemini Reviewer
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        # In a real-world scenario, you might have a package.json
+        # and would install dependencies here. For this script,
+        # we're just installing the required packages.
         run: |
-          # The script is now saved to a file and then executed with 'node'.
-          # This is the correct way to run a Node.js script in a GitHub Action.
-          cat <<EOF > gemini-reviewer.js
+          npm install @actions/github @google/generative-ai
+
+      - name: Run Gemini Reviewer Script
+        # This is where the magic happens! We use the pipe (|)
+        # to tell YAML that the following content is a multi-line string.
+        run: |
+          // gemini-reviewer.js
           const { context, getOctokit } = require('@actions/github');
           const { GoogleGenerativeAI } = require('@google/generative-ai');
-
+          
+          // Function to handle exponential backoff for API calls.
+          function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+          }
+          
+          async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
+            for (let i = 0; i < maxRetries; i++) {
+              try {
+                return await func();
+              } catch (error) {
+                if (error.status === 429) {
+                  console.warn(`Rate limit exceeded. Retrying in ${initialDelay}ms...`);
+                  await sleep(initialDelay);
+                  initialDelay *= 2; // Exponential backoff
+                } else {
+                  throw error;
+                }
+              }
+            }
+            throw new Error('Max retries exceeded.');
+          }
+          
+          // Function to get the file content from a pull request.
+          async function getFileContent(octokit, owner, repo, path, ref) {
+            try {
+              const { data } = await octokit.rest.repos.getContent({
+                owner,
+                repo,
+                path,
+                ref, // ref is the branch name (e.g., 'master' or 'main')
+              });
+              // Decode the Base64 content to a string.
+              return Buffer.from(data.content, 'base64').toString('utf-8');
+            } catch (error) {
+              console.error(`Error fetching file content for ${path}: ${error.message}`);
+              return null;
+            }
+          }
+          
           async function run() {
             try {
               const octokit = getOctokit(process.env.GITHUB_TOKEN);
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
               const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-              let contentToReview = '';
-              let issueNumber = 0;
-              let commentBody = '';
-
+          
               if (context.eventName === 'pull_request') {
-                issueNumber = context.payload.pull_request.number;
-                const pr = await octokit.rest.pulls.get({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
+                const pr = context.payload.pull_request;
+                const issueNumber = pr.number;
+                const { owner, repo } = context.repo;
+          
+                console.log(`Starting review for PR #${issueNumber}...`);
+                
+                // Get the list of files changed in the PR
+                const files = await octokit.rest.pulls.listFiles({
+                  owner,
+                  repo,
                   pull_number: issueNumber,
                 });
-                const prDiff = await octokit.rest.pulls.get({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: issueNumber,
-                  mediaType: { format: 'diff' }
-                });
-
-                contentToReview = prDiff.data;
-                const prompt = \`Review the following code diff for best practices, potential bugs, and provide a summary of changes.
-                
-                Code Diff:
-                \${contentToReview}
-                \`;
-                
-                const result = await model.generateContent(prompt);
-                commentBody = result.response.text();
-
+          
+                const comments = [];
+          
+                for (const file of files.data) {
+                  if (file.status === 'added' || file.status === 'modified') {
+                    console.log(`Reviewing file: ${file.filename}`);
+          
+                    // Create a detailed prompt for each file.
+                    const prompt = `Review the following code for best practices, potential bugs, and provide suggestions for improvement.
+                      
+                      File: ${file.filename}
+                      Status: ${file.status}
+                      
+                      Code Diff:
+                      \`\`\`diff
+                      ${file.patch}
+                      \`\`\`
+                      
+                      Provide a short, specific review. Focus on one or two key points. Do not provide a general summary.
+                      If there are no issues, just say "Looks good."
+                    `;
+          
+                    // Generate the review comment.
+                    const result = await fetchWithBackoff(() => model.generateContent(prompt));
+                    const reviewComment = result.response.text();
+          
+                    // Add a comment to the list for the PR review.
+                    if (reviewComment && reviewComment !== "Looks good.") {
+                      comments.push({
+                        path: file.filename,
+                        body: reviewComment,
+                        // The position is relative to the start of the diff hunk. We use a simple method here.
+                        // For a more advanced approach, you would need to parse the diff patch.
+                        position: 1, 
+                      });
+                    }
+                  }
+                }
+          
+                // If there are any comments, create a PR review.
+                if (comments.length > 0) {
+                  await octokit.rest.pulls.createReview({
+                    owner,
+                    repo,
+                    pull_number: issueNumber,
+                    event: 'COMMENT', // 'COMMENT' posts comments without approving or requesting changes
+                    comments,
+                  });
+                  console.log('Gemini review comments posted successfully.');
+                } else {
+                  await octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `## Gemini Automated Review\n\nLooks good! I found no immediate issues with this pull request.`
+                  });
+                  console.log('Gemini review: No issues found. A final summary comment was posted.');
+                }
+          
               } else if (context.eventName === 'issues') {
-                issueNumber = context.payload.issue.number;
-                contentToReview = context.payload.issue.body;
-                const prompt = \`Review the following issue description and provide an initial analysis and potential solution.
+                const issue = context.payload.issue;
+                const issueNumber = issue.number;
+                const { owner, repo } = context.repo;
+          
+                console.log(`Starting analysis for Issue #${issueNumber}...`);
                 
-                Issue:
-                \${contentToReview}
-                \`;
-
-                const result = await model.generateContent(prompt);
-                commentBody = result.response.text();
+                const prompt = `Analyze the following issue description and provide a structured, helpful reply.
+                  
+                  Issue Title: ${issue.title}
+                  Issue Body:
+                  ${issue.body}
+                  
+                  Provide a response in Markdown format. The response should include:
+                  1. An acknowledgment of the issue.
+                  2. A clear summary of the problem.
+                  3. Potential root causes or areas to investigate.
+                  4. A proposed solution or next steps.
+                  5. Use code blocks for any code examples.
+                  `;
+          
+                const result = await fetchWithBackoff(() => model.generateContent(prompt));
+                const commentBody = result.response.text();
+          
+                if (commentBody) {
+                  await octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issueNumber,
+                    body: `## Gemini Automated Review\n\n${commentBody}`
+                  });
+                  console.log('Gemini review comment posted successfully.');
+                } else {
+                  console.log('No content to review or API response was empty.');
+                }
               }
-
-              if (commentBody) {
-                await octokit.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issueNumber,
-                  body: \`## Gemini Automated Review\n\n\${commentBody}\`
-                });
-                console.log('Gemini review comment posted successfully.');
-              } else {
-                console.log('No content to review or API response was empty.');
-              }
-
+          
             } catch (error) {
-              console.error(\`An error occurred: \${error.message}\`);
+              console.error(`An error occurred: ${error.message}`);
               throw error;
             }
           }
-
-          run();
-          EOF
           
-          # Execute the script using node.
-          node gemini-reviewer.js
+          run();
