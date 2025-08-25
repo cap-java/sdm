@@ -1,10 +1,6 @@
-# This workflow uses the Gemini API to review pull requests and issues.
-
 name: Gemini PR Reviewer
 
 on:
-  # This section defines when the workflow will run.
-  # We want it to run on new pull requests and when issues are opened.
   pull_request:
     types: [opened, reopened, edited, synchronize]
   issues:
@@ -13,9 +9,6 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
-    
-    # We need to grant permissions for the workflow to read the PR/issue
-    # and to write comments.
     permissions:
       contents: read
       pull-requests: write
@@ -24,9 +17,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
-      # This step will install the dependencies for our custom script.
-      # We will use a Node.js environment for simplicity.
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -34,8 +24,6 @@ jobs:
 
       - name: Install Dependencies
         run: npm install @actions/github @google/generative-ai
-
-      # This is the custom script that interacts with the Gemini API.
       - name: Run Gemini Reviewer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
