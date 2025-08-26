@@ -18,10 +18,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
-- Create link: Provides the capability to create a link type of attachment.
-- Open link: Provides the capability the open link.
-- Rename link: Provides the capability to rename links.
-- Delete link: Provides the capability to remove links.
+- Link as attachments: Provides the capability to support link or URL as attachments.
 
 ## Table of Contents
 
@@ -564,31 +561,15 @@ This plugin provides capability to copy attachments from one entity to another. 
 
 ## Support for link type attachments
 
-This plugin provides the capability to create, open, rename and delete attachments of link type. 
+> **Note:** Row-press is the new recommended approach for handling actions on attachment rows. With row-press enabled, the Attachments column will no longer appear as a separate action button. Instead, clicking on a row will automatically perform the appropriate action — opening a link or downloading a file, based on the attachment type.
 
-### Steps to Enable Create Link Feature in CAP Application
-
-1. **Add the `createLink` action to application's service definition** 
-   
-   See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L12) from a sample Bookshop app:
-
-   ```cds
-   action createLink(
-         in:many $self,
-         @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
-         @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$'
-         @Common.Label:'URL' url: String @UI.Placeholder: 'Enter the link URL'
-      ); 
-   ```
-   - Purpose: Enables users to create links with name and URL.
-   - Validation: Ensures only valid HTTP(S) URLs are accepted.
-   - UI Support: Provides labels and placeholders for better user experience.
+This plugin provides the capability to create, open, rename and delete attachments of link type.
 
 ### Steps to Enable Row-Press for Open Link
 
 1. **Add the `openAttachment` action to application's service definition**
    
-   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app.
+   See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L19) from a sample Bookshop app.
 
    ```cds
    action openAttachment() returns String;
@@ -641,7 +622,7 @@ This plugin provides the capability to create, open, rename and delete attachmen
 
 3. **Add controlConfiguration for Row Press**
 
-   In your `sap.ui5.routing.targets` section, under the relevant Object Page (e.g., `BooksDetails`), add or extend the `controlConfiguration` for the facet you want to enhance by copy and pasting below content:
+   In your `sap.ui5.routing.targets` section, under the relevant Object Page (e.g., `BooksDetails`), add or extend the `controlConfiguration` for the facet you want to enhance by copy and pasting below content. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L121)
 
    ```json
    "controlConfiguration": {
@@ -661,7 +642,7 @@ This plugin provides the capability to create, open, rename and delete attachmen
 
 4. **Register the Custom Controller Extension**
    
-   In the root of your `sap.ui5` section, add or extend the `extends` property to register your custom controller by copy and pasting below content:
+   In the root of your `sap.ui5` section, add or extend the `extends` property to register your custom controller by copy and pasting below content. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L159)
 
    ```json
    "extends": {
@@ -680,9 +661,31 @@ This plugin provides the capability to create, open, rename and delete attachmen
    - Replace `books` in `"controllerName": "books.controller.custom"` with the SAPUI5.Component name from your 
    `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
 
-### UI Annotation Setup**
+### Steps to Enable Create Link Feature in CAP Application
 
-To enable Create and Link button on the toolbar, add the following annotation block to your app/common.cds file:
+> **Note:** Enabling row-press for open link (see steps above) is a prerequisite for link support.
+
+1. **Add the `createLink` action to application's service definition** 
+   
+   See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L12) from a sample Bookshop app:
+
+   ```cds
+   action createLink(
+         in:many $self,
+         @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+         @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$'
+         @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+      ); 
+   ```
+   - Purpose: Enables users to create links with name and URL.
+   - Validation: Ensures only valid HTTP(S) URLs are accepted.
+   - UI Support: Provides labels and placeholders for better user experience.
+
+### UI Annotation Setup
+
+To enable the creation of links, you need to add a new button to the attachments table toolbar. This button will appear as a **menu button labeled "Create"** on the toolbar of the attachments table. When clicked, it will display a menu with the **"Link"** option, allowing users to create a new link-type attachment.
+
+Add the following annotation block to your app/common.cds file. See this [example](https://github.com/cap-java/sdm/blob/4288ce6f58bc415a171a9e0340fa075aeac835ff/cap-notebook/demoapp/app/common.cds#L60)
 
 ```cds
 annotate my.Books.attachments with @UI: {
