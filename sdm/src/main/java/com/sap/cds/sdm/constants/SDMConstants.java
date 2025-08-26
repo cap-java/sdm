@@ -53,6 +53,8 @@ public class SDMConstants {
   public static final int CHUNK_SIZE = 20 * 1024 * 1024; // 20MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
+  public static final String REPOSITORY_ALREADY_EXIST =
+      "Repository with name %s and id %s already exists. Skipping onboarding.";
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
