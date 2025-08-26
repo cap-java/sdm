@@ -78,7 +78,7 @@ public class SDMConstants {
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
   public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
-      "The following file(s) could not be updated because the filename(s) cannot be empty.";
+      "The file name cannot be empty or consist entirely of space characters. Enter a value.";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

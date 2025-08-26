@@ -539,9 +539,9 @@ class IntegrationTest_MultipleFacet {
       if (counter >= 2) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"The following file(s) could not be updated because the filename(s) cannot be empty.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"The following file(s) could not be updated because the filename(s) cannot be empty.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"The following file(s) could not be updated because the filename(s) cannot be empty.\",\"numericSeverity\":3}]";
+            "[{\"code\":\"<none>\",\"message\":\"The file name cannot be empty or consist entirely of space characters. Enter a value.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"The file name cannot be empty or consist entirely of space characters. Enter a value.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"The file name cannot be empty or consist entirely of space characters. Enter a value.\",\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
           counter = -1; // Reset counter for the next check

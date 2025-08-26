@@ -620,7 +620,7 @@ class IntegrationTest_SingleFacet {
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"The following file(s) could not be updated because the filename(s) cannot be empty.\","
+            "[{\"code\":\"<none>\",\"message\":\"The file name cannot be empty or consist entirely of space characters. Enter a value.\","
                 + "\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
