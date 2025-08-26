@@ -52,6 +52,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
     onboardingReq.setHeader("Content-Type", "application/json");
     try (var response = (CloseableHttpResponse) httpClient.execute(onboardingReq)) {
       String responseString = EntityUtils.toString(response.getEntity());
+      if ((responseString.contains(REPOSITORY_ID + " already exists"))
+          && response.getStatusLine().getStatusCode() == 409) {
+        return String.format(
+            SDMConstants.REPOSITORY_ALREADY_EXIST, repository.getDisplayName(), REPOSITORY_ID);
+      }
       JsonObject jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
       String repositoryId = jsonObject.get("id").getAsString();
       return String.format(
