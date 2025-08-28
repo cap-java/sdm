@@ -332,7 +332,7 @@ public class SDMUtils {
     }
   }
 
-  private static boolean isRelatedEntity(CdsEntity attachmentEntity, CdsEntity cdsEntity) {
+  public static boolean isRelatedEntity(CdsEntity attachmentEntity, CdsEntity cdsEntity) {
     String attachmentQualifiedName = attachmentEntity.getQualifiedName();
     return attachmentQualifiedName.contains(cdsEntity.getQualifiedName())
         && !attachmentQualifiedName.equals(cdsEntity.getQualifiedName());
