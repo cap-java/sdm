@@ -752,7 +752,7 @@ This plugin provides the capability to edit the URL of attachments of link type.
 
 1. **Add the `editLink` action to application's service definition** 
    
-   See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L12) from a sample Bookshop app:
+   See this [example](https://github.com/cap-java/sdm/blob/a1fc26f3aa92ffd4f9203d815f51107838d5f677/cap-notebook/demoapp/srv/admin-service.cds#L18) from a sample Bookshop app:
 
    ```cds
    action editLink(
