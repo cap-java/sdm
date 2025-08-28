@@ -6,7 +6,7 @@ extend aspect Attachments with {
     repositoryId : String ;
     objectId : String ;
     linkUrl : String;
-    type: String @(UI: {IsImageURL: true});
+    type : String @(UI: {IsImageURL: true});
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
