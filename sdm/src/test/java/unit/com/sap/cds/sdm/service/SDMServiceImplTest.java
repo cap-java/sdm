@@ -1603,7 +1603,38 @@ public class SDMServiceImplTest {
   }
 
   @Test
-  public void testEditLink() throws IOException {
+  public void testEditLink_technicalUserFlow() throws IOException {
+    String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId");
+    cmisDocument.setUrl("url");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, true);
+
+    JSONObject expectedResponse = new JSONObject();
+    expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
+    expectedResponse.put("status", "success");
+    assertEquals(expectedResponse.toString(), actualResponse.toString());
+  }
+
+  @Test
+  public void testEditLink_namedUserFlow() throws IOException {
     String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
 
     CmisDocument cmisDocument = new CmisDocument();
@@ -1624,7 +1655,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, true);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, false);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("message", "");
