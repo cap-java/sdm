@@ -10,10 +10,6 @@ public interface AttachmentReadContext extends EventContext {
     return (AttachmentReadContext) EventContext.create(AttachmentReadContext.class, null);
   }
 
-  String getUrl();
-
-  void setUrl(String var1);
-
   void setResult(String res);
 
   String getResult();
