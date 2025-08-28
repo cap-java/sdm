@@ -45,6 +45,8 @@ public class SDMConstants {
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
+  public static final String USER_NOT_AUTHORISED_ERROR_LINK =
+      "You do not have the required permissions to create links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
@@ -97,6 +99,26 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append("\nRename the files and try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String linkNameConstraintMessage(
+      List<String> fileNameWithRestrictedCharacters, String operation) {
+    // Create the base message
+    String prefixMessage =
+        "Link could not be %s. The following name(s) contain unsupported characters (/, \\). \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage, operation);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : fileNameWithRestrictedCharacters) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nRename the link and try again.");
     return bulletPoints.toString();
   }
 
