@@ -84,14 +84,31 @@ annotate my.Books.attachments with @UI: {
         {
           $Type : 'UI.DataFieldForAction',
           Label : 'Link',
-          Action: 'AdminService.createLink',
+          Action: 'AdminService.createLink'
         }
       ]
     },
     {
+      @UI.Hidden: {$edmJson: {
+          $If: [
+            { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
+            true,
+            {
+              $If: [
+                { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
+                true,
+                false
+              ]
+            }
+          ]
+        }
+      },
       $Type : 'UI.DataFieldForAction',
       Label : 'Edit Link',
-      Action: 'AdminService.editLink',           
+      Action: 'AdminService.editLink',
+      Inline: true,
+      IconUrl: 'sap-icon://edit',
+      @HTML5.CssDefaults: {width: '4%'}         
     }
   ],
 } 
@@ -115,12 +132,12 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 }}{};
 
 annotate my.Books.references with @UI: {
-    HeaderInfo: {
-        $Type         : 'UI.HeaderInfoType',
-        TypeName      : '{i18n>Attachment}',
-        TypeNamePlural: '{i18n>Attachments}',
-    },
-    LineItem  : [
+  HeaderInfo: {
+    $Type         : 'UI.HeaderInfoType',
+    TypeName      : '{i18n>Attachment}',
+    TypeNamePlural: '{i18n>Attachments}',
+  },
+  LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -141,37 +158,55 @@ annotate my.Books.references with @UI: {
         {
           $Type : 'UI.DataFieldForAction',
           Label : 'Link',
-          Action: 'AdminService.createLink',
+          Action: 'AdminService.createLink'
         }
       ]
     },
     {
+      @UI.Hidden: {$edmJson: {
+          $If: [
+            { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
+            true,
+            {
+              $If: [
+                { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
+                true,
+                false
+              ]
+            }
+          ]
+        }
+      },
       $Type : 'UI.DataFieldForAction',
       Label : 'Edit Link',
-      Action: 'AdminService.editLink',           
+      Action: 'AdminService.editLink',
+      Inline: true,
+      IconUrl: 'sap-icon://edit',
+      @HTML5.CssDefaults: {width: '4%'}         
     }
   ],
-} {
-    note       @(title: '{i18n>Note}');
-    fileName  @(title: '{i18n>Filename}');
-    modifiedAt @(odata.etag: null);
-    content
-       @Core.ContentDisposition: { Filename: fileName }
-        @(title: '{i18n>Attachment}');
-       folderId @UI.Hidden;
-    repositoryId  @UI.Hidden ;
-    objectId  @UI.Hidden ;
-    mimeType @UI.Hidden;
-    status @UI.Hidden;
+} 
+{
+  note       @(title: '{i18n>Note}');
+  fileName  @(title: '{i18n>Filename}');
+  modifiedAt @(odata.etag: null);
+  content
+    @Core.ContentDisposition: { Filename: fileName }
+    @(title: '{i18n>Attachment}');
+  folderId @UI.Hidden;
+  repositoryId  @UI.Hidden ;
+  objectId  @UI.Hidden ;
+  mimeType @UI.Hidden;
+  status @UI.Hidden;
 }
 
 annotate my.Books.footnotes with @UI: {
-    HeaderInfo: {
-        $Type         : 'UI.HeaderInfoType',
-        TypeName      : '{i18n>Attachment}',
-        TypeNamePlural: '{i18n>Attachments}',
-    },
-    LineItem  : [
+  HeaderInfo: {
+    $Type         : 'UI.HeaderInfoType',
+    TypeName      : '{i18n>Attachment}',
+    TypeNamePlural: '{i18n>Attachments}',
+  },
+  LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -192,14 +227,31 @@ annotate my.Books.footnotes with @UI: {
         {
           $Type : 'UI.DataFieldForAction',
           Label : 'Link',
-          Action: 'AdminService.createLink',
+          Action: 'AdminService.createLink'
         }
       ]
     },
     {
+      @UI.Hidden: {$edmJson: {
+          $If: [
+            { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
+            true,
+            {
+              $If: [
+                { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
+                true,
+                false
+              ]
+            }
+          ]
+        }
+      },
       $Type : 'UI.DataFieldForAction',
       Label : 'Edit Link',
-      Action: 'AdminService.editLink',           
+      Action: 'AdminService.editLink',
+      Inline: true,
+      IconUrl: 'sap-icon://edit',
+      @HTML5.CssDefaults: {width: '4%'}         
     }
   ],
 } {
@@ -207,9 +259,9 @@ annotate my.Books.footnotes with @UI: {
     fileName  @(title: '{i18n>Filename}');
     modifiedAt @(odata.etag: null);
     content
-       @Core.ContentDisposition: { Filename: fileName }
-        @(title: '{i18n>Attachment}');
-       folderId @UI.Hidden;
+      @Core.ContentDisposition: { Filename: fileName }
+      @(title: '{i18n>Attachment}');
+    folderId @UI.Hidden;
     repositoryId  @UI.Hidden ;
     objectId  @UI.Hidden ;
     mimeType @UI.Hidden;
