@@ -32,22 +32,22 @@ async function getDiff(octokit, owner, repo, pull_number) {
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   
-  // The new, corrected prompt with your desired format.
+  // The prompt has been updated to include bolding for each heading.
   const prompt = `You are a helpful and expert AI code reviewer named Gemini. Your task is to review a pull request based on the provided Git diff.
   
   Your review must strictly follow this exact markdown format and content:
 
   ######
-  Gemini Automated Review
-  Summary of Changes
+  **Gemini Automated Review**
+  **Summary of Changes**
   [A brief, high-level summary of what the commit does.]
-  Best Practices Review
+  **Best Practices Review**
   [A concise, bulleted list of best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
-  Potential Bugs
+  **Potential Bugs**
   [A concise, bulleted list of potential bugs or errors. Reference specific issues found in the Best Practices section.]
-  Recommendations
+  **Recommendations**
   [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
-  Overall
+  **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
 
