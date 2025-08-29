@@ -1,7 +1,7 @@
 const { context, getOctokit } = require("@actions/github");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
+async function fetchWithBackoff(func, maxRetries = 10, initialDelay = 2000) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await func();
@@ -36,7 +36,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   
   Your review must strictly follow this exact markdown format and content:
 
-  ######
+  #
   **Gemini Automated Review**
   **Summary of Changes**
   [A brief, high-level summary of what the commit does.]
@@ -48,7 +48,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
   **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
-  ######
+  #
 
   If you don't find any issues, simply state that in the "Overall" section.
 
@@ -72,7 +72,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
   const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
 
   const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, pull_number);
