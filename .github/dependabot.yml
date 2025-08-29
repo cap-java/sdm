@@ -5,11 +5,22 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
-    allow:
-      - dependency-name: "com.sap.cds:cds-services-bom"
-      - dependency-name: "com.sap.cloud.sdk:sdk-bom"
+    ignore:
+      - dependency-name: "some-dependency-not-to-monitor" # Example, replace with actual unwanted dependencies
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-name: "com.sap.cds/cds-services-bom"
+      - dependency-name: "com.sap.cloud.sdk/sdk-bom"
+      - dependency-name: "org.sonatype.central"
+      # - dependency-name: "com.sap.cloud.security.xsuaa"
+      #   update-types: ["version-update:semver-major"]
+      # - dependency-name: "cds-feature-attachments"
