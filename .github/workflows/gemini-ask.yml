@@ -1,13 +1,12 @@
-# .github/workflows/gemini-ask.yml
 name: Gemini AI Comment Responder
 
 on:
   issue_comment:
-    types:
-      - created
+    types: [created]
 
 jobs:
   respond:
+    # Ensure this job only runs for PR comments and not from the bot itself
     if: github.event.issue.pull_request && github.event.comment.author.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
@@ -24,92 +23,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and Run Script
+      - name: Install dependencies
+        run: npm install @actions/github @google/generative-ai @octokit/core
+
+      - name: Run Gemini Responder Script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          npm install @actions/github @google/generative-ai @octokit/core
-
-          # Write the JavaScript code to a temporary file
-          cat << 'EOF' > /tmp/review.js
-          const { context, getOctokit } = require("@actions/github");
-          const { GoogleGenerativeAI } = require("@google/generative-ai");
-          const { Octokit } = require("@octokit/core");
-
-          async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
-            for (let i = 0; i < maxRetries; i++) {
-              try {
-                return await func();
-              } catch (error) {
-                if (error.status === 429) {
-                  console.warn(`Rate limit exceeded. Retrying in ${initialDelay}ms...`);
-                  await new Promise(resolve => setTimeout(resolve, initialDelay));
-                  initialDelay *= 2;
-                } else {
-                  throw error;
-                }
-              }
-            }
-            throw new Error("Max retries exceeded.");
-          }
-
-          async function run() {
-            try {
-              const octokit = getOctokit(process.env.GITHUB_TOKEN);
-              const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-              const { owner, repo } = context.repo;
-              const issueNumber = context.payload.issue.number;
-              const commentBody = context.payload.comment.body;
-
-              if (commentBody.startsWith("Hey Gemini,")) {
-                console.log("Found a user question. Generating response...");
-
-                const { data: pullRequest } = await octokit.rest.pulls.get({
-                  owner,
-                  repo,
-                  pull_number: issueNumber,
-                  mediaType: { format: "diff" },
-                });
-
-                const diffContent = pullRequest;
-                const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
-
-                const prompt = `A user has a question about a pull request. The pull request diff is below, followed by the user's question. Please provide a clear and concise answer.
-
-                ---
-                Git Diff:
-                \`\`\`diff
-                ${diffContent}
-                \`\`\`
-
-                ---
-                User's question:
-                ${userQuestion}
-                `;
-
-                const result = await fetchWithBackoff(() => model.generateContent(prompt));
-                const response = result.response.text();
-
-                if (response) {
-                  await octokit.rest.issues.createComment({
-                    owner,
-                    repo,
-                    issue_number: issueNumber,
-                    body: `## Gemini's Response\n\n${response}`
-                  });
-                  console.log("Gemini's response posted successfully.");
-                }
-              }
-            } catch (error) {
-              console.error(`An error occurred: ${error.message}`);
-              throw error;
-            }
-          }
-
-          run();
-          EOF
-          
-          node /tmp/review.js
+        run: node .github/scripts/review.js
