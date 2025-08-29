@@ -1,15 +1,13 @@
 namespace sap.attachments;
 
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
-extend aspect Attachments with {
-    folderId : String ;
+
+extend aspect Attachments with  {
+folderId : String ;
     repositoryId : String ;
     objectId : String ;
     linkUrl: String;
-    type: String @(UI: {IsImageURL: true});
-}
-extend aspect Attachments with actions{
-action changelog() returns String;
+    type: String @(UI: {IsImageURL: true}) default null;
 }
 annotate Attachments with @UI: {
      HeaderInfo: {

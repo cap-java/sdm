@@ -132,6 +132,30 @@ public class DBQuery {
     return type;
   }
 
+  public void updateTypeForMimeType(
+      CdsEntity attachmentEntity, PersistenceService persistenceService) {
+    System.out.println("Test Migration Checkkkkk... ");
+    CqnSelect q =
+        Select.from(attachmentEntity).where(doc -> doc.get("type").eq("sap-icon://ppt-attachment"));
+    Result result = persistenceService.run(q);
+    for (Row row : result.list()) {
+      System.out.println("Test Migration... ");
+      String ID = row.get("ID").toString();
+      System.out.println("ID... " + ID);
+      String mimeType = row.get("mimeType").toString();
+      System.out.println("mimeType... " + mimeType);
+      String iconType = getIconforMimeType(mimeType);
+      System.out.println("iconType... " + iconType);
+      Map<String, Object> updatedFields = new HashMap<>();
+      updatedFields.put("type", iconType);
+      // call update api
+      CqnUpdate updateQuery =
+          Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("ID").eq(ID));
+      persistenceService.run(updateQuery);
+      System.out.println("Update Result " + updateQuery.isUpdate());
+    }
+  }
+
   public List<CmisDocument> getAttachmentsForFolder(
       String entity,
       PersistenceService persistenceService,
