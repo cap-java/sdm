@@ -31,20 +31,22 @@ async function getDiff(octokit, owner, repo, pull_number) {
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  
+  // The new, corrected prompt with your desired format.
   const prompt = `You are a helpful and expert AI code reviewer named Gemini. Your task is to review a pull request based on the provided Git diff.
   
-  Your review should be organized into five sections using the following markdown format:
+  Your review must strictly follow this exact markdown format and content:
 
   ######
   Gemini Automated Review
   Summary of Changes
   [A brief, high-level summary of what the commit does.]
   Best Practices Review
-  [A concise list of best practices, including formatting, naming conventions, and code organization. Be specific and reference code snippets if necessary.]
+  [A concise, bulleted list of best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
   Potential Bugs
-  [A list of potential bugs or errors. Highlight security vulnerabilities, race conditions, or logic errors. Also, be sure to highlight redundant dependencies, missing versions, or unnecessary comments if they are found.]
+  [A concise, bulleted list of potential bugs or errors. Reference specific issues found in the Best Practices section.]
   Recommendations
-  [A prioritized list of actionable recommendations for improving the code. Be polite and constructive. If possible, provide a code snippet of how the improved code should look like under a section called 'Example of improved code snippet']
+  [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
   Overall
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
