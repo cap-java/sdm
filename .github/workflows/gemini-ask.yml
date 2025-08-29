@@ -8,7 +8,6 @@ on:
 
 jobs:
   respond:
-    # Ensure this job only runs if a `GITHUB_TOKEN` is available
     if: github.event.issue.pull_request && github.event.comment.author.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
@@ -25,20 +24,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: |
-          npm install @actions/github @google/generative-ai @octokit/core
-
-      - name: Run Gemini Responder Script
+      - name: Install dependencies and Run Script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          node -e '
+          npm install @actions/github @google/generative-ai @octokit/core
+          
+          # Use a heredoc to write the script to a temp file
+          cat << 'EOF' > /tmp/review.js
           const { context, getOctokit } = require("@actions/github");
           const { GoogleGenerativeAI } = require("@google/generative-ai");
           const { Octokit } = require("@octokit/core");
-          
+
           async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
             for (let i = 0; i < maxRetries; i++) {
               try {
@@ -55,31 +53,28 @@ jobs:
             }
             throw new Error("Max retries exceeded.");
           }
-          
+
           async function run() {
             try {
               const octokit = getOctokit(process.env.GITHUB_TOKEN);
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
               const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-              
+
               const { owner, repo } = context.repo;
               const issueNumber = context.payload.issue.number;
               const commentBody = context.payload.comment.body;
-              
-              // Check if the comment is a question directed at the bot
+
               if (commentBody.startsWith("Hey Gemini,")) {
                 console.log("Found a user question. Generating response...");
 
-                // Fetch the full PR diff to provide context to Gemini
                 const { data: pullRequest } = await octokit.rest.pulls.get({
                   owner,
                   repo,
                   pull_number: issueNumber,
                   mediaType: { format: "diff" },
                 });
-                
-                const diffContent = pullRequest;
 
+                const diffContent = pullRequest;
                 const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
 
                 const prompt = `A user has a question about a pull request. The pull request diff is below, followed by the user's question. Please provide a clear and concise answer.
@@ -113,6 +108,8 @@ jobs:
               throw error;
             }
           }
-          
+
           run();
-          '
+          EOF
+          
+          node /tmp/review.js
