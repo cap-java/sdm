@@ -42,9 +42,9 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   Best Practices Review
   [A concise list of best practices, including formatting, naming conventions, and code organization. Be specific and reference code snippets if necessary.]
   Potential Bugs
-  [A list of potential bugs or errors. Highlight security vulnerabilities, race conditions, or logic errors.]
+  [A list of potential bugs or errors. Highlight security vulnerabilities, race conditions, or logic errors. Also, be sure to highlight redundant dependencies, missing versions, or unnecessary comments if they are found.]
   Recommendations
-  [A prioritized list of actionable recommendations for improving the code. Be polite and constructive.]
+  [A prioritized list of actionable recommendations for improving the code. Be polite and constructive. If possible, provide a code snippet of how the improved code should look like under a section called 'Example of improved code snippet']
   Overall
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
