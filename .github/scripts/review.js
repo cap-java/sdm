@@ -36,7 +36,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   
   Your review must strictly follow this exact markdown format and content:
 
-  ######
+  ##
   **Gemini Automated Review**
   **Summary of Changes**
   [A brief, high-level summary of what the commit does.]
@@ -48,7 +48,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
   **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
-  ######
+  ##
 
   If you don't find any issues, simply state that in the "Overall" section.
 
