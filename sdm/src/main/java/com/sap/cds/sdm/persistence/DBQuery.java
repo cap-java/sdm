@@ -135,9 +135,9 @@ public class DBQuery {
   public void updateTypeForMimeType(
       CdsEntity attachmentEntity, PersistenceService persistenceService) {
     System.out.println("Test Migration Checkkkkk... ");
-    CqnSelect q =
-        Select.from(attachmentEntity).where(doc -> doc.get("type").eq("sap-icon://ppt-attachment"));
+    CqnSelect q = Select.from(attachmentEntity).where(doc -> doc.get("type").isNull());
     Result result = persistenceService.run(q);
+    System.out.println("RRS" + result.rowCount());
     for (Row row : result.list()) {
       System.out.println("Test Migration... ");
       String ID = row.get("ID").toString();
