@@ -32,7 +32,6 @@ async function getDiff(octokit, owner, repo, pull_number) {
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   
-  // The prompt has been updated to include bolding for each heading.
   const prompt = `You are a helpful and expert AI code reviewer named Gemini. Your task is to review a pull request based on the provided Git diff.
   
   Your review must strictly follow this exact markdown format and content:
