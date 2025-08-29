@@ -14,15 +14,13 @@ on:
 
 jobs:
   review:
-    # Ensure this job only runs if a `GITHUB_TOKEN` is available
-    # and the event is from a pull request or issue.
     if: github.event_name == 'pull_request' || github.event_name == 'issues'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       issues: write
-    
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,11 +32,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install @actions/github @google/generative-ai
+          npm install @actions/github @google/generative-ai @octokit/core
 
       - name: Run Gemini Reviewer Script
-        # Pass the GitHub Token and Gemini API key as environment variables
-        # so the script can access them.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -46,8 +42,8 @@ jobs:
           node -e '
           const { context, getOctokit } = require("@actions/github");
           const { GoogleGenerativeAI } = require("@google/generative-ai");
+          const { Octokit } = require("@octokit/core"); // Added for raw requests
           
-          // Function to handle exponential backoff for API calls.
           function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
           }
@@ -60,7 +56,7 @@ jobs:
                 if (error.status === 429) {
                   console.warn(`Rate limit exceeded. Retrying in ${initialDelay}ms...`);
                   await sleep(initialDelay);
-                  initialDelay *= 2; // Exponential backoff
+                  initialDelay *= 2;
                 } else {
                   throw error;
                 }
@@ -69,125 +65,108 @@ jobs:
             throw new Error("Max retries exceeded.");
           }
           
-          // Function to get the file content from a pull request.
-          async function getFileContent(octokit, owner, repo, path, ref) {
-            try {
-              const { data } = await octokit.rest.repos.getContent({
-                owner,
-                repo,
-                path,
-                ref, // ref is the branch name (e.g., "master" or "main")
-              });
-              // Decode the Base64 content to a string.
-              return Buffer.from(data.content, "base64").toString("utf-8");
-            } catch (error) {
-              console.error(`Error fetching file content for ${path}: ${error.message}`);
-              return null;
-            }
-          }
-          
           async function run() {
             try {
               const octokit = getOctokit(process.env.GITHUB_TOKEN);
               const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
               const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          
+              
+              const { owner, repo } = context.repo;
+
               if (context.eventName === "pull_request") {
                 const pr = context.payload.pull_request;
-                const issueNumber = pr.number;
-                const { owner, repo } = context.repo;
-          
-                console.log(`Starting review for PR #${issueNumber}...`);
+                const prNumber = pr.number;
                 
-                // Get the list of files changed in the PR
-                const files = await octokit.rest.pulls.listFiles({
+                console.log(`Starting review for PR #${prNumber}...`);
+
+                // Get the full PR diff as a single string
+                const { data: pullRequest } = await octokit.rest.pulls.get({
                   owner,
                   repo,
-                  pull_number: issueNumber,
+                  pull_number: prNumber,
+                  mediaType: { format: "diff" },
                 });
-          
-                const comments = [];
-          
-                for (const file of files.data) {
-                  if (file.status === "added" || file.status === "modified") {
-                    console.log(`Reviewing file: ${file.filename}`);
-          
-                    // Create a detailed prompt for each file.
-                    const prompt = `Review the following code for best practices, potential bugs, and provide suggestions for improvement.
-                      
-                      File: ${file.filename}
-                      Status: ${file.status}
-                      
-                      Code Diff:
-                      \`\`\`diff
-                      ${file.patch}
-                      \`\`\`
-                      
-                      Provide a short, specific review. Focus on one or two key points. Do not provide a general summary.
-                      If there are no issues, just say "Looks good."
-                    `;
-          
-                    // Generate the review comment.
-                    const result = await fetchWithBackoff(() => model.generateContent(prompt));
-                    const reviewComment = result.response.text();
-          
-                    // Add a comment to the list for the PR review.
-                    if (reviewComment && reviewComment !== "Looks good.") {
-                      comments.push({
-                        path: file.filename,
-                        body: reviewComment,
-                        // The position is relative to the start of the diff hunk. We use a simple method here.
-                        // For a more advanced approach, you would need to parse the diff patch.
-                        position: 1, 
-                      });
-                    }
-                  }
-                }
-          
-                // If there are any comments, create a PR review.
-                if (comments.length > 0) {
-                  await octokit.rest.pulls.createReview({
-                    owner,
-                    repo,
-                    pull_number: issueNumber,
-                    event: "COMMENT", // "COMMENT" posts comments without approving or requesting changes
-                    comments,
-                  });
-                  console.log("Gemini review comments posted successfully.");
-                } else {
+                
+                const diffContent = pullRequest;
+
+                if (!diffContent) {
                   await octokit.rest.issues.createComment({
                     owner,
                     repo,
-                    issue_number: issueNumber,
-                    body: "## Gemini Automated Review\n\nLooks good! I found no immediate issues with this pull request."
+                    issue_number: prNumber,
+                    body: "## Gemini Automated Review\n\nNo code changes to review in this pull request."
                   });
-                  console.log("Gemini review: No issues found. A final summary comment was posted.");
+                  console.log("No diff content. Comment posted.");
+                  return;
                 }
-          
+
+                // The new, structured prompt that requests the specific sections you want.
+                const prompt = `You are a helpful and professional code reviewer.
+                Analyze the following Git diff and provide a structured review.
+                Your response must be a single Markdown block with the following sections:
+
+                ### Summary of Changes
+                A concise, high-level overview of what the changes in the diff accomplish.
+
+                ### Best Practices Review
+                Identify any code that does not follow best practices. Suggest improvements for readability, maintainability, or efficiency.
+
+                ### Potential Bugs
+                Point out any potential bugs, edge cases, or logical errors that might arise from the changes.
+
+                ### Recommendations
+                Provide specific, actionable recommendations for improvement, with code examples where helpful.
+
+                ### Overall
+                Provide a final one-sentence overall assessment of the changes.
+
+                ---
+                Git Diff to analyze:
+                \`\`\`diff
+                ${diffContent}
+                \`\`\`
+                `;
+
+                console.log("Sending diff to Gemini for analysis...");
+                const result = await fetchWithBackoff(() => model.generateContent(prompt));
+                const reviewComment = result.response.text();
+
+                if (reviewComment) {
+                  await octokit.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                    body: `## Gemini Automated Review\n\n${reviewComment}`
+                  });
+                  console.log("Gemini review comment posted successfully.");
+                } else {
+                  console.log("No content to review or API response was empty.");
+                }
+
               } else if (context.eventName === "issues") {
                 const issue = context.payload.issue;
                 const issueNumber = issue.number;
                 const { owner, repo } = context.repo;
-          
+                
                 console.log(`Starting analysis for Issue #${issueNumber}...`);
                 
                 const prompt = `Analyze the following issue description and provide a structured, helpful reply.
-                  
-                  Issue Title: ${issue.title}
-                  Issue Body:
-                  ${issue.body}
-                  
-                  Provide a response in Markdown format. The response should include:
-                  1. An acknowledgment of the issue.
-                  2. A clear summary of the problem.
-                  3. Potential root causes or areas to investigate.
-                  4. A proposed solution or next steps.
-                  5. Use code blocks for any code examples.
-                  `;
-          
+                
+                Issue Title: ${issue.title}
+                Issue Body:
+                ${issue.body}
+                
+                Provide a response in Markdown format. The response should include:
+                1. An acknowledgment of the issue.
+                2. A clear summary of the problem.
+                3. Potential root causes or areas to investigate.
+                4. A proposed solution or next steps.
+                5. Use code blocks for any code examples.
+                `;
+                
                 const result = await fetchWithBackoff(() => model.generateContent(prompt));
                 const commentBody = result.response.text();
-          
+                
                 if (commentBody) {
                   await octokit.rest.issues.createComment({
                     owner,
@@ -200,7 +179,7 @@ jobs:
                   console.log("No content to review or API response was empty.");
                 }
               }
-          
+            
             } catch (error) {
               console.error(`An error occurred: ${error.message}`);
               throw error;
