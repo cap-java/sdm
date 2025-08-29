@@ -30,8 +30,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           npm install @actions/github @google/generative-ai @octokit/core
-          
-          # Use a heredoc to write the script to a temp file
+
+          # Write the JavaScript code to a temporary file
           cat << 'EOF' > /tmp/review.js
           const { context, getOctokit } = require("@actions/github");
           const { GoogleGenerativeAI } = require("@google/generative-ai");
