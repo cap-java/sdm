@@ -5,6 +5,19 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
+    allow:
+      - dependency-name: "com.sap.cds:cds-services-bom"
+      - dependency-name: "com.sap.cloud.sdk:sdk-bom"
+  
+  - package-ecosystem: "maven"
+    directory: "/sdm"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-name: "com.sap.cds:cds-feature-attachments"
+      - dependency-name: "com.sap.cloud.security.xsuaa:token-client"
+  
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
