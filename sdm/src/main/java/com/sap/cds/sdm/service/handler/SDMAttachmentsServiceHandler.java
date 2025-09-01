@@ -296,6 +296,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
+        cmisDocument.setMimeType(createResult.get("mimeType").toString());
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

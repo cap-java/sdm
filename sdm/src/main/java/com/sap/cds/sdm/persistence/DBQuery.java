@@ -10,6 +10,8 @@ import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.ObjectIdMimeTypeMapping;
+import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.net.URLConnection;
 import java.util.*;
@@ -98,8 +100,9 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    updatedFields.put("mimeType", cmisDocument.getMimeType());
     String icon = getIconforMimeType(cmisDocument.getMimeType());
-    updatedFields.put("type", icon);
+  //  updatedFields.put("type", icon);
 
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
@@ -133,28 +136,50 @@ public class DBQuery {
     return type;
   }
 
-  public void updateTypeForMimeType(
+  public Set<String> getUniqueFolders(
       CdsEntity attachmentEntity, PersistenceService persistenceService) {
     System.out.println("Test Migration Checkkkkk... ");
     CqnSelect q = Select.from(attachmentEntity).where(doc -> doc.get("type").isNull());
     Result result = persistenceService.run(q);
+    Set<String> folderIds = new HashSet<>();
     System.out.println("RRS" + result.rowCount());
     for (Row row : result.list()) {
-      System.out.println("Test Migration... ");
-      String ID = row.get("ID").toString();
-      System.out.println("ID... " + ID);
-      String fileName = row.get("fileName").toString();
-      // Fetch mimetype based on Filename
+      //Fetch the unique folders by adding to set and call gechildren for each of the folders
+      //Read the mimetype for each document get the icon against it and update the attachment database
+      folderIds.add(row.get("folderId").toString());
+//      System.out.println("Test Migration... ");
+//      String ID = row.get("ID").toString();
+//      System.out.println("ID... " + ID);
+//      String fileName = row.get("fileName").toString();
+//      // Fetch mimetype based on Filename
+//
+//      String mimeType = URLConnection.guessContentTypeFromName(fileName);
+//      System.out.println("mimeType... " + mimeType);
+//      String iconType = getIconforMimeType(mimeType);
+//      System.out.println("iconType... " + iconType);
+//      Map<String, Object> updatedFields = new HashMap<>();
+//      updatedFields.put("type", iconType);
+//      // call update api
+//      CqnUpdate updateQuery =
+//          Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("ID").eq(ID));
+//      persistenceService.run(updateQuery);
+//      System.out.println("Update Result " + updateQuery.isUpdate());
+    }
+return folderIds;
+  }
 
-      String mimeType = URLConnection.guessContentTypeFromName(fileName);
-      System.out.println("mimeType... " + mimeType);
-      String iconType = getIconforMimeType(mimeType);
+  public void updateIconAndMimeTypeForAttachment(
+          CdsEntity attachmentEntity, PersistenceService persistenceService, List<ObjectIdMimeTypeMapping> objMimeMapping) {
+    System.out.println("Test Mapping Checkkkkk... ");
+    for (ObjectIdMimeTypeMapping objectIdMimeTypeMapping : objMimeMapping) {
+      String iconType = getIconforMimeType(objectIdMimeTypeMapping.getMimeType());
       System.out.println("iconType... " + iconType);
       Map<String, Object> updatedFields = new HashMap<>();
       updatedFields.put("type", iconType);
+      updatedFields.put("mimeType", objectIdMimeTypeMapping.getMimeType());
       // call update api
       CqnUpdate updateQuery =
-          Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("ID").eq(ID));
+          Update.entity(attachmentEntity).data(updatedFields).where(doc -> doc.get("objectId").eq(objectIdMimeTypeMapping.getObjectId()));
       persistenceService.run(updateQuery);
       System.out.println("Update Result " + updateQuery.isUpdate());
     }

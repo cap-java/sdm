@@ -14,6 +14,7 @@ import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.ObjectIdMimeTypeMapping;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
@@ -717,6 +718,32 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
+    }
+  }
+
+  @Override
+  public List<ObjectIdMimeTypeMapping> getChildren(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+
+    String sdmUrl =
+            sdmCredentials.getUrl()
+                    + "browser/"
+                    + SDMConstants.REPOSITORY_ID
+                    + "/root?cmisselector=children&succinct=true";
+
+    HttpGet getObjectRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
+      if (response.getStatusLine().getStatusCode() != 200) {
+        return null;
+      }
+      String responseString = EntityUtils.toString(response.getEntity());
+      JSONObject jsonObject = new JSONObject(responseString);
+      JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
+      return null;
+    } catch (IOException e) {
+      throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
   }
 }

@@ -3,6 +3,7 @@ package com.sap.cds.sdm.service;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.ObjectIdMimeTypeMapping;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -66,4 +67,7 @@ public interface SDMService {
 
   public JSONObject getChangeLog(
       String objectId, SDMCredentials sdmCredentials, boolean isSystemUser);
+
+  public List<ObjectIdMimeTypeMapping> getChildren(
+          String objectId, SDMCredentials sdmCredentials, boolean isSystemUser);
 }
