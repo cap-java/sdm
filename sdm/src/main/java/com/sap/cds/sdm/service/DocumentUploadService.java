@@ -170,6 +170,7 @@ public class DocumentUploadService {
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+    System.out.println("Mimetype in create Document " + cmisDocument.getMimeType());
     builder.addBinaryBody(
         "filename",
         cmisDocument.getContent(),

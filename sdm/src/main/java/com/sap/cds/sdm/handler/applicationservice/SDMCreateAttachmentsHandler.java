@@ -238,6 +238,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           updatedSecondaryProperties.put("filename", filenameInRequest);
         }
       }
+      System.out.println("Mimetype in save Document " + cmisDocument.getMimeType());
       try {
         int responseCode =
             sdmService.updateAttachments(

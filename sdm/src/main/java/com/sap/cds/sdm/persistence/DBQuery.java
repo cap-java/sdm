@@ -11,6 +11,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.net.URLConnection;
 import java.util.*;
 
 public class DBQuery {
@@ -142,7 +143,10 @@ public class DBQuery {
       System.out.println("Test Migration... ");
       String ID = row.get("ID").toString();
       System.out.println("ID... " + ID);
-      String mimeType = row.get("mimeType").toString();
+      String fileName = row.get("fileName").toString();
+      // Fetch mimetype based on Filename
+
+      String mimeType = URLConnection.guessContentTypeFromName(fileName);
       System.out.println("mimeType... " + mimeType);
       String iconType = getIconforMimeType(mimeType);
       System.out.println("iconType... " + iconType);

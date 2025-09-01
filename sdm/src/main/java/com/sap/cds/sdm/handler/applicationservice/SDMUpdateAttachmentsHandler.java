@@ -228,6 +228,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
     }
+    System.out.println("Mimetype in update Document " + cmisDocument.getMimeType());
     if (!updatedSecondaryProperties.isEmpty()) {
       try {
         int responseCode =

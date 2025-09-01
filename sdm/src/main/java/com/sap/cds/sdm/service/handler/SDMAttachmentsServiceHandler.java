@@ -275,6 +275,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     cmisDocument.setParentId((String) attachmentIds.get(upIdKey));
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setFolderId(folderId);
+    System.out.println("Mimetype Value " + (String) data.get("mimeType"));
     cmisDocument.setMimeType((String) data.get("mimeType"));
     cmisDocument.setContentLength(contentlen);
   }
