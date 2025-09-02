@@ -198,7 +198,11 @@ public class SDMServiceGenericHandler implements EventHandler {
       persistenceService.run(update);
       logger.info("Successfully edited link");
     } else {
-      throw new ServiceException("Failed to edit link");
+      if (status.equals("unauthorized")) {
+        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+      } else {
+        throw new ServiceException("Failed to edit link");
+      }
     }
     context.setCompleted();
   }
