@@ -1,21 +1,43 @@
 const { context, getOctokit } = require("@actions/github");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
-  for (let i = 0; i < maxRetries; i++) {
+// Utility function to safely parse an environment variable as a number
+function safeParseInt(envVar, defaultValue) {
+  const value = parseInt(envVar);
+  return !isNaN(value) && value > 0 ? value : defaultValue;
+}
+
+// Fetch and validate environment variables with default values
+const MAX_RETRIES = safeParseInt(process.env.MAX_RETRIES, 5);
+const INITIAL_DELAY_MS = safeParseInt(process.env.INITIAL_DELAY_MS, 1000);
+const MAX_CHUNK_TOKENS = safeParseInt(process.env.MAX_CHUNK_TOKENS, 10000);
+
+async function fetchWithBackoff(func, maxRetries = MAX_RETRIES, initialDelay = INITIAL_DELAY_MS) {
+  let retries = 0;
+  let delay = initialDelay;
+
+  while (retries < maxRetries) {
     try {
       return await func();
     } catch (error) {
-      if (error.status === 429) {
-        console.warn(`Rate limit exceeded. Retrying in ${initialDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, initialDelay));
-        initialDelay *= 2;
+      const retryableErrors = [429, 500, 503, 504];
+      if (retryableErrors.includes(error.status)) {
+        console.warn(`Transient error (${error.status}) encountered. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+        retries++;
       } else {
+        // Log the full error object for non-retryable errors
+        console.error("Non-retryable error encountered. Aborting fetchWithBackoff. Details:", error);
         throw error;
       }
     }
   }
-  throw new Error("Max retries exceeded.");
+
+  // Throw an error if max retries are exceeded
+  const error = new Error(`Max retries (${maxRetries}) exceeded.`);
+  error.status = 504; // Set a gateway timeout status for consistency
+  throw error;
 }
 
 async function getDiff(octokit, owner, repo, pull_number) {
@@ -29,38 +51,103 @@ async function getDiff(octokit, owner, repo, pull_number) {
   return pullRequest;
 }
 
+// Function to split the diff into chunks based on token count
+async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
+  if (!diff || diff.length === 0) {
+    return [];
+  }
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const lines = diff.split('\n');
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const line of lines) {
+    const tempChunk = currentChunk + line + '\n';
+    try {
+      const tokenCount = (await model.countTokens(tempChunk)).totalTokens;
+      if (tokenCount < maxTokens) {
+        currentChunk = tempChunk;
+      } else {
+        chunks.push(currentChunk);
+        currentChunk = line + '\n';
+      }
+    } catch (error) {
+      console.error("Error counting tokens. Skipping chunking for this line. Details:", error);
+      chunks.push(currentChunk);
+      currentChunk = line + '\n';
+    }
+  }
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+  return chunks;
+}
+
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  
-  const prompt = `You are a helpful and expert AI code reviewer named Gemini. Your task is to review a pull request based on the provided Git diff.
-  
-  Your review must strictly follow this exact markdown format and content:
+
+  const chunks = await splitDiffIntoTokens(genAI, diffContent);
+  const chunkReviews = [];
+
+  if (chunks.length === 0) {
+    console.log("No diff content to review.");
+    return;
+  }
+
+  console.log(`Splitting diff into ${chunks.length} chunks for processing...`);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk and provide a concise review of its contents. Do not provide a final summary. Focus on a summary of changes, best practices, potential bugs, and recommendations for this specific chunk. Do not recommend adding comments to explain the purpose of code elements.
+
+    Git Diff Chunk:
+    \`\`\`diff
+    ${chunk}
+    \`\`\`
+    `;
+
+    try {
+      const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
+      chunkReviews.push(result.response.text());
+      console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
+    } catch (error) {
+      console.error(`Error processing chunk ${i + 1}. Details:`, error);
+      chunkReviews.push(`Error: Could not generate review for this chunk due to: ${error.message}`);
+    }
+  }
+
+  // Now, synthesize the reviews into a single final review
+  const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and comprehensive final review. Your review must strictly follow this exact markdown format and content:
 
   ######
   **Gemini Automated Review**
   **Summary of Changes**
-  [A brief, high-level summary of what the commit does.]
+  [A brief, high-level summary of all the commits.]
   **Best Practices Review**
-  [A concise, bulleted list of best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
+  [A concise, bulleted list of all best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, and Missing Version in dependency.]
   **Potential Bugs**
-  [A concise, bulleted list of potential bugs or errors. Reference specific issues found in the Best Practices section.]
+  [A concise, bulleted list of all potential bugs or errors. Reference specific issues found.]
   **Recommendations**
-  [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
+  [A prioritized, bulleted list of all actionable recommendations for improving the code. For the most critical recommendations, provide a code snippet showing the improved version.]
+  **Quality Rating**
+  [A rating out of 10 that reflects the overall quality of the code.]
   **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
-
-  If you don't find any issues, simply state that in the "Overall" section.
-
-  Here is the Git diff to review:
-  \`\`\`diff
-  ${diffContent}
-  \`\`\`
+  
+  Partial Reviews to Synthesize:
+  ${chunkReviews.join('\n\n---\n\n')}
   `;
-
-  const result = await fetchWithBackoff(() => model.generateContent(prompt));
-  const reviewBody = result.response.text();
-  console.log("Gemini's review generated successfully.");
+  
+  let reviewBody = "Review generation failed.";
+  try {
+    const finalReviewResult = await fetchWithBackoff(() => model.generateContent(synthesisPrompt));
+    reviewBody = finalReviewResult.response.text();
+    console.log("Gemini's final review generated successfully.");
+  } catch (error) {
+    console.error(`Error synthesizing final review. Details:`, error);
+    reviewBody = `An error occurred while generating the final review. Partial reviews are below:\n\n${chunkReviews.join('\n\n---\n\n')}`;
+  }
 
   await octokit.rest.issues.createComment({
     owner: context.repo.owner,
@@ -68,7 +155,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     issue_number: pull_number,
     body: reviewBody,
   });
-  console.log("Gemini's review posted successfully.");
+  console.log("Gemini's final review posted successfully.");
 }
 
 async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
@@ -90,8 +177,14 @@ async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
   ${userQuestion}
   `;
 
-  const result = await fetchWithBackoff(() => model.generateContent(prompt));
-  const response = result.response.text();
+  let response = "Error: Could not generate a response to your comment.";
+  try {
+    const result = await fetchWithBackoff(() => model.generateContent(prompt));
+    response = result.response.text();
+    console.log("Gemini's response generated successfully.");
+  } catch (error) {
+    console.error(`Error generating response to comment. Details:`, error);
+  }
 
   if (response) {
     await octokit.rest.issues.createComment({
