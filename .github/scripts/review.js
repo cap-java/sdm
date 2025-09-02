@@ -1,7 +1,7 @@
 const { context, getOctokit } = require("@actions/github");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-async function fetchWithBackoff(func, maxRetries = 5, initialDelay = 1000) {
+async function fetchWithBackoff(func, maxRetries = 10, initialDelay = 2000) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await func();
@@ -29,38 +29,76 @@ async function getDiff(octokit, owner, repo, pull_number) {
   return pullRequest;
 }
 
+// Function to split the diff into chunks
+function splitDiffIntoChunks(diff, maxTokens = 10000) {
+  const lines = diff.split('\n');
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const line of lines) {
+    if ((currentChunk + line).length < maxTokens) {
+      currentChunk += line + '\n';
+    } else {
+      chunks.push(currentChunk);
+      currentChunk = line + '\n';
+    }
+  }
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+  return chunks;
+}
+
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  
-  const prompt = `You are a helpful and expert AI code reviewer named Gemini. Your task is to review a pull request based on the provided Git diff.
-  
-  Your review must strictly follow this exact markdown format and content:
+
+  const chunks = splitDiffIntoChunks(diffContent);
+  const chunkReviews = [];
+
+  console.log(`Splitting diff into ${chunks.length} chunks for processing...`);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk and provide a concise review of its contents. Do not provide a final summary. Focus on a summary of changes, best practices, potential bugs, and recommendations for this specific chunk. Do not recommend adding comments to explain the purpose of code elements.
+
+    Git Diff Chunk:
+    \`\`\`diff
+    ${chunk}
+    \`\`\`
+    `;
+
+    const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
+    chunkReviews.push(result.response.text());
+    console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
+  }
+
+  // Now, synthesize the reviews into a single final review
+  const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and comprehensive final review. Your review must strictly follow this exact markdown format and content:
 
   ######
   **Gemini Automated Review**
   **Summary of Changes**
-  [A brief, high-level summary of what the commit does.]
+  [A brief, high-level summary of all the commits.]
   **Best Practices Review**
-  [A concise, bulleted list of best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
+  [A concise, bulleted list of all best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
   **Potential Bugs**
-  [A concise, bulleted list of potential bugs or errors. Reference specific issues found in the Best Practices section.]
+  [A concise, bulleted list of all potential bugs or errors. Reference specific issues found.]
   **Recommendations**
-  [A prioritized, bulleted list of actionable recommendations for improving the code. Be polite and constructive. For the most critical recommendations, provide a code snippet showing the improved version.]
+  [A prioritized, bulleted list of all actionable recommendations for improving the code. For the most critical recommendations, provide a code snippet showing the improved version.]
+  **Quality Rating**
+  [A rating out of 10 that reflects the overall quality of the code.]
   **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
-
-  If you don't find any issues, simply state that in the "Overall" section.
-
-  Here is the Git diff to review:
-  \`\`\`diff
-  ${diffContent}
-  \`\`\`
+  
+  Partial Reviews to Synthesize:
+  ${chunkReviews.join('\n\n---\n\n')}
   `;
 
-  const result = await fetchWithBackoff(() => model.generateContent(prompt));
-  const reviewBody = result.response.text();
-  console.log("Gemini's review generated successfully.");
+  const finalReviewResult = await fetchWithBackoff(() => model.generateContent(synthesisPrompt));
+  const reviewBody = finalReviewResult.response.text();
+
+  console.log("Gemini's final review generated successfully.");
 
   await octokit.rest.issues.createComment({
     owner: context.repo.owner,
@@ -68,11 +106,11 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     issue_number: pull_number,
     body: reviewBody,
   });
-  console.log("Gemini's review posted successfully.");
+  console.log("Gemini's final review posted successfully.");
 }
 
 async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
   const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
 
   const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, pull_number);
