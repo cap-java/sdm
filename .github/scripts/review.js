@@ -50,7 +50,7 @@ function splitDiffIntoChunks(diff, maxTokens = 10000) {
 }
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const chunks = splitDiffIntoChunks(diffContent);
   const chunkReviews = [];
