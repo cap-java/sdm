@@ -1,4 +1,3 @@
-
 name: Daily SAPUI5 Version Update
 
 on:
@@ -22,7 +21,6 @@ jobs:
         with:
           ref: develop_deploy
 
-    
       - name: Get latest SAPUI5 version
         id: get_latest_version
         run: |
@@ -30,19 +28,17 @@ jobs:
           
           echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
           echo "Latest SAPUI5 version found: $LATEST_VERSION"
-
+          
       - name: Get current version from file
         id: get_current_version
         run: |
-          
           CURRENT_VERSION=$(grep 'sap-ui-core' cap-notebook/demoapp/app/index.html | sed -e 's/.*hana.ondemand.com\///' -e 's/\/resources.*//')
           
           echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Current SAPUI5 version in file: $CURRENT_VERSION"
-
+          
       - name: Compare and update version
         id: update_version_file
-    
         if: steps.get_latest_version.outputs.latest_version > steps.get_current_version.outputs.current_version
         run: |
           echo "A newer version of SAPUI5 is available. Updating..."
@@ -64,3 +60,4 @@ jobs:
             - Latest Version: ${{ steps.get_latest_version.outputs.latest_version }}
           branch: 'update-sapui5-version'
           base: develop_deploy
+          assignees: yashmeet29
