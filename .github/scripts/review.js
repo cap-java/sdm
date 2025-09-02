@@ -29,7 +29,7 @@ async function getDiff(octokit, owner, repo, pull_number) {
   return pullRequest;
 }
 
-// New function to split the diff into chunks
+// Function to split the diff into chunks
 function splitDiffIntoChunks(diff, maxTokens = 10000) {
   const lines = diff.split('\n');
   const chunks = [];
@@ -59,7 +59,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk and provide a concise review of its contents. Do not provide a final summary. Focus on a summary of changes, best practices, potential bugs, and recommendations for this specific chunk.
+    const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk and provide a concise review of its contents. Do not provide a final summary. Focus on a summary of changes, best practices, potential bugs, and recommendations for this specific chunk. Do not recommend adding comments to explain the purpose of code elements.
 
     Git Diff Chunk:
     \`\`\`diff
@@ -85,6 +85,8 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   [A concise, bulleted list of all potential bugs or errors. Reference specific issues found.]
   **Recommendations**
   [A prioritized, bulleted list of all actionable recommendations for improving the code. For the most critical recommendations, provide a code snippet showing the improved version.]
+  **Quality Rating**
+  [A rating out of 10 that reflects the overall quality of the code.]
   **Overall**
   [A brief overall assessment of the code quality and readiness for merge.]
   ######
