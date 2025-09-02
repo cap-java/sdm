@@ -196,7 +196,7 @@ public class SDMServiceGenericHandler implements EventHandler {
               .data(updatedFields)
               .where(doc -> doc.get("ID").eq(ID));
       persistenceService.run(update);
-      logger.info("Succefully edited link");
+      logger.info("Successfully edited link");
     } else {
       throw new ServiceException("Failed to edit link");
     }

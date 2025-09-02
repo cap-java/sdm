@@ -746,7 +746,7 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 
 ## Support for edit of link type attachments
 
-This plugin provides the capability to edit the URL of attachments of link type.
+This plugin provides the capability to update/edit the URL of attachments of link type.
 
 ### Steps to Enable Edit Link Feature in CAP Application
 
