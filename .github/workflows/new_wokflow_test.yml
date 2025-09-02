@@ -18,10 +18,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout the develop_deploy branch
+      - name: Checkout the develop_deploy_ui5 branch
         uses: actions/checkout@v4
         with:
-          ref: develop_deploy
+          ref: develop_deploy_ui5
 
       - name: Install dependencies
         run: |
