@@ -1,21 +1,43 @@
 const { context, getOctokit } = require("@actions/github");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-async function fetchWithBackoff(func, maxRetries = 10, initialDelay = 2000) {
-  for (let i = 0; i < maxRetries; i++) {
+// Utility function to safely parse an environment variable as a number
+function safeParseInt(envVar, defaultValue) {
+  const value = parseInt(envVar);
+  return !isNaN(value) && value > 0 ? value : defaultValue;
+}
+
+// Fetch and validate environment variables with default values
+const MAX_RETRIES = safeParseInt(process.env.MAX_RETRIES, 5);
+const INITIAL_DELAY_MS = safeParseInt(process.env.INITIAL_DELAY_MS, 1000);
+const MAX_CHUNK_TOKENS = safeParseInt(process.env.MAX_CHUNK_TOKENS, 10000);
+
+async function fetchWithBackoff(func, maxRetries = MAX_RETRIES, initialDelay = INITIAL_DELAY_MS) {
+  let retries = 0;
+  let delay = initialDelay;
+
+  while (retries < maxRetries) {
     try {
       return await func();
     } catch (error) {
-      if (error.status === 429) {
-        console.warn(`Rate limit exceeded. Retrying in ${initialDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, initialDelay));
-        initialDelay *= 2;
+      const retryableErrors = [429, 500, 503, 504];
+      if (retryableErrors.includes(error.status)) {
+        console.warn(`Transient error (${error.status}) encountered. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+        retries++;
       } else {
+        // Log the full error object for non-retryable errors
+        console.error("Non-retryable error encountered. Aborting fetchWithBackoff. Details:", error);
         throw error;
       }
     }
   }
-  throw new Error("Max retries exceeded.");
+
+  // Throw an error if max retries are exceeded
+  const error = new Error(`Max retries (${maxRetries}) exceeded.`);
+  error.status = 504; // Set a gateway timeout status for consistency
+  throw error;
 }
 
 async function getDiff(octokit, owner, repo, pull_number) {
@@ -29,16 +51,28 @@ async function getDiff(octokit, owner, repo, pull_number) {
   return pullRequest;
 }
 
-// Function to split the diff into chunks
-function splitDiffIntoChunks(diff, maxTokens = 10000) {
+// Function to split the diff into chunks based on token count
+async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
+  if (!diff || diff.length === 0) {
+    return [];
+  }
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const lines = diff.split('\n');
   const chunks = [];
   let currentChunk = '';
 
   for (const line of lines) {
-    if ((currentChunk + line).length < maxTokens) {
-      currentChunk += line + '\n';
-    } else {
+    const tempChunk = currentChunk + line + '\n';
+    try {
+      const tokenCount = (await model.countTokens(tempChunk)).totalTokens;
+      if (tokenCount < maxTokens) {
+        currentChunk = tempChunk;
+      } else {
+        chunks.push(currentChunk);
+        currentChunk = line + '\n';
+      }
+    } catch (error) {
+      console.error("Error counting tokens. Skipping chunking for this line. Details:", error);
       chunks.push(currentChunk);
       currentChunk = line + '\n';
     }
@@ -52,8 +86,13 @@ function splitDiffIntoChunks(diff, maxTokens = 10000) {
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const chunks = splitDiffIntoChunks(diffContent);
+  const chunks = await splitDiffIntoTokens(genAI, diffContent);
   const chunkReviews = [];
+
+  if (chunks.length === 0) {
+    console.log("No diff content to review.");
+    return;
+  }
 
   console.log(`Splitting diff into ${chunks.length} chunks for processing...`);
 
@@ -67,9 +106,14 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     \`\`\`
     `;
 
-    const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
-    chunkReviews.push(result.response.text());
-    console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
+    try {
+      const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
+      chunkReviews.push(result.response.text());
+      console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
+    } catch (error) {
+      console.error(`Error processing chunk ${i + 1}. Details:`, error);
+      chunkReviews.push(`Error: Could not generate review for this chunk due to: ${error.message}`);
+    }
   }
 
   // Now, synthesize the reviews into a single final review
@@ -80,7 +124,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   **Summary of Changes**
   [A brief, high-level summary of all the commits.]
   **Best Practices Review**
-  [A concise, bulleted list of all best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, Missing Version in dependency, and Unnecessary Comments.]
+  [A concise, bulleted list of all best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, and Missing Version in dependency.]
   **Potential Bugs**
   [A concise, bulleted list of all potential bugs or errors. Reference specific issues found.]
   **Recommendations**
@@ -94,11 +138,16 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
   Partial Reviews to Synthesize:
   ${chunkReviews.join('\n\n---\n\n')}
   `;
-
-  const finalReviewResult = await fetchWithBackoff(() => model.generateContent(synthesisPrompt));
-  const reviewBody = finalReviewResult.response.text();
-
-  console.log("Gemini's final review generated successfully.");
+  
+  let reviewBody = "Review generation failed.";
+  try {
+    const finalReviewResult = await fetchWithBackoff(() => model.generateContent(synthesisPrompt));
+    reviewBody = finalReviewResult.response.text();
+    console.log("Gemini's final review generated successfully.");
+  } catch (error) {
+    console.error(`Error synthesizing final review. Details:`, error);
+    reviewBody = `An error occurred while generating the final review. Partial reviews are below:\n\n${chunkReviews.join('\n\n---\n\n')}`;
+  }
 
   await octokit.rest.issues.createComment({
     owner: context.repo.owner,
@@ -110,7 +159,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
 
   const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, pull_number);
@@ -128,8 +177,14 @@ async function handleCommentResponse(octokit, commentBody, pull_number, genAI) {
   ${userQuestion}
   `;
 
-  const result = await fetchWithBackoff(() => model.generateContent(prompt));
-  const response = result.response.text();
+  let response = "Error: Could not generate a response to your comment.";
+  try {
+    const result = await fetchWithBackoff(() => model.generateContent(prompt));
+    response = result.response.text();
+    console.log("Gemini's response generated successfully.");
+  } catch (error) {
+    console.error(`Error generating response to comment. Details:`, error);
+  }
 
   if (response) {
     await octokit.rest.issues.createComment({
