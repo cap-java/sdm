@@ -292,7 +292,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         dbQuery.addAttachmentToDraft(
