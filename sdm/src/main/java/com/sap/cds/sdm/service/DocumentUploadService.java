@@ -316,7 +316,8 @@ public class DocumentUploadService {
         } else if (responseCode == 409) {
           status = "duplicate";
         } else if (responseCode == 403
-            && "MIME type of the uploaded file is blocked according to your repository configuration.".equals(message)) {
+            && "MIME type of the uploaded file is blocked according to your repository configuration."
+                .equals(message)) {
           status = "blocked";
         } else if (responseCode == 403) {
           status = "unauthorized";
