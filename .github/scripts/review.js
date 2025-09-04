@@ -259,7 +259,6 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 async function handleCommentResponse(octokit, commentBody, number, genAI) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
-
     let prompt;
 
     // Check if the comment is on a pull request
@@ -314,7 +313,6 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
     }
 }
 
-// New function to handle new issue creation
 async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
     
@@ -357,35 +355,37 @@ async function run() {
         
         const { owner, repo } = context.repo;
 
-        // The number is from the 'issue' object for issue_comment events
-        const number = context.payload.issue.number;
-
-        // Correctly check the event type and payload properties
-        const isPullRequestEvent = context.eventName === 'pull_request';
-        const isIssueOpenedEvent = context.eventName === 'issues' && context.payload.action === 'opened';
-        const isCommentToGemini = context.eventName === 'issue_comment' && 
-                                  context.payload.comment && 
-                                  context.payload.comment.body.startsWith("Hey Gemini,");
+        // Determine the number based on the event payload
+        let number;
+        if (context.eventName === 'pull_request') {
+            number = context.payload.pull_request.number;
+        } else if (context.payload.issue) {
+            number = context.payload.issue.number;
+        } else {
+            console.log("Could not determine issue/PR number from payload. Exiting.");
+            return;
+        }
 
         // Conditional logic based on event type
-        if (isPullRequestEvent) {
+        if (context.eventName === 'pull_request') {
             console.log(`Pull Request event detected for #${number}. Initiating review.`);
             const diffContent = await getDiff(octokit, owner, repo, number);
             await performPRReview(octokit, diffContent, number, genAI);
-        } else if (isIssueOpenedEvent) {
+        } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
             await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
-        } else if (isCommentToGemini) {
-            console.log(`Comment to Gemini detected on issue/PR #${number}. Initiating response.`);
+        } else if (context.eventName === 'issue_comment' && context.payload.comment.body.startsWith("Hey Gemini,")) {
+            console.log(`"Hey Gemini," comment detected on issue/PR #${number}. Initiating response.`);
             await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
         } else {
-            console.log(`Event '${context.eventName}' with action '${context.payload.action}' did not match any triggers. No action taken.`);
+            console.log(`Event '${context.eventName}' did not match any triggers. No action taken.`);
         }
     } catch (error) {
         console.error(`An error occurred: ${error.message}`);
         throw error;
     }
 }
+
 run();
