@@ -360,27 +360,27 @@ async function run() {
         // The number will always be from the 'issue' object for issue_comment events
         const number = context.payload.issue.number;
 
-        // Determine the event type based on the payload structure
-        const isPullRequestComment = !!context.payload.issue.pull_request;
-        const isPullRequestEvent = context.eventName === 'pull_request';
-        const isIssueOpenedEvent = context.eventName === 'issues' && context.payload.action === 'opened';
-        const isCommentToGemini = context.payload.comment && context.payload.comment.body.startsWith("Hey Gemini,");
+        // Determine if the comment is a command for Gemini
+        const isCommentToGemini = context.payload.issue_comment && context.payload.issue_comment.body.startsWith("Hey Gemini,");
 
         // Conditional logic based on event type
-        if (isPullRequestEvent) {
+        if (context.eventName === 'pull_request') {
+            // This is for new/synced PRs, not comments
             console.log(`Pull Request event detected for #${number}. Initiating review.`);
             const diffContent = await getDiff(octokit, owner, repo, number);
             await performPRReview(octokit, diffContent, number, genAI);
-        } else if (isIssueOpenedEvent) {
+        } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
+            // This is for new issues
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
             await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
         } else if (context.eventName === 'issue_comment' && isCommentToGemini) {
-            // This now correctly handles both issue and PR comments
+            // This handles comments on both issues and PRs
             console.log(`Comment to Gemini detected on issue/PR #${number}. Initiating response.`);
             await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
         } else {
+            // Log for debugging if no action is taken
             console.log(`Event '${context.eventName}' with action '${context.payload.action}' did not match any triggers. No action taken.`);
         }
     } catch (error) {
