@@ -640,6 +640,83 @@ public class ApiMT implements ApiInterface {
     }
   }
 
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + "AdminService.createLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not create link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link created successfully";
+    }
+  }
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=true)/"
+            + facetName
+            + "/"
+            + "AdminService.openAttachment";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not open attachment: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachment opened succesfully";
+    } catch (IOException e) {
+      System.out.println("Error while opening attachment: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {

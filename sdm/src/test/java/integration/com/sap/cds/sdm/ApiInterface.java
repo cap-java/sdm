@@ -73,5 +73,18 @@ public interface ApiInterface {
   public List<Map<String, Object>> fetchEntityMetadata(
       String appUrl, String entityName, String facetName, String entityID) throws IOException;
 
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException;
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
+
   String deleteEntityDraft(String appUrl, String entityName, String entityID);
 }
