@@ -357,30 +357,30 @@ async function run() {
         
         const { owner, repo } = context.repo;
 
-        // The number will always be from the 'issue' object for issue_comment events
+        // The number is from the 'issue' object for issue_comment events
         const number = context.payload.issue.number;
 
-        // Determine if the comment is a command for Gemini
-        const isCommentToGemini = context.payload.issue_comment && context.payload.issue_comment.body.startsWith("Hey Gemini,");
+        // Correctly check the event type and payload properties
+        const isPullRequestEvent = context.eventName === 'pull_request';
+        const isIssueOpenedEvent = context.eventName === 'issues' && context.payload.action === 'opened';
+        const isCommentToGemini = context.eventName === 'issue_comment' && 
+                                  context.payload.comment && 
+                                  context.payload.comment.body.startsWith("Hey Gemini,");
 
         // Conditional logic based on event type
-        if (context.eventName === 'pull_request') {
-            // This is for new/synced PRs, not comments
+        if (isPullRequestEvent) {
             console.log(`Pull Request event detected for #${number}. Initiating review.`);
             const diffContent = await getDiff(octokit, owner, repo, number);
             await performPRReview(octokit, diffContent, number, genAI);
-        } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
-            // This is for new issues
+        } else if (isIssueOpenedEvent) {
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
             await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
-        } else if (context.eventName === 'issue_comment' && isCommentToGemini) {
-            // This handles comments on both issues and PRs
+        } else if (isCommentToGemini) {
             console.log(`Comment to Gemini detected on issue/PR #${number}. Initiating response.`);
             await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
         } else {
-            // Log for debugging if no action is taken
             console.log(`Event '${context.eventName}' with action '${context.payload.action}' did not match any triggers. No action taken.`);
         }
     } catch (error) {
