@@ -6,7 +6,9 @@ on:
 
 jobs:
   respond:
-    if: github.event.issue.pull_request && github.event.comment.author.login != 'github-actions[bot]'
+    # This job will now run for comments on both issues and pull requests,
+    # as long as the comment is not from the bot itself.
+    if: github.event.comment.author.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -16,15 +18,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm install @actions/github @google/generative-ai @octokit/core
-        
+
       - name: Run Gemini Responder Script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
