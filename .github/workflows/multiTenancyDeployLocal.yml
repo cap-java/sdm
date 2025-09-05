@@ -32,40 +32,41 @@ jobs:
             echo "🔨 Building and packaging..."
             mvn clean install -P unit-tests -DskipIntegrationTests
             echo "✅ Build completed successfully!"
-
-      - name: Setup Node.js 🟢
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18' # Ensure to use at least version 18
-
-      - name: Install MBT ⚙️
-        run: |
-            echo "🔧 Installing MBT..."
-            npm install -g mbt
-            echo "✅ MBT installation complete!"
-
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-
-      - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
-        run: |
-            pwd
-            echo "✔️ Directory changed!"
-
-      - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
-        run: |
-            echo "🚀 Running MBT build..."
-            echo "java version:"
-            java --version
-            mbt build
-            echo "✅ MBT build completed!"
             echo "cds version is: "
             cds v -i
+
+      # - name: Setup Node.js 🟢
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: '18' # Ensure to use at least version 18
+
+      # - name: Install MBT ⚙️
+      #   run: |
+      #       echo "🔧 Installing MBT..."
+      #       npm install -g mbt
+      #       echo "✅ MBT installation complete!"
+
+      # - name: Clone the cloud-cap-samples-java repo 🌐
+      #   run: |
+      #       echo "🔄 Cloning repository..."
+      #       git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+      #       echo "✅ Repository cloned!"
+
+      # - name: Change directory to cloud-cap-samples-java 📂
+      #   working-directory: cloud-cap-samples-java
+      #   run: |
+      #       pwd
+      #       echo "✔️ Directory changed!"
+
+      # - name: Run mbt build 🔨
+      #   working-directory: cloud-cap-samples-java
+      #   run: |
+      #       echo "🚀 Running MBT build..."
+      #       echo "java version:"
+      #       java --version
+      #       mbt build
+      #       echo "✅ MBT build completed!"
+            
 
       # - name: Deploy to Cloud Foundry ☁️
       #   working-directory: cloud-cap-samples-java
