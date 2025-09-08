@@ -31,21 +31,44 @@ jobs:
           # Define the target file
           FILE_PATH="cap-notebook/demoapp/app/index.html"
           
-          # Fetch the latest version using jq for robust parsing
-          LATEST_VERSION=$(curl -s "https://sapui5.hana.ondemand.com/resources/sap-ui-version.json" | jq -r '.version')
+          # Function to get the latest version and its corresponding latest patch version
+          fetch_versions() {
+              local json_url="https://sapui5.hana.ondemand.com/versionoverview.json"
+              local json_content=$(curl -s "$json_url")
           
-          echo "Latest SAPUI5 version found: $LATEST_VERSION"
+              local latest_version_with_long_term_maintenance
+              latest_version_with_long_term_maintenance=$(echo "$json_content" | jq -r \
+                  '[.versions[] | select(.support == "Maintenance" and (.eom | test("Long-term Maintenance")))][0].version' | tr -d '*')
           
-          # Fetch the current version from the specified file
-          CURRENT_VERSION=$(grep 'sap-ui-core' "$FILE_PATH" | sed -E 's|.*hana\.ondemand\.com/||' -E 's|/resources.*||')
+              local latest_patch_version
+              latest_patch_version=$(echo "$json_content" | jq -r --arg version_prefix "${latest_version_with_long_term_maintenance%.*}" \
+                  '[.patches[] | select((.version | startswith($version_prefix)) and (.eocp != "To Be Determined"))] | sort_by(.version | split("-")[0] | split(".") | map(tonumber)) | last | .version')
           
-          echo "Current SAPUI5 version in file: $CURRENT_VERSION"
+              echo "$latest_version_with_long_term_maintenance $latest_patch_version"
+          }
+          
+          # Function to fetch the current version from the file
+          fetch_current_version() {
+              local file="$1"
+              local current_version
+              current_version=$(grep 'src="https://sapui5.hana.ondemand.com/' "$file" | sed -E 's|.*hana\.ondemand\.com/||' \
+                  | sed -E 's|/resources.*||' | tr -d '\n"')
+              echo "$current_version"
+          }
+          
+          # Get the latest versions
+          read -r latest_version latest_patch_version < <(fetch_versions)
+          echo "Latest SAPUI5 version found: $latest_patch_version"
+          
+          # Get the current version
+          current_version=$(fetch_current_version "$FILE_PATH")
+          echo "Current SAPUI5 version in file: $current_version"
           
           # Split versions into components for numerical comparison
-          IFS='.' read -r LATEST_MAJOR LATEST_MINOR LATEST_PATCH <<< "$LATEST_VERSION"
-          IFS='.' read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "$CURRENT_VERSION"
+          IFS='.' read -r LATEST_MAJOR LATEST_MINOR LATEST_PATCH <<< "$latest_patch_version"
+          IFS='.' read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "$current_version"
           
-          echo "Comparing versions: $CURRENT_VERSION vs $LATEST_VERSION"
+          echo "Comparing versions: $current_version vs $latest_patch_version"
           
           # Perform numerical comparison
           if (( LATEST_MAJOR > CURRENT_MAJOR || \
@@ -54,14 +77,14 @@ jobs:
               
               echo "A newer version of SAPUI5 is available. Updating..."
               
-              # Use a safe sed replacement with a different delimiter to avoid conflicts with version numbers
-              sed -i "s|${CURRENT_VERSION}|${LATEST_VERSION}|g" "$FILE_PATH"
+              # Use a safe sed replacement with a different delimiter to avoid conflicts
+              sed -i "s|${current_version}|${latest_patch_version}|g" "$FILE_PATH"
               
               echo "Update successful."
               
               # Set output to trigger the PR creation
               echo "changes_made=true" >> "$GITHUB_OUTPUT"
-              echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
+              echo "latest_version=$latest_patch_version" >> "$GITHUB_OUTPUT"
           else
               echo "Current version is up-to-date. No changes needed."
           fi
@@ -76,7 +99,6 @@ jobs:
           title: 'Automated: Update SAPUI5 to ${{ steps.run_script.outputs.latest_version }}'
           body: |
             This is an automated pull request to update the SAPUI5 version in `index.html`.
-            - Current Version: ${{ steps.get_current_version.outputs.current_version }}
             - Latest Version: ${{ steps.run_script.outputs.latest_version }}
           branch: 'update-sapui5-version'
           base: develop_deploy
