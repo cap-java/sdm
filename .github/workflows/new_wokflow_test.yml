@@ -15,49 +15,54 @@ jobs:
       pull-requests: write
 
     steps:
-  
-      - name: Checkout the develop_deploy branch
-        uses: actions/checkout@v3
-        with:
-          ref: develop_deploy
+    - name: Checkout the develop_deploy branch
+      uses: actions/checkout@v3
+      with:
+        ref: develop_deploy
 
-      - name: Get latest SAPUI5 version
-        id: get_latest_version
-        run: |
-          LATEST_VERSION=$(curl -s "https://sapui5.hana.ondemand.com/resources/sap-ui-version.json" | grep "version" | head -n 1 | awk '{print $2}' | tr -d '", ')
-          
-          echo "latest_version=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Latest SAPUI5 version found: $LATEST_VERSION"
-          
-      - name: Get current version from file
-        id: get_current_version
-        run: |
-          CURRENT_VERSION=$(grep 'sap-ui-core' cap-notebook/demoapp/app/index.html | sed -e 's/.*hana.ondemand.com\///' -e 's/\/resources.*//')
-          
-          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Current SAPUI5 version in file: $CURRENT_VERSION"
-          
-      - name: Compare and update version
-        id: update_version_file
-        if: steps.get_latest_version.outputs.latest_version > steps.get_current_version.outputs.current_version
-        run: |
-          echo "A newer version of SAPUI5 is available. Updating..."
-          
-          sed -i "s|${{ steps.get_current_version.outputs.current_version }}|${{ steps.get_latest_version.outputs.latest_version }}|g" cap-notebook/demoapp/app/index.html
-          
-          echo "Update successful."
+    - name: Set up jq
+      run: sudo apt-get install -y jq
 
-      - name: Create Pull Request
-        if: steps.update_version_file.outcome == 'success'
-        uses: peter-evans/create-pull-request@v4
-        with:
-          token: ${{ secrets.GIT_TOKEN }}
-          commit-message: 'chore: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
-          title: 'Automated: Update SAPUI5 to ${{ steps.get_latest_version.outputs.latest_version }}'
-          body: |
-            This is an automated pull request to update the SAPUI5 version in `index.html`.
-            - Current Version: ${{ steps.get_current_version.outputs.current_version }}
-            - Latest Version: ${{ steps.get_latest_version.outputs.latest_version }}
-          branch: 'update-sapui5-version'
-          base: develop_deploy
-          assignees: yashmeet29
+    - name: Get latest SAPUI5 version
+      id: fetch_versions
+      run: |
+        export JSON_URL="https://sapui5.hana.ondemand.com/versionoverview.json"
+
+        latest_versions=$(curl -s "$JSON_URL" | jq -r '[.versions[] | select(.support == "Maintenance" and (.eom | test("Long-term Maintenance")))][0] | "\(.version) \(.latest_patch_version)"')
+        read -r latest_version latest_patch_version <<< "$latest_versions"
+
+        echo "latest_version=$latest_version" >> "$GITHUB_OUTPUT"
+        echo "latest_patch_version=$latest_patch_version" >> "$GITHUB_OUTPUT"
+        echo "Latest versions determined: $latest_version, Patch: $latest_patch_version"
+
+    - name: Get current version from index.html
+      id: get_current_version
+      run: |
+        current_version=$(grep 'sap-ui-core' cap-notebook/demoapp/app/index.html | sed -e 's/.*hana.ondemand.com\///' -e 's/\/resources.*//' | tr -d '\n"')
+        
+        echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
+        echo "Current SAPUI5 version in index.html: $current_version"
+
+    - name: Compare and update version in index.html
+      if: ${{ steps.fetch_versions.outputs.latest_patch_version != steps.get_current_version.outputs.current_version }}
+      run: |
+        echo "Updating index.html with new UI5 version..."
+        
+        sed -i "s|${{ steps.get_current_version.outputs.current_version }}|${{ steps.fetch_versions.outputs.latest_patch_version }}|g" cap-notebook/demoapp/app/index.html
+        git add cap-notebook/demoapp/app/index.html
+        git commit -m "Update UI5 version to ${{ steps.fetch_versions.outputs.latest_patch_version }}"
+        git push origin HEAD
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v4
+      with:
+        token: ${{ secrets.GIT_TOKEN }}
+        commit-message: 'chore: Update UI5 to ${{ steps.fetch_versions.outputs.latest_patch_version }}'
+        title: 'Automated: Update UI5 to ${{ steps.fetch_versions.outputs.latest_patch_version }}'
+        body: |
+          This is an automated pull request to update the UI5 version in `index.html`.
+          - Current Version: ${{ steps.get_current_version.outputs.current_version }}
+          - Latest Patch Version: ${{ steps.fetch_versions.outputs.latest_patch_version }}
+        branch: 'update-ui5-version'
+        base: develop_deploy
+        assignees: yashmeet29
