@@ -51,7 +51,7 @@ jobs:
           fetch_current_version() {
               local file="$1"
               local current_version
-              current_version=$(grep -oE 'sapui5\.hana\.ondemand\.com/([0-9]+\.[0-9]+\.[0-9]+)' "$file" | cut -d'/' -f4 | head -n 1)
+              current_version=$(grep -oP '(?<=sap/ushell/bootstrap/sandbox\.js[^>]*>)\d+\.\d+\.\d+' "$file" | head -n 1)
               echo "$current_version"
           }
           
@@ -61,6 +61,12 @@ jobs:
           
           # Get the current version
           current_version=$(fetch_current_version "$FILE_PATH")
+          
+          if [[ -z "$current_version" ]]; then
+            echo "Error: Current version could not be found in $FILE_PATH. Exiting."
+            exit 1
+          fi
+          
           echo "Current SAPUI5 version in file: $current_version"
           
           # Split versions into components for numerical comparison
@@ -76,8 +82,9 @@ jobs:
               
               echo "A newer version of SAPUI5 is available. Updating..."
               
-              # Use a safe sed replacement with a different delimiter to avoid conflicts
-              sed -i "s|${current_version}|${latest_patch_version}|g" "$FILE_PATH"
+              # Use sed to replace only the version number
+              # Note: This is a robust replacement that handles the full line
+              sed -i "s|sapui5.hana.ondemand.com/${current_version}|sapui5.hana.ondemand.com/${latest_patch_version}|g" "$FILE_PATH"
               
               echo "Update successful."
               
