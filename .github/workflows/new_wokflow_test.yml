@@ -47,11 +47,9 @@ jobs:
               echo "$latest_version_with_long_term_maintenance $latest_patch_version"
           }
           
-          # Function to fetch the current version from the file (CORRECTED)
+          # Function to fetch the current version from the file
           fetch_current_version() {
               local file="$1"
-              # Grep specifically for the line with "sap-ui-core.js"
-              # then use sed to extract only the version number
               local current_version
               current_version=$(grep 'sap-ui-core.js' "$file" | sed -E 's|.*sapui5\.hana\.ondemand\.com/([0-9]+\.[0-9]+\.[0-9]+)/resources.*|\1|')
               echo "$current_version"
@@ -89,9 +87,10 @@ jobs:
               
               echo "Update successful."
               
-              # Set output to trigger the PR creation
+              # Set output variables to be used in subsequent steps
               echo "changes_made=true" >> "$GITHUB_OUTPUT"
               echo "latest_version=$latest_patch_version" >> "$GITHUB_OUTPUT"
+              echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
           else
               echo "Current version is up-to-date. No changes needed."
           fi
@@ -106,7 +105,8 @@ jobs:
           title: 'Automated: Update SAPUI5 to ${{ steps.run_script.outputs.latest_version }}'
           body: |
             This is an automated pull request to update the SAPUI5 version in `index.html`.
-            - Latest Version: ${{ steps.run_script.outputs.latest_version }}
+            Current Version: ${{ steps.run_script.outputs.current_version }}
+            Latest patch version: ${{ steps.run_script.outputs.latest_version }}
           branch: 'update-sapui5-version'
           base: develop_deploy_ui5
           assignees: yashmeet29
