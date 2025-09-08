@@ -47,12 +47,11 @@ jobs:
               echo "$latest_version_with_long_term_maintenance $latest_patch_version"
           }
           
-          # Function to fetch the current version from the file
+          # Function to fetch the current version from the file (CORRECTED)
           fetch_current_version() {
               local file="$1"
               local current_version
-              current_version=$(grep 'src="https://sapui5.hana.ondemand.com/' "$file" | sed -E 's|.*hana\.ondemand\.com/||' \
-                  | sed -E 's|/resources.*||' | tr -d '\n"')
+              current_version=$(grep -oE 'sapui5\.hana\.ondemand\.com/([0-9]+\.[0-9]+\.[0-9]+)' "$file" | cut -d'/' -f4 | head -n 1)
               echo "$current_version"
           }
           
