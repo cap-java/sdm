@@ -19,6 +19,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
 - Link as attachments: Provides the capability to support link or URL as attachments.
+- Edit Link-type attachments: Provides the capability to update URL of link-type attachments.
 
 ## Table of Contents
 
@@ -33,6 +34,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
 - [Support for Link type attachments](#support-for-link-type-attachments)
+- [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -740,6 +742,96 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 
 - Replace `my.Books.attachments` with the correct path for your entity and element (for example, `my.YourEntity.yourElement`) where you have defined `composition of many Attachments`.
 - Replace `AdminService` in `Action: 'AdminService.createLink'` with the name of your service.
+- Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
+
+## Support for edit of link type attachments
+
+This plugin provides the capability to update/edit the URL of attachments of link type.
+
+### Steps to Enable Edit Link Feature in CAP Application
+
+1. **Add the `editLink` action to application's service definition** 
+   
+   See this [example](https://github.com/cap-java/sdm/blob/a1fc26f3aa92ffd4f9203d815f51107838d5f677/cap-notebook/demoapp/srv/admin-service.cds#L18) from a sample Bookshop app:
+
+   ```cds
+   action editLink(
+         @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$'
+         @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+      ); 
+   ```
+   - Purpose: Enables users to edit URL of previously created links.
+   - Validation: Ensures only valid HTTP(S) URLs are accepted.
+   - UI Support: Provides labels and placeholders for better user experience.
+
+### UI Annotation Setup
+
+To enable the editing of links, you need to add a new button to the attachments table toolbar. This button will appear as an **inline button labeled "Edit Link"** on the attachment row of the attachments table for only link type attachments. When clicked, it will display a menu with the **"Edit Link"** option, allowing users to edit the URL of an existing link-type attachment.
+
+Add the following annotation block to your app/common.cds file. See this [example](https://github.com/cap-java/sdm/blob/4288ce6f58bc415a171a9e0340fa075aeac835ff/cap-notebook/demoapp/app/common.cds#L60)
+
+```cds
+annotate my.Books.attachments with @UI: {
+  HeaderInfo: {
+    $Type         : 'UI.HeaderInfoType',
+    TypeName      : '{i18n>Attachment}',
+    TypeNamePlural: '{i18n>Attachments}',
+  },
+  LineItem  : [
+    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {
+      $Type  : 'UI.DataFieldForActionGroup',
+      ID     : 'TableActionGroup',
+      Label  : 'Create',
+      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
+      Actions: [
+        {
+          $Type : 'UI.DataFieldForAction',
+          Label : 'Link',
+          Action: 'AdminService.createLink',
+        }
+      ]
+    },
+    {
+      @UI.Hidden: {$edmJson:{$If:[{$Eq:[{$Path: 'IsActiveEntity' },true]},true,{$If:[{$Ne:[{$Path:'mimeType'},'application/internet-shortcut']},true,false]}]}},
+      $Type : 'UI.DataFieldForAction',
+      Label : 'Edit Link',
+      Action: 'AdminService.editLink',
+      Inline: true,
+      IconUrl: 'sap-icon://edit',
+      @HTML5.CssDefaults: {width: '4%'}        
+    }
+  ],
+} 
+{
+  note       @(title: '{i18n>Note}');
+  type       @(title: '{i18n>Type}');
+  linkUrl       @(title: '{i18n>LinkURL}');
+  fileName  @(title: '{i18n>Filename}');
+  modifiedAt @(odata.etag: null);
+  content
+    @Core.ContentDisposition: { Filename: fileName }
+    @(title: '{i18n>Attachment}');
+  folderId @UI.Hidden;
+  repositoryId  @UI.Hidden ;
+  objectId  @UI.Hidden ;
+  mimeType @UI.Hidden;
+  status @UI.Hidden;
+}
+annotate Attachments with @Common: {SideEffects #ContentChanged: {
+  SourceProperties: [content],
+  TargetProperties: ['status'],
+  TargetEntities : [Books.attachments]
+}}{};
+```
+
+- Replace `my.Books.attachments` with the correct path for your entity and element (for example, `my.YourEntity.yourElement`) where you have defined `composition of many Attachments`.
+- Replace `AdminService` in `Action: 'AdminService.editLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
 ## Known Restrictions
