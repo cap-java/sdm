@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnElementRef;
@@ -840,5 +841,81 @@ public class SDMServiceGenericHandlerTest {
 
     // Assert
     verify(context).setResult("None");
+  }
+
+  @Test
+  void testEditLinkSuccess() throws IOException {
+    // Arrange
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.getEvent()).thenReturn("editLink");
+    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    UserInfo userInfo = Mockito.mock(UserInfo.class);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(cmisDocument);
+    when(mockContext.get("url")).thenReturn("http://newlink.com");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    JSONObject successResponse = new JSONObject();
+    successResponse.put("status", "success");
+    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
+        .thenReturn(successResponse);
+
+    // Act
+    sdmServiceGenericHandler.edit(mockContext);
+
+    // Assert
+    assertEquals("http://newlink.com", cmisDocument.getUrl());
+    verify(persistenceService).run(any(Update.class));
+    verify(mockContext).setCompleted();
+  }
+
+  @Test
+  void testEditLinkFailure() throws IOException {
+    // Arrange
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    UserInfo userInfo = Mockito.mock(UserInfo.class);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(cmisDocument);
+    when(mockContext.get("url")).thenReturn("http://badlink.com");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    JSONObject failureResponse = new JSONObject();
+    failureResponse.put("status", "error");
+    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
+        .thenReturn(failureResponse);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));
+    verify(persistenceService, never()).run(any(Update.class));
+    verify(mockContext, never()).setCompleted();
   }
 }

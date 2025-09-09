@@ -81,6 +81,46 @@ public class SDMServiceImpl implements SDMService {
     return new JSONObject(finalResponse);
   }
 
+  @Override
+  public JSONObject editLink(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws ServiceException {
+
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    Map<String, String> finalResponse = new HashMap<>();
+
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+
+    String urlShortcut = "[InternetShortcut]\nURL=" + cmisDocument.getUrl();
+    byte[] fileContent = urlShortcut.getBytes(StandardCharsets.UTF_8);
+
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+    builder.addTextBody("cmisaction", "setContent", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody(
+        "filename",
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url",
+        ContentType.TEXT_PLAIN);
+    builder.addTextBody("charset", "UTF-8", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+
+    builder.addBinaryBody(
+        "media",
+        fileContent,
+        ContentType.create("application/internet-shortcut"),
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url");
+
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    return new JSONObject(finalResponse);
+  }
+
   private void executeHttpPost(
       HttpClient httpClient,
       HttpPost uploadFile,
