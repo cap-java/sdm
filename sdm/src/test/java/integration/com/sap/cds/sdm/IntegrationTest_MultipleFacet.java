@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import okhttp3.*;
 import okio.ByteString;
+import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -52,8 +53,10 @@ class IntegrationTest_MultipleFacet {
   private static String copyAttachmentSourceEntity;
   private static String copyAttachmentTargetEntity;
   private static String copyAttachmentTargetEntityEmpty;
+  private static String createLinkEntity;
   private static List<String> sourceObjectIds = new ArrayList<>();
   private static List<String> targetAttachmentIds = new ArrayList<>();
+  private static List<String> successfullyRenamedAttachments = new ArrayList<>();
 
   @BeforeAll
   static void setup() throws IOException {
@@ -2181,7 +2184,7 @@ class IntegrationTest_MultipleFacet {
     if (!response.equals("Could not create entity")) {
       entityID6 = response;
       response = api.deleteEntityDraft(appUrl, entityName, entityID6);
-      if (response.equals("Entity Deleted")) {
+      if (response.equals("Entity Draft Deleted")) {
         testStatus = true;
       }
     }
@@ -2218,7 +2221,7 @@ class IntegrationTest_MultipleFacet {
         }
       }
       response = api.deleteEntityDraft(appUrl, entityName, entityID6);
-      if ("Entity Deleted".equals(response)) {
+      if ("Entity Draft Deleted".equals(response)) {
         testStatus = true;
       }
     }
@@ -2725,6 +2728,515 @@ class IntegrationTest_MultipleFacet {
       }
     } else {
       fail("Could not edit entities");
+    }
+  }
+
+  @Test
+  @Order(37)
+  void testCreateLinkSuccess() throws IOException {
+    System.out.println("Test (37): Create link in entity");
+    List<String> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample";
+    String linkUrl = "https://www.example.com";
+    for (String facetName : facet) {
+      String createLinkResponse1 =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      String createLinkResponse2 =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName + "1", linkUrl);
+      if (!createLinkResponse1.equals("Link created successfully")
+          || !createLinkResponse2.equals("Link created successfully")) {
+        fail("Could not create links for facet : " + facetName + createLinkResponse1);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      // String openAttachmentResponse;
+      // for (String attachment : attachments) {
+      //   openAttachmentResponse =
+      //       api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
+      //   if (!openAttachmentResponse.equals("Attachment opened succesfully")) {
+      //     fail("Could not open created link in facet : " + facetName);
+      //   }
+      // }
+    }
+  }
+
+  @Test
+  @Order(38)
+  void testCreateLinkDifferentEntity() throws IOException {
+    System.out.println("Test (38): Create link with same name in different entity");
+
+    String createLinkDifferentEntity =
+        api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkDifferentEntity.equals("Could not edit entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample";
+    String linkUrl = "https://example.com";
+    for (String facetName : facet) {
+      String createResponse =
+          api.createLink(
+              appUrl, entityName, facetName, createLinkDifferentEntity, linkName, linkUrl);
+      if (!createResponse.equals("Link created successfully")) {
+        fail("Could not create link in different entity with same name");
+      }
+    }
+
+    String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkDifferentEntity);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkDifferentEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(39)
+  void testCreateLinkFailure() throws IOException {
+    System.out.println("Test (39): Create link fails due to invalid URL and name");
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (editEntityResponse.equals("Could not edit entity")) {
+      fail("Could not edit entity");
+    }
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "example.com";
+      try {
+        String response =
+            api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+        fail("Create link did not throw an error for invalid url");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("400018", errorCode);
+        assertEquals("Enter a value that is within the expected pattern.", errorMessage);
+      }
+      try {
+        api.createLink(
+            appUrl, entityName, facetName, createLinkEntity, linkName + "//", "https://" + linkUrl);
+        fail("Create link did not throw an error for invalid name");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        String expected =
+            "Link could not be created. The following name(s) contain unsupported characters (/, \\).\n\n"
+                + " • sample//\n\n"
+                + "Rename the link and try again.";
+        assertEquals("500", errorCode);
+        assertEquals(
+            expected.replaceAll("\\s+", " ").trim(), errorMessage.replaceAll("\\s+", " ").trim());
+      }
+      try {
+        api.createLink(appUrl, entityName, facetName, createLinkEntity, "", "");
+        fail("Create link did not throw an error for empty name and url");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        String expected = "Provide the missing value.";
+        assertEquals("409008", errorCode);
+        assertEquals(expected, errorMessage);
+      }
+      try {
+        api.createLink(
+            appUrl, entityName, facetName, createLinkEntity, linkName, "https://" + linkUrl);
+        fail("Create link did not throw an error for duplicate name");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        assertEquals("sample already exists.", errorMessage);
+      }
+      try {
+        for (int i = 2; i < 6; i++) {
+          api.createLink(
+              appUrl, entityName, facetName, createLinkEntity, linkName + i, "https://" + linkUrl);
+        }
+        System.out.println("Created 5 links in facet: " + facetName);
+        if (!facetName.equals("footnotes")) {
+          fail("More than 5 links were created in the same entity");
+        }
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        if (facetName.equals("references")) {
+          assertEquals("Only 5 attachments allowed.", errorMessage);
+        } else if (facetName.equals("attachments")) {
+          assertEquals("Only 4 attachments allowed.", errorMessage);
+        }
+      }
+    }
+
+    String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(40)
+  void testCreateLinkNoSDMRoles() throws IOException {
+    System.out.println("Test (40): Create link fails due to no SDM roles assigned");
+
+    String createLinkEntityNoSDMRoles =
+        apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntityNoSDMRoles.equals("Could not edit entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample27";
+      String linkUrl = "https://example.com";
+      try {
+        apiNoRoles.createLink(
+            appUrl, entityName, facetName, createLinkEntityNoSDMRoles, linkName, linkUrl);
+        fail("Link got created without SDM roles");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        assertEquals(
+            "You do not have the required permissions to upload attachments. Please contact your administrator for access.",
+            errorMessage);
+      }
+    }
+
+    String response =
+        apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntityNoSDMRoles);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkEntityNoSDMRoles);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(41)
+  void testDeleteLink() throws IOException {
+    System.out.println("Test (41): Delete link in entity");
+    List<List<String>> attachments = new ArrayList<>();
+
+    String createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet : " + facetName);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      String deleteLinkResponse =
+          api.deleteAttachment(
+              appUrl, entityName, facetName, createLinkEntity, attachments.get(index).get(0));
+      System.out.println("Delete response for facet " + facetName + ": " + deleteLinkResponse);
+      if (!deleteLinkResponse.equals("Deleted")) {
+        fail("Could not delete created link");
+      }
+      index += 1;
+    }
+
+    saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    index = 0;
+    attachments.clear();
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+      System.out.println(
+          "Attachments after deletion in facet " + facetName + ": " + attachments.get(index));
+      if (attachments.get(index).size() != 0) {
+        fail("Link wasn't deleted");
+      }
+      index += 1;
+    }
+
+    String response = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(42)
+  void testRenameLinkSuccess() throws IOException {
+    System.out.println("Test (42): Rename link in entity");
+    List<List<String>> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      successfullyRenamedAttachments.add(attachments.get(index).get(0));
+      String renameLinkResponse =
+          api.renameAttachment(
+              appUrl,
+              entityName,
+              facetName,
+              createLinkEntity,
+              attachments.get(index).get(0),
+              "sampleRenamed");
+      if (!renameLinkResponse.equals("Renamed")) {
+        fail("Could not Renamed created link");
+      }
+      index += 1;
+    }
+
+    saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+  }
+
+  @Test
+  @Order(43)
+  void testRenameLinkDuplicate() throws IOException {
+    System.out.println("Test (43): Rename link in entity fails due to duplicate error");
+    List<String> attachments = new ArrayList<>();
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (saveResponse.equals("Could not save entity")) {
+      fail("Could not save entity");
+    }
+
+    index = 0;
+    List<String> facetAttachments;
+    for (String facetName : facet) {
+      int lambdaIndex = index;
+      facetAttachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .filter(
+                  item ->
+                      !successfullyRenamedAttachments
+                          .get(lambdaIndex)
+                          .equals(item.get("ID"))) // skip unwanted filename
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      index += 1;
+      attachments.add(facetAttachments.get(0));
+    }
+
+    System.out.println("Attachments to be renamed: " + attachments);
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!response.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    index = 0;
+    for (String facetName : facet) {
+      api.renameAttachment(
+          appUrl, entityName, facetName, createLinkEntity, attachments.get(index), "sampleRenamed");
+      index += 1;
+    }
+
+    String saveError = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    String expectedWarning =
+        "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}]}}";
+    ObjectMapper mapper = new ObjectMapper();
+    assertEquals(mapper.readTree(expectedWarning), mapper.readTree(saveError));
+
+    String deleteEntityResponse = api.deleteEntityDraft(appUrl, entityName, createLinkEntity);
+    if (!deleteEntityResponse.equals("Entity Draft Deleted")) {
+      fail("Entity draft not deleted");
+    }
+  }
+
+  @Test
+  @Order(44)
+  void testRenameLinkUnsupportedCharacters() throws IOException {
+    System.out.println(
+        "Test (44): Rename link in entity fails due to unsupported characters in name");
+    List<List<String>> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample2";
+    String linkUrl = "https://www.example.com";
+
+    for (String facetName : facet) {
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      api.renameAttachment(
+          appUrl,
+          entityName,
+          facetName,
+          createLinkEntity,
+          attachments.get(index).get(0),
+          "sampleRenamed//");
+      index += 1;
+    }
+
+    String warning =
+        saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    String expectedWarning =
+        "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+    ObjectMapper mapper = new ObjectMapper();
+    assertEquals(mapper.readTree(expectedWarning), mapper.readTree(warning));
+
+    String deleteEntityResponse = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!deleteEntityResponse.equals("Entity Deleted")) {
+      fail("Entity draft not deleted");
     }
   }
 }

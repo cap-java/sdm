@@ -2461,8 +2461,8 @@ class IntegrationTest_SingleFacet {
           api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
       String createLinkResponse2 =
           api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName + "1", linkUrl);
-      if (createLinkResponse1.equals("Link created succesfully")
-          && createLinkResponse2.equals("Link created succesfully")) {
+      if (createLinkResponse1.equals("Link created successfully")
+          && createLinkResponse2.equals("Link created successfully")) {
         String saveEntityResponse =
             api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
         if (saveEntityResponse.equals("Saved")) {
@@ -2475,7 +2475,7 @@ class IntegrationTest_SingleFacet {
           for (String attachment : attachments) {
             openAttachmentResponse =
                 api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
-            if (!openAttachmentResponse.equals("Attachment opened succesfully")) {
+            if (!openAttachmentResponse.equals("Attachment opened successfully")) {
               fail("Could not open created link");
             }
           }
@@ -2502,7 +2502,7 @@ class IntegrationTest_SingleFacet {
       String createResponse =
           api.createLink(
               appUrl, entityName, facetName, createLinkDifferentEntity, linkName, linkUrl);
-      if (!createResponse.equals("Link created succesfully")) {
+      if (!createResponse.equals("Link created successfully")) {
         fail("Could not create link in different entity with same name");
       }
       String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkDifferentEntity);
@@ -2665,7 +2665,7 @@ class IntegrationTest_SingleFacet {
       String linkUrl = "https://www.example.com";
       String createLinkResponse =
           api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
-      if (createLinkResponse.equals("Link created succesfully")) {
+      if (createLinkResponse.equals("Link created successfully")) {
         String saveEntityResponse =
             api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
         if (saveEntityResponse.equals("Saved")) {
@@ -2728,7 +2728,7 @@ class IntegrationTest_SingleFacet {
     String linkUrl = "https://www.example.com";
     String createLinkResponse =
         api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
-    if (!createLinkResponse.equals("Link created succesfully")) {
+    if (!createLinkResponse.equals("Link created successfully")) {
       fail("Could not create link");
     }
 
@@ -2775,7 +2775,7 @@ class IntegrationTest_SingleFacet {
     String linkUrl = "https://www.example.com";
     String createLinkResponse =
         api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
-    if (!createLinkResponse.equals("Link created succesfully")) {
+    if (!createLinkResponse.equals("Link created successfully")) {
       fail("Could not create link");
     }
 
@@ -2828,7 +2828,7 @@ class IntegrationTest_SingleFacet {
     String linkUrl = "https://www.example.com";
     String createLinkResponse =
         api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
-    if (!createLinkResponse.equals("Link created succesfully")) {
+    if (!createLinkResponse.equals("Link created successfully")) {
       fail("Could not create link");
     }
 

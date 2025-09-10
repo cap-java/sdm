@@ -196,7 +196,7 @@ public class ApiMT implements ApiInterface {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
       }
-      return "Entity Deleted";
+      return "Entity Draft Deleted";
     } catch (IOException e) {
       System.out.println("Could not delete entity : " + e);
     }
@@ -505,11 +505,6 @@ public class ApiMT implements ApiInterface {
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
-        System.out.println(
-            "Rename Attachment failed in the "
-                + facetName
-                + " section. Error : "
-                + renameResponse.body().string());
         throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
@@ -687,6 +682,8 @@ public class ApiMT implements ApiInterface {
             + appUrl
             + "/api/admin/"
             + entityName
+            + "_"
+            + facetName
             + "(up__ID="
             + entityID
             + ",ID="
