@@ -72,16 +72,26 @@ public class SDMCustomServiceHandler {
       folderId = succinctProperties.getString("cmis:objectId");
     }
     CmisDocument cmisDocument = new CmisDocument();
-    cmisDocument.setRepositoryId(repositoryId);
-    cmisDocument.setFolderId(folderId);
+
     List<String> objectIds = context.getObjectIds();
     List<List<String>> attachmentsMetadata = new ArrayList<>();
     for (String objectId : objectIds) {
       // get Link Url from objectId and set to cmisDocument
+      System.out.println("Facet name " + context.getFacet());
       Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
+      System.out.println(
+          "Entity name "
+              + attachmentEntity
+              + (attachmentEntity.isPresent()
+                  ? attachmentEntity.get().getQualifiedName()
+                  : "Not PRESENT"));
       cmisDocument =
           dbQuery.getAttachmentForObjectID(attachmentEntity.get(), persistenceService, objectId);
+      System.out.println("Document Details" + cmisDocument.getType() + ":" + cmisDocument.getUrl());
+
       cmisDocument.setObjectId(objectId);
+      cmisDocument.setRepositoryId(repositoryId);
+      cmisDocument.setFolderId(folderId);
       try {
         attachmentsMetadata.add(
             sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
