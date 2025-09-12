@@ -139,7 +139,7 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  public String getIconForMimeType(String mimeType) {
+  private String getIconForMimeType(String mimeType) {
     if (isExcel(mimeType)) {
       return "sap-icon://excel-attachment";
     } else if (isImage(mimeType)) {
