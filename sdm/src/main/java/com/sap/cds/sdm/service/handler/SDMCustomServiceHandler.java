@@ -9,12 +9,14 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
+import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,14 +28,22 @@ import org.json.JSONObject;
 @ServiceName(value = "*", type = RegisterService.class)
 public class SDMCustomServiceHandler {
   private final SDMService sdmService;
+  private final DBQuery dbQuery;
   private final List<DraftService> draftService;
   private final TokenHandler tokenHandler;
+  private final PersistenceService persistenceService;
 
   public SDMCustomServiceHandler(
-      SDMService sdmService, List<DraftService> draftService, TokenHandler tokenHandler) {
+      SDMService sdmService,
+      List<DraftService> draftService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery,
+      PersistenceService persistenceService) {
     this.sdmService = sdmService;
     this.draftService = draftService;
     this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
+    this.persistenceService = persistenceService;
   }
 
   @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
@@ -67,6 +77,10 @@ public class SDMCustomServiceHandler {
     List<String> objectIds = context.getObjectIds();
     List<List<String>> attachmentsMetadata = new ArrayList<>();
     for (String objectId : objectIds) {
+      // get Link Url from objectId and set to cmisDocument
+      Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
+      cmisDocument =
+          dbQuery.getAttachmentForObjectID(attachmentEntity.get(), persistenceService, objectId);
       cmisDocument.setObjectId(objectId);
       try {
         attachmentsMetadata.add(
@@ -107,9 +121,11 @@ public class SDMCustomServiceHandler {
       updatedFields.put("folderId", folderId);
       updatedFields.put("status", "Clean");
       updatedFields.put("mimeType", mimeType);
+      updatedFields.put("type", cmisDocument.getType());
       updatedFields.put("fileName", fileName);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
+      updatedFields.put("linkUrl", cmisDocument.getUrl());
       updatedFields.put(
           "contentId", newObjectId + ":" + folderId + ":" + context.getFacet() + ":" + mimeType);
       updatedFields.put(upIdKey, upID);

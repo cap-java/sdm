@@ -62,6 +62,23 @@ public class DBQuery {
     return cmisDocument;
   }
 
+  public CmisDocument getAttachmentForObjectID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("linkUrl", "type")
+            .where(doc -> doc.get("objectId").eq(id));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    }
+    return cmisDocument;
+  }
+
   public Result getAttachmentsForUPIDAndRepository(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
@@ -106,7 +123,7 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  private static String getIconForMimeType(String mimeType) {
+  public String getIconForMimeType(String mimeType) {
     if (isExcel(mimeType)) {
       return "sap-icon://excel-attachment";
     } else if (isImage(mimeType)) {
