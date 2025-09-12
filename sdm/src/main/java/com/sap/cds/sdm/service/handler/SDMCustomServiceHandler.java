@@ -114,6 +114,10 @@ public class SDMCustomServiceHandler {
     for (List<String> attachmentMetadata : attachmentsMetadata) {
       String fileName = attachmentMetadata.get(0);
       String mimeType = attachmentMetadata.get(1);
+      if (mimeType.equalsIgnoreCase("application/internet-shortcut")) {
+        int dotIndex = fileName.lastIndexOf('.');
+        fileName = fileName.substring(0, dotIndex);
+      }
       String newObjectId = attachmentMetadata.get(2);
       updatedFields.put("objectId", newObjectId);
       updatedFields.put("repositoryId", repositoryId);
