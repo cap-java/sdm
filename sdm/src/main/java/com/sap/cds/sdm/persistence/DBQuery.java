@@ -10,6 +10,7 @@ import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
@@ -63,9 +64,10 @@ public class DBQuery {
   }
 
   public CmisDocument getAttachmentForObjectID(
-      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+      PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
     CqnSelect q =
-        Select.from(attachmentEntity)
+        Select.from(attachmentEntity.get())
             .columns("linkUrl", "type")
             .where(doc -> doc.get("objectId").eq(id));
     Result result = persistenceService.run(q);
@@ -75,6 +77,20 @@ public class DBQuery {
       Row row = res.get();
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    } else {
+      // Check in draft table as well
+      attachmentEntity = context.getModel().findEntity(context.getFacet() + "_drafts");
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("linkUrl", "type")
+              .where(doc -> doc.get("objectId").eq(id));
+      result = persistenceService.run(q);
+      res = result.first();
+      if (res.isPresent()) {
+        Row row = res.get();
+        cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+        cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      }
     }
     return cmisDocument;
   }
