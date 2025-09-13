@@ -206,7 +206,7 @@ public class Api implements ApiInterface {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
       }
-      return "Entity Deleted";
+      return "Entity Draft Deleted";
     } catch (IOException e) {
       System.out.println("Could not delete entity : " + e);
     }
@@ -672,6 +672,94 @@ public class Api implements ApiInterface {
       return "Attachments copied successfully";
     } catch (IOException e) {
       System.out.println("Error while copying attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + serviceName
+            + ".createLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not create link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link created successfully";
+    } catch (IOException e) {
+      System.out.println("Error while creating link: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/Books(ID="
+            + entityID
+            + ",IsActiveEntity=true)"
+            + "/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=true)"
+            + "/"
+            + serviceName
+            + ".openAttachment";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not open attachment: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachment opened successfully";
+    } catch (IOException e) {
+      System.out.println("Error while opening attachment: " + e.getMessage());
       throw new IOException(e);
     }
   }
