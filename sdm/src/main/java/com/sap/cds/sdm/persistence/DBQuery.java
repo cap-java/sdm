@@ -129,37 +129,11 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
-    String icon = getIconForMimeType(cmisDocument.getMimeType());
-    updatedFields.put("type", icon);
-
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
-  }
-
-  private String getIconForMimeType(String mimeType) {
-    if (isExcel(mimeType)) {
-      return "sap-icon://excel-attachment";
-    } else if (isImage(mimeType)) {
-      return "sap-icon://attachment-photo";
-    } else if (isText(mimeType)) {
-      return "sap-icon://attachment-text-file";
-    } else if (isPdf(mimeType)) {
-      return "sap-icon://pdf-attachment";
-    } else if (isPowerPoint(mimeType)) {
-      return "sap-icon://ppt-attachment";
-    } else if (isVideo(mimeType)) {
-      return "sap-icon://attachment-video";
-    } else if (isAudio(mimeType)) {
-      return "sap-icon://attachment-audio";
-    } else if (isZip(mimeType)) {
-      return "sap-icon://attachment-zip-file";
-    } else if (isHtml(mimeType)) {
-      return "sap-icon://attachment-html";
-    }
-    return "sap-icon://document";
   }
 
   private static boolean isExcel(String mimeType) {
