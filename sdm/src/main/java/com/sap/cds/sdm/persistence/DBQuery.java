@@ -137,43 +137,6 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  private static boolean isExcel(String mimeType) {
-    return mimeType.contains("vnd.ms-excel")
-        || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  }
-
-  private static boolean isImage(String mimeType) {
-    return mimeType.contains("image");
-  }
-
-  private static boolean isText(String mimeType) {
-    return mimeType.contains("text");
-  }
-
-  private static boolean isPdf(String mimeType) {
-    return mimeType.contains("pdf");
-  }
-
-  private static boolean isPowerPoint(String mimeType) {
-    return mimeType.contains("powerpoint") || mimeType.contains("presentation");
-  }
-
-  private static boolean isVideo(String mimeType) {
-    return mimeType.contains("video");
-  }
-
-  private static boolean isAudio(String mimeType) {
-    return mimeType.contains("audio");
-  }
-
-  private static boolean isZip(String mimeType) {
-    return mimeType.contains("zip");
-  }
-
-  private static boolean isHtml(String mimeType) {
-    return mimeType.contains("html");
-  }
-
   public List<CmisDocument> getAttachmentsForFolder(
       String entity,
       PersistenceService persistenceService,

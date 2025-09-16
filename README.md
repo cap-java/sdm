@@ -834,22 +834,14 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Replace `AdminService` in `Action: 'AdminService.editLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
-### Updating Tenant databases
-Introduction of additional database columns to support the Link feature leads to "invalid column" error when multitenant application is deployed with latest pom dependency.
-Below is the hook command should be executed to update the tenant database containers. This command should be added in the mta for the sidecar application.
-```
-hooks:
-- name: upgrade-all
-type: task
-phases:
-- blue-green.application.before-start.idle
-- deploy.application.before-start
-parameters:
-name: upgrade
-memory: 512M
-disk-quota: 768M
-command: npx -p @sap/cds-mtx cds-mtx upgrade "*"
-```
+### Updating Tenant Databases for Link Feature
+To support the Link feature, additional database columns are introduced.
+Upon re-deployment of your multitenant application, you may encounter "invalid column" errors if tenant database containers are not updated.
+
+To resolve this, ensure the following hook command is added to the mta.yaml for the sidecar application.
+This will automatically update tenant databases during deployment. See this [example](https://github.com/vibhutikumar07/cloud-cap-samples-java/blob/31009de404af0ddc92b8c593b21395757ed053e6/mta.yaml#L71).
+
+
 ## Known Restrictions
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.
