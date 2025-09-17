@@ -749,6 +749,19 @@ To support the Link feature, additional database columns are introduced.
 Upon re-deployment of your multitenant application, you may encounter "invalid column" errors if tenant database containers are not updated.
 
 To resolve this, ensure the following hook command is added to the mta.yaml for the sidecar application.
+```
+hooks:
+- name: upgrade-all
+type: task
+phases:
+- blue-green.application.before-start.idle
+- deploy.application.before-start
+parameters:
+name: upgrade
+memory: 512M
+disk-quota: 768M
+command: npx -p @sap/cds-mtx cds-mtx upgrade "*"
+```
 This will automatically update tenant databases during deployment. See this [example](https://github.com/vibhutikumar07/cloud-cap-samples-java/blob/31009de404af0ddc92b8c593b21395757ed053e6/mta.yaml#L71).
 
 ## Support for edit of link type attachments
