@@ -10,6 +10,7 @@ import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
@@ -62,6 +63,38 @@ public class DBQuery {
     return cmisDocument;
   }
 
+  public CmisDocument getAttachmentForObjectID(
+      PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
+    CqnSelect q =
+        Select.from(attachmentEntity.get())
+            .columns("linkUrl", "type")
+            .where(doc -> doc.get("objectId").eq(id));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    } else {
+      // Check in draft table as well
+      attachmentEntity = context.getModel().findEntity(context.getFacet() + "_drafts");
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("linkUrl", "type")
+              .where(doc -> doc.get("objectId").eq(id));
+      result = persistenceService.run(q);
+      res = result.first();
+      if (res.isPresent()) {
+        Row row = res.get();
+        cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+        cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      }
+    }
+    return cmisDocument;
+  }
+
   public Result getAttachmentsForUPIDAndRepository(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
@@ -96,74 +129,12 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
-    String icon = getIconForMimeType(cmisDocument.getMimeType());
-    updatedFields.put("type", icon);
-
+    updatedFields.put("type", "sap-icon://document");
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
-  }
-
-  private static String getIconForMimeType(String mimeType) {
-    if (isExcel(mimeType)) {
-      return "sap-icon://excel-attachment";
-    } else if (isImage(mimeType)) {
-      return "sap-icon://attachment-photo";
-    } else if (isText(mimeType)) {
-      return "sap-icon://attachment-text-file";
-    } else if (isPdf(mimeType)) {
-      return "sap-icon://pdf-attachment";
-    } else if (isPowerPoint(mimeType)) {
-      return "sap-icon://ppt-attachment";
-    } else if (isVideo(mimeType)) {
-      return "sap-icon://attachment-video";
-    } else if (isAudio(mimeType)) {
-      return "sap-icon://attachment-audio";
-    } else if (isZip(mimeType)) {
-      return "sap-icon://attachment-zip-file";
-    } else if (isHtml(mimeType)) {
-      return "sap-icon://attachment-html";
-    }
-    return "sap-icon://document";
-  }
-
-  private static boolean isExcel(String mimeType) {
-    return mimeType.contains("vnd.ms-excel")
-        || mimeType.contains("vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  }
-
-  private static boolean isImage(String mimeType) {
-    return mimeType.contains("image");
-  }
-
-  private static boolean isText(String mimeType) {
-    return mimeType.contains("text");
-  }
-
-  private static boolean isPdf(String mimeType) {
-    return mimeType.contains("pdf");
-  }
-
-  private static boolean isPowerPoint(String mimeType) {
-    return mimeType.contains("powerpoint") || mimeType.contains("presentation");
-  }
-
-  private static boolean isVideo(String mimeType) {
-    return mimeType.contains("video");
-  }
-
-  private static boolean isAudio(String mimeType) {
-    return mimeType.contains("audio");
-  }
-
-  private static boolean isZip(String mimeType) {
-    return mimeType.contains("zip");
-  }
-
-  private static boolean isHtml(String mimeType) {
-    return mimeType.contains("html");
   }
 
   public List<CmisDocument> getAttachmentsForFolder(
