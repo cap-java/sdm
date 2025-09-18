@@ -136,8 +136,8 @@ jobs:
           echo "🚀 Starting integration tests..."
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
           authUrlMT1="${{ secrets.AUTHURLMT1 }}"
           authUrlMT2="${{ secrets.AUTHURLMT2 }}"
