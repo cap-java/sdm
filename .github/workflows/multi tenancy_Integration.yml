@@ -56,7 +56,6 @@ jobs:
             -u ${{ secrets.CF_USER }} \
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
-            #-s ${{ secrets.CF_SPACE }}
             -s ${{ steps.determine_space.outputs.space }}
 
       - name: Fetch and Escape Client Details for single tenant 🔍
