@@ -3010,7 +3010,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(48)
   void testCopyLinkSuccessNewEntity() throws IOException {
-    System.out.println("Test (52): Copy link from one entity to another new entity");
+    System.out.println("Test (48): Copy link from one entity to another new entity");
 
     copySourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3062,7 +3062,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(49)
   void testCopyLinkUnsuccessfulNewEntity() throws IOException {
-    System.out.println("Test (53): Copy link with incorrect ID to new entity");
+    System.out.println("Test (49): Copy invalid type of link from one entity to another new entity");
 
     copySourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3096,7 +3096,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(50)
   void testCopyLinkFromNewEntityToExistingEntity() throws IOException {
-    System.out.println("Test (54): Copy link from a new entity to an existing target entity");
+    System.out.println("Test (50): Copy link from a new entity to an existing target entity");
 
     copySourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (copySourceEntity.equals("Could not create entity")) {
@@ -3153,7 +3153,7 @@ class IntegrationTest_SingleFacet {
   @Order(51)
   void testCopyInvalidLinkFromNewEntityToExistingEntity() throws IOException {
     System.out.println(
-        "Test (55): Copy invalid type of link from new entity to existing target entity");
+        "Test (51): Copy invalid type of link from new entity to existing target entity");
 
     copySourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (copySourceEntity.equals("Could not create entity")) {
