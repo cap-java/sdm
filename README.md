@@ -364,13 +364,13 @@ public void onSubscribe(SubscribeEventContext context) {
    repository.setDescription("Onboarding Repo Demo");
    repository.setDisplayName(" Test Onboarding repo");
    repository.setSubdomain(subdomain);
+   repository.setHashAlgorithms("SHA-256");
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
    SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
    String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-
  ```java
  @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
  public void afterUnsubscribe(UnsubscribeEventContext context) {
