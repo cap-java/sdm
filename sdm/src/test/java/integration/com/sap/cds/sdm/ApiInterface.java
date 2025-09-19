@@ -82,6 +82,15 @@ public interface ApiInterface {
       String linkUrl)
       throws IOException;
 
+  public String editLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String linkUrl)
+      throws IOException;
+
   public String openAttachment(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;

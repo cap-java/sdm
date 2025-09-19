@@ -764,6 +764,55 @@ public class Api implements ApiInterface {
     }
   }
 
+  public String editLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String linkUrl)
+      throws IOException {
+
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/"
+            + serviceName
+            + ".editLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{" + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not edit link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link edited successfully";
+    } catch (IOException e) {
+      System.out.println("Error while editing link: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
