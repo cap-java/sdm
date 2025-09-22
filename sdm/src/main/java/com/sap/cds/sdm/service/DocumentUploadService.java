@@ -316,9 +316,9 @@ public class DocumentUploadService {
           objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
+          } else {
+            status = "duplicate";
           }
-        } else if (responseCode == 409) {
-          status = "duplicate";
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
