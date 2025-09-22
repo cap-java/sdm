@@ -385,6 +385,11 @@ public void onSubscribe(SubscribeEventContext context) {
  String res = sdmAdminService.offboardRepository(subdomain);
  }
  ```
+
+> **Note**
+>
+> Unsubscription will fail if an error occurs while deleting the repository, except when the error indicates that the repository was not found — in that case, the unsubscription will succeed.
+
 When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
 The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
