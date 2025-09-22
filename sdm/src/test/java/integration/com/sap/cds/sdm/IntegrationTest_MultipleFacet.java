@@ -3633,7 +3633,8 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(52)
   void testCopyLinkSuccessNewEntityDraft() throws IOException {
-    System.out.println("Test (52): Copy attachments from one entity to another new entity draft mode");
+    System.out.println(
+        "Test (52): Copy attachments from one entity to another new entity draft mode");
     List<List<String>> attachmentsByFacet = new ArrayList<>();
     for (int i = 0; i < facet.length; i++) {
       attachmentsByFacet.add(new ArrayList<>());
@@ -3729,7 +3730,8 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(53)
   void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
-    System.out.println("Test (53): Copy attachments from one entity to another new entity draft mode");
+    System.out.println(
+        "Test (53): Copy attachments from one entity to another new entity draft mode");
     List<List<String>> attachments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       attachments.add(new ArrayList<>());
@@ -3848,6 +3850,4 @@ class IntegrationTest_MultipleFacet {
       fail("Could not create entities");
     }
   }
-
-
 }
