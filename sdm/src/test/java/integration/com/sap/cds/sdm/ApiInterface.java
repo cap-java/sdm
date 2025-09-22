@@ -70,7 +70,14 @@ public interface ApiInterface {
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
 
+  public Map<String, Object> fetchMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
+
   public List<Map<String, Object>> fetchEntityMetadata(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException;
+
+  public List<Map<String, Object>> fetchEntityMetadataDraft(
       String appUrl, String entityName, String facetName, String entityID) throws IOException;
 
   public String createLink(

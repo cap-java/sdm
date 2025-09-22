@@ -3516,7 +3516,6 @@ class IntegrationTest_MultipleFacet {
             appUrl, entityName, facetName, copyAttachmentTargetEntityEmpty, sourceObjectIds);
         fail("Copy attachments did not throw an error for facet: " + facetName);
       } catch (IOException e) {
-        // Expected exception
         System.out.println("Successfully caught expected error for facet: " + facetName);
       }
     }
@@ -3630,4 +3629,225 @@ class IntegrationTest_MultipleFacet {
     api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntity);
     api.deleteEntity(appUrl, entityName, createLinkEntity);
   }
+
+  @Test
+  @Order(52)
+  void testCopyLinkSuccessNewEntityDraft() throws IOException {
+    System.out.println("Test (52): Copy attachments from one entity to another new entity draft mode");
+    List<List<String>> attachmentsByFacet = new ArrayList<>();
+    for (int i = 0; i < facet.length; i++) {
+      attachmentsByFacet.add(new ArrayList<>());
+    }
+
+    copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+
+    if (copyAttachmentSourceEntity.equals("Could not create entity")
+        || copyAttachmentTargetEntity.equals("Could not create entity")) {
+      fail("Could not create source or target entities");
+    }
+
+    for (int i = 0; i < facet.length; i++) {
+      String linkName = "sample" + i;
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(
+              appUrl, entityName, facet[i], copyAttachmentSourceEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facet[i]);
+      }
+    }
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+
+    sourceObjectIds.clear();
+    for (int i = 0; i < facet.length; i++) {
+      List<String> objectIds =
+          api
+              .fetchEntityMetadataDraft(appUrl, entityName, facet[i], copyAttachmentSourceEntity)
+              .stream()
+              .map(item -> (String) item.get("objectId"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      sourceObjectIds.addAll(objectIds);
+    }
+
+    if (sourceObjectIds.size() != facet.length) {
+      fail(
+          "Could not fetch object Ids for all attachments. Expected: "
+              + facet.length
+              + ", Found: "
+              + sourceObjectIds.size());
+    }
+
+    int objectIdIndex = 0;
+    for (String facetName : facet) {
+      String editResponse =
+          api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+      if (!editResponse.equals("Entity in draft mode")) {
+        fail("Could not edit target entity draft for facet: " + facetName);
+      }
+
+      List<String> subListToCopy = sourceObjectIds.subList(objectIdIndex, objectIdIndex + 1);
+      String copyResponse =
+          api.copyAttachment(
+              appUrl, entityName, facetName, copyAttachmentTargetEntity, subListToCopy);
+
+      if (!copyResponse.equals("Attachments copied successfully")) {
+        fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
+      }
+
+      String saveEntityResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+      if (!saveEntityResponse.equals("Saved")) {
+        fail(
+            "Could not save entity after copying attachments for facet "
+                + facetName
+                + ": "
+                + saveEntityResponse);
+      }
+
+      List<Map<String, Object>> fetchEntityMetadataResponse =
+          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyAttachmentTargetEntity);
+      targetAttachmentIds =
+          fetchEntityMetadataResponse.stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      for (String targetAttachmentId : targetAttachmentIds) {
+        String readResponse =
+            api.readAttachment(
+                appUrl, entityName, facetName, copyAttachmentTargetEntity, targetAttachmentId);
+        if (!readResponse.equals("OK")) {
+          fail("Could not read copied attachment for facet: " + facetName);
+        }
+      }
+      objectIdIndex++;
+    }
+  }
+
+  @Test
+  @Order(53)
+  void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
+    System.out.println("Test (53): Copy attachments from one entity to another new entity draft mode");
+    List<List<String>> attachments = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      attachments.add(new ArrayList<>());
+    }
+    copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (!copyAttachmentSourceEntity.equals("Could not create entity")
+        && !copyAttachmentTargetEntity.equals("Could not create entity")) {
+      ClassLoader classLoader = getClass().getClassLoader();
+      List<File> files = new ArrayList<>();
+      files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+      files.add(new File(classLoader.getResource("sample1.pdf").getFile()));
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", entityID7);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      for (int i = 0; i < facet.length; i++) {
+        for (File file : files) {
+          List<String> createResponse =
+              api.createAttachment(
+                  appUrl,
+                  entityName,
+                  facet[i],
+                  copyAttachmentSourceEntity,
+                  srvpath,
+                  postData,
+                  file);
+          if (createResponse.get(0).equals("Attachment created")) {
+            attachments.get(i).add(createResponse.get(1));
+          } else {
+            fail("Could not create attachment");
+          }
+        }
+      }
+      List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
+      Map<String, Object> fetchAttachmentMetadataResponse;
+      for (int i = 0; i < attachments.size(); i++) {
+        for (String attachment : attachments.get(i)) {
+          try {
+            fetchAttachmentMetadataResponse =
+                api.fetchMetadataDraft(
+                    appUrl, entityName, facet[i], copyAttachmentSourceEntity, attachment);
+            attachmentsMetadata.add(fetchAttachmentMetadataResponse);
+          } catch (IOException e) {
+            fail("Could not fetch attachment metadata: " + e.getMessage());
+          }
+        }
+      }
+      for (Map<String, Object> metadata : attachmentsMetadata) {
+        if (metadata.containsKey("objectId")) {
+          sourceObjectIds.add(metadata.get("objectId").toString());
+        } else {
+          fail("Attachment metadata does not contain objectId");
+        }
+      }
+
+      if (sourceObjectIds.size() == 6) {
+        String copyResponse;
+        int i = 0;
+        for (String facetName : facet) {
+          if (i != 0) {
+            String editResponse =
+                api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+            if (!editResponse.equals("Entity in draft mode")) {
+              fail("Could not edit target entity draft");
+            }
+          }
+          copyResponse =
+              api.copyAttachment(
+                  appUrl,
+                  entityName,
+                  facetName,
+                  copyAttachmentTargetEntity,
+                  sourceObjectIds.subList(i, Math.min(i + 2, sourceObjectIds.size())));
+          i += 2;
+          if (copyResponse.equals("Attachments copied successfully")) {
+            String saveEntityResponse =
+                api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+            if (saveEntityResponse.equals("Saved")) {
+              List<Map<String, Object>> fetchEntityMetadataResponse;
+              fetchEntityMetadataResponse =
+                  api.fetchEntityMetadata(
+                      appUrl, entityName, facetName, copyAttachmentTargetEntity);
+              targetAttachmentIds =
+                  fetchEntityMetadataResponse.stream()
+                      .map(item -> (String) item.get("ID"))
+                      .filter(Objects::nonNull)
+                      .collect(Collectors.toList());
+              String readResponse;
+              for (String targetAttachmentId : targetAttachmentIds) {
+                readResponse =
+                    api.readAttachment(
+                        appUrl,
+                        entityName,
+                        facetName,
+                        copyAttachmentTargetEntity,
+                        targetAttachmentId);
+                if (!readResponse.equals("OK")) {
+                  fail("Could not read copied attachment");
+                }
+              }
+            } else {
+              fail("Could not save entity after copying attachments: " + saveEntityResponse);
+            }
+          } else {
+            fail("Could not copy attachments: " + copyResponse);
+          }
+        }
+      } else {
+        fail("Could not fetch objects Ids for all attachments");
+      }
+    } else {
+      fail("Could not create entities");
+    }
+  }
+
+
 }
