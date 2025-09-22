@@ -814,7 +814,7 @@ public class ApiMT implements ApiInterface {
             + entityID
             + ",ID="
             + ID
-            + ",IsActiveEntity=true)";
+            + ",IsActiveEntity=false)";
 
     // Make a GET request to fetch the attachment metadata
     Request request =
@@ -891,7 +891,7 @@ public class ApiMT implements ApiInterface {
             + entityName
             + "(ID="
             + entityID
-            + ",IsActiveEntity=true)/"
+            + ",IsActiveEntity=false)/"
             + facetName;
 
     // Make a GET request to fetch the attachment metadata

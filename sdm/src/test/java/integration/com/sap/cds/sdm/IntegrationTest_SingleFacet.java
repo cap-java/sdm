@@ -3250,7 +3250,7 @@ class IntegrationTest_SingleFacet {
   @Order(53)
   void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
     System.out.println(
-        "Test (53): Copy attachments from one entity to another new entity Draft mode");
+        "Test (53): Copy attachments from one entity to another new entity draft mode");
     List<String> attachments = new ArrayList<>();
     copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3266,6 +3266,8 @@ class IntegrationTest_SingleFacet {
       postData.put("createdAt", new Date().toString());
       postData.put("createdBy", "test@test.com");
       postData.put("modifiedBy", "test@test.com");
+
+      sourceObjectIds.clear();
 
       for (File file : files) {
         List<String> createResponse =
@@ -3283,7 +3285,7 @@ class IntegrationTest_SingleFacet {
       for (String attachment : attachments) {
         try {
           fetchAttachmentMetadataResponse =
-              api.fetchMetadata(
+              api.fetchMetadataDraft(
                   appUrl, entityName, facetName, copyAttachmentSourceEntity, attachment);
           attachmentsMetadata.add(fetchAttachmentMetadataResponse);
         } catch (IOException e) {

@@ -3751,6 +3751,8 @@ class IntegrationTest_MultipleFacet {
       postData.put("createdBy", "test@test.com");
       postData.put("modifiedBy", "test@test.com");
 
+      sourceObjectIds.clear();
+
       for (int i = 0; i < facet.length; i++) {
         for (File file : files) {
           List<String> createResponse =
@@ -3816,7 +3818,7 @@ class IntegrationTest_MultipleFacet {
             if (saveEntityResponse.equals("Saved")) {
               List<Map<String, Object>> fetchEntityMetadataResponse;
               fetchEntityMetadataResponse =
-                  api.fetchEntityMetadata(
+                  api.fetchEntityMetadataDraft(
                       appUrl, entityName, facetName, copyAttachmentTargetEntity);
               targetAttachmentIds =
                   fetchEntityMetadataResponse.stream()
