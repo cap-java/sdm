@@ -37,7 +37,6 @@ public class SDMAdminServiceImpl implements SDMAdminService {
   @java.lang.Override
   public String onboardRepository(Repository repository)
       throws JsonProcessingException, UnsupportedEncodingException {
-
     if (repository == null) {
       logger.error("Repository object is null. Cannot proceed with onboarding.");
       throw new IllegalArgumentException("Repository object cannot be null.");

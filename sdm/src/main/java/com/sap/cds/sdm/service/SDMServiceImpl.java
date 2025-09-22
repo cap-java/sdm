@@ -149,6 +149,9 @@ public class SDMServiceImpl implements SDMService {
 
       if (responseCode == 201 || responseCode == 200) {
         status = "success";
+        JSONObject jsonResponse = new JSONObject(responseString);
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+        objectId = succinctProperties.getString("cmis:objectId");
       } else {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
@@ -157,9 +160,9 @@ public class SDMServiceImpl implements SDMService {
           objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
+          } else {
+            status = "duplicate";
           }
-        } else if (responseCode == 409) {
-          status = "duplicate";
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
