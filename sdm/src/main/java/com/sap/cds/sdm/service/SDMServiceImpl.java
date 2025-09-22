@@ -18,16 +18,12 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
+import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
@@ -81,6 +77,46 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    return new JSONObject(finalResponse);
+  }
+
+  @Override
+  public JSONObject editLink(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws ServiceException {
+
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    Map<String, String> finalResponse = new HashMap<>();
+
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+
+    String urlShortcut = "[InternetShortcut]\nURL=" + cmisDocument.getUrl();
+    byte[] fileContent = urlShortcut.getBytes(StandardCharsets.UTF_8);
+
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+    builder.addTextBody("cmisaction", "setContent", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody(
+        "filename",
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url",
+        ContentType.TEXT_PLAIN);
+    builder.addTextBody("charset", "UTF-8", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+
+    builder.addBinaryBody(
+        "media",
+        fileContent,
+        ContentType.create("application/internet-shortcut"),
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url");
+
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+
     executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
     return new JSONObject(finalResponse);
   }
@@ -496,9 +532,14 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int deleteDocument(String cmisaction, String objectId) throws IOException {
+  public int deleteDocument(String cmisaction, String objectId, String user) {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    HttpClient httpClient;
+    if (user.equals(SDMConstants.SYSTEM_USER)) {
+      httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
+    } else {
+      httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
+    }
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);

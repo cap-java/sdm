@@ -12,12 +12,16 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
+import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -32,10 +36,13 @@ public class SDMCustomServiceHandlerTest {
   @Mock private AttachmentCopyEventContext mockContext;
 
   @Mock private SDMService sdmService;
+  @Mock private PersistenceService persistenceService;
 
   @Mock private TokenHandler tokenHandler;
 
   @Mock private DraftService draftService;
+
+  @Mock private DBQuery dbQuery;
 
   private SDMCustomServiceHandler sdmCustomServiceHandler;
 
@@ -50,7 +57,8 @@ public class SDMCustomServiceHandlerTest {
     when(draftService.getName()).thenReturn(FACET);
     // Pass a non-null list of DraftService mocks
     sdmCustomServiceHandler =
-        new SDMCustomServiceHandler(sdmService, List.of(draftService), tokenHandler);
+        new SDMCustomServiceHandler(
+            sdmService, List.of(draftService), tokenHandler, dbQuery, persistenceService);
   }
 
   @Test
@@ -66,7 +74,43 @@ public class SDMCustomServiceHandlerTest {
 
     // Mock attachment copy
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
+        .thenReturn(List.of("fileName.url", "application/internet-shortcut", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+
+    // Mock context
+    AttachmentCopyEventContext context = createMockContext();
+    context.setObjectIds(List.of(OBJECT_ID));
+
+    // Act
+    sdmCustomServiceHandler.copyAttachments(context);
+
+    // Assert
+    verify(sdmService, times(1))
+        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class));
+    verify(draftService, times(1)).newDraft(any());
+    verify(context, times(1)).setCompleted();
+  }
+
+  @Test
+  void testCopyAttachments_HappyPathNonLink() throws IOException {
+    // Mock SDMCredentials
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock folder id retrieval
+    when(sdmService.getFolderIdByPath(
+            any(String.class), any(String.class), any(SDMCredentials.class), any(Boolean.class)))
+        .thenReturn(FOLDER_ID);
+
+    // Mock attachment copy
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://document");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -116,6 +160,10 @@ public class SDMCustomServiceHandlerTest {
     // Mock attachment copy
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -148,6 +196,10 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID))
         .thenThrow(new ServiceException("Copy failed"));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -157,7 +209,7 @@ public class SDMCustomServiceHandlerTest {
     try {
       sdmCustomServiceHandler.copyAttachments(context);
     } catch (ServiceException e) {
-      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class));
+      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class), any());
     }
   }
 
@@ -177,6 +229,13 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     ServiceException ex =
         assertThrows(
@@ -186,7 +245,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the folder
-    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
@@ -206,6 +265,13 @@ public class SDMCustomServiceHandlerTest {
 
     AttachmentCopyEventContext context = createMockContext();
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID, "mockObjectId2"));
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     ServiceException ex =
         assertThrows(
@@ -215,7 +281,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the copied attachment
-    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID));
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 

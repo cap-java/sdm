@@ -10,6 +10,7 @@ import com.sap.cds.ql.cqn.CqnUpdate;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
@@ -35,9 +36,63 @@ public class DBQuery {
       String upIdKey) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
             .where(doc -> doc.get(upIdKey).eq(upID));
     return persistenceService.run(q);
+  }
+
+  public CmisDocument getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl")
+            .where(doc -> doc.get("ID").eq(id));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setContentId(
+          row.get("contentId") != null ? row.get("contentId").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    }
+    return cmisDocument;
+  }
+
+  public CmisDocument getAttachmentForObjectID(
+      PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
+    CqnSelect q =
+        Select.from(attachmentEntity.get())
+            .columns("linkUrl", "type")
+            .where(doc -> doc.get("objectId").eq(id));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    } else {
+      // Check in draft table as well
+      attachmentEntity = context.getModel().findEntity(context.getFacet() + "_drafts");
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("linkUrl", "type")
+              .where(doc -> doc.get("objectId").eq(id));
+      result = persistenceService.run(q);
+      res = result.first();
+      if (res.isPresent()) {
+        Row row = res.get();
+        cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+        cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      }
+    }
+    return cmisDocument;
   }
 
   public Result getAttachmentsForUPIDAndRepository(
@@ -74,7 +129,7 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
-
+    updatedFields.put("type", "sap-icon://document");
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)

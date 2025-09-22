@@ -9,6 +9,10 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String SYSTEM_USER = "system-internal";
+  public static final String DESTINATION_EXCEPTION =
+      "Unable to get the destination for sdm service binding";
+
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
@@ -41,12 +45,16 @@ public class SDMConstants {
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
+  public static final String USER_NOT_AUTHORISED_ERROR_LINK =
+      "You do not have the required permissions to create links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
   public static final int CHUNK_SIZE = 20 * 1024 * 1024; // 20MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
+  public static final String REPOSITORY_ALREADY_EXIST =
+      "Repository with name %s and id %s already exists. Skipping onboarding.";
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
@@ -91,6 +99,26 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append("\nRename the files and try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String linkNameConstraintMessage(
+      List<String> fileNameWithRestrictedCharacters, String operation) {
+    // Create the base message
+    String prefixMessage =
+        "Link could not be %s. The following name(s) contain unsupported characters (/, \\). \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage, operation);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : fileNameWithRestrictedCharacters) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nRename the link and try again.");
     return bulletPoints.toString();
   }
 

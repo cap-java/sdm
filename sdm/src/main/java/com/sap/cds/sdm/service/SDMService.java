@@ -33,7 +33,7 @@ public interface SDMService {
 
   public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
-  public int deleteDocument(String cmisaction, String objectId) throws IOException;
+  public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
@@ -61,6 +61,10 @@ public interface SDMService {
       throws IOException;
 
   public List<String> copyAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
+
+  public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 }

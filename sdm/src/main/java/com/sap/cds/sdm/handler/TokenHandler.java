@@ -1,23 +1,27 @@
 package com.sap.cds.sdm.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
+import static com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf.TECHNICAL_USER_CURRENT_TENANT;
 import static java.util.Objects.requireNonNull;
 
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.service.SDMPropertySupplier;
+import com.sap.cds.sdm.service.SDMUser;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cloud.environment.servicebinding.api.DefaultServiceBindingAccessor;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
-import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpClientFactory;
-import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultHttpDestination;
-import com.sap.cloud.sdk.cloudplatform.connectivity.OAuth2DestinationBuilder;
-import com.sap.cloud.sdk.cloudplatform.connectivity.OnBehalfOf;
+import com.sap.cloud.environment.servicebinding.api.ServiceIdentifier;
+import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import com.sap.cloud.security.config.ClientCredentials;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.http.client.HttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TokenHandler {
   private static final String SDM_TOKEN_ENDPOINT = "url";
@@ -29,11 +33,18 @@ public class TokenHandler {
 
   private TokenHandler() {}
 
+  private static final Logger logger = LoggerFactory.getLogger(TokenHandler.class);
+
   public static TokenHandler getTokenHandlerInstance() {
     if (instance == null) {
       instance = new TokenHandler();
     }
     return instance;
+  }
+
+  static {
+    OAuth2ServiceBindingDestinationLoader.registerPropertySupplier(
+        ServiceIdentifier.of("sdm"), SDMPropertySupplier::new);
   }
 
   public byte[] toBytes(String str) {
@@ -126,5 +137,49 @@ public class TokenHandler {
     }
 
     return builder.build().createHttpClient(destination);
+  }
+
+  public HttpClient getHttpClientForAuthoritiesFlow(
+      CdsProperties.ConnectionPool connectionPoolConfig, String user) {
+
+    Optional<HttpDestination> destinations = getHttpDestination(user);
+    if (destinations.isPresent()) {
+      DefaultHttpClientFactory.DefaultHttpClientFactoryBuilder builder =
+          DefaultHttpClientFactory.builder();
+
+      if (connectionPoolConfig == null) {
+        Duration timeout = Duration.ofSeconds(SDMConstants.CONNECTION_TIMEOUT);
+        builder.timeoutMilliseconds((int) timeout.toMillis());
+        builder.maxConnectionsPerRoute(SDMConstants.MAX_CONNECTIONS);
+        builder.maxConnectionsTotal(SDMConstants.MAX_CONNECTIONS);
+      } else {
+        builder.timeoutMilliseconds((int) connectionPoolConfig.getTimeout().toMillis());
+        builder.maxConnectionsPerRoute(connectionPoolConfig.getMaxConnectionsPerRoute());
+        builder.maxConnectionsTotal(connectionPoolConfig.getMaxConnections());
+      }
+
+      return builder.build().createHttpClient(destinations.get());
+    }
+    return null;
+  }
+
+  private Optional<HttpDestination> getHttpDestination(String userName) {
+    HttpDestination httpDestination;
+    try {
+      httpDestination =
+          ServiceBindingDestinationLoader.defaultLoaderChain()
+              .getDestination(getSDMDestinationOptions(userName));
+    } catch (Exception exception) {
+      logger.error("Error with fetching httpdestination " + exception.getCause());
+      httpDestination = null;
+    }
+    return Optional.ofNullable(httpDestination);
+  }
+
+  public static ServiceBindingDestinationOptions getSDMDestinationOptions(String userName) {
+    return ServiceBindingDestinationOptions.forService(ServiceIdentifier.of("sdm"))
+        .onBehalfOf(TECHNICAL_USER_CURRENT_TENANT)
+        .withOption(SDMUser.of(userName))
+        .build();
   }
 }

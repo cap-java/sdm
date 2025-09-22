@@ -10,7 +10,9 @@ import static org.mockito.Mockito.*;
 import com.google.gson.JsonObject;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
@@ -761,6 +763,9 @@ public class SDMServiceImplTest {
   public void testDeleteFolder() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     try {
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test.com");
@@ -772,9 +777,41 @@ public class SDMServiceImplTest {
       when(response.getStatusLine()).thenReturn(statusLine);
       when(statusLine.getStatusCode()).thenReturn(200);
       when(response.getEntity()).thenReturn(entity);
-
+      when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+      when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-      int actualResponse = sdmServiceImpl.deleteDocument("deleteTree", "objectId");
+      int actualResponse =
+          sdmServiceImpl.deleteDocument(
+              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
+      assertEquals(200, actualResponse);
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testDeleteFolderAuthorities() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    mockWebServer.start();
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+    try {
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test.com");
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+      when(tokenHandler.getHttpClientForAuthoritiesFlow(any(), any())).thenReturn(httpClient);
+
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+      when(deletionUserInfo.getName()).thenReturn("testUser");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      int actualResponse =
+          sdmServiceImpl.deleteDocument(
+              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -820,6 +857,9 @@ public class SDMServiceImplTest {
   @Test
   public void testDeleteDocument() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     mockWebServer.start();
     try {
       String grantType = "TECHNICAL_CREDENTIALS_FLOW";
@@ -831,9 +871,40 @@ public class SDMServiceImplTest {
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test.com");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-
+      when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+      when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-      int actualResponse = sdmServiceImpl.deleteDocument("delete", "objectId");
+      int actualResponse =
+          sdmServiceImpl.deleteDocument(
+              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
+      assertEquals(200, actualResponse);
+    } finally {
+      mockWebServer.shutdown();
+    }
+  }
+
+  @Test
+  public void testDeleteDocumentNamedUserFlow() throws IOException {
+    MockWebServer mockWebServer = new MockWebServer();
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+    mockWebServer.start();
+    try {
+      when(tokenHandler.getHttpClientForAuthoritiesFlow(any(), any())).thenReturn(httpClient);
+      when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+      when(response.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      when(response.getEntity()).thenReturn(entity);
+      SDMCredentials mockSdmCredentials = new SDMCredentials();
+      mockSdmCredentials.setUrl("test.com");
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+      when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+      when(deletionUserInfo.getName()).thenReturn("testUser");
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      int actualResponse =
+          sdmServiceImpl.deleteDocument(
+              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -844,6 +915,9 @@ public class SDMServiceImplTest {
   public void testDeleteDocumentObjectNotFound() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     try {
       String mockResponseBody = "{\"message\": \"Object Not Found\"}";
       String grantType = "TECHNICAL_CREDENTIALS_FLOW";
@@ -855,9 +929,12 @@ public class SDMServiceImplTest {
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test.com");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-
+      when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+      when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-      int actualResponse = sdmServiceImpl.deleteDocument("delete", "ewdwe");
+      int actualResponse =
+          sdmServiceImpl.deleteDocument(
+              "delete", "ewdwe", mockContext.getDeletionUserInfo().getName());
       assertEquals(404, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -1174,6 +1251,9 @@ public class SDMServiceImplTest {
   @Test
   public void testDeleteDocumentThrowsServiceExceptionOnHttpClientError() throws IOException {
     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    AttachmentMarkAsDeletedEventContext mockContext =
+        mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     String grantType = "TECHNICAL_CREDENTIALS_FLOW";
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
 
@@ -1185,9 +1265,14 @@ public class SDMServiceImplTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-
+    when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("system-internal");
     // Ensure ServiceException is thrown
-    assertThrows(ServiceException.class, () -> sdmServiceImpl.deleteDocument("delete", "123"));
+    assertThrows(
+        ServiceException.class,
+        () ->
+            sdmServiceImpl.deleteDocument(
+                "delete", "123", mockContext.getDeletionUserInfo().getName()));
   }
 
   @Test
@@ -1515,5 +1600,67 @@ public class SDMServiceImplTest {
             () -> sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true));
     assertTrue(ex.getMessage().contains(SDMConstants.FAILED_TO_COPY_ATTACHMENT));
     assertTrue(ex.getCause() instanceof IOException);
+  }
+
+  @Test
+  public void testEditLink_technicalUserFlow() throws IOException {
+    String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId");
+    cmisDocument.setUrl("url");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, true);
+
+    JSONObject expectedResponse = new JSONObject();
+    expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
+    expectedResponse.put("status", "success");
+    assertEquals(expectedResponse.toString(), actualResponse.toString());
+  }
+
+  @Test
+  public void testEditLink_namedUserFlow() throws IOException {
+    String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId");
+    cmisDocument.setUrl("url");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    String grantType = "TOKEN_EXCHANGE";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    JSONObject actualResponse = sdmServiceImpl.editLink(cmisDocument, sdmCredentials, false);
+
+    JSONObject expectedResponse = new JSONObject();
+    expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
+    expectedResponse.put("status", "success");
+    assertEquals(expectedResponse.toString(), actualResponse.toString());
   }
 }

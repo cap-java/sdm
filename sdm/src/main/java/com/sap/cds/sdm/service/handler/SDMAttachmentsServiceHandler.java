@@ -79,10 +79,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
-        sdmService.deleteDocument("deleteTree", folderId);
+        sdmService.deleteDocument("deleteTree", folderId, context.getDeletionUserInfo().getName());
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
-          sdmService.deleteDocument("delete", objectId);
+          sdmService.deleteDocument("delete", objectId, context.getDeletionUserInfo().getName());
         }
       }
     }
