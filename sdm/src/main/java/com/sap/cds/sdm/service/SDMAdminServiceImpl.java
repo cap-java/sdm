@@ -110,12 +110,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       }
 
       JsonObject jsonObject;
-      try {
-        jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
-      } catch (Exception e) {
-        logger.error("Failed to parse JSON response: " + responseString);
-        throw new ServiceException("Failed to parse JSON response.", e);
-      }
+      jsonObject = JsonParser.parseString(responseString).getAsJsonObject();
 
       String repositoryId;
       if (jsonObject.has("id") && !jsonObject.get("id").isJsonNull()) {
