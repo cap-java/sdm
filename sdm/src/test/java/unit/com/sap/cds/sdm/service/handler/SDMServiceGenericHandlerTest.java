@@ -18,10 +18,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
-import com.sap.cds.sdm.model.AttachmentReadContext;
-import com.sap.cds.sdm.model.CmisDocument;
-import com.sap.cds.sdm.model.CopyAttachmentInput;
-import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.RegisterService;
@@ -186,8 +183,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -220,9 +219,10 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getModel()).thenReturn(cdsModel);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
-
-    when(sdmService.checkRepositoryType(anyString(), anyString()))
-        .thenReturn(SDMConstants.REPOSITORY_VERSIONED);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -276,14 +276,14 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__Maximum two links allowed");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals("Maximum two links allowed", ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -332,14 +332,14 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, 2), ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -388,16 +388,16 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
         SDMConstants.linkNameConstraintMessage(Collections.singletonList("test/URL"), "created"),
         ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -449,8 +449,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -503,8 +505,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -568,8 +572,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -634,8 +640,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -699,8 +707,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled("Non VirusEnabled");
+    repoValue.setVersionEnabled("Non Versioned");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();

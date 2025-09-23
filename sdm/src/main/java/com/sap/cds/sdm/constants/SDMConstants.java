@@ -9,6 +9,9 @@ public class SDMConstants {
   }
 
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String VIRUSEANBLED = "VirusEnabled";
+  public static final String NON_VERSIONED = "Non Versioned";
+  public static final String NON_VIRUSEANBLED = "Non VirusEnabled";
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
       "Unable to get the destination for sdm service binding";
@@ -27,6 +30,8 @@ public class SDMConstants {
   public static final String GENERIC_ERROR = "Could not %s the document.";
   public static final String VERSIONED_REPO_ERROR =
       "Upload not supported for versioned repositories.";
+  public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
+      "Upload not supported for file sizes greater than 400 when Repository is Virus Enabled.";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";

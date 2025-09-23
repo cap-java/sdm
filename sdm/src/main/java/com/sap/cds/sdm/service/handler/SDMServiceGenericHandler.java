@@ -12,10 +12,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
-import com.sap.cds.sdm.model.AttachmentReadContext;
-import com.sap.cds.sdm.model.CmisDocument;
-import com.sap.cds.sdm.model.CopyAttachmentInput;
-import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.RegisterService;
@@ -118,9 +115,9 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck =
+    RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
-    if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
+    if (SDMConstants.REPOSITORY_VERSIONED.equals(repoValue.getVersionEnabled())) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
   }
