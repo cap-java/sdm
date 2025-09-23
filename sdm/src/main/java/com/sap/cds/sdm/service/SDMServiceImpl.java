@@ -485,15 +485,6 @@ public class SDMServiceImpl implements SDMService {
       repoKey.setRepoId(repositoryId);
       RepoValue value = repoValueMap.get(repositoryId);
       CacheConfig.getRepoCache().put(repoKey, value);
-      repoValue = CacheConfig.getRepoCache().get(repoKey);
-      System.out.println(
-          "REPO NOT IN CACHE "
-              + repoValue.getVersionEnabled()
-              + ":"
-              + repoValue.getVirusScanEnabled()
-              + ":"
-              + repoValue.getDisableVirusScannerForLargeFile());
-
       return repoValueMap.get(repositoryId);
     }
     System.out.println(
