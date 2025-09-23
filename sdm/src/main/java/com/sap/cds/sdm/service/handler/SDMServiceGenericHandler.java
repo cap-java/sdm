@@ -117,7 +117,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
-    if (SDMConstants.REPOSITORY_VERSIONED.equals(repoValue.getVersionEnabled())) {
+    if (repoValue.getVersionEnabled()) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
   }

@@ -130,8 +130,8 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
       RepoValue repoValue = new RepoValue();
-      repoValue.setVirusScanEnabled("Non VirusEnabled");
-      repoValue.setVersionEnabled("Versioned");
+      repoValue.setVirusScanEnabled(false);
+      repoValue.setVersionEnabled(true);
       when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error("Upload not supported for versioned repositories."))
@@ -161,7 +161,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
     RepoValue repoValue = new RepoValue();
-    repoValue.setVersionEnabled("Versioned");
+    repoValue.setVersionEnabled(true);
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     when(mockContext.getMessages()).thenReturn(mockMessages);
     when(mockMessages.error("Upload not supported for versioned repositories."))
@@ -195,9 +195,9 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
       RepoValue repoValue = new RepoValue();
-      repoValue.setVirusScanEnabled("VirusEnabled");
+      repoValue.setVirusScanEnabled(true);
       repoValue.setDisableVirusScannerForLargeFile(false);
-      repoValue.setVersionEnabled("Non Versioned");
+      repoValue.setVersionEnabled(false);
       when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB))
@@ -257,10 +257,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -330,10 +329,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getData()).thenReturn(mockMediaData);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -414,10 +412,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -504,10 +501,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -586,10 +582,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -663,11 +658,10 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(true);
+    repoValue.setVersionEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(true);
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -732,8 +726,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.empty());
     when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -790,8 +784,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockCqnElementRef.path()).thenReturn("ID");
     when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(emptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -844,10 +838,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
@@ -1049,8 +1042,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token)).thenReturn(repoValue);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
@@ -1068,8 +1061,8 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
     when(mockReadContext.getContentId()).thenReturn("objectId:part2");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(SDMConstants.REPOSITORY_ID, token)).thenReturn(repoValue);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
@@ -1123,10 +1116,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockResult.rowCount()).thenReturn(3L);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1193,10 +1185,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockResult.rowCount()).thenReturn(3L);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1241,10 +1232,9 @@ public class SDMAttachmentsServiceHandlerTest {
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
-    when(sdmService.checkRepositoryType("repoid", eventContext.getUserInfo().getTenant()))
-        .thenReturn(repoValue);
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getModel()).thenReturn(cdsModel);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);

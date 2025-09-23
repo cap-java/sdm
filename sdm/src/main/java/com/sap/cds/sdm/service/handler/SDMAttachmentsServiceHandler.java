@@ -144,13 +144,13 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
-    if (SDMConstants.REPOSITORY_VERSIONED.equals(repoValue.getVersionEnabled())) {
+    if (repoValue.getVersionEnabled()) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
     // Check if repository is virus scanned
-    if (SDMConstants.VIRUSEANBLED.equals(repoValue.getVirusScanEnabled())
+    if (repoValue.getVirusScanEnabled()
         && contentLen > 400 * 1024 * 1024
         && !repoValue.getDisableVirusScannerForLargeFile()) {
       throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);

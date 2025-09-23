@@ -214,8 +214,8 @@ public class SDMServiceImplTest {
       when(entity.getContent()).thenReturn(inputStream);
 
       RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
-      assertEquals("Versioned", repoValue.getVersionEnabled());
-      assertEquals("Non VirusEnabled", repoValue.getVirusScanEnabled());
+      assertEquals(true, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
     }
   }
 
@@ -274,8 +274,8 @@ public class SDMServiceImplTest {
       when(entity.getContent()).thenReturn(inputStream);
 
       RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
-      assertEquals("Non Versioned", repoValue.getVersionEnabled());
-      assertEquals("Non VirusEnabled", repoValue.getVirusScanEnabled());
+      assertEquals(false, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
     }
   }
 
@@ -292,14 +292,14 @@ public class SDMServiceImplTest {
       repoKey.setRepoId(repositoryId);
       Cache<RepoKey, RepoValue> mockCache = Mockito.mock(Cache.class);
       RepoValue repoValue = new RepoValue();
-      repoValue.setVersionEnabled("Non Versioned");
-      repoValue.setVirusScanEnabled("Non VirusEnabled");
+      repoValue.setVersionEnabled(false);
+      repoValue.setVirusScanEnabled(false);
       repoValue.setDisableVirusScannerForLargeFile(false);
       Mockito.when(mockCache.get(repoKey)).thenReturn(repoValue);
       cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
       repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
-      assertEquals("Non Versioned", repoValue.getVersionEnabled());
-      assertEquals("Non VirusEnabled", repoValue.getVirusScanEnabled());
+      assertEquals(false, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
       assertEquals(false, repoValue.getDisableVirusScannerForLargeFile());
     }
   }

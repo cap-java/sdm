@@ -184,8 +184,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
@@ -220,8 +220,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(true);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
@@ -277,8 +277,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("2__Maximum two links allowed");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
@@ -333,8 +333,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("2__");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
@@ -389,8 +389,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
@@ -450,8 +450,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
@@ -506,8 +506,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
@@ -573,8 +573,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
@@ -641,8 +641,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
@@ -708,8 +708,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
-    repoValue.setVirusScanEnabled("Non VirusEnabled");
-    repoValue.setVersionEnabled("Non Versioned");
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 

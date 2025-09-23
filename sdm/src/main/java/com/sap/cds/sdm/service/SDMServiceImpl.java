@@ -510,30 +510,19 @@ public class SDMServiceImpl implements SDMService {
     repoInfo = repoInfo.getJSONObject(repositoryId);
     JSONObject capabilities = repoInfo.getJSONObject("capabilities");
     String type = capabilities.getString("capabilityContentStreamUpdatability");
-    if ("pwconly".equals(type)) {
-      type = SDMConstants.REPOSITORY_VERSIONED;
-    } else {
-      type = SDMConstants.NON_VERSIONED;
-    }
     RepoValue repoValue = new RepoValue();
-    repoValue.setVersionEnabled(type);
+    repoValue.setVersionEnabled("pwconly".equals(type) ? true : false);
     JSONArray extendedFeaturesArray = repoInfo.getJSONArray("extendedFeatures");
-    String virusEnabled = "";
-    Boolean disableVirusScannerForLargeFile;
     // Iterate over the array and find the object with featureData
     for (int i = 0; i < extendedFeaturesArray.length(); i++) {
       JSONObject feature = extendedFeaturesArray.getJSONObject(i);
       if (feature.has("featureData")) {
         JSONObject featureData = feature.getJSONObject("featureData");
         // Fetch the 'virusScanner' value
-        String virusScanner = featureData.getString("virusScanner");
-        virusEnabled =
-            virusScanner.equals("true") ? SDMConstants.VIRUSEANBLED : SDMConstants.NON_VIRUSEANBLED;
+        repoValue.setVirusScanEnabled(featureData.getBoolean("virusScanner"));
         // Fetch the disableVirusScannerForLargeFile
-        disableVirusScannerForLargeFile =
-            featureData.getString("disableVirusScannerForLargeFile").equals("true");
-        repoValue.setVirusScanEnabled(virusEnabled);
-        repoValue.setDisableVirusScannerForLargeFile(disableVirusScannerForLargeFile);
+        repoValue.setDisableVirusScannerForLargeFile(
+            featureData.getBoolean("disableVirusScannerForLargeFile"));
       }
     }
     repoValueMap.put(repositoryId, repoValue);

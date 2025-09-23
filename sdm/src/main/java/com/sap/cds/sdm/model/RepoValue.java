@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RepoValue {
-  private String virusScanEnabled;
-  private String versionEnabled;
+  private Boolean virusScanEnabled;
+  private Boolean versionEnabled;
   private Boolean disableVirusScannerForLargeFile;
 }
