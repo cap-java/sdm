@@ -5,8 +5,8 @@ extend aspect Attachments with {
     folderId : String;
     repositoryId : String;
     objectId : String;
-    linkUrl: String default null;
-    type: String @(UI: {IsImageURL: true}) default null;
+    linkUrl : String default null;
+    type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
