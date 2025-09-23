@@ -474,12 +474,10 @@ public class SDMServiceImpl implements SDMService {
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
     RepoValue repoValue = CacheConfig.getRepoCache().get(repoKey);
-    System.out.println("Repo Value " + repoValue);
     if (repoValue == null) {
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
       Map<String, RepoValue> repoValueMap = fetchRepositoryData(repoInfo, repositoryId);
-      System.out.println("Repo value map when no cachec " + repoValueMap);
       repoKey = new RepoKey();
       repoKey.setSubdomain(tenant);
       repoKey.setRepoId(repositoryId);
@@ -487,13 +485,6 @@ public class SDMServiceImpl implements SDMService {
       CacheConfig.getRepoCache().put(repoKey, value);
       return repoValueMap.get(repositoryId);
     }
-    System.out.println(
-        "Repo valuein cache present "
-            + repoValue.getVersionEnabled()
-            + ":"
-            + repoValue.getVirusScanEnabled()
-            + ":"
-            + repoValue.getDisableVirusScannerForLargeFile());
     return repoValue;
   }
 
