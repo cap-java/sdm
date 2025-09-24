@@ -608,7 +608,8 @@ public class SDMServiceImplTest {
 
   @Test
   public void testCreateDocumentFailDuplicate() throws IOException {
-    String mockResponseBody = "{\"message\": \"Duplicate document found\"}";
+    String mockResponseBody =
+        "{\"message\": \"Duplicate document found\", \"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName("sample.pdf");
     cmisDocument.setAttachmentId("attachmentId");
@@ -640,6 +641,7 @@ public class SDMServiceImplTest {
     expectedResponse.put("name", "sample.pdf");
     expectedResponse.put("id", "attachmentId");
     expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
     expectedResponse.put("status", "duplicate");
     assertEquals(expectedResponse.toString(), actualResponse.toString());
   }
@@ -647,7 +649,7 @@ public class SDMServiceImplTest {
   @Test
   public void testCreateDocumentFailVirus() throws IOException {
     String mockResponseBody =
-        "{\"message\": \"Malware Service Exception: Virus found in the file!\"}";
+        "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}, \"message\": \"Malware Service Exception: Virus found in the file!\"}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName("sample.pdf");
@@ -681,6 +683,7 @@ public class SDMServiceImplTest {
     expectedResponse.put("name", "sample.pdf");
     expectedResponse.put("id", "attachmentId");
     expectedResponse.put("message", "");
+    expectedResponse.put("objectId", "objectId");
     expectedResponse.put("status", "virus");
     assertEquals(expectedResponse.toString(), actualResponse.toString());
   }
