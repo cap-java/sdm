@@ -728,14 +728,15 @@ public class ApiMT implements ApiInterface {
             + appUrl
             + "/api/admin/"
             + entityName
-            + "_"
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
             + facetName
             + "(up__ID="
             + entityID
             + ",ID="
             + ID
-            + ",IsActiveEntity=true)/"
-            + facetName
+            + ",IsActiveEntity=true)"
             + "/"
             + "AdminService.openAttachment";
 
@@ -753,7 +754,7 @@ public class ApiMT implements ApiInterface {
         throw new IOException(
             "Could not open attachment: " + response.code() + " - " + response.body().string());
       }
-      return "Attachment opened succesfully";
+      return "Attachment opened successfully";
     } catch (IOException e) {
       System.out.println("Error while opening attachment: " + e.getMessage());
       throw new IOException(e);

@@ -2769,14 +2769,14 @@ class IntegrationTest_MultipleFacet {
               .map(item -> (String) item.get("ID"))
               .filter(Objects::nonNull)
               .collect(Collectors.toList());
-      // String openAttachmentResponse;
-      // for (String attachment : attachments) {
-      //   openAttachmentResponse =
-      //       api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
-      //   if (!openAttachmentResponse.equals("Attachment opened succesfully")) {
-      //     fail("Could not open created link in facet : " + facetName);
-      //   }
-      // }
+      String openAttachmentResponse;
+      for (String attachment : attachments) {
+        openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
+        if (!openAttachmentResponse.equals("Attachment opened succesfully")) {
+          fail("Could not open created link in facet : " + facetName);
+        }
+      }
     }
   }
 
@@ -3488,11 +3488,6 @@ class IntegrationTest_MultipleFacet {
       List<Map<String, Object>> attachmentsMetadata =
           api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
 
-      //      assertEquals(
-      //          1,
-      //          attachmentsMetadata.size(),
-      //          "Expected 1 attachment in facet " + facetName + " after copy.");
-
       Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
       String receivedType = (String) copiedAttachment.get("type");
       String receivedUrl = (String) copiedAttachment.get("linkUrl");
@@ -3619,11 +3614,6 @@ class IntegrationTest_MultipleFacet {
 
       List<Map<String, Object>> attachmentsMetadata =
           api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
-
-      //      assertEquals(
-      //          1,
-      //          attachmentsMetadata.size(),
-      //          "Assertion Failed: Expected 1 attachment in facet " + facetName + " after copy.");
 
       Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
       String receivedType = (String) copiedAttachment.get("type");
@@ -3767,11 +3757,6 @@ class IntegrationTest_MultipleFacet {
 
       List<Map<String, Object>> attachmentsMetadata =
           api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
-
-      //      assertEquals(
-      //          1,
-      //          attachmentsMetadata.size(),
-      //          "Assertion Failed: Expected 1 attachment in facet " + facetName + " after copy.");
 
       Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
       String receivedType = (String) copiedAttachment.get("type");
