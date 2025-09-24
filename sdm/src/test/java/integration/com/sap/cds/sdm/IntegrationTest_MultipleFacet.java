@@ -2773,7 +2773,7 @@ class IntegrationTest_MultipleFacet {
       for (String attachment : attachments) {
         openAttachmentResponse =
             api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
-        if (!openAttachmentResponse.equals("Attachment opened succesfully")) {
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
           fail("Could not open created link in facet : " + facetName);
         }
       }

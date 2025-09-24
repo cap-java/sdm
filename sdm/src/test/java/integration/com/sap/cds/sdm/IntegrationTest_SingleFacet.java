@@ -2478,6 +2478,7 @@ class IntegrationTest_SingleFacet {
           for (String attachment : attachments) {
             openAttachmentResponse =
                 api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
+            System.out.println("openAttachmentResponse: " + openAttachmentResponse);
             if (!openAttachmentResponse.equals("Attachment opened successfully")) {
               fail("Could not open created link");
             }
