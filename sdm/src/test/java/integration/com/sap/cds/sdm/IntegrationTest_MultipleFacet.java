@@ -3418,8 +3418,80 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(48)
+  void testEditLinkNoSDMRoles() throws IOException {
+    System.out.println("Test (48): Edit link fails due to no SDM roles assigned");
+
+    Boolean testStatus = false;
+
+    editLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (editLinkEntity.equals("Could not create entity")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sampleNoRole_" + facetName;
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, editLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link in facet: " + facetName);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    String editEntityResponse =
+        apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      List<String> attachments =
+          apiNoRoles.fetchEntityMetadata(appUrl, entityName, facetName, editLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      if (attachments.isEmpty()) {
+        fail("Could not find link in facet: " + facetName);
+      }
+
+      String linkId = attachments.get(0);
+      String updatedUrl = "https://www.editedexample.com";
+
+      try {
+        apiNoRoles.editLink(appUrl, entityName, facetName, editLinkEntity, linkId, updatedUrl);
+        fail("Link got edited without SDM roles in facet: " + facetName);
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+
+        assertEquals("500", errorCode);
+        assertEquals(
+            "You do not have the required permissions to update attachments. Kindly contact the admin",
+            errorMessage);
+
+        testStatus = true;
+      }
+    }
+    api.deleteEntity(appUrl, entityName, editLinkEntity);
+    if (!testStatus) {
+      fail("Link got edited without SDM roles");
+    }
+  }
+
+  @Test
+  @Order(49)
   void testCopyLinkSuccessNewEntity() throws IOException {
-    System.out.println("Test (48): Copy link from one entity to another new entity");
+    System.out.println("Test (49): Copy link from one entity to another new entity");
     List<List<String>> attachmentsByFacet = new ArrayList<>();
     String linkUrl = "https://www.example.com";
     for (int i = 0; i < facet.length; i++) {
@@ -3524,10 +3596,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(49)
+  @Order(50)
   void testCopyLinkUnsuccessfulNewEntity() throws IOException {
     System.out.println(
-        "Test (49): Copy invalid type of link from one entity to another new entity");
+        "Test (50): Copy invalid type of link from one entity to another new entity");
     String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
     copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
 
@@ -3551,9 +3623,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(50)
+  @Order(51)
   void testCopyLinkFromNewEntityToExistingEntity() throws IOException {
-    System.out.println("Test (50): Copy link from a new entity to an existing target entity");
+    System.out.println("Test (51): Copy link from a new entity to an existing target entity");
 
     List<List<String>> attachmentsByFacet = new ArrayList<>();
     String linkUrl = "https://www.example.com";
@@ -3648,10 +3720,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(51)
+  @Order(52)
   void testCopyInvalidLinkFromNewEntityToExistingEntity() throws IOException {
     System.out.println(
-        "Test (51): Copy invalid type of link from new entity to existing target entity");
+        "Test (52): Copy invalid type of link from new entity to existing target entity");
     String linkUrl = "https://www.example.com";
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3688,9 +3760,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(52)
+  @Order(53)
   void testCopyLinkSuccessNewEntityDraft() throws IOException {
-    System.out.println("Test (52): Copy link from one entity to another new entity draft mode");
+    System.out.println("Test (53): Copy link from one entity to another new entity draft mode");
     List<List<String>> attachmentsByFacet = new ArrayList<>();
     String linkUrl = "https://www.example.com";
     for (int i = 0; i < facet.length; i++) {
@@ -3793,10 +3865,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(53)
+  @Order(54)
   void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
     System.out.println(
-        "Test (53): Copy attachments from one entity to another new entity draft mode");
+        "Test (54): Copy attachments from one entity to another new entity draft mode");
     List<List<String>> attachments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       attachments.add(new ArrayList<>());
