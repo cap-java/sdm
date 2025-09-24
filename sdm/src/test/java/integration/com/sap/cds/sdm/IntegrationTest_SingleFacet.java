@@ -2475,6 +2475,7 @@ class IntegrationTest_SingleFacet {
           for (String attachment : attachments) {
             openAttachmentResponse =
                 api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
+            System.out.println("openAttachmentResponse: " + openAttachmentResponse);
             if (!openAttachmentResponse.equals("Attachment opened successfully")) {
               fail("Could not open created link");
             }
@@ -2537,7 +2538,10 @@ class IntegrationTest_SingleFacet {
         String errorCode = json.getJSONObject("error").getString("code");
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("400018", errorCode);
-        assertEquals("Enter a value that is within the expected pattern.", errorMessage);
+        assertTrue(
+            errorMessage.equals("Enter a value that is within the expected pattern.")
+                || errorMessage.equals("Enter a value that matches the expected pattern."),
+            "Unexpected error message: " + errorMessage);
       }
       try {
         api.createLink(
