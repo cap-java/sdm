@@ -312,8 +312,6 @@ public class DocumentUploadService {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
-          JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-          objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
           } else {
