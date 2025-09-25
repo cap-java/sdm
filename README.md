@@ -364,13 +364,13 @@ public void onSubscribe(SubscribeEventContext context) {
    repository.setDescription("Onboarding Repo Demo");
    repository.setDisplayName(" Test Onboarding repo");
    repository.setSubdomain(subdomain);
+   repository.setHashAlgorithms("SHA-256");
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
    SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
    String response = sdmAdminService.onboardRepository(repository);
 }
  ```
-
  ```java
  @After(event = DeploymentService.EVENT_UNSUBSCRIBE)
  public void afterUnsubscribe(UnsubscribeEventContext context) {
@@ -385,6 +385,11 @@ public void onSubscribe(SubscribeEventContext context) {
  String res = sdmAdminService.offboardRepository(subdomain);
  }
  ```
+
+> **Note**
+>
+> Unsubscription will fail if an error occurs while deleting the repository, except when the error indicates that the repository was not found — in that case, the unsubscription will succeed.
+
 When the application is deployed as a SaaS application with above code, a repository is onboarded automatically when a tenant subscribes the SaaS application. The same repository is deleted when the tenant unsubscribes from the SaaS application.
 The necessary params for the Repository onboarding can be found in the [documentation](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository).
 
@@ -744,6 +749,26 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Replace `AdminService` in `Action: 'AdminService.createLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
+### Updating Tenant Databases for Link Feature
+To support the Link feature, additional database columns are introduced.
+Upon re-deployment of your multitenant application, you may encounter "invalid column" errors if tenant database containers are not updated.
+
+To resolve this, ensure the following hook command is added to the mta.yaml for the sidecar application.
+```
+hooks:
+- name: upgrade-all
+type: task
+phases:
+- blue-green.application.before-start.idle
+- deploy.application.before-start
+parameters:
+name: upgrade
+memory: 512M
+disk-quota: 768M
+command: npx -p @sap/cds-mtx cds-mtx upgrade "*"
+```
+This will automatically update tenant databases during deployment. See this [example](https://github.com/vibhutikumar07/cloud-cap-samples-java/blob/31009de404af0ddc92b8c593b21395757ed053e6/mta.yaml#L71).
+
 ## Support for edit of link type attachments
 
 This plugin provides the capability to update/edit the URL of attachments of link type.
@@ -833,6 +858,7 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Replace `my.Books.attachments` with the correct path for your entity and element (for example, `my.YourEntity.yourElement`) where you have defined `composition of many Attachments`.
 - Replace `AdminService` in `Action: 'AdminService.editLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
+
 
 ## Known Restrictions
 

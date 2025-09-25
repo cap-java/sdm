@@ -97,7 +97,12 @@ public class Registration implements CdsRuntimeConfiguration {
             dbQueryInstance,
             tokenHandlerInstance));
     configurer.eventHandler(
-        new SDMCustomServiceHandler(sdmService, draftServiceList, tokenHandlerInstance));
+        new SDMCustomServiceHandler(
+            sdmService,
+            draftServiceList,
+            tokenHandlerInstance,
+            dbQueryInstance,
+            persistenceService));
   }
 
   private AttachmentService buildAttachmentService() {
