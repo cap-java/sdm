@@ -848,8 +848,8 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(17)
-  void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
-    System.out.println("Test (17) : Rename attachments where user don't have SDM Roles");
+  void testUploadBlockedMimeTypeZIP() throws IOException {
+    System.out.println("Test (17) : Upload blocked mimeType .rtf");
     Boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -873,7 +873,7 @@ class IntegrationTest_MultipleFacet {
 
         String actualResponse = createResponse.get(0);
         String expectedJson =
-            "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration.\"}}";
+            "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration. Please contact your administrator for access.\"}}";
 
         if (!expectedJson.equals(actualResponse)) {
           allBlocked = false;

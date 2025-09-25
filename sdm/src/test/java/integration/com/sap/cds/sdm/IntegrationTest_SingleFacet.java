@@ -867,7 +867,7 @@ class IntegrationTest_SingleFacet {
           api.createAttachment(appUrl, entityName, facetName, entityID2, srvpath, postData, file);
       String actualResponse = createResponse.get(0);
       String expectedJson =
-          "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration.\"}}";
+          "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration. Please contact your administrator for access.\"}}";
 
       if (expectedJson.equals(actualResponse)) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID2);
