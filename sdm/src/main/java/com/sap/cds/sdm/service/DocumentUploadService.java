@@ -321,9 +321,10 @@ public class DocumentUploadService {
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
         } else if ((responseCode == 403)
-            && (responseString.equals("MIME type of the uploaded file is blocked according to your repository configuration."))) {
+            && (responseString.equals(
+                "MIME type of the uploaded file is blocked according to your repository configuration."))) {
           status = "blocked";
-        }else {
+        } else {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           status = "fail";

@@ -848,9 +848,9 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(17)
-  void testUploadBlockedMimeTypeZIP_MultiFacet() throws IOException {
+  void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
     System.out.println(
-        "Test (17): Upload blocked mimeType .rtf for attachment, reference, and footnote");
+        "Test (17) : Rename attachments where user don't have SDM Roles");
     Boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2780,9 +2780,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(37)
+  @Order(38)
   void testCreateLinkSuccess() throws IOException {
-    System.out.println("Test (37): Create link in entity");
+    System.out.println("Test (38): Create link in entity");
     List<String> attachments = new ArrayList<>();
 
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2826,9 +2826,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(38)
+  @Order(39)
   void testCreateLinkDifferentEntity() throws IOException {
-    System.out.println("Test (38): Create link with same name in different entity");
+    System.out.println("Test (39): Create link with same name in different entity");
 
     String createLinkDifferentEntity =
         api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2859,9 +2859,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(39)
+  @Order(40)
   void testCreateLinkFailure() throws IOException {
-    System.out.println("Test (39): Create link fails due to invalid URL and name");
+    System.out.println("Test (40): Create link fails due to invalid URL and name");
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     if (editEntityResponse.equals("Could not edit entity")) {
       fail("Could not edit entity");
@@ -2970,9 +2970,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(40)
+  @Order(41)
   void testCreateLinkNoSDMRoles() throws IOException {
-    System.out.println("Test (40): Create link fails due to no SDM roles assigned");
+    System.out.println("Test (41): Create link fails due to no SDM roles assigned");
 
     String createLinkEntityNoSDMRoles =
         apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3014,9 +3014,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(41)
+  @Order(42)
   void testDeleteLink() throws IOException {
-    System.out.println("Test (41): Delete link in entity");
+    System.out.println("Test (42): Delete link in entity");
     List<List<String>> attachments = new ArrayList<>();
 
     String createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3092,9 +3092,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(42)
+  @Order(43)
   void testRenameLinkSuccess() throws IOException {
-    System.out.println("Test (42): Rename link in entity");
+    System.out.println("Test (43): Rename link in entity");
     List<List<String>> attachments = new ArrayList<>();
 
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3154,9 +3154,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(43)
+  @Order(44)
   void testRenameLinkDuplicate() throws IOException {
-    System.out.println("Test (43): Rename link in entity fails due to duplicate error");
+    System.out.println("Test (44): Rename link in entity fails due to duplicate error");
     List<String> attachments = new ArrayList<>();
 
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
@@ -3224,10 +3224,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(44)
+  @Order(45)
   void testRenameLinkUnsupportedCharacters() throws IOException {
     System.out.println(
-        "Test (44): Rename link in entity fails due to unsupported characters in name");
+        "Test (45): Rename link in entity fails due to unsupported characters in name");
     List<List<String>> attachments = new ArrayList<>();
 
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);

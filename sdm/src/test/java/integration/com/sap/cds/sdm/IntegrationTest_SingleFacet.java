@@ -762,7 +762,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(17)
   void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
-    System.out.println("Test (17) : Rename attachments where user don't have SDM-Roles");
+    System.out.println("Test (17) : Rename attachments where user don't have SDM Roles");
     boolean testStatus = false;
     String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String name = "sample123";
@@ -2167,7 +2167,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(32)
   void testDiscardDraftWithoutAttachments() {
-    System.out.println("Test (31) : Discard draft without adding attachments");
+    System.out.println("Test (32) : Discard draft without adding attachments");
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
 
@@ -2182,9 +2182,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(32)
+  @Order(33)
   void testDiscardDraftWithAttachments() throws IOException {
-    System.out.println("Test (32) : Discard draft with attachments");
+    System.out.println("Test (33) : Discard draft with attachments");
     boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
@@ -2218,9 +2218,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(33)
+  @Order(34)
   void testCopyAttachmentsSuccessNewEntity() throws IOException {
-    System.out.println("Test (33): Copy attachments from one entity to another new entity");
+    System.out.println("Test (34): Copy attachments from one entity to another new entity");
     List<String> attachments = new ArrayList<>();
     copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2313,9 +2313,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(34)
+  @Order(35)
   void testCopyAttachmentsUnsuccessfulNewEntity() throws IOException {
-    System.out.println("Test (34): Copy attachments from one entity to another new entity");
+    System.out.println("Test (35): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     copyAttachmentTargetEntityEmpty =
@@ -2350,9 +2350,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(35)
+  @Order(36)
   void testCopyAttachmentsSuccessExistingEntity() throws IOException {
-    System.out.println("Test (35): Copy attachments from one entity to another existing entity");
+    System.out.println("Test (36): Copy attachments from one entity to another existing entity");
     List<String> attachments = new ArrayList<>();
     ClassLoader classLoader = getClass().getClassLoader();
     List<File> files = new ArrayList<>();
@@ -2458,9 +2458,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(36)
+  @Order(37)
   void testCopyAttachmentsUnsuccessfulExistingEntity() throws IOException {
-    System.out.println("Test (36): Copy attachments from one entity to another new entity");
+    System.out.println("Test (37): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     String editResponse2 =
@@ -2488,9 +2488,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(37)
+  @Order(38)
   void testCreateLinkSuccess() throws IOException {
-    System.out.println("Test (37): Create link in entity");
+    System.out.println("Test (38): Create link in entity");
     List<String> attachments = new ArrayList<>();
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntity.equals("Could not create entity")) {
@@ -2531,9 +2531,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(38)
+  @Order(39)
   void testCreateLinkDifferentEntity() throws IOException {
-    System.out.println("Test (38): Create link with same name in different entity");
+    System.out.println("Test (39): Create link with same name in different entity");
     String createLinkDifferentEntity =
         api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkDifferentEntity.equals("Could not edit entity")) {
@@ -2559,9 +2559,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(39)
+  @Order(40)
   void testCreateLinkFailure() throws IOException {
-    System.out.println("Test (39): Create link fails due to invalid URL and name");
+    System.out.println("Test (40): Create link fails due to invalid URL and name");
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     if (!editEntityResponse.equals("Could not edit entity")) {
       String linkName = "sample";
@@ -2659,9 +2659,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(40)
+  @Order(41)
   void testCreateLinkNoSDMRoles() throws IOException {
-    System.out.println("Test (40): Create link fails due to no SDM roles assigned");
+    System.out.println("Test (41): Create link fails due to no SDM roles assigned");
     String createLinkEntityNoSDMRoles =
         apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntityNoSDMRoles.equals("Could not edit entity")) {
@@ -2698,9 +2698,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(41)
+  @Order(42)
   void testDeleteLink() throws IOException {
-    System.out.println("Test (41): Delete link in entity");
+    System.out.println("Test (42): Delete link in entity");
     List<String> attachments = new ArrayList<>();
     String createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntity.equals("Could not create entity")) {
@@ -2757,9 +2757,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(42)
+  @Order(43)
   void testRenameLinkSuccess() throws IOException {
-    System.out.println("Test (42): Rename link in entity");
+    System.out.println("Test (43): Rename link in entity");
     List<String> attachments = new ArrayList<>();
 
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2804,9 +2804,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(43)
+  @Order(44)
   void testRenameLinkDuplicate() throws IOException {
-    System.out.println("Test (43): Rename link in entity fails due to duplicate error");
+    System.out.println("Test (44): Rename link in entity fails due to duplicate error");
     List<String> attachments = new ArrayList<>();
 
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
@@ -2856,10 +2856,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(44)
+  @Order(45)
   void testRenameLinkUnsupportedCharacters() throws IOException {
     System.out.println(
-        "Test (44): Rename link in entity fails due to unsupported characters in name");
+        "Test (45): Rename link in entity fails due to unsupported characters in name");
     List<String> attachments = new ArrayList<>();
 
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
