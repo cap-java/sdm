@@ -849,8 +849,7 @@ class IntegrationTest_MultipleFacet {
   @Test
   @Order(17)
   void testRenameSingleAttachmentWithoutSDMRole() throws IOException {
-    System.out.println(
-        "Test (17) : Rename attachments where user don't have SDM Roles");
+    System.out.println("Test (17) : Rename attachments where user don't have SDM Roles");
     Boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
