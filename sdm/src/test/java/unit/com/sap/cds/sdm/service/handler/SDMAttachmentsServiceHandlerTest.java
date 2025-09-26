@@ -569,6 +569,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("url", "url");
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
+    mockCreateResult.put("mimeType", "application/pdf");
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
@@ -595,6 +596,7 @@ public class SDMAttachmentsServiceHandlerTest {
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "success");
     mockResponse.put("objectId", "123");
+
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
         .thenReturn(mockCreateResult);
@@ -645,7 +647,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("url", "url");
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
-
+    mockCreateResult.put("mimeType", "application/pdf");
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getModel()).thenReturn(cdsModel);
@@ -672,6 +674,7 @@ public class SDMAttachmentsServiceHandlerTest {
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "success");
     mockResponse.put("objectId", "123");
+    mockResponse.put("mimeType", "application/pdf");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
         .thenReturn(mockCreateResult);

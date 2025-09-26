@@ -298,7 +298,7 @@ public class DocumentUploadService {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
-    String objectId = "";
+    String objectId = "", mimeType = "";
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
@@ -308,6 +308,7 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        mimeType = succinctProperties.getString("cmis:contentStreamMimeType");
       } else {
         String message = jsonResponse.getString("message");
         if (responseCode == 409
@@ -329,6 +330,7 @@ public class DocumentUploadService {
       finalResponse.put("message", error);
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
+        finalResponse.put("mimeType", mimeType);
       }
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
