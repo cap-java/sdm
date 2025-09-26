@@ -2208,7 +2208,7 @@ class IntegrationTest_SingleFacet {
       if (check.equals("Attachment created")) {
         response = api.deleteEntityDraft(appUrl, entityName, entityID7);
       }
-      if (response.equals("Entity Deleted")) {
+      if (response.equals("Entity Draft Deleted")) {
         testStatus = true;
       }
     }
