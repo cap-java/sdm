@@ -302,23 +302,28 @@ public class DocumentUploadService {
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
-      JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 201 || responseCode == 200) {
+        JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
         mimeType = succinctProperties.getString("cmis:contentStreamMimeType");
       } else {
-        String message = jsonResponse.getString("message");
-        if (responseCode == 409
-            && "Malware Service Exception: Virus found in the file!".equals(message)) {
-          status = "virus";
-        } else if (responseCode == 409) {
-          status = "duplicate";
-        } else if (responseCode == 403) {
+        if (responseCode == 409) {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
+          if ("Malware Service Exception: Virus found in the file!".equals(message)) {
+            status = "virus";
+          } else {
+            status = "duplicate";
+          }
+        } else if ((responseCode == 403)
+            && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
         } else {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
         }

@@ -196,7 +196,7 @@ public class ApiMT implements ApiInterface {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
       }
-      return "Entity Deleted";
+      return "Entity Draft Deleted";
     } catch (IOException e) {
       System.out.println("Could not delete entity : " + e);
     }
@@ -505,11 +505,6 @@ public class ApiMT implements ApiInterface {
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
       if (renameResponse.code() != 200) {
-        System.out.println(
-            "Rename Attachment failed in the "
-                + facetName
-                + " section. Error : "
-                + renameResponse.body().string());
         throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
@@ -637,6 +632,86 @@ public class ApiMT implements ApiInterface {
             "Could not copy attachments: " + response.code() + " - " + response.body().string());
       }
       return "Attachments copied successfully";
+    }
+  }
+
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + "AdminService.createLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not create link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link created successfully";
+    }
+  }
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=true)"
+            + "/"
+            + "AdminService.openAttachment";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not open attachment: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachment opened successfully";
+    } catch (IOException e) {
+      System.out.println("Error while opening attachment: " + e.getMessage());
+      throw new IOException(e);
     }
   }
 
