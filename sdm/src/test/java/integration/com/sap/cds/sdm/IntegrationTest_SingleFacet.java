@@ -846,7 +846,7 @@ class IntegrationTest_SingleFacet {
 
   @Test
   @Order(20)
-  void testUploadBlockedMimeTypeZIP() throws IOException {
+  void testUploadBlockedMimeType() throws IOException {
     System.out.println("Test (20): Upload blocked mimeType .rtf");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -867,7 +867,7 @@ class IntegrationTest_SingleFacet {
           api.createAttachment(appUrl, entityName, facetName, entityID2, srvpath, postData, file);
       String actualResponse = createResponse.get(0);
       String expectedJson =
-          "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration. Please contact your administrator for access.\"}}";
+          "{\"error\":{\"code\":\"500\",\"message\":\"This file type is not allowed in this repository. Contact your administrator for assistance.\"}}";
 
       if (expectedJson.equals(actualResponse)) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID2);

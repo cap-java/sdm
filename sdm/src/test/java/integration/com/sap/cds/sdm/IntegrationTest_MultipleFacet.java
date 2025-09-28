@@ -848,7 +848,7 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(17)
-  void testUploadBlockedMimeTypeZIP() throws IOException {
+  void testUploadBlockedMimeType() throws IOException {
     System.out.println("Test (17) : Upload blocked mimeType .rtf");
     Boolean testStatus = false;
 
@@ -873,7 +873,7 @@ class IntegrationTest_MultipleFacet {
 
         String actualResponse = createResponse.get(0);
         String expectedJson =
-            "{\"error\":{\"code\":\"500\",\"message\":\"MIME type of the uploaded file is blocked according to your repository configuration. Please contact your administrator for access.\"}}";
+            "{\"error\":{\"code\":\"500\",\"message\":\"This file type is not allowed in this repository. Contact your administrator for assistance.\"}}";
 
         if (!expectedJson.equals(actualResponse)) {
           allBlocked = false;
