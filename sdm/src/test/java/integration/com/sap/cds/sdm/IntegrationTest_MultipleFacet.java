@@ -889,7 +889,7 @@ class IntegrationTest_MultipleFacet {
     }
 
     if (!testStatus) {
-      fail("One or more facets accepted blocked .rtf MIME type");
+      fail("Attachment got uploaded with blocked .rtf MIME type");
     }
   }
 
