@@ -45,6 +45,8 @@ public class SDMConstants {
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
+  public static final String MIMETYPE_INVALID_ERROR =
+      "This file type is not allowed in this repository. Contact your administrator for assistance.";
   public static final String USER_NOT_AUTHORISED_ERROR_LINK =
       "You do not have the required permissions to create links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
