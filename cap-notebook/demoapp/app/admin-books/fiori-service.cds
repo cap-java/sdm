@@ -29,12 +29,6 @@ annotate AdminService.Books with @(UI: {
     },
     {
       $Type : 'UI.ReferenceFacet',
-      ID    : 'ReferencesFacet',
-      Label : 'References',
-      Target: 'references/@UI.LineItem'
-    },
-    {
-      $Type : 'UI.ReferenceFacet',
       ID    : 'FootnotesFacet',
       Label : 'Footnotes',
       Target: 'footnotes/@UI.LineItem'
@@ -43,7 +37,13 @@ annotate AdminService.Books with @(UI: {
       $Type : 'UI.ReferenceFacet',
       Label : '{i18n>Admin}',
       Target: '@UI.FieldGroup#Admin'
-    }
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      Label : '{i18n>Chapters}',
+      ID : 'i18nChapters',
+      Target : 'chapters/@UI.LineItem#i18nChapters',
+    },
   ],
   FieldGroup #General: {Data: [
     {Value: title},
@@ -66,6 +66,110 @@ annotate AdminService.Books with @(UI: {
     {Value: modifiedAt}
   ]}
 });
+
+//////////
+
+// Chapters annotations
+annotate AdminService.Chapters with @title : '{i18n>Chapter}';
+ 
+annotate AdminService.Books.chapters with @(
+    title : '{i18n>Chapters}'
+);
+ 
+annotate AdminService.Chapters with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : '{i18n>ChapterTitle}',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : chapterType,
+            Label : '{i18n>ChapterType}',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : description,
+            Label : '{i18n>Description}',
+        },
+    ],
+    UI.LineItem #i18nChapters : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : '{i18n>ChapterTitle}',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : chapterType,
+            Label : '{i18n>ChapterType}',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : description,
+            Label : '{i18n>Description}',
+        },
+    ]
+);
+ 
+annotate AdminService.Chapters with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : '{i18n>Chapter}',
+        TypeNamePlural : '{i18n>Chapters}',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : description,
+        },
+    }
+);
+ 
+annotate AdminService.Chapters with @(
+    UI.FieldGroup #GeneratedGroup1 : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : '{i18n>ChapterTitle}',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : chapterType,
+                Label : '{i18n>ChapterType}',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : description,
+                Label : '{i18n>Description}',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : url,
+                Label : '{i18n>URL}',
+            },
+        ],
+    },
+  UI.Facets : [
+    {
+      $Type : 'UI.ChapterFacet',
+      ID : 'GeneratedFacet1',
+      Label : '{i18n>GeneralInformation}',
+      Target : '@UI.FieldGroup#GeneratedGroup1',
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      ID : 'AttachmentsFacet',
+      Label : '{i18n>attachments}',
+      Target : 'attachments/@UI.LineItem'
+    }
+  ]
+);
+
 
 
 ////////////////////////////////////////////////////////////
@@ -128,6 +232,7 @@ annotate AdminService.Books with {
   genre @Common.ValueListWithFixedValues;
 }
 
-annotate AdminService.Books.attachments with {
-  customProperty1 @Common.ValueListWithFixedValues;
-}
+// annotate AdminService.Books.attachments with {
+//   customProperty1 @Common.ValueListWithFixedValues;
+// }
+

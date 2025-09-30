@@ -1,60 +1,26 @@
-using {sap.capire.bookshop as my} from '../db/schema';
+using { sap.capire.bookshop as my } from '../db/schema';
 
-service AdminService @(requires: ['admin','system-user']) {
+service AdminService @(requires: 'admin') {
+
   entity Books as projection on my.Books;
   entity Authors as projection on my.Authors;
+  entity Chapters as projection on my.Chapters;
+
   entity Books.attachments as projection on my.Books.attachments
-  actions {
-    @(Common.SideEffects : {TargetEntities: ['']},)
-    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    actions {
+    // Table-level actions
+    @(Common.SideEffects : { TargetEntities: [''] })
+    action copyAttachments(in: many $self, up__ID: String, objectIds: String);
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : { TargetEntities: [''] })
     action createLink(
-      in:many $self,
-      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
-    
-    action editLink(
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
-    action openAttachment() returns String;
-  }
+      in: many $self,
+      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
+      @mandatory @placeholder: 'Enter URL' url: String
+    );
 
-  entity Books.references as projection on my.Books.references
-  actions {
-    @(Common.SideEffects : {TargetEntities: ['']},)
-    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
-
-    @(Common.SideEffects : {TargetEntities: ['']},)
-    action createLink(
-      in:many $self,
-      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
-    
-    action editLink(
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
+    // Row-level actions
+    action editLink(in: $self, url: String);
     action openAttachment() returns String;
-  }
-  
-  entity Books.footnotes as projection on my.Books.footnotes
-  actions {
-    @(Common.SideEffects : {TargetEntities: ['']},)
-    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
-
-    @(Common.SideEffects : {TargetEntities: ['']},)
-    action createLink(
-      in:many $self,
-      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
-    
-    action editLink(
-      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
-    ); 
-    action openAttachment() returns String;
-  }
+  };
 }
-

@@ -83,6 +83,11 @@
           "pattern": "Books({key}/author({key2}):?query:",
           "name": "AuthorsDetails",
           "target": "AuthorsDetails"
+        },
+        {
+          "pattern": "Books({key})/chapters({key2}):?query:",
+          "name": "chaptersObjectPage",
+          "target": "ChaptersObjectPage"
         }
       ],
       "targets": {
@@ -112,21 +117,14 @@
             "settings": {
               "entitySet": "Books",
               "navigation": {
-                "Authors": {
+                "Chapters": {
                   "detail": {
-                    "route": "AuthorsDetails"
+                    "route": "ChaptersObjectPage"
                   }
                 }
               },
               "controlConfiguration": {
                 "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
-                  "tableSettings": {
-                    "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
-                    "rowPress": ".extension.books.controller.custom.onRowPress"
-                  }
-                },
-                "references/@com.sap.vocabularies.UI.v1.LineItem": {
                   "tableSettings": {
                     "type": "ResponsiveTable",
                     "selectionMode": "Auto",
@@ -139,9 +137,26 @@
                     "selectionMode": "Auto",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
                   }
+                },
+                "chapters/@com.sap.vocabularies.UI.v1.LineItem#i18nChapters": {
+                  "tableSettings": {
+                      "type": "ResponsiveTable"
+                  }
                 }
               }
             }
+          }
+        },
+        "ChaptersObjectPage": {
+          "type": "Component",
+          "id": "ChaptersObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Chapters",
+                  "navigation": {}
+              }
           }
         },
         "AuthorsDetails": {
