@@ -547,6 +547,134 @@ public class SDMAttachmentsServiceHandlerTest {
   }
 
   @Test
+  public void testCreateNonVersionedDIUnauthorized() throws IOException {
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    Result mockResult = mock(Result.class);
+    List<Row> nonEmptyRowList = List.of(mock(Row.class));
+    CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    CdsModel mockModel = mock(CdsModel.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    // Set up the JSON response for the "unauthorized" case
+    JSONObject mockCreateResult = new JSONObject();
+    mockCreateResult.put("status", "unauthorized");
+
+    // Mock method calls
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(mockContext.getModel()).thenReturn(mockModel);
+    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+    when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(parameterInfo.getHeaders()).thenReturn(headers);
+
+    // Mock the behavior of createDocument and other dependencies
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(mockResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(mockResult);
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn("10__null");
+
+      // Assert that a ServiceException is thrown and verify its message
+      ServiceException thrown =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                handlerSpy.createAttachment(mockContext);
+              });
+      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, thrown.getMessage());
+    }
+  }
+
+  @Test
+  public void testCreateNonVersionedDIBlocked() throws IOException {
+    // Initialization of mocks and setup
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "upid");
+    mockAttachmentIds.put("ID", "id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    Result mockResult = mock(Result.class);
+    List<Row> nonEmptyRowList = List.of(mock(Row.class));
+    CdsEntity mockDraftEntity = mock(CdsEntity.class);
+    CdsModel mockModel = mock(CdsModel.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    // Set up the JSON response for the "blocked" case
+    JSONObject mockCreateResult = new JSONObject();
+    mockCreateResult.put("status", "blocked");
+
+    // Mock method calls
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    when(mockContext.getModel()).thenReturn(mockModel);
+    when(mockModel.findEntity(anyString())).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
+    when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(parameterInfo.getHeaders()).thenReturn(headers);
+
+    // Mock the behavior of createDocument and other dependencies
+    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+        .thenReturn(mockCreateResult);
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(mockResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(mockResult);
+    when(mockResult.list()).thenReturn(nonEmptyRowList);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn("10__null");
+
+      // Assert that a ServiceException is thrown and verify its message
+      ServiceException thrown =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                handlerSpy.createAttachment(mockContext);
+              });
+      assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+    }
+  }
+
+  @Test
   public void testCreateNonVersionedDISuccess() throws IOException {
     // Initialization of mocks and setup
     Map<String, Object> mockAttachmentIds = new HashMap<>();
