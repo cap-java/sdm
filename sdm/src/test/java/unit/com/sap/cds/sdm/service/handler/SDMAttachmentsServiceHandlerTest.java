@@ -575,7 +575,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getData()).thenReturn(mockMediaData);
     when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
     when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
@@ -639,7 +644,13 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("Non Versioned");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    repoValue.setDisableVirusScannerForLargeFile(false);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getData()).thenReturn(mockMediaData);
     when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
     when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
