@@ -312,8 +312,6 @@ public class DocumentUploadService {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
-          JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
-          objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
           } else {
@@ -322,6 +320,11 @@ public class DocumentUploadService {
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
+        } else if (responseCode == 403) {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
+          if ("MIME type of the uploaded file is blocked according to your repository configuration."
+              .equals(message)) status = "blocked";
         } else {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
