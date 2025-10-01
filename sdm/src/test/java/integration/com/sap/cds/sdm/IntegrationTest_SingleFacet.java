@@ -2912,9 +2912,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(45)
+  @Order(46)
   void testEditLinkSuccess() throws IOException {
-    System.out.println("Test (45): Edit existing link in entity");
+    System.out.println("Test (46): Edit existing link in entity");
 
     List<String> attachments = new ArrayList<>();
     editLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2969,9 +2969,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(46)
+  @Order(47)
   void testEditLinkFailureInvalidURL() throws IOException {
-    System.out.println("Test (46): Edit existing link with invalid url");
+    System.out.println("Test (47): Edit existing link with invalid url");
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
 
@@ -3016,9 +3016,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(47)
+  @Order(48)
   void testEditLinkFailureEmptyURL() throws IOException {
-    System.out.println("Test (47): Edit existing link with an empty url");
+    System.out.println("Test (48): Edit existing link with an empty url");
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
 
@@ -3059,9 +3059,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(48)
+  @Order(49)
   void testEditLinkNoSDMRoles() throws IOException {
-    System.out.println("Test (48): Edit link fails due to no SDM roles assigned");
+    System.out.println("Test (49): Edit link fails due to no SDM roles assigned");
 
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
@@ -3105,9 +3105,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(49)
+  @Order(50)
   void testCopyLinkSuccessNewEntity() throws IOException {
-    System.out.println("Test (49): Copy link from one entity to another new entity");
+    System.out.println("Test (50): Copy link from one entity to another new entity");
     List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3184,10 +3184,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(50)
+  @Order(51)
   void testCopyLinkUnsuccessfulNewEntity() throws IOException {
     System.out.println(
-        "Test (50): Copy invalid type of link from one entity to another new entity");
+        "Test (51): Copy invalid type of link from one entity to another new entity");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3219,9 +3219,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(51)
+  @Order(52)
   void testCopyLinkFromNewEntityToExistingEntity() throws IOException {
-    System.out.println("Test (51): Copy link from a new entity to an existing target entity");
+    System.out.println("Test (52): Copy link from a new entity to an existing target entity");
     List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3306,10 +3306,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(52)
+  @Order(53)
   void testCopyInvalidLinkFromNewEntityToExistingEntity() throws IOException {
     System.out.println(
-        "Test (52): Copy invalid type of link from new entity to existing target entity");
+        "Test (53): Copy invalid type of link from new entity to existing target entity");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (copyLinkSourceEntity.equals("Could not create entity")) {
@@ -3359,9 +3359,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(53)
+  @Order(54)
   void testCopyLinkSuccessNewEntityDraft() throws IOException {
-    System.out.println("Test (53): Copy link from one entity to another new entity draft mode");
+    System.out.println("Test (54): Copy link from one entity to another new entity draft mode");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3433,10 +3433,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(54)
+  @Order(55)
   void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
     System.out.println(
-        "Test (54): Copy attachments from one entity to another new entity draft mode");
+        "Test (55): Copy attachments from one entity to another new entity draft mode");
     List<String> attachments = new ArrayList<>();
     copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
