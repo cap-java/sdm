@@ -764,6 +764,55 @@ public class Api implements ApiInterface {
     }
   }
 
+  public String editLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String linkUrl)
+      throws IOException {
+
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/"
+            + serviceName
+            + ".editLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{" + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not edit link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link edited successfully";
+    } catch (IOException e) {
+      System.out.println("Error while editing link: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
@@ -805,6 +854,47 @@ public class Api implements ApiInterface {
     }
   }
 
+  public Map<String, Object> fetchMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "_"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)";
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println(
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
+      } else {
+        // Parse the JSON response to extract metadata
+        return objectMapper.readValue(
+            response.body().string(),
+            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+      }
+    }
+  }
+
   public List<Map<String, Object>> fetchEntityMetadata(
       String appUrl, String entityName, String facetName, String entityID) throws IOException {
 
@@ -819,6 +909,50 @@ public class Api implements ApiInterface {
             + "(ID="
             + entityID
             + ",IsActiveEntity=true)/"
+            + facetName;
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println(
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
+      } else {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> entityData =
+            objectMapper.readValue(
+                response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        Object value = entityData.get("value");
+        List<Map<String, Object>> result =
+            objectMapper.convertValue(
+                value,
+                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+        return result;
+      }
+    }
+  }
+
+  public List<Map<String, Object>> fetchEntityMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
             + facetName;
 
     // Make a GET request to fetch the attachment metadata
