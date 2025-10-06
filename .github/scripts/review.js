@@ -20,9 +20,10 @@ async function fetchWithBackoff(func, maxRetries = MAX_RETRIES, initialDelay = I
         try {
             return await func();
         } catch (error) {
-            const retryableErrors = [429, 500, 503, 504];
-            if (retryableErrors.includes(error.status)) {
-                console.warn(`Transient error (${error.status}) encountered. Retrying in ${delay}ms...`);
+            // Note: The original script checked for error.status.
+            // Using a generic check here for robustness in different environments.
+            if (error.status === 429 || error.status >= 500) {
+                console.warn(`Transient error (${error.status || error.message}) encountered. Retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 2;
                 retries++;
@@ -53,7 +54,8 @@ async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
     if (!diff || diff.length === 0) {
         return [];
     }
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // FIX: Updated model name to gemini-2.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const lines = diff.split('\n');
     const chunks = [];
     let currentChunk = '';
@@ -144,7 +146,8 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
 }
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // FIX: Updated model name to gemini-2.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const chunks = await splitDiffIntoTokens(genAI, diffContent);
     const chunkReviews = [];
 
@@ -257,7 +260,8 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, number, genAI) {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // FIX: Updated model name to gemini-2.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
     let prompt;
 
@@ -316,7 +320,8 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
 async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
     
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // FIX: Updated model name to gemini-2.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a helpful and expert AI assistant for a software development team. A new issue has been created. Your task is to:
     1.  Provide a concise, one-paragraph summary of the issue.
@@ -357,9 +362,7 @@ async function run() {
 
         // Determine the number based on the event payload
         let number;
-        if (context.eventName === 'pull_request') {
-            number = context.payload.pull_request.number;
-        } else if (context.payload.issue) {
+        if (context.payload.issue) {
             number = context.payload.issue.number;
         } else {
             console.log("Could not determine issue/PR number from payload. Exiting.");
@@ -367,18 +370,47 @@ async function run() {
         }
 
         // Conditional logic based on event type
-        if (context.eventName === 'pull_request') {
-            console.log(`Pull Request event detected for #${number}. Initiating review.`);
-            const diffContent = await getDiff(octokit, owner, repo, number);
-            await performPRReview(octokit, diffContent, number, genAI);
+        // The workflow is now only triggered by 'issue_comment' or 'issues:opened'
+
+        if (context.eventName === 'issue_comment') {
+            const commentBody = context.payload.comment.body.toLowerCase().trim();
+
+            if (context.payload.issue.pull_request) {
+                // PR Comment Logic (Review command or general question)
+                
+                // Check for explicit review command
+                if (commentBody.includes('review this pr') || commentBody.includes('gemini review')) {
+                    console.log(`Explicit review command detected on PR #${number}. Initiating full review.`);
+                    // Ensure PR head ref is available for checkout operations in sub-functions
+                    context.payload.pull_request = context.payload.issue.pull_request;
+                    const diffContent = await getDiff(octokit, owner, repo, number);
+                    await performPRReview(octokit, diffContent, number, genAI);
+                    
+                // Check for general "Hey Gemini" question
+                } else if (commentBody.startsWith("hey gemini,")) {
+                    console.log(`"Hey Gemini," question detected on PR #${number}. Initiating response.`);
+                    // Re-set the pull_request object for handleCommentResponse
+                    context.payload.issue.pull_request = context.payload.issue.pull_request;
+                    await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
+                } else {
+                    console.log(`Comment on PR #${number} did not contain a review or question command. No action taken.`);
+                }
+                
+            } else {
+                // Issue Comment Logic (Only handles general questions)
+                 if (commentBody.startsWith("hey gemini,")) {
+                    console.log(`"Hey Gemini," comment detected on Issue #${number}. Initiating response.`);
+                    await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
+                } else {
+                    console.log(`Comment on Issue #${number} did not contain a question command. No action taken.`);
+                }
+            }
+            
         } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
             await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
-        } else if (context.eventName === 'issue_comment' && context.payload.comment.body.startsWith("Hey Gemini,")) {
-            console.log(`"Hey Gemini," comment detected on issue/PR #${number}. Initiating response.`);
-            await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
         } else {
             console.log(`Event '${context.eventName}' did not match any triggers. No action taken.`);
         }
