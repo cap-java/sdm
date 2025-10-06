@@ -20,8 +20,7 @@ async function fetchWithBackoff(func, maxRetries = MAX_RETRIES, initialDelay = I
         try {
             return await func();
         } catch (error) {
-            // Note: The original script checked for error.status.
-            // Using a generic check here for robustness in different environments.
+            // Check for status codes indicating transient errors
             if (error.status === 429 || error.status >= 500) {
                 console.warn(`Transient error (${error.status || error.message}) encountered. Retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
@@ -54,7 +53,7 @@ async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
     if (!diff || diff.length === 0) {
         return [];
     }
-    // FIX: Updated model name to gemini-2.5-flash
+    // MODEL FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const lines = diff.split('\n');
     const chunks = [];
@@ -89,13 +88,16 @@ async function updateReadme(octokit, owner, repo, aiGeneratedContent, pull_numbe
     const readmePath = "README.md";
     let readmeSha;
     
+    // NOTE: context.payload.pull_request is guaranteed to exist here because it was fixed in run()
+    const headRef = context.payload.pull_request.head.ref;
+    
     console.log("Attempting to read existing README.md...");
     try {
         const { data } = await octokit.rest.repos.getContents({
             owner,
             repo,
             path: readmePath,
-            ref: context.payload.pull_request.head.ref,
+            ref: headRef, // Use the head ref of the PR
         });
         readmeSha = data.sha;
         console.log("README.md file found. Its SHA is:", readmeSha);
@@ -117,7 +119,7 @@ async function updateReadme(octokit, owner, repo, aiGeneratedContent, pull_numbe
             message: `chore(readme): Update README with changes from PR #${pull_number}`,
             content: Buffer.from(aiGeneratedContent).toString('base64'),
             sha: readmeSha,
-            branch: context.payload.pull_request.head.ref,
+            branch: headRef,
         });
         console.log("README.md updated successfully.");
     } catch (error) {
@@ -128,6 +130,7 @@ async function updateReadme(octokit, owner, repo, aiGeneratedContent, pull_numbe
 
 async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedContent) {
     const featureDocPath = `docs/features/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
+    const headRef = context.payload.pull_request.head.ref;
 
     try {
         await octokit.rest.repos.createOrUpdateFileContents({
@@ -136,7 +139,7 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
             path: featureDocPath,
             message: `docs(feature): Add feature documentation for "${title}"`,
             content: Buffer.from(aiGeneratedContent).toString('base64'),
-            branch: context.payload.pull_request.head.ref,
+            branch: headRef,
         });
         console.log("Feature document created successfully at:", featureDocPath);
     } catch (error) {
@@ -146,7 +149,7 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
 }
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
-    // FIX: Updated model name to gemini-2.5-flash
+    // MODEL FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const chunks = await splitDiffIntoTokens(genAI, diffContent);
     const chunkReviews = [];
@@ -231,6 +234,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         console.error("Failed to check or update README. Details:", error);
     }
 
+    // This line caused the error. It now relies on the context.payload.pull_request fix in run()
     const featureLabel = context.payload.pull_request.labels.find(label => label.name === 'feature');
     if (featureLabel) {
         const featureDocPrompt = `You are an expert technical writer. Based on the following PR title and Git diff, create a concise feature document. The document should explain what the new feature is, how to use it, and any new configurations. Format the response as a single markdown file content.
@@ -260,12 +264,12 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, number, genAI) {
-    // FIX: Updated model name to gemini-2.5-flash
+    // MODEL FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
     let prompt;
 
-    // Check if the comment is on a pull request
+    // Check if the comment is on a pull request (context.payload.issue.pull_request will be set)
     if (context.payload.issue.pull_request) {
         // This is a comment on a PR, so we can get the diff
         const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, number);
@@ -320,7 +324,7 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
 async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
     
-    // FIX: Updated model name to gemini-2.5-flash
+    // MODEL FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a helpful and expert AI assistant for a software development team. A new issue has been created. Your task is to:
@@ -369,35 +373,39 @@ async function run() {
             return;
         }
 
-        // Conditional logic based on event type
-        // The workflow is now only triggered by 'issue_comment' or 'issues:opened'
+        // Conditional logic based on event type (workflow is now only triggered by 'issue_comment' or 'issues:opened')
 
         if (context.eventName === 'issue_comment') {
             const commentBody = context.payload.comment.body.toLowerCase().trim();
 
             if (context.payload.issue.pull_request) {
-                // PR Comment Logic (Review command or general question)
+                // This is a comment on a Pull Request
                 
-                // Check for explicit review command
+                // Fetch the full PR object for use in subsequent functions (fixes the 'find' error)
+                const { data: pullRequest } = await octokit.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: number,
+                });
+                context.payload.pull_request = pullRequest; // CRITICAL FIX
+                
+                // 1. Check for explicit review command
                 if (commentBody.includes('review this pr') || commentBody.includes('gemini review')) {
                     console.log(`Explicit review command detected on PR #${number}. Initiating full review.`);
-                    // Ensure PR head ref is available for checkout operations in sub-functions
-                    context.payload.pull_request = context.payload.issue.pull_request;
+                    
                     const diffContent = await getDiff(octokit, owner, repo, number);
                     await performPRReview(octokit, diffContent, number, genAI);
                     
-                // Check for general "Hey Gemini" question
-                } else if (commentBody.startsWith("hey gemini,")) {
+                // 2. Check for general "Hey Gemini" question
+                } else if (commentBody.startsWith("hey gemini,")) { 
                     console.log(`"Hey Gemini," question detected on PR #${number}. Initiating response.`);
-                    // Re-set the pull_request object for handleCommentResponse
-                    context.payload.issue.pull_request = context.payload.issue.pull_request;
                     await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
                 } else {
                     console.log(`Comment on PR #${number} did not contain a review or question command. No action taken.`);
                 }
                 
             } else {
-                // Issue Comment Logic (Only handles general questions)
+                // This is a comment on a regular Issue
                  if (commentBody.startsWith("hey gemini,")) {
                     console.log(`"Hey Gemini," comment detected on Issue #${number}. Initiating response.`);
                     await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
@@ -407,6 +415,7 @@ async function run() {
             }
             
         } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
+            // New Issue Handling (This trigger is still assumed to be in the workflow file)
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
