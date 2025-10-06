@@ -53,7 +53,7 @@ async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
     if (!diff || diff.length === 0) {
         return [];
     }
-    // MODEL FIX: Using gemini-2.5-flash
+    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const lines = diff.split('\n');
     const chunks = [];
@@ -88,7 +88,7 @@ async function updateReadme(octokit, owner, repo, aiGeneratedContent, pull_numbe
     const readmePath = "README.md";
     let readmeSha;
     
-    // NOTE: context.payload.pull_request is guaranteed to exist here because it was fixed in run()
+    // context.payload.pull_request is guaranteed to exist here
     const headRef = context.payload.pull_request.head.ref;
     
     console.log("Attempting to read existing README.md...");
@@ -149,7 +149,7 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
 }
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
-    // MODEL FIX: Using gemini-2.5-flash
+    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const chunks = await splitDiffIntoTokens(genAI, diffContent);
     const chunkReviews = [];
@@ -163,13 +163,26 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk and provide a concise review of its contents. Do not provide a final summary. Focus on a summary of changes, best practices, potential bugs, and recommendations for this specific chunk. Do not recommend adding comments to explain the purpose of code elements.
+        
+        // --- PROMPT FIX: Instructing for point-by-point, structured feedback with code ---
+        const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
+
+        For each issue found, format your finding with a clear bullet point and, if the fix is simple, provide the recommended code change directly beneath it in a code block.
+
+        Format your findings strictly as:
+        - [ISSUE TYPE]: [Concise description of the issue.]
+        [Optional Code Snippet with FIX]
+
+        Issue Types must include: BEST_PRACTICE, POTENTIAL_BUG, REFACTOR, DEPENDENCY_ISSUE.
 
         Git Diff Chunk:
         \`\`\`diff
         ${chunk}
         \`\`\`
+        
+        Provide only the structured list of findings and nothing else.
         `;
+        // --- END PROMPT FIX ---
 
         try {
             const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
@@ -181,27 +194,31 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         }
     }
 
-    const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and comprehensive final review. Your review must strictly follow this exact markdown format and content:
+    // --- PROMPT FIX: Instructing for highly actionable synthesis with code snippets ---
+    const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and highly actionable final review. The partial reviews already contain point-by-point findings and recommended code changes.
+
+    Your review must strictly follow this exact markdown format and content. Prioritize clear, point-by-point feedback. Ensure the Recommendations section includes the actual code snippets gathered from the partial reviews, not just descriptions.
 
     ######
     **Gemini Automated Review**
     **Summary of Changes**
-    [A brief, high-level summary of all the commits.]
-    **Best Practices Review**
-    [A concise, bulleted list of all best practices violations. Be specific and include issues like Inconsistent Formatting, Redundant Dependency, Unused Property, Redundant Exclusion, Version Mismatch, and Missing Version in dependency.]
-    **Potential Bugs**
-    [A concise, bulleted list of all potential bugs or errors. Reference specific issues found.]
-    **Recommendations**
-    [A prioritized, bulleted list of all actionable recommendations for improving the code. For the most critical recommendations, provide a code snippet showing the improved version.]
-    **Quality Rating**
+    [A brief, high-level summary of all the changes across the PR.]
+    **Best Practices Review** 💡
+    [A clear, bulleted list of all best practices violations identified across the partial reviews. Each point must be concise and actionable.]
+    **Potential Bugs** 🐛
+    [A clear, bulleted list of all potential bugs or errors. Reference specific files or lines if possible.]
+    **Recommendations & Required Changes** 🛠️
+    [A prioritized, point-by-point list of all required code changes and improvements. **For every critical recommendation, you MUST provide the recommended code snippet.** Do not just describe the fix—show it in a code block.]
+    **Quality Rating** ⭐
     [A rating out of 10 that reflects the overall quality of the code.]
-    **Overall**
-    [A brief overall assessment of the code quality and readiness for merge.]
+    **Overall Assessment**
+    [A brief, overall assessment of the code quality and readiness for merge, based on the severity of the issues found.]
     ######
     
     Partial Reviews to Synthesize:
     ${chunkReviews.join('\n\n---\n\n')}
     `;
+    // --- END PROMPT FIX ---
     
     let reviewBody = "Review generation failed.";
     try {
@@ -234,7 +251,6 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         console.error("Failed to check or update README. Details:", error);
     }
 
-    // This line caused the error. It now relies on the context.payload.pull_request fix in run()
     const featureLabel = context.payload.pull_request.labels.find(label => label.name === 'feature');
     if (featureLabel) {
         const featureDocPrompt = `You are an expert technical writer. Based on the following PR title and Git diff, create a concise feature document. The document should explain what the new feature is, how to use it, and any new configurations. Format the response as a single markdown file content.
@@ -264,7 +280,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, number, genAI) {
-    // MODEL FIX: Using gemini-2.5-flash
+    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
     let prompt;
@@ -324,7 +340,7 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
 async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
     
-    // MODEL FIX: Using gemini-2.5-flash
+    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a helpful and expert AI assistant for a software development team. A new issue has been created. Your task is to:
@@ -364,7 +380,7 @@ async function run() {
         
         const { owner, repo } = context.repo;
 
-        // Determine the number based on the event payload
+        // Determine the number based on the event payload (only issue number is available from comment event)
         let number;
         if (context.payload.issue) {
             number = context.payload.issue.number;
@@ -373,21 +389,21 @@ async function run() {
             return;
         }
 
-        // Conditional logic based on event type (workflow is now only triggered by 'issue_comment' or 'issues:opened')
+        // Conditional logic based on event type
 
         if (context.eventName === 'issue_comment') {
             const commentBody = context.payload.comment.body.toLowerCase().trim();
 
             if (context.payload.issue.pull_request) {
-                // This is a comment on a Pull Request
+                // This is a comment on a Pull Request (PR)
                 
-                // Fetch the full PR object for use in subsequent functions (fixes the 'find' error)
+                // CRITICAL FIX: Fetch the full PR object for use in subsequent functions (labels, head.ref)
                 const { data: pullRequest } = await octokit.rest.pulls.get({
                     owner,
                     repo,
                     pull_number: number,
                 });
-                context.payload.pull_request = pullRequest; // CRITICAL FIX
+                context.payload.pull_request = pullRequest; // Attach full PR object to context
                 
                 // 1. Check for explicit review command
                 if (commentBody.includes('review this pr') || commentBody.includes('gemini review')) {
@@ -415,7 +431,7 @@ async function run() {
             }
             
         } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
-            // New Issue Handling (This trigger is still assumed to be in the workflow file)
+            // New Issue Handling (assuming this is still desired)
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
