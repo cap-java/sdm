@@ -20,6 +20,9 @@ image : LargeBinary @Core.MediaType: 'image/png';
 // top-level chapters composition (root of the nested hierarchy)
 chapters : Composition of many Chapters on chapters.book = $self;
 
+// top-level pages composition (same pattern as chapters)
+pages : Composition of many Pages on pages.book = $self;
+
 // keep any other fields as before
 }
 
@@ -53,16 +56,6 @@ on children.parent = $self;
 // sections : Composition of many Sections on sections.chapter = $self;
 // }
 
-entity Sections : cuid, managed {
-title : String(255);
-
-// backlink to parent chapter
-chapter : Association to Chapters;
-
-// attachments will be added via attachments-extension.cds so we don't create a hard dependency on SDM in the core schema
-// attachments : Composition of many sap.attachments.Attachments; // added by extension
-}
-
 entity Chapters : cuid, managed {
   book       : Association to Books;
   title          : String @title: 'Chapter Title';
@@ -70,3 +63,12 @@ entity Chapters : cuid, managed {
   url            : String;
   chapterType  : String @title: 'Chapter Type';
 }
+
+entity Pages : cuid, managed {
+  book       : Association to Books;
+  title          : String @title: 'Page Title';
+  description    : String;
+  url            : String;
+  pageType  : String @title: 'Page Type';
+}
+

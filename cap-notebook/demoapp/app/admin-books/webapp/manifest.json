@@ -88,6 +88,11 @@
           "pattern": "Books({key})/chapters({key2}):?query:",
           "name": "chaptersObjectPage",
           "target": "ChaptersObjectPage"
+        },
+        {
+          "pattern": "Books({key})/pages({key2}):?query:",
+          "name": "pagesObjectPage",
+          "target": "PagesObjectPage"
         }
       ],
       "targets": {
@@ -121,6 +126,11 @@
                   "detail": {
                     "route": "ChaptersObjectPage"
                   }
+                },
+                "Pages": {
+                  "detail": {
+                    "route": "PagesObjectPage"
+                  }
                 }
               },
               "controlConfiguration": {
@@ -142,7 +152,13 @@
                   "tableSettings": {
                       "type": "ResponsiveTable"
                   }
+                },
+                "pages/@com.sap.vocabularies.UI.v1.LineItem#i18nPages": {
+                  "tableSettings": {
+                      "type": "ResponsiveTable"
+                  }
                 }
+
               }
             }
           }
@@ -154,7 +170,31 @@
           "options": {
               "settings": {
                   "editableHeaderContent": false,
-                  "entitySet": "Chapters",
+                  "entitySet": "Chapters"
+
+              }
+          }
+        },
+        "PagesObjectPage": {
+          "type": "Component",
+          "id": "PagesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Pages",
+                  "navigation": {}
+              }
+          }
+        },
+        "SectionsObjectPage": {
+          "type": "Component",
+          "id": "SectionsObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Sections",
                   "navigation": {}
               }
           }
