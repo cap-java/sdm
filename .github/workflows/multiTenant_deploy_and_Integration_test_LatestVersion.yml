@@ -21,10 +21,10 @@ jobs:
 
     steps:
     
-      - name: Wait for 2 minutes ⏳
-        run: |
-          sleep 120
-          echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
+      # - name: Wait for 2 minutes ⏳
+      #   run: |
+      #     sleep 120
+      #     echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
 
       - name: Checkout this repository 📁
         uses: actions/checkout@v2
@@ -35,22 +35,22 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build and package 📦
-        run: |
-            echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
-            echo "✅ Build completed successfully!"
+      # - name: Build and package 📦
+      #   run: |
+      #       echo "🔨 Building and packaging..."
+      #       mvn clean install -P unit-tests -DskipIntegrationTests
+      #       echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢
         uses: actions/setup-node@v3
         with:
           node-version: '18' # Ensure to use at least version 18
 
-      - name: Install MBT ⚙️
-        run: |
-            echo "🔧 Installing MBT..."
-            npm install -g mbt
-            echo "✅ MBT installation complete!"
+      # - name: Install MBT ⚙️
+      #   run: |
+      #       echo "🔧 Installing MBT..."
+      #       npm install -g mbt
+      #       echo "✅ MBT installation complete!"
 
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
@@ -75,225 +75,225 @@ jobs:
           echo "NOTE: Not committing these changes; runtime only."
         shell: bash
 
-      - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
-        run: |
-            pwd
-            echo "✔️ Directory changed!"
+  #     - name: Change directory to cloud-cap-samples-java 📂
+  #       working-directory: cloud-cap-samples-java
+  #       run: |
+  #           pwd
+  #           echo "✔️ Directory changed!"
 
-      - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
-        run: |
-            echo "🚀 Running MBT build..."
-            echo "java version:"
-            java --version
-            mbt build
-            echo "✅ MBT build completed!"
+  #     - name: Run mbt build 🔨
+  #       working-directory: cloud-cap-samples-java
+  #       run: |
+  #           echo "🚀 Running MBT build..."
+  #           echo "java version:"
+  #           java --version
+  #           mbt build
+  #           echo "✅ MBT build completed!"
 
-      - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
-        run: | 
-            echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
-            echo "🔧 Installing Cloud Foundry CLI and plugins..."
+  #     - name: Deploy to Cloud Foundry ☁️
+  #       working-directory: cloud-cap-samples-java
+  #       run: | 
+  #           echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
+  #           echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
-            # Install cf CLI plugin
-            wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
-            echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-            sudo apt update
-            sudo apt install cf-cli
+  #           # Install cf CLI plugin
+  #           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
+  #           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #           sudo apt update
+  #           sudo apt install cf-cli
             
-            cf install-plugin multiapps -f
-            echo "✅ Cloud Foundry CLI setup complete!"
+  #           cf install-plugin multiapps -f
+  #           echo "✅ Cloud Foundry CLI setup complete!"
 
-            # Login to Cloud Foundry again to ensure session is active
-            echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
-            echo "✅ Logged in successfully!"
+  #           # Login to Cloud Foundry again to ensure session is active
+  #           echo "🔑 Logging in to Cloud Foundry..."
+  #           cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+  #           echo "✅ Logged in successfully!"
 
-            # Deploy the application
-            echo "📂 Current directory.."
-            pwd
-            ls -lrth
-            echo "▶️ Running cf deploy..."
-            cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
-            echo "✅ Deployment complete!"
+  #           # Deploy the application
+  #           echo "📂 Current directory.."
+  #           pwd
+  #           ls -lrth
+  #           echo "▶️ Running cf deploy..."
+  #           cf deploy mta_archives/bookshop-mt_1.0.0.mtar -f
+  #           echo "✅ Deployment complete!"
 
-  integration-test:
-    needs: deploy
-    runs-on: ubuntu-latest
+  # integration-test:
+  #   needs: deploy
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository ✅
-        uses: actions/checkout@v2
+  #   steps:
+  #     - name: Checkout repository ✅
+  #       uses: actions/checkout@v2
 
-      - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
+  #     - name: Set up Java 17 ☕
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 17
+  #         distribution: 'temurin'
 
-      - name: Install Cloud Foundry CLI and jq 📦
-        run: |
-          echo "🔧 Installing Cloud Foundry CLI and jq..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli jq
+  #     - name: Install Cloud Foundry CLI and jq 📦
+  #       run: |
+  #         echo "🔧 Installing Cloud Foundry CLI and jq..."
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli jq
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "🌍 Space determined: $space"
-          echo "::set-output name=space::$space"
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "🌍 Space determined: $space"
+  #         echo "::set-output name=space::$space"
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          echo "🔄 Logging in to Cloud Foundry using space: ${{ steps.determine_space.outputs.space }}"
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         echo "🔄 Logging in to Cloud Foundry using space: ${{ steps.determine_space.outputs.space }}"
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ secrets.CF_SPACE }}
 
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
-        run: |
-          echo "Fetching client details for single tenant..."
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
+  #     - name: Fetch and Escape Client Details for single tenant 🔍
+  #       id: fetch_credentials
+  #       run: |
+  #         echo "Fetching client details for single tenant..."
+  #         service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
 
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
 
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
-          fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
+  #         clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+  #           echo "❌ Error: clientSecret is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret"
 
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
+  #         clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+  #           echo "❌ Error: clientID is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID"
 
-          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-          echo "::set-output name=CLIENT_ID::$clientID"
-          echo "✅ Client details fetched successfully!"
+  #         echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
+  #         echo "::set-output name=CLIENT_ID::$clientID"
+  #         echo "✅ Client details fetched successfully!"
 
-      - name: Fetch and Escape Client Details for multi tenant 🔍
-        id: fetch_credentials_mt
-        run: |
-          echo "Fetching client details for multi tenant..."
-          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
+  #     - name: Fetch and Escape Client Details for multi tenant 🔍
+  #       id: fetch_credentials_mt
+  #       run: |
+  #         echo "Fetching client details for multi tenant..."
+  #         service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
 
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
 
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
 
-          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-            echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
-          fi
-          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret_mt"
+  #         clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+  #           echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret_mt"
 
-          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-            echo "❌ Error: clientID_mt is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID_mt"
+  #         clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+  #           echo "❌ Error: clientID_mt is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID_mt"
 
-          echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
-          echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
-          echo "✅ Multi-tenant client details fetched successfully!"
+  #         echo "::set-output name=CLIENT_SECRET_MT::$escapedClientSecret_mt"
+  #         echo "::set-output name=CLIENT_ID_MT::$clientID_mt"
+  #         echo "✅ Multi-tenant client details fetched successfully!"
 
-      - name: Run integration tests 🎯
-        env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
-        run: |
-          echo "🚀 Starting integration tests..."
-          set -e
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+  #     - name: Run integration tests 🎯
+  #       env:
+  #         CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+  #         CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+  #         CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+  #         CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+  #       run: |
+  #         echo "🚀 Starting integration tests..."
+  #         set -e
+  #         PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+  #         appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+  #         appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+  #         authUrl="${{ secrets.CAPAUTH_URL }}"
+  #         authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+  #         authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+  #         clientID="${{ env.CLIENT_ID }}"
+  #         clientSecret="${{ env.CLIENT_SECRET }}"
+  #         clientIDMT="${{ env.CLIENT_ID_MT }}"
+  #         clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+  #         username="${{ secrets.CF_USER }}"
+  #         password="${{ secrets.CF_PASSWORD }}"
+  #         noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+  #         noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
 
-          echo "::add-mask::$clientSecret"
-          echo "::add-mask::$clientID"
-          echo "::add-mask::$clientSecretMT"
-          echo "::add-mask::$clientIDMT"
-          echo "::add-mask::$username"
-          echo "::add-mask::$password"
-          echo "::add-mask::$noSDMRoleUsername"
-          echo "::add-mask::$noSDMRoleUserPassword"
+  #         echo "::add-mask::$clientSecret"
+  #         echo "::add-mask::$clientID"
+  #         echo "::add-mask::$clientSecretMT"
+  #         echo "::add-mask::$clientIDMT"
+  #         echo "::add-mask::$username"
+  #         echo "::add-mask::$password"
+  #         echo "::add-mask::$noSDMRoleUsername"
+  #         echo "::add-mask::$noSDMRoleUserPassword"
 
-          if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
-          if [ -z "$appUrlMT" ]; then echo "❌ Error: appUrlMT is not set"; exit 1; fi
-          if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
-          if [ -z "$authUrlMT1" ]; then echo "❌ Error: authUrlMT1 is not set"; exit 1; fi
-          if [ -z "$authUrlMT2" ]; then echo "❌ Error: authUrlMT2 is not set"; exit 1; fi
-          if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
-          if [ -z "$clientSecret" ]; then echo "❌ Error: clientSecret is not set"; exit 1; fi
-          if [ -z "$clientIDMT" ]; then echo "❌ Error: clientIDMT is not set"; exit 1; fi
-          if [ -z "$clientSecretMT" ]; then echo "❌ Error: clientSecretMT is not set"; exit 1; fi
-          if [ -z "$username" ]; then echo "❌ Error: username is not set"; exit 1; fi
-          if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
-          if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
-          if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
+  #         if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
+  #         if [ -z "$appUrlMT" ]; then echo "❌ Error: appUrlMT is not set"; exit 1; fi
+  #         if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
+  #         if [ -z "$authUrlMT1" ]; then echo "❌ Error: authUrlMT1 is not set"; exit 1; fi
+  #         if [ -z "$authUrlMT2" ]; then echo "❌ Error: authUrlMT2 is not set"; exit 1; fi
+  #         if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
+  #         if [ -z "$clientSecret" ]; then echo "❌ Error: clientSecret is not set"; exit 1; fi
+  #         if [ -z "$clientIDMT" ]; then echo "❌ Error: clientIDMT is not set"; exit 1; fi
+  #         if [ -z "$clientSecretMT" ]; then echo "❌ Error: clientSecretMT is not set"; exit 1; fi
+  #         if [ -z "$username" ]; then echo "❌ Error: username is not set"; exit 1; fi
+  #         if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
+  #         if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
+  #         if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
 
-          cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=$appUrl
-          appUrlMT=$appUrlMT
-          authUrl=$authUrl
-          authUrlMT1=$authUrlMT1
-          authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
-          username=$username
-          password=$password
-          noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword=$noSDMRoleUserPassword
-          EOL
+  #         cat > "$PROPERTIES_FILE" <<EOL
+  #         appUrl=$appUrl
+  #         appUrlMT=$appUrlMT
+  #         authUrl=$authUrl
+  #         authUrlMT1=$authUrlMT1
+  #         authUrlMT2=$authUrlMT2
+  #         clientID=$clientID
+  #         clientSecret=$clientSecret
+  #         clientIDMT=$clientIDMT
+  #         clientSecretMT=$clientSecretMT
+  #         username=$username
+  #         password=$password
+  #         noSDMRoleUsername=$noSDMRoleUsername
+  #         noSDMRoleUserPassword=$noSDMRoleUserPassword
+  #         EOL
 
-          echo "🎯 Running Maven integration tests"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
-          echo "✅ Integration tests completed!"
+  #         echo "🎯 Running Maven integration tests"
+  #         mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
+  #         mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
+  #         mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+  #         mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+  #         echo "✅ Integration tests completed!"
