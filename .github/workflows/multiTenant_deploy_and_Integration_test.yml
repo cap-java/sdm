@@ -18,10 +18,10 @@ jobs:
 
     steps:
     
-      - name: Wait for 5 minutes ⏳
-        run: |
-          sleep 300
-          echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
+      # - name: Wait for 5 minutes ⏳
+      #   run: |
+      #     sleep 300
+      #     echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
 
       - name: Checkout this repository 📁
         uses: actions/checkout@v2
@@ -32,22 +32,22 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build and package 📦
-        run: |
-            echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
-            echo "✅ Build completed successfully!"
+      # - name: Build and package 📦
+      #   run: |
+      #       echo "🔨 Building and packaging..."
+      #       mvn clean install -P unit-tests -DskipIntegrationTests
+      #       echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢
         uses: actions/setup-node@v3
         with:
           node-version: '18' # Ensure to use at least version 18
 
-      - name: Install MBT ⚙️
-        run: |
-            echo "🔧 Installing MBT..."
-            npm install -g mbt
-            echo "✅ MBT installation complete!"
+      # - name: Install MBT ⚙️
+      #   run: |
+      #       echo "🔧 Installing MBT..."
+      #       npm install -g mbt
+      #       echo "✅ MBT installation complete!"
 
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
