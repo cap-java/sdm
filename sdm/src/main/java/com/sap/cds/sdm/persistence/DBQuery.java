@@ -130,6 +130,7 @@ public class DBQuery {
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
     updatedFields.put("type", "sap-icon://document");
+    updatedFields.put("mimeType", cmisDocument.getMimeType());
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)

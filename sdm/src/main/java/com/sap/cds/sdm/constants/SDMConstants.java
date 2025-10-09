@@ -27,6 +27,8 @@ public class SDMConstants {
   public static final String GENERIC_ERROR = "Could not %s the document.";
   public static final String VERSIONED_REPO_ERROR =
       "Upload not supported for versioned repositories.";
+  public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
+      "You cannot upload files that are larger than 400 MB";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
