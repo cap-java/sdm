@@ -89,7 +89,7 @@ jobs:
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER1 }} -p ${{ secrets.CF_PASSWORD1 }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
             echo "✅ Logged in successfully!"
 
             # Deploy the application
