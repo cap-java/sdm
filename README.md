@@ -749,8 +749,8 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Replace `AdminService` in `Action: 'AdminService.createLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
-### Updating Tenant Databases for Link Feature
-To support the Link feature, additional database columns are introduced.
+### Updating Tenant Databases for type column
+As part of a UI enhancement to better distinguish between file types, additional database columns are introduced.
 Upon re-deployment of your multitenant application, you may encounter "invalid column" errors if tenant database containers are not updated.
 
 To resolve this, ensure the following hook command is added to the mta.yaml for the sidecar application.
