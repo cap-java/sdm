@@ -20,11 +20,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    
-      - name: Wait for 30 sec ⏳
-        run: |
-          sleep 30
-          echo "⏳ Waiting for snapshot deployment... Initiating deployment in 30 sec."
 
       - name: Checkout this repository 📁
         uses: actions/checkout@v2
@@ -57,6 +52,55 @@ jobs:
             echo "🔄 Cloning repository..."
             git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
             echo "✅ Repository cloned!"
+      
+      - name: Override cds.services.version (runtime only)
+        env:
+          TARGET_CDS_SERVICES_VERSION: 4.3.1
+        run: |
+          set -e
+          echo "=== cds.services.version Override Step ==="
+          echo "Target version to apply: ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "POM files containing property:"; echo "$FILES" | sed 's/^/  - /'
+
+          echo "\nCurrent raw occurrences BEFORE override:"
+          for f in $FILES; do
+            # Show each occurrence with line number (first 3 if multiple)
+            MATCHES=$(grep -n "<cds.services.version>" "$f" | head -3 || true)
+            if [ -n "$MATCHES" ]; then
+              echo "--- $f"; echo "$MATCHES"
+            fi
+          done
+
+          echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
+          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
+          if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
+            echo "NOTE: Effective value already equals target; files will still be normalized to target string."
+          fi
+
+          echo "\nApplying override ..."
+            # Perform in-place replacement for each file
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+
+          echo "\nRaw occurrences AFTER override:"
+          grep -R "<cds.services.version>" $FILES || true
+
+          echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
+          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
+          if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
+            echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
+          fi
+
+          echo "(Not committing these changes)"
+          echo "=== Override Step Complete ==="
+        shell: bash
 
 
       - name: Change directory to cloud-cap-samples-java 📂
@@ -65,22 +109,6 @@ jobs:
             pwd
             echo "✔️ Directory changed!"
 
-      - name: Override cds.services.version to 4.3.1 (runtime only)
-        env:
-          TARGET_CDS_SERVICES_VERSION: 4.3.1
-        run: |
-          echo "Overriding cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
-          if [ -z "$FILES" ]; then
-            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
-          fi
-          echo "Updating files:"; echo "$FILES" | sed 's/^/  - /'
-          for f in $FILES; do
-            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
-          done
-          echo "Post-update values:"; grep -R "<cds.services.version>" $FILES
-          echo "NOTE: Not committing these changes; runtime only."
-        shell: bash
 
       - name: Run mbt build 🔨
         working-directory: cloud-cap-samples-java
