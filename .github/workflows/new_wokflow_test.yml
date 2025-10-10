@@ -1,6 +1,9 @@
 name: Check Release Branch Names
 
 on:
+  push:
+    branches:
+      - ltsversion
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
