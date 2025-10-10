@@ -20,6 +20,7 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
@@ -36,7 +37,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName({"*"})
+@ServiceName(value = "*", type = ApplicationService.class)
 public class SDMServiceGenericHandler implements EventHandler {
   private final RegisterService attachmentService;
   private final PersistenceService persistenceService;

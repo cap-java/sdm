@@ -16,6 +16,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUser
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
+import com.sap.cds.sdm.caching.SecondaryTypesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -52,6 +53,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class SDMServiceImplTest {
   private static final String REPO_ID = "repo";
   private SDMService SDMService;
@@ -1653,5 +1655,112 @@ public class SDMServiceImplTest {
     expectedResponse.put("objectId", "objectId");
     expectedResponse.put("status", "success");
     assertEquals(expectedResponse.toString(), actualResponse.toString());
+  }
+
+  @Test
+  public void testGetSecondaryTypes_WithCacheHit() throws IOException {
+    // Given
+    String repositoryId = "testRepo";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+    List<String> cachedTypes = Arrays.asList("cachedType1", "cachedType2");
+
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<SecondaryTypesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
+      when(mockCache.get(any())).thenReturn(cachedTypes);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      // When
+      List<String> result = sdmServiceImpl.getSecondaryTypes(repositoryId, sdmCredentials, false);
+
+      // Then
+      assertEquals(cachedTypes, result);
+      assertEquals(2, result.size());
+      assertTrue(result.contains("cachedType1"));
+      assertTrue(result.contains("cachedType2"));
+    }
+  }
+
+  @Test
+  public void testGetValidSecondaryProperties_WithCacheHit() throws IOException {
+    // Given
+    List<String> secondaryTypes = Arrays.asList("type1", "type2");
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+    String repositoryId = "testRepo";
+    List<String> cachedProperties = Arrays.asList("prop1", "prop2", "prop3");
+
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+      when(mockCache.get(any())).thenReturn(cachedProperties);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      // When
+      List<String> result =
+          sdmServiceImpl.getValidSecondaryProperties(
+              secondaryTypes, sdmCredentials, repositoryId, false);
+
+      // Then
+      assertEquals(cachedProperties, result);
+      assertEquals(3, result.size());
+      assertTrue(result.contains("prop1"));
+    }
+  }
+
+  @Test
+  public void testUpdateAttachments_WithCachedData() throws IOException {
+    // Given
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setObjectId("testObjectId");
+    cmisDocument.setFileName("testFile.pdf");
+
+    Map<String, String> secondaryProperties = new HashMap<>();
+    secondaryProperties.put("validProperty", "value1");
+    secondaryProperties.put("filename", "testFile.pdf");
+
+    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+
+    List<String> secondaryTypes = Arrays.asList("type1", "type2");
+    List<String> validProperties = Arrays.asList("validProperty", "filename");
+
+    // Mock the tokenHandler to return httpClient
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any())).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<SecondaryTypesKey, List<String>> mockTypesCache = Mockito.mock(Cache.class);
+      Cache<SecondaryPropertiesKey, List<String>> mockPropertiesCache = Mockito.mock(Cache.class);
+
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockTypesCache);
+      cacheConfigMockedStatic
+          .when(CacheConfig::getSecondaryPropertiesCache)
+          .thenReturn(mockPropertiesCache);
+
+      when(mockTypesCache.get(any())).thenReturn(secondaryTypes);
+      when(mockPropertiesCache.get(any())).thenReturn(validProperties);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      // When
+      int result =
+          sdmServiceImpl.updateAttachments(
+              sdmCredentials,
+              cmisDocument,
+              secondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions,
+              false);
+
+      // Then
+      assertEquals(200, result);
+    }
   }
 }

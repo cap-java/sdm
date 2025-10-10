@@ -535,35 +535,13 @@
                         <exclude>
                             ${excluded.generation.package}**/*
                         </exclude>
+                        <!-- Keep constants and generated models excluded from coverage -->
                         <exclude>
                             com/sap/cds/sdm/constants/**
                         </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/model/**
-                        </exclude>
+                        <!-- Keep persistence layer excluded as it's infrastructure -->
                         <exclude>
                             com/sap/cds/sdm/persistence/**
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/SDMAttachmentsService.class
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/DocumentUploadService.class
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/ReadAheadInputStream.class
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/RetryUtils.class
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/RetryUtils$RetryAttempt.class
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/caching/**
-                        </exclude>
-                        <exclude>
-                            com/sap/cds/sdm/service/handler/AttachmentCopyEventContext.class
                         </exclude>
                     </excludes>
                 </configuration>
