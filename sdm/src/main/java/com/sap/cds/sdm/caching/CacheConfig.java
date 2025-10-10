@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.caching;
 
+import com.sap.cds.sdm.model.RepoValue;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.ehcache.Cache;
@@ -18,7 +19,7 @@ public class CacheConfig {
   private static Cache<CacheKey, String> userTokenCache;
   private static Cache<CacheKey, String> clientCredentialsTokenCache;
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
-  private static Cache<RepoKey, String> versionedRepoCache;
+  private static Cache<RepoKey, RepoValue> repoCache;
   private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
   private static Cache<String, String> maxAllowedAttachmentsCache;
   private static Cache<SecondaryPropertiesKey, List<String>> secondaryPropertiesCache;
@@ -52,11 +53,11 @@ public class CacheConfig {
                 .withExpiry(
                     Expirations.timeToLiveExpiration(
                         new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
-    versionedRepoCache =
+    repoCache =
         cacheManager.createCache(
             "versionedRepo",
             CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    RepoKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                    RepoKey.class, RepoValue.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
                 .withExpiry(
                     Expirations.timeToLiveExpiration(
                         new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
@@ -107,8 +108,8 @@ public class CacheConfig {
     return clientCredentialsTokenCache;
   }
 
-  public static Cache<RepoKey, String> getVersionedRepoCache() {
-    return versionedRepoCache;
+  public static Cache<RepoKey, RepoValue> getRepoCache() {
+    return repoCache;
   }
 
   public static Cache<String, String> getMaxAllowedAttachmentsCache() {

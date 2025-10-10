@@ -19,6 +19,7 @@ import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.service.*;
 import com.sap.cds.services.ServiceException;
@@ -42,6 +43,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.ehcache.Cache;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,40 +87,6 @@ public class SDMServiceImplTest {
     expected.add("ext_attr", jsonObject);
     repoKey.setRepoId("repo");
     repoKey.setSubdomain("tenant");
-  }
-
-  @Test
-  public void testIsRepositoryVersioned_Versioned() throws IOException {
-    // Mocked JSON structure for a versioned repository
-    JSONObject capabilities = new JSONObject();
-    capabilities.put("capabilityContentStreamUpdatability", "pwconly");
-
-    JSONObject repoInfo = new JSONObject();
-    repoInfo.put("capabilities", capabilities);
-
-    JSONObject root = new JSONObject();
-    root.put(REPO_ID, repoInfo);
-
-    // Call the method and verify the result
-    boolean isVersioned = SDMService.isRepositoryVersioned(root, REPO_ID);
-    assertTrue(isVersioned);
-  }
-
-  @Test
-  public void testIsRepositoryVersioned_NonVersioned() throws IOException {
-    // Mocked JSON structure for a non-versioned repository
-    JSONObject capabilities = new JSONObject();
-    capabilities.put("capabilityContentStreamUpdatability", "other");
-
-    JSONObject repoInfo = new JSONObject();
-    repoInfo.put("capabilities", capabilities);
-
-    JSONObject root = new JSONObject();
-    root.put(REPO_ID, repoInfo);
-
-    // Call the method and verify the result
-    boolean isVersioned = SDMService.isRepositoryVersioned(root, REPO_ID);
-    assertFalse(isVersioned);
   }
 
   @Test
@@ -194,42 +162,6 @@ public class SDMServiceImplTest {
     assertEquals(SDMConstants.REPOSITORY_ERROR, exception.getMessage());
   }
 
-  // @Test
-  // public void testCheckRepositoryTypeCacheVersioned() throws IOException {
-  //   String repositoryId = "repo";
-  //   String token = "token";
-  //   try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-  //       Mockito.mockStatic(CacheConfig.class)) {
-  //     Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
-  //     // when(tokenHandler.getTokenFields(token)).thenReturn(expected);
-  //     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-  //         .thenReturn(httpClient);
-  //     when(tokenHandler.getSDMCredentials())
-  //         .thenReturn(new SDMCredentials("test", "test", "test", "test"));
-  //     Mockito.when(mockCache.get(repoKey)).thenReturn("Versioned");
-  //     cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-  //     String result = SDMService.checkRepositoryType(token, repositoryId);
-  //     assertEquals("Versioned", result);
-  //   }
-  // }
-
-  // @Test
-  // public void testCheckRepositoryTypeCacheNonVersioned() throws IOException {
-  //   String repositoryId = "repo";
-  //   String token = "token";
-  //   try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-  //       Mockito.mockStatic(CacheConfig.class)) {
-  //     Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
-  //     SDMCredentials mockSdmCredentials = new SDMCredentials();
-  //     mockSdmCredentials.setUrl("test");
-  //     // when(tokenHandler.getTokenFields(token)).thenReturn(expected);
-  //     Mockito.when(mockCache.get(repoKey)).thenReturn("Non Versioned");
-  //     cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
-  //     String result = SDMService.checkRepositoryType(token, repositoryId);
-  //     assertEquals("Non Versioned", result);
-  //   }
-  // }
-
   @Test
   public void testCheckRepositoryTypeNoCacheVersioned() throws IOException {
     String repositoryId = "repo";
@@ -240,7 +172,7 @@ public class SDMServiceImplTest {
         Mockito.mockStatic(CacheConfig.class)) {
       Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
-      cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
+      cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test");
       when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
@@ -260,15 +192,30 @@ public class SDMServiceImplTest {
       capabilities.put(
           "capabilityContentStreamUpdatability",
           "pwconly"); // To match the expected output "Versioned"
+      JSONObject featureData = new JSONObject();
+      featureData.put("virusScanner", "false");
+      featureData.put("disableVirusScannerForLargeFile", "false");
+      // Create a JSON object representing an 'extendedFeature' entry with 'featureData'
+      JSONObject extendedFeatureWithVirusScanner = new JSONObject();
+      extendedFeatureWithVirusScanner.put("id", "ecmRepoInfo");
+      extendedFeatureWithVirusScanner.put("featureData", featureData);
+
+      // Create the array of 'extendedFeatures'
+      JSONArray extendedFeaturesArray = new JSONArray();
+      extendedFeaturesArray.put(extendedFeatureWithVirusScanner);
+
+      // Wrap the 'extendedFeatures' array in the main repoInfo object
       JSONObject repoInfo = new JSONObject();
+      repoInfo.put("extendedFeatures", extendedFeaturesArray);
       repoInfo.put("capabilities", capabilities);
       JSONObject mockRepoData = new JSONObject();
       mockRepoData.put(repositoryId, repoInfo);
       InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
       when(entity.getContent()).thenReturn(inputStream);
 
-      String result = spySDMService.checkRepositoryType(repositoryId, tenant);
-      assertEquals("Versioned", result);
+      RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      assertEquals(true, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
     }
   }
 
@@ -280,9 +227,9 @@ public class SDMServiceImplTest {
         Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
         Mockito.mockStatic(CacheConfig.class)) {
-      Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
+      Cache<RepoKey, RepoValue> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
-      cacheConfigMockedStatic.when(CacheConfig::getVersionedRepoCache).thenReturn(mockCache);
+      cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test");
       when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
@@ -302,7 +249,22 @@ public class SDMServiceImplTest {
       capabilities.put(
           "capabilityContentStreamUpdatability",
           "notpwconly"); // To match the expected output "Versioned"
+      JSONObject featureData = new JSONObject();
+      featureData.put("virusScanner", "false");
+      featureData.put("disableVirusScannerForLargeFile", "false");
+
+      // Create a JSON object representing an 'extendedFeature' entry with 'featureData'
+      JSONObject extendedFeatureWithVirusScanner = new JSONObject();
+      extendedFeatureWithVirusScanner.put("id", "ecmRepoInfo");
+      extendedFeatureWithVirusScanner.put("featureData", featureData);
+
+      // Create the array of 'extendedFeatures'
+      JSONArray extendedFeaturesArray = new JSONArray();
+      extendedFeaturesArray.put(extendedFeatureWithVirusScanner);
+
+      // Wrap the 'extendedFeatures' array in the main repoInfo object
       JSONObject repoInfo = new JSONObject();
+      repoInfo.put("extendedFeatures", extendedFeaturesArray);
       repoInfo.put("capabilities", capabilities);
       JSONObject mockRepoData = new JSONObject();
       mockRepoData.put(repositoryId, repoInfo);
@@ -311,8 +273,34 @@ public class SDMServiceImplTest {
       InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
       when(entity.getContent()).thenReturn(inputStream);
 
-      String result = spySDMService.checkRepositoryType(repositoryId, tenant);
-      assertEquals("Non Versioned", result);
+      RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      assertEquals(false, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
+    }
+  }
+
+  @Test
+  public void testCheckRepositoryTypeCacheNonVersioned() throws IOException {
+    String repositoryId = "repo";
+    String tenant = "tenant1";
+    SDMServiceImpl spySDMService =
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
+        Mockito.mockStatic(CacheConfig.class)) {
+      RepoKey repoKey = new RepoKey();
+      repoKey.setSubdomain(tenant);
+      repoKey.setRepoId(repositoryId);
+      Cache<RepoKey, RepoValue> mockCache = Mockito.mock(Cache.class);
+      RepoValue repoValue = new RepoValue();
+      repoValue.setVersionEnabled(false);
+      repoValue.setVirusScanEnabled(false);
+      repoValue.setDisableVirusScannerForLargeFile(false);
+      Mockito.when(mockCache.get(repoKey)).thenReturn(repoValue);
+      cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
+      repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      assertEquals(false, repoValue.getVersionEnabled());
+      assertEquals(false, repoValue.getVirusScanEnabled());
+      assertEquals(false, repoValue.getDisableVirusScannerForLargeFile());
     }
   }
 
