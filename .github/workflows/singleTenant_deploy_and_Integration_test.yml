@@ -32,15 +32,20 @@ jobs:
           java-version: 17
           distribution: 'temurin'
 
-      - name: Verify and Checkout Deploy Branch
+      # - name: Verify and Checkout Deploy Branch
+      #   run: |
+      #     git fetch origin
+      #     if git rev-parse --verify origin/develop_deploy; then
+      #       git checkout develop_deploy
+      #     else
+      #       echo "Branch 'develop_deploy' not found. Please verify the branch name."
+      #       exit 1
+      #     fi
+      - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
-          git fetch origin
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
-          else
-            echo "Branch 'develop_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
+            echo "🔄 Cloning repository..."
+            git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+            echo "✅ Repository cloned!"
 
       - name: Override cds.services.version (runtime only)
         env:
