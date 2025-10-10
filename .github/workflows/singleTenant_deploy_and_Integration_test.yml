@@ -13,13 +13,13 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == false
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
     
       - name: Wait for 5 minutes # Added a 5-minute delay to ensure the snapshot is deployed successfully before initiating the deployment job.
-        run: sleep 30
+        run: sleep 300
         
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -41,6 +41,23 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
+      - name: Override cds.services.version (runtime only)
+        env:
+          TARGET_CDS_SERVICES_VERSION: 4.3.1
+        run: |
+          echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "Updating files:"; echo "$FILES" | sed 's/^/  - /'
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+          echo "Post-update values:"; grep -R "<cds.services.version>" $FILES || true
+          echo "(Not committing these changes)"
+        shell: bash
 
   #     - name: Deleting the sdm directory for fresh build
   #       run: |

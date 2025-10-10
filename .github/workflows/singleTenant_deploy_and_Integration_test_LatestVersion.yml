@@ -1,7 +1,7 @@
 name: Single Tenant Deploy and Integration Test LatestVersion
 
 # This workflow now runs ONLY after the main "Single Tenant Deploy and Integration Test" workflow
-# (deploy_and_Integration_test.yml) has completed successfully. It can still be
+# (singleTenant_deploy_and_integration.yml) has completed successfully. It can still be
 # triggered manually via workflow_dispatch if needed.
 on:
   workflow_run:
@@ -45,6 +45,23 @@ jobs:
             exit 1
           fi
 
+      - name: Override cds.services.version (runtime only)
+        env:
+          TARGET_CDS_SERVICES_VERSION: 4.3.1
+        run: |
+          echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "Updating files:"; echo "$FILES" | sed 's/^/  - /'
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+          echo "Post-update values:"; grep -R "<cds.services.version>" $FILES || true
+          echo "(Not committing these changes)"
+        shell: bash
+
       - name: Deleting the sdm directory for fresh build
         run: |
           pwd
@@ -68,27 +85,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Dry Run Validation (cds.services.version 4.3.1)
-        env:
-          TARGET_CDS_SERVICES_VERSION: 4.3.1
-        run: |
-          set -e
-          echo "== Dry Run Validation Start =="
-          ROOT_VAL=$(grep -m1 -oP '(?<=<cds.services.version>)[^<]+' pom.xml || true)
-          if [ "$ROOT_VAL" != "$TARGET_CDS_SERVICES_VERSION" ]; then
-            echo "Root pom mismatch: $ROOT_VAL != $TARGET_CDS_SERVICES_VERSION" >&2; exit 1; fi
-          echo "Root pom.xml OK: $ROOT_VAL"
-          echo "Evaluating via mvn help:evaluate..."
-          MVN_VAL=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
-          if [ "$MVN_VAL" != "$TARGET_CDS_SERVICES_VERSION" ]; then
-            echo "help:evaluate mismatch: $MVN_VAL != $TARGET_CDS_SERVICES_VERSION" >&2; exit 1; fi
-          echo "Property resolution OK ($MVN_VAL)"
-          echo "Downloading dependencies (go-offline)..."
-          mvn -B -U -DskipTests dependency:go-offline
-          echo "Compiling (skip tests) ..."
-          mvn -B -q -DskipTests -DskipITs=true -DskipIntegrationTests=true -DskipUnitTests=true -pl sdm -am compile
-          echo "== Dry Run Validation Success =="
-        shell: bash
 
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
