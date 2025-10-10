@@ -9,8 +9,6 @@ extend entity Books with {
   footnotes: Composition of many Attachments;
 }
 
-
-
 extend entity Chapters with { 
   attachments: Composition of many Attachments;
   references: Composition of many Attachments;
@@ -45,16 +43,7 @@ annotate Books.attachments with {
   );
 }
 
-annotate sap.capire.bookshop.Sections.attachments with {
-  status @(
-    Common.Text: {
-      $value: ![statusText.text],
-      ![@UI.TextArrangement]: #TextOnly
-    },
-    ValueList: { entity: 'Statuses' },
-    sap.value.list: 'fixed-values'
-  );
-}
+
 
 annotate Books.references with {
   status @(
@@ -133,38 +122,7 @@ annotate Pages.footnotes with {
   );
 }
 
-annotate Sections.attachments with {
-  status @(
-    Common.Text: {
-      $value: ![statusText.text],
-      ![@UI.TextArrangement]: #TextOnly
-    },
-    ValueList: { entity: 'Statuses' },
-    sap.value.list: 'fixed-values'
-  );
-}
 
-annotate Sections.references with {
-  status @(
-    Common.Text: {
-      $value: ![statusText.text],
-      ![@UI.TextArrangement]: #TextOnly
-    },
-    ValueList: { entity: 'Statuses' },
-    sap.value.list: 'fixed-values'
-  );
-}
-
-annotate Sections.footnotes with {
-  status @(
-    Common.Text: {
-      $value: ![statusText.text],
-      ![@UI.TextArrangement]: #TextOnly
-    },
-    ValueList: { entity: 'Statuses' },
-    sap.value.list: 'fixed-values'
-  );
-}
 
 extend Attachments with {
     customProperty1 : WDIRS_CodeList_TYPE
