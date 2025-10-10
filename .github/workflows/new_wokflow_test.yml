@@ -17,7 +17,7 @@ jobs:
     - name: List Release branches
       run: |
         # Fetch all branches
-        branches=$(git branch -r | grep 'origin/Release')
+        branches=$(git branch -r | grep 'Release')
         
         # Check if any branches were found
         if [ -n "$branches" ]; then
