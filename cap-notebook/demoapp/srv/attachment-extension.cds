@@ -4,9 +4,9 @@ using {sap,managed,sap.common.CodeList} from '@sap/cds/common';
 
 // keep the original shallow attachments on Books
 extend entity Books with {
-  attachments : Composition of many Attachments;
-  references: Composition of many Attachments;
-  footnotes: Composition of many Attachments;
+  attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
+  references  : Composition of many Attachments  @SDM.Attachments:{maxCount: 5, maxCountError:'Only 5 attachments allowed.'};
+  footnotes   : Composition of many Attachments;
 }
 
 extend entity Chapters with { 
