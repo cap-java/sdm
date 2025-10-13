@@ -132,33 +132,6 @@
                     "route": "PagesObjectPage"
                   }
                 }
-              },
-              "controlConfiguration": {
-                "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
-                  "tableSettings": {
-                    "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
-                    "rowPress": ".extension.books.controller.custom.onRowPress"
-                  }
-                },
-                "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
-                  "tableSettings": {
-                    "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
-                    "rowPress": ".extension.books.controller.custom.onRowPress"
-                  }
-                },
-                "chapters/@com.sap.vocabularies.UI.v1.LineItem#i18nChapters": {
-                  "tableSettings": {
-                      "type": "ResponsiveTable"
-                  }
-                },
-                "pages/@com.sap.vocabularies.UI.v1.LineItem#i18nPages": {
-                  "tableSettings": {
-                      "type": "ResponsiveTable"
-                  }
-                }
-
               }
             }
           }
@@ -213,10 +186,7 @@
     },
     "extends": {
       "extensions": {
-        "sap.ui.controllerExtensions": {
-          "sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList": {
-              "controllerName": "books.controller.custom"
-          }       
+        "sap.ui.controllerExtensions": {    
         }
       }
     },

@@ -12,17 +12,6 @@ service AdminService @(requires: 'admin') {
     // Table-level actions
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    // Row-level actions
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   entity Books.references as projection on my.Books.references
@@ -30,17 +19,6 @@ service AdminService @(requires: 'admin') {
     // Table-level actions
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    // Row-level actions
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   entity Pages.attachments as projection on my.Pages.attachments
@@ -48,17 +26,6 @@ service AdminService @(requires: 'admin') {
     // Table-level actions
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    // Row-level actions
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   entity Pages.references as projection on my.Pages.references
@@ -66,17 +33,6 @@ service AdminService @(requires: 'admin') {
     // Table-level actions
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    // Row-level actions
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   // Chapters projections
@@ -84,48 +40,18 @@ service AdminService @(requires: 'admin') {
     actions {
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   entity Chapters.references as projection on my.Chapters.references
     actions {
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   entity Chapters.footnotes as projection on my.Chapters.footnotes
     actions {
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 
   // Pages footnotes projection
@@ -133,15 +59,5 @@ service AdminService @(requires: 'admin') {
     actions {
     @(Common.SideEffects : { TargetEntities: [''] })
     action copyAttachments(in: many $self, up__ID: String, objectIds: String);
-
-    @(Common.SideEffects : { TargetEntities: [''] })
-    action createLink(
-      in: many $self,
-      @mandatory @assert.unique @placeholder: 'Enter name' name: String,
-      @mandatory @placeholder: 'Enter URL' url: String
-    );
-
-    action editLink(in: $self, url: String);
-    action openAttachment() returns String;
   };
 }
