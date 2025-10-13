@@ -64,52 +64,15 @@ annotate my.Books.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'},
-      @UI.ButtonType : #Tertiary     
     }
   ],
 } 
@@ -139,51 +102,15 @@ annotate my.Books.references with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -208,51 +135,15 @@ annotate my.Books.footnotes with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -277,51 +168,15 @@ annotate my.Chapters.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -346,51 +201,15 @@ annotate my.Chapters.references with @UI: {
     TypeNamePlural: '{i18n>References}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy References',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -415,51 +234,15 @@ annotate my.Pages.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -484,51 +267,15 @@ annotate my.Pages.references with @UI: {
     TypeNamePlural: '{i18n>References}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy References',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
@@ -553,51 +300,15 @@ annotate my.Pages.footnotes with @UI: {
     TypeNamePlural: '{i18n>Footnotes}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
-    {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+    {Value: content, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Footnotes',
       Action: 'AdminService.copyAttachments',
-    },
-    {
-      $Type  : 'UI.DataFieldForActionGroup',
-      ID     : 'TableActionGroup',
-      Label  : 'Create',
-      ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      Actions: [
-        {
-          $Type : 'UI.DataFieldForAction',
-          Label : 'Link',
-          Action: 'AdminService.createLink'
-        }
-      ]
-    },
-    {
-      @UI.Hidden: {$edmJson: {
-    $If: [
-      { $Eq: [ { $Path: 'IsActiveEntity' }, true ] },
-      true,
-      {
-        $If: [
-          { $Ne: [ { $Path: 'mimeType' }, 'application/internet-shortcut' ] },
-          true,
-          false
-        ]
-      }
-    ]
-  }
-},
-      $Type : 'UI.DataFieldForAction',
-      Label : 'Edit Link',
-      Action: 'AdminService.editLink',
-      Inline: true,
-      IconUrl: 'sap-icon://edit',
-      @HTML5.CssDefaults: {width: '4%'}      
     }
   ],
 } 
