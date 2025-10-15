@@ -1,7 +1,9 @@
 package com.sap.cds.sdm.constants;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class SDMConstants {
   private SDMConstants() {
@@ -84,24 +86,29 @@ public class SDMConstants {
   public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
       "The file name cannot be empty or consist entirely of space characters. Enter a value.";
 
-  public static String nameConstraintMessage(
-      List<String> fileNameWithRestrictedCharacters, String operation) {
-    // Create the base message
-    String prefixMessage =
-        "%s unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
+  // Helper Methods to create error/warning messages
+  public static String buildErrorMessage(
+      Collection<String> filenames, String operation, String prefixTemplate) {
+    String closingRemark = "Rename the files and try again.";
+    StringBuilder message = new StringBuilder(String.format(prefixTemplate, operation));
 
-    // Create the formatted prefix message
-    String formattedPrefixMessage = String.format(prefixMessage, operation);
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
-
-    // Append each unsupported file name to the StringBuilder
-    for (String file : fileNameWithRestrictedCharacters) {
-      bulletPoints.append(String.format("\t• %s%n", file));
+    for (String file : filenames) {
+      message.append(String.format("\t• %s%n", file));
     }
-    bulletPoints.append("\nRename the files and try again.");
-    return bulletPoints.toString();
+    message.append("\n  ").append(closingRemark);
+    return message.toString();
+  }
+
+  public static String nameConstraintMessage(List<String> invalidFileNames, String operation) {
+    String prefix =
+        "%s unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
+    return buildErrorMessage(invalidFileNames, operation, prefix);
+  }
+
+  public static String duplicateFilenameFormat(Set<String> duplicateFileNames, String operation) {
+    String prefix =
+        "%s unsuccessful. The following filename(s) have been added multiple times. \n\n";
+    return buildErrorMessage(duplicateFileNames, operation, prefix);
   }
 
   public static String linkNameConstraintMessage(

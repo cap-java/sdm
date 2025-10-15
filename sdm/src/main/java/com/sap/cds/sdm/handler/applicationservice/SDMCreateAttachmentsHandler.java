@@ -62,6 +62,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       throws IOException {
     Map<String, String> propertyTitles = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+    SDMUtils.validateFileName(context, data, composition);
     Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
@@ -230,7 +231,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       if (fileNameInDB
           == null) { // If the file name in DB is null, it means that the file is being created for
         // the first time
-        if (filenameInRequest != null) {
+        if (filenameInRequest != null && !filenameInRequest.isBlank()) {
           updatedSecondaryProperties.put("filename", filenameInRequest);
         } else {
           throw new ServiceException("Filename cannot be empty");

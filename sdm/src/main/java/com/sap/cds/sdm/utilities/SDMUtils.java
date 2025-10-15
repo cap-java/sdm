@@ -7,12 +7,14 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.AttachmentInfo;
+import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +34,68 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
+  public static void validateFileName(
+      CdsCreateEventContext context, List<CdsData> data, String composition) {
+    StringBuilder invalidFilenameError = new StringBuilder();
+    Map<String, String> errorPerObject = new LinkedHashMap<>();
+
+    // Validation for file names
+    Set<String> whitespaceFilenames = isFileNameContainsWhitespace(data, composition);
+    List<String> restrictedFileNames = isFileNameContainsRestrictedCharaters(data);
+    Set<String> duplicateFilenames = isFileNameDuplicateInDrafts(data, composition);
+
+    // Collecting all the errors
+    if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
+      errorPerObject.put("Whitespace", SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE);
+      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE);
+    }
+    if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
+      errorPerObject.put(
+          "Restricted", SDMConstants.nameConstraintMessage(restrictedFileNames, "Rename"));
+      context
+          .getMessages()
+          .error(SDMConstants.nameConstraintMessage(restrictedFileNames, "Rename"));
+    }
+    if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
+      String formattedMessage =
+          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames, "Rename"));
+      context.getMessages().error(formattedMessage);
+      errorPerObject.put("Duplicate", formattedMessage);
+    }
+
+    // Preparing the error message
+    if (!errorPerObject.isEmpty()) {
+      final String SEPERATOR = "-------------------------------------\n";
+      int count = 0;
+      invalidFilenameError.append("Invalid file names found:\n\n");
+      for (Map.Entry<String, String> entry : errorPerObject.entrySet()) {
+        if (count > 0 && count < errorPerObject.size()) invalidFilenameError.append(SEPERATOR);
+        invalidFilenameError.append("- ").append(entry.getValue()).append("\n");
+        count++;
+      }
+    }
+    // returning the error message
+    System.out.println("Final Error Message: !@" + invalidFilenameError.toString());
+  }
+
+  public static Set<String> isFileNameContainsWhitespace(List<CdsData> data, String composition) {
+    Set<String> filenamesWithWhitespace = new HashSet<>();
+    for (Map<String, Object> entity : data) {
+      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+      if (attachments != null) {
+        Iterator<Map<String, Object>> iterator = attachments.iterator();
+        while (iterator.hasNext()) {
+          Map<String, Object> attachment = iterator.next();
+          String filenameInRequest = (String) attachment.get("fileName");
+          if (filenameInRequest == null || filenameInRequest.isBlank()) {
+            filenamesWithWhitespace.add("Whitespace/null");
+          }
+        }
+      }
+    }
+    return filenamesWithWhitespace;
+  }
+
   public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data, String composition) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
@@ -42,10 +106,12 @@ public class SDMUtils {
         while (iterator.hasNext()) {
           Map<String, Object> attachment = iterator.next();
           String filenameInRequest = (String) attachment.get("fileName");
-          String repositoryInRequest = (String) attachment.get("repositoryId");
-          String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
-          if (!uniqueFilenames.add(fileRepositorySpecific)) {
-            duplicateFilenames.add(filenameInRequest);
+          if (filenameInRequest != null && !filenameInRequest.isBlank()) {
+            String repositoryInRequest = (String) attachment.get("repositoryId");
+            String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
+            if (!uniqueFilenames.add(fileRepositorySpecific)) {
+              duplicateFilenames.add(filenameInRequest);
+            }
           }
         }
       }
@@ -72,6 +138,9 @@ public class SDMUtils {
   }
 
   public static boolean isRestrictedCharactersInName(String cmisName) {
+    if (cmisName == null || cmisName.isBlank()) {
+      return false;
+    }
     String regex = "[/\\\\]";
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(cmisName);
