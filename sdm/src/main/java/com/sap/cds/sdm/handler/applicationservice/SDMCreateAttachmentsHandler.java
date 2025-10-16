@@ -8,6 +8,7 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
@@ -52,7 +53,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    List<String> attachmentCompositions = getEntityCompositions(context);
+    // List<String> attachmentCompositions = getEntityCompositions(context);
+    List<String> attachmentCompositions =
+        AttachmentsHandlerUtils.getAttachmentEntityPaths(
+            context.getModel(), context.getTarget(), persistenceService);
     for (String composition : attachmentCompositions) {
       updateName(context, data, composition);
     }
@@ -73,11 +77,22 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest = new HashMap<>();
       List<String> noSDMRoles = new ArrayList<>();
       for (Map<String, Object> entity : data) {
-        List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
-        Optional<CdsEntity> attachmentEntity =
-            context
-                .getModel()
-                .findEntity(context.getTarget().getQualifiedName() + "." + composition);
+        // List<Map<String, Object>> attachments = (List<Map<String, Object>>)
+        // entity.get(composition);
+        String[] compositionParts = composition.split("\\.");
+        String attachmentKeyFromComposition =
+            compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")
+        String parentKeyFromComposition =
+            compositionParts.length >= 2
+                ? compositionParts[compositionParts.length - 2].toLowerCase()
+                : null; // Second last part (e.g., "chapters")
+
+        // Find all attachment arrays in the nested entity structure
+        List<Map<String, Object>> attachments =
+            AttachmentsHandlerUtils.findNestedAttachments(
+                entity, attachmentKeyFromComposition, parentKeyFromComposition);
+        System.out.println("Nested attachments found: " + attachments);
+        Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(composition);
         if (attachments != null && !attachments.isEmpty()) {
           propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
           secondaryPropertiesWithInvalidDefinitions =
@@ -132,7 +147,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
-    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+    // List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+    String[] compositionParts = composition.split("\\.");
+    String attachmentKeyFromComposition =
+        compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")
+    String parentKeyFromComposition =
+        compositionParts.length >= 2
+            ? compositionParts[compositionParts.length - 2].toLowerCase()
+            : null; // Second last part (e.g., "chapters")
+
+    // Find all attachment arrays in the nested entity structure
+    List<Map<String, Object>> attachments =
+        AttachmentsHandlerUtils.findNestedAttachments(
+            entity, attachmentKeyFromComposition, parentKeyFromComposition);
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
@@ -168,6 +195,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
+    System.out.println("Processing attachment: " + attachment);
     String id = (String) attachment.get("ID");
     String fileNameInDB;
     fileNameInDB =
