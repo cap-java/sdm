@@ -54,6 +54,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     // List<String> attachmentCompositions = getEntityCompositions(context);
+    System.out.println("Inside SDMCreateAttachmentsHandler - processBefore");
     System.out.println("Raw CDS data: " + data);
     List<String> attachmentCompositions =
         AttachmentsHandlerUtils.getAttachmentEntityPaths(

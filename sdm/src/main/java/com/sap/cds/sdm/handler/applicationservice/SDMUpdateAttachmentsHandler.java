@@ -48,10 +48,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
     // List<String> attachmentCompositions = getEntityCompositions(context);
+    System.out.println("Inside SDMUpdateAttachmentsHandler - processBefore");
+    System.out.println("Raw CDS data: " + data);
     List<String> attachmentCompositions =
         AttachmentsHandlerUtils.getAttachmentEntityPaths(
             context.getModel(), context.getTarget(), persistenceService);
+    System.out.println("Attachment compositions fetched : " + attachmentCompositions);
     for (String composition : attachmentCompositions) {
+      System.out.println("Checking for composition: " + composition);
       updateName(context, data, composition);
     }
   }
