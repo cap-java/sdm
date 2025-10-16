@@ -97,7 +97,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.run_script.outputs.changes_made == 'true'
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GIT_TOKEN }}
           commit-message: 'chore: Update SAPUI5 to ${{ steps.run_script.outputs.latest_version }}'
