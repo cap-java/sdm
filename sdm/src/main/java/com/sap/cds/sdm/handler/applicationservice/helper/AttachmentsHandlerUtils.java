@@ -127,4 +127,11 @@ public class AttachmentsHandlerUtils {
     // Check if the current parent matches the expected parent
     return expectedParentKey.equals(currentParentKey);
   }
+
+  public static Map<String, Object> wrapEntityWithParent(
+      Map<String, Object> root, String targetEntity) {
+    Map<String, Object> wrapper = new HashMap<>();
+    wrapper.put(targetEntity, root);
+    return wrapper;
+  }
 }

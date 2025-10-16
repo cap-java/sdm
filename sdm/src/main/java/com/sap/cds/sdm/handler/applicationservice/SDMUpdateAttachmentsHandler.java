@@ -89,6 +89,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     for (Map<String, Object> entity : data) {
       // List<Map<String, Object>> attachments = (List<Map<String, Object>>)
       // entity.get(composition);
+      String targetEntity = context.getTarget().getQualifiedName();
+      System.out.println("Target Entity: " + targetEntity);
+      String[] targetEntityPath = targetEntity.split("\\.");
+      targetEntity = targetEntityPath[targetEntityPath.length - 1];
+      entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity.toLowerCase());
       String[] compositionParts = composition.split("\\.");
       String attachmentKeyFromComposition =
           compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")

@@ -54,10 +54,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     // List<String> attachmentCompositions = getEntityCompositions(context);
+    System.out.println("Raw CDS data: " + data);
     List<String> attachmentCompositions =
         AttachmentsHandlerUtils.getAttachmentEntityPaths(
             context.getModel(), context.getTarget(), persistenceService);
+    System.out.println("Attachment compositions fetched : " + attachmentCompositions);
     for (String composition : attachmentCompositions) {
+      System.out.println("Checking for composition: " + composition);
       updateName(context, data, composition);
     }
   }
@@ -79,6 +82,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       for (Map<String, Object> entity : data) {
         // List<Map<String, Object>> attachments = (List<Map<String, Object>>)
         // entity.get(composition);
+        String targetEntity = context.getTarget().getQualifiedName();
+        System.out.println("Target Entity: " + targetEntity);
+        String[] targetEntityPath = targetEntity.split("\\.");
+        targetEntity = targetEntityPath[targetEntityPath.length - 1];
+        entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity.toLowerCase());
         String[] compositionParts = composition.split("\\.");
         String attachmentKeyFromComposition =
             compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")
@@ -91,7 +99,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         List<Map<String, Object>> attachments =
             AttachmentsHandlerUtils.findNestedAttachments(
                 entity, attachmentKeyFromComposition, parentKeyFromComposition);
-        System.out.println("Nested attachments found: " + attachments);
+        System.out.println(
+            "Nested attachments found for composition : " + composition + " : " + attachments);
         Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(composition);
         if (attachments != null && !attachments.isEmpty()) {
           propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
@@ -195,7 +204,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
-    System.out.println("Processing attachment: " + attachment);
+    System.out.println(
+        "Processing attachment: " + attachment + " For composition : " + composition);
     String id = (String) attachment.get("ID");
     String fileNameInDB;
     fileNameInDB =
