@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.handler.applicationservice.helper;
 
+import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
@@ -36,6 +37,87 @@ public class AttachmentsHandlerUtils {
     System.out.println(
         "Searching for attachments with key '" + attachmentKey + " under parent key " + parentKey);
     return findNestedAttachments(entity, attachmentKey, parentKey, null);
+  }
+
+  public static List<String> getAttachmentEntityPathsWithActualPropertyNames(
+      CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
+    try {
+      List<String> actualPaths = new ArrayList<>();
+
+      // Get all compositions from the target entity
+      entity
+          .compositions()
+          .forEach(
+              composition -> {
+                String compositionName = composition.getName();
+                String compositionTargetEntityName = "";
+                if (composition.getType().isAssociation()) {
+                  CdsAssociationType assocType = (CdsAssociationType) composition.getType();
+                  compositionTargetEntityName = assocType.getTarget().getQualifiedName();
+                }
+
+                System.out.println(
+                    "Processing composition: "
+                        + compositionName
+                        + " -> "
+                        + compositionTargetEntityName);
+
+                // Check if the target entity of this composition has attachments
+                if (!compositionTargetEntityName.isEmpty()) {
+                  Optional<CdsEntity> targetEntityOpt =
+                      model.findEntity(compositionTargetEntityName);
+                  if (targetEntityOpt.isPresent()) {
+                    CdsEntity targetEntity = targetEntityOpt.get();
+
+                    // Get attachment paths from the target entity
+                    SDMAssociationCascader cascader = new SDMAssociationCascader();
+                    SDMAttachmentsReader reader =
+                        new SDMAttachmentsReader(cascader, persistenceService);
+                    List<String> attachmentPaths =
+                        reader.getAttachmentEntityPaths(model, targetEntity);
+
+                    // Transform the paths to use the actual composition property name
+                    for (String attachmentPath : attachmentPaths) {
+                      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
+                      if (actualPath != null) {
+                        actualPaths.add(actualPath);
+                        System.out.println("Built actual path: " + actualPath);
+                      }
+                    }
+                  }
+                }
+              });
+
+      return actualPaths;
+    } catch (Exception e) {
+      logger.error("Error getting attachment entity paths with actual property names", e);
+      return new ArrayList<>();
+    }
+  }
+
+  private static String buildActualPath(
+      CdsEntity parentEntity, String compositionPropertyName, String attachmentPath) {
+    try {
+      String[] pathParts = attachmentPath.split("\\.");
+      if (pathParts.length >= 3) {
+        // Get the service name (first part)
+        String serviceName = pathParts[0];
+
+        // Replace the entity name with the composition property name
+        // Keep the attachment part (last part)
+        String attachmentPart = pathParts[pathParts.length - 1];
+
+        // Build the new path: ServiceName.compositionPropertyName.attachments
+        return serviceName + "." + compositionPropertyName + "." + attachmentPart;
+      }
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to build actual path for composition '{}' and attachment path '{}'",
+          compositionPropertyName,
+          attachmentPath,
+          e);
+    }
+    return null;
   }
 
   private static List<Map<String, Object>> findNestedAttachments(

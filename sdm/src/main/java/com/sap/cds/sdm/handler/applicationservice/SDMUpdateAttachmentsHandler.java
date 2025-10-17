@@ -50,8 +50,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     // List<String> attachmentCompositions = getEntityCompositions(context);
     System.out.println("Inside SDMUpdateAttachmentsHandler - processBefore");
     System.out.println("Raw CDS data: " + data);
+    // List<String> attachmentCompositions =
+    //     AttachmentsHandlerUtils.getAttachmentEntityPaths(
+    //         context.getModel(), context.getTarget(), persistenceService);
     List<String> attachmentCompositions =
-        AttachmentsHandlerUtils.getAttachmentEntityPaths(
+        AttachmentsHandlerUtils.getAttachmentEntityPathsWithActualPropertyNames(
             context.getModel(), context.getTarget(), persistenceService);
     System.out.println("Attachment compositions fetched : " + attachmentCompositions);
     for (String composition : attachmentCompositions) {
