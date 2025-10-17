@@ -112,7 +112,19 @@ public class AttachmentsHandlerUtils {
     try {
       Map<String, String> pathMapping = new HashMap<>();
 
-      // Get all compositions from the target entity
+      // First, check for direct attachments on the root entity itself
+      SDMAssociationCascader cascader = new SDMAssociationCascader();
+      SDMAttachmentsReader reader = new SDMAttachmentsReader(cascader, persistenceService);
+      List<String> directAttachmentPaths = reader.getAttachmentEntityPaths(model, entity);
+
+      for (String attachmentPath : directAttachmentPaths) {
+        // For direct attachments, entity path and actual path are the same
+        pathMapping.put(attachmentPath, attachmentPath);
+        System.out.println(
+            "Mapped direct attachment path: " + attachmentPath + " -> " + attachmentPath);
+      }
+
+      // Then, get all compositions from the target entity for nested attachments
       entity
           .compositions()
           .forEach(
@@ -138,9 +150,6 @@ public class AttachmentsHandlerUtils {
                     CdsEntity targetEntity = targetEntityOpt.get();
 
                     // Get attachment paths from the target entity
-                    SDMAssociationCascader cascader = new SDMAssociationCascader();
-                    SDMAttachmentsReader reader =
-                        new SDMAttachmentsReader(cascader, persistenceService);
                     List<String> attachmentPaths =
                         reader.getAttachmentEntityPaths(model, targetEntity);
 
