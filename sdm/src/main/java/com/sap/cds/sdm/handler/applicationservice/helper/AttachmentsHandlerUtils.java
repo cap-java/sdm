@@ -95,6 +95,107 @@ public class AttachmentsHandlerUtils {
     }
   }
 
+  /**
+   * Gets both attachment entity paths and their corresponding actual property paths as a map. This
+   * method combines the logic of both getAttachmentEntityPaths and
+   * getAttachmentEntityPathsWithActualPropertyNames to ensure accurate mapping between entity paths
+   * and actual property paths.
+   *
+   * @param model the CDS model
+   * @param entity the target entity
+   * @param persistenceService the persistence service
+   * @return a map where key is the entity path (e.g., "AdminService.Chapters.attachments") and
+   *     value is the actual property path (e.g., "AdminService.chapters123.attachments")
+   */
+  public static Map<String, String> getAttachmentPathMapping(
+      CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
+    try {
+      Map<String, String> pathMapping = new HashMap<>();
+
+      // Get all compositions from the target entity
+      entity
+          .compositions()
+          .forEach(
+              composition -> {
+                String compositionName = composition.getName();
+                String compositionTargetEntityName = "";
+                if (composition.getType().isAssociation()) {
+                  CdsAssociationType assocType = (CdsAssociationType) composition.getType();
+                  compositionTargetEntityName = assocType.getTarget().getQualifiedName();
+                }
+
+                System.out.println(
+                    "Processing composition: "
+                        + compositionName
+                        + " -> "
+                        + compositionTargetEntityName);
+
+                // Check if the target entity of this composition has attachments
+                if (!compositionTargetEntityName.isEmpty()) {
+                  Optional<CdsEntity> targetEntityOpt =
+                      model.findEntity(compositionTargetEntityName);
+                  if (targetEntityOpt.isPresent()) {
+                    CdsEntity targetEntity = targetEntityOpt.get();
+
+                    // Get attachment paths from the target entity
+                    SDMAssociationCascader cascader = new SDMAssociationCascader();
+                    SDMAttachmentsReader reader =
+                        new SDMAttachmentsReader(cascader, persistenceService);
+                    List<String> attachmentPaths =
+                        reader.getAttachmentEntityPaths(model, targetEntity);
+
+                    // For each attachment path, create both the entity path and actual path
+                    for (String attachmentPath : attachmentPaths) {
+                      // Build the entity-based path (using entity name from target)
+                      String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
+
+                      // Build the actual property-based path (using composition property name)
+                      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
+
+                      if (entityPath != null && actualPath != null) {
+                        pathMapping.put(entityPath, actualPath);
+                        System.out.println(
+                            "Mapped entity path: " + entityPath + " -> actual path: " + actualPath);
+                      }
+                    }
+                  }
+                }
+              });
+
+      return pathMapping;
+    } catch (Exception e) {
+      logger.error("Error getting attachment path mapping", e);
+      return new HashMap<>();
+    }
+  }
+
+  private static String buildEntityPath(
+      CdsEntity parentEntity, CdsEntity targetEntity, String attachmentPath) {
+    try {
+      String[] pathParts = attachmentPath.split("\\.");
+      if (pathParts.length >= 3) {
+        // Get the service name (first part)
+        String serviceName = pathParts[0];
+
+        // Get the target entity name (without service prefix)
+        String targetEntityName = targetEntity.getName();
+
+        // Get the attachment part (last part)
+        String attachmentPart = pathParts[pathParts.length - 1];
+
+        // Build the entity path: ServiceName.EntityName.attachments
+        return serviceName + "." + targetEntityName + "." + attachmentPart;
+      }
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to build entity path for target entity '{}' and attachment path '{}'",
+          targetEntity.getName(),
+          attachmentPath,
+          e);
+    }
+    return null;
+  }
+
   private static String buildActualPath(
       CdsEntity parentEntity, String compositionPropertyName, String attachmentPath) {
     try {

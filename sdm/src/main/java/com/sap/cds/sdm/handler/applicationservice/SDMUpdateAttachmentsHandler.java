@@ -50,22 +50,32 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     // List<String> attachmentCompositions = getEntityCompositions(context);
     System.out.println("Inside SDMUpdateAttachmentsHandler - processBefore");
     System.out.println("Raw CDS data: " + data);
-    // List<String> attachmentCompositions =
-    //     AttachmentsHandlerUtils.getAttachmentEntityPaths(
-    //         context.getModel(), context.getTarget(), persistenceService);
-    List<String> attachmentCompositions =
-        AttachmentsHandlerUtils.getAttachmentEntityPathsWithActualPropertyNames(
+
+    Map<String, String> compositionPathMapping =
+        AttachmentsHandlerUtils.getAttachmentPathMapping(
             context.getModel(), context.getTarget(), persistenceService);
-    System.out.println("Attachment compositions fetched : " + attachmentCompositions);
-    for (String composition : attachmentCompositions) {
-      System.out.println("Checking for composition: " + composition);
-      updateName(context, data, composition);
+
+    System.out.println("Composition path mapping: " + compositionPathMapping);
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      String attachmentCompositionName = entry.getValue();
+      System.out.println(
+          "Checking for composition - Entity path: "
+              + attachmentCompositionDefinition
+              + ", Actual path: "
+              + attachmentCompositionName);
+      updateName(context, data, attachmentCompositionDefinition, attachmentCompositionName);
     }
   }
 
-  public void updateName(CdsUpdateEventContext context, List<CdsData> data, String composition)
+  public void updateName(
+      CdsUpdateEventContext context,
+      List<CdsData> data,
+      String attachmentCompositionDefinition,
+      String attachmentCompositionName)
       throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
+    Set<String> duplicateFilenames =
+        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionDefinition);
     if (!duplicateFilenames.isEmpty()) {
       context
           .getMessages()
@@ -74,8 +84,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                   SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
                   String.join(", ", duplicateFilenames)));
     } else {
-      Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(composition);
-      renameDocument(attachmentEntity, context, data, composition);
+      Optional<CdsEntity> attachmentEntity =
+          context.getModel().findEntity(attachmentCompositionDefinition);
+      renameDocument(
+          attachmentEntity,
+          context,
+          data,
+          attachmentCompositionDefinition,
+          attachmentCompositionName);
     }
   }
 
@@ -83,7 +99,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity,
       CdsUpdateEventContext context,
       List<CdsData> data,
-      String composition)
+      String attachmentCompositionDefinition,
+      String attachmentCompositionName)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
@@ -101,7 +118,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String[] targetEntityPath = targetEntity.split("\\.");
       targetEntity = targetEntityPath[targetEntityPath.length - 1];
       entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity.toLowerCase());
-      String[] compositionParts = composition.split("\\.");
+      String[] compositionParts = attachmentCompositionName.split("\\.");
       String attachmentKeyFromComposition =
           compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")
       String parentKeyFromComposition =
