@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
+import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -145,7 +147,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Repository.versionedRepoError",
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.VERSIONED_REPO_ERROR_MSG))
+        throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      throw new ServiceException(errorMessage);
     }
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
@@ -215,7 +226,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (maxCount > 0 && rowCount >= maxCount) {
       String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
-        throw new ServiceException(message);
+        String errorMessage =
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Attachments.maxCountError",
+                    null,
+                    eventContext.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+        throw new ServiceException(errorMessage);
       }
       throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
     }
@@ -300,9 +320,27 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        String errorMessage =
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Authorization.userNotAuthorizedError",
+                    null,
+                    eventContext.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG))
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(errorMessage);
       case "blocked":
-        throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
+        String errorMessage2 =
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.File.mimetypeInvalidError",
+                    null,
+                    eventContext.getParameterInfo().getLocale());
+        if (errorMessage2.equalsIgnoreCase(SDMConstants.MIMETYPE_INVALID_ERROR_MSG))
+          throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
+        throw new ServiceException(errorMessage2);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         cmisDocument.setMimeType(createResult.get("mimeType").toString());

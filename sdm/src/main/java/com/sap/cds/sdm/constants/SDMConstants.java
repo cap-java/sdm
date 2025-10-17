@@ -66,6 +66,18 @@ public class SDMConstants {
   public static final String ATTACHMENT_MAXCOUNT_ERROR_MSG = "SDM.Attachments.maxCountError";
   public static final String MAX_COUNT_ERROR_MESSAGE =
       "Cannot upload more than %s attachments as set up by the application";
+
+  // Localized error message keys
+  public static final String VERSIONED_REPO_ERROR_MSG = "SDM.Repository.versionedRepoError";
+  public static final String USER_NOT_AUTHORISED_ERROR_MSG =
+      "SDM.Authorization.userNotAuthorizedError";
+  public static final String USER_NOT_AUTHORISED_ERROR_LINK_MSG =
+      "SDM.Authorization.userNotAuthorizedLinkError";
+  public static final String FAILED_TO_EDIT_LINK_MSG = "SDM.Link.failedToEditLinkError";
+  public static final String REPOSITORY_ERROR_MSG = "SDM.Repository.repositoryError";
+  public static final String FILE_NOT_FOUND_ERROR_MSG = "SDM.File.fileNotFoundError";
+  public static final String MIMETYPE_INVALID_ERROR_MSG = "SDM.File.mimetypeInvalidError";
+  public static final String FAILED_TO_FETCH_FACET_MSG = "SDM.Facet.failedToFetchFacetError";
   public static final String NO_SDM_BINDING = "No SDM binding found";
   public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
   public static final String DI_TOKEN_EXCHANGE_PARAMS =
@@ -85,6 +97,39 @@ public class SDMConstants {
   public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
+
+  // Error messages for ServiceException
+  public static final String FAILED_TO_EDIT_LINK = "Failed to edit link";
+  public static final String ERROR_IN_SETTING_TIMEOUT = "Error in setting timeout";
+  public static final String SDM_CREDENTIALS_MISSING_OR_INVALID =
+      "SDM credentials are missing or invalid.";
+  public static final String FAILED_TO_RETRIEVE_SDM_CREDENTIALS =
+      "Failed to retrieve SDM credentials.";
+  public static final String FAILED_TO_CREATE_HTTP_CLIENT = "Failed to create HTTP client.";
+  public static final String ERROR_WHILE_CREATING_HTTP_CLIENT = "Error while creating HTTP client.";
+  public static final String FAILED_TO_SET_REPOSITORY_DETAILS = "Failed to set repository details.";
+  public static final String FAILED_TO_SERIALIZE_REPOSITORY_OBJECT_TO_JSON =
+      "Failed to serialize repository object to JSON.";
+  public static final String FAILED_TO_CREATE_STRING_ENTITY = "Failed to create StringEntity.";
+  public static final String CLIENT_CREDENTIALS_MISSING_OR_INVALID =
+      "Client credentials are missing or invalid.";
+  public static final String FAILED_TO_CREATE_CLIENT_CREDENTIALS =
+      "Failed to create client credentials.";
+  public static final String FAILED_TO_REPLACE_SUBDOMAIN_IN_BASE_TOKEN_URL =
+      "Failed to replace subdomain in base token URL.";
+  public static final String ERROR_WHILE_FETCHING_REPOSITORY_ID =
+      "Error while fetching repository ID.";
+  public static final String UNEXPECTED_ERROR_WHILE_FETCHING_REPOSITORY_ID =
+      "Unexpected error while fetching repository ID.";
+  public static final String FAILED_TO_OFFBOARD_REPOSITORY = "Failed to offboard repository.";
+  public static final String ERROR_WHILE_OFFBOARDING_REPOSITORY =
+      "Error while offboarding repository.";
+  public static final String UNEXPECTED_ERROR_WHILE_OFFBOARDING_REPOSITORY =
+      "Unexpected error while offboarding repository.";
+  public static final String FAILED_TO_PARSE_REPOSITORY_RESPONSE =
+      "Failed to parse repository response";
+  public static final String ERROR_IN_SETTING_TIMEOUT_MESSAGE = "Error in setting timeout";
+  public static final String FAILED_TO_CREATE_FOLDER = "Failed to create folder";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {

@@ -50,7 +50,16 @@ public class SDMCustomServiceHandler {
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
     String[] splitFacet = context.getFacet().split("\\.");
     if (splitFacet.length < 3) {
-      throw new ServiceException(SDMConstants.FAILED_TO_FETCH_FACET);
+      String errorMessage =
+          context
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Facet.failedToFetchFacetError",
+                  null,
+                  context.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.FAILED_TO_FETCH_FACET_MSG))
+        throw new ServiceException(SDMConstants.FAILED_TO_FETCH_FACET);
+      throw new ServiceException(errorMessage);
     }
     String facet = splitFacet[2];
     String upID = context.getUpId();

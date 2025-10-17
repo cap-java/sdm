@@ -1,5 +1,6 @@
 package unit.com.sap.cds.sdm.service.handler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -11,6 +12,7 @@ import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -21,9 +23,12 @@ import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +55,8 @@ public class SDMCustomServiceHandlerTest {
   private static final String FOLDER_ID = "mockFolderId";
   private static final String UP_ID = "mockUpId";
   private static final String FACET = "mockFacet";
+  @Mock private CdsRuntime cdsRuntime;
+  @Mock ParameterInfo parameterInfo;
 
   @BeforeEach
   void setUp() {
@@ -130,8 +137,15 @@ public class SDMCustomServiceHandlerTest {
   void testCopyAttachments_InvalidFacetFormat_ThrowsException() throws IOException {
     AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
     when(context.getFacet()).thenReturn("invalid.facet"); // Only 2 parts
-    // Other mocks not needed as exception is thrown before they're used
+    // Mock the required methods for localized message handling
+    when(context.getParameterInfo()).thenReturn(parameterInfo);
+    when(context.getCdsRuntime()).thenReturn(cdsRuntime);
 
+    // Mock localized message to return the key (fallback scenario)
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.FAILED_TO_FETCH_FACET_MSG);
+
+    when(parameterInfo.getLocale()).thenReturn(Locale.ENGLISH);
     ServiceException ex =
         assertThrows(
             ServiceException.class,
@@ -139,6 +153,30 @@ public class SDMCustomServiceHandlerTest {
               sdmCustomServiceHandler.copyAttachments(context);
             });
     assertTrue(ex.getMessage().contains("Invalid facet format"));
+  }
+
+  @Test
+  void testCopyAttachments_InvalidFacetFormat_LocalizedMessage_ThrowsException()
+      throws IOException {
+    AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
+    when(context.getFacet()).thenReturn("invalid.facet"); // Only 2 parts
+    // Mock the required methods for localized message handling
+    when(context.getParameterInfo()).thenReturn(parameterInfo);
+    when(context.getCdsRuntime()).thenReturn(cdsRuntime);
+
+    // Mock localized message to return a different localized message
+    String localizedMessage =
+        "Format de facette invalide, impossible d'extraire les informations requises.";
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn(localizedMessage);
+
+    when(parameterInfo.getLocale()).thenReturn(Locale.FRENCH);
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmCustomServiceHandler.copyAttachments(context);
+            });
+    assertEquals(localizedMessage, ex.getMessage());
   }
 
   @Test
