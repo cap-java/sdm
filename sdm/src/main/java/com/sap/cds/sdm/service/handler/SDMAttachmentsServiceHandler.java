@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.persistence.DBQuery.*;
-
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -13,6 +11,7 @@ import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
@@ -143,15 +142,24 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private void validateRepository(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String repocheck =
+    RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
-    if (SDMConstants.REPOSITORY_VERSIONED.equals(repocheck)) {
+    if (repoValue.getVersionEnabled()) {
       throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+    }
+    String len = eventContext.getParameterInfo().getHeaders().get("content-length");
+    long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
+    // Check if repository is virus scanned
+    if (repoValue.getVirusScanEnabled()
+        && contentLen > 400 * 1024 * 1024
+        && !repoValue.getDisableVirusScannerForLargeFile()) {
+      throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
     }
   }
 
   private void processEntities(AttachmentCreateEventContext eventContext)
       throws ServiceException, IOException {
+
     Map<String, Object> attachmentIds = eventContext.getAttachmentIds();
     CdsEntity attachmentDraftEntity = getAttachmentDraftEntity(eventContext);
     String upIdKey = getUpIdKey(attachmentDraftEntity);
@@ -293,8 +301,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+      case "blocked":
+        throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
+        cmisDocument.setMimeType(createResult.get("mimeType").toString());
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

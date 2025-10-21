@@ -2,9 +2,11 @@ namespace sap.attachments;
 
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 extend aspect Attachments with {
-    folderId : String ;
-    repositoryId : String ;
-    objectId : String ;
+    folderId : String;
+    repositoryId : String;
+    objectId : String;
+    linkUrl : String default null;
+    type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
 }
 annotate Attachments with @UI: {
     HeaderInfo: {
@@ -14,10 +16,10 @@ annotate Attachments with @UI: {
     },
     LineItem  : [
         {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
-         {Value: content, @HTML5.CssDefaults: {width: '20%'}},
-          {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-          {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-          {Value: note, @HTML5.CssDefaults: {width: '20%'}}
+        {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+        {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+        {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+        {Value: note, @HTML5.CssDefaults: {width: '20%'}}
     ]
 } {
     note       @(title: '{i18n>Note}');

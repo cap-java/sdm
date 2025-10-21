@@ -1,10 +1,12 @@
-name: Single Tenant Deploy and Integration Test
+name: Single Tenant Deploy and Integration Test LatestVersion
 
+# This workflow now runs ONLY after the main "Single Tenant Deploy and Integration Test" workflow
+# (singleTenant_deploy_and_integration.yml) has completed successfully. It can still be
+# triggered manually via workflow_dispatch if needed.
 on:
-  pull_request:
-    types: [closed]
-    branches:
-      - develop
+  workflow_run:
+    workflows: ["Single Tenant Deploy and Integration Test"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -13,13 +15,11 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
+    # Run only if the triggering workflow concluded successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
 
     steps:
-    
-      - name: Wait for 5 minutes # Added a 5-minute delay to ensure the snapshot is deployed successfully before initiating the deployment job.
-        run: sleep 300
         
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -41,6 +41,55 @@ jobs:
             echo "Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
+      - name: Override cds.services.version (runtime only)
+        env:
+          TARGET_CDS_SERVICES_VERSION: 4.3.1
+        run: |
+          set -e
+          echo "=== cds.services.version Override Step ==="
+          echo "Target version to apply: ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "POM files containing property:"; echo "$FILES" | sed 's/^/  - /'
+
+          echo "\nCurrent raw occurrences BEFORE override:"
+          for f in $FILES; do
+            # Show each occurrence with line number (first 3 if multiple)
+            MATCHES=$(grep -n "<cds.services.version>" "$f" | head -3 || true)
+            if [ -n "$MATCHES" ]; then
+              echo "--- $f"; echo "$MATCHES"
+            fi
+          done
+
+          echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
+          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
+          if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
+            echo "NOTE: Effective value already equals target; files will still be normalized to target string."
+          fi
+
+          echo "\nApplying override ..."
+            # Perform in-place replacement for each file
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+
+          echo "\nRaw occurrences AFTER override:"
+          grep -R "<cds.services.version>" $FILES || true
+
+          echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
+          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
+          if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
+            echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
+          fi
+
+          echo "(Not committing these changes)"
+          echo "=== Override Step Complete ==="
+        shell: bash
 
       - name: Deleting the sdm directory for fresh build
         run: |
@@ -64,6 +113,8 @@ jobs:
           EOF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
@@ -137,64 +188,66 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
+      - name: Fetch and Escape Client Secret
+        id: fetch_secret
         run: |
-          echo "Fetching client details for single tenant..."
+          # Fetch the service instance GUID
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+            echo "Error: Unable to retrieve service instance GUID"; exit 1;
           fi
+          # Fetch the binding GUID
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          
+          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+            echo "Error: Unable to retrieve binding GUID"; exit 1;
           fi
+          
+          # Fetch the clientSecret
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
+            echo "Error: clientSecret is not set or is null"; exit 1;
           fi
+          
+          # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
           echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-          echo "::set-output name=CLIENT_ID::$clientID"
-          echo "✅ Client details fetched successfully!"
-      - name: Run integration tests 🎯
+      - name: Run integration tests
         env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
         run: |
-          echo "🚀 Starting integration tests..."
-          set -e
+          set -e  # Enable error checking
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+          # Gather secrets and other values
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ env.CLIENT_ID }}"
+          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
           clientSecret="${{ env.CLIENT_SECRET }}"
           username="${{ secrets.CF_USER }}"
           password="${{ secrets.CF_PASSWORD }}"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          echo "::add-mask::$clientSecret"
-          echo "::add-mask::$clientID"
-          echo "::add-mask::$username"
-          echo "::add-mask::$password"
-          echo "::add-mask::$noSDMRoleUsername"
-          echo "::add-mask::$noSDMRoleUserPassword"
-          if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
-          if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
-          if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
-          if [ -z "$clientSecret" ]; then echo "❌ Error: clientSecret is not set"; exit 1; fi
-          if [ -z "$username" ]; then echo "❌ Error: username is not set"; exit 1; fi
-          if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
-          if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
-          if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
+          # Ensure all required variables are set
+          if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "Error: noSDMRoleUserPassword is not set"; exit 1; fi
+          # Function to partially mask sensitive information for logging
+          mask() {
+            local value="$1"
+            if [ ${#value} -gt 6 ]; then
+              echo "${value:0:3}*****${value: -3}"
+            else
+              echo "${value:0:2}*****"
+            fi
+          }
+          # Update properties file with real values
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           authUrl=$authUrl
@@ -205,11 +258,8 @@ jobs:
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
-          echo "🎯 Running Maven integration tests"
           # Run Maven integration tests
           mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
           mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
     
-      
-
-      
+    

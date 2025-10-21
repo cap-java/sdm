@@ -27,6 +27,8 @@ public class SDMConstants {
   public static final String GENERIC_ERROR = "Could not %s the document.";
   public static final String VERSIONED_REPO_ERROR =
       "Upload not supported for versioned repositories.";
+  public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
+      "You cannot upload files that are larger than 400 MB";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String NOT_FOUND_ERROR = "Failed to read document.";
@@ -45,12 +47,18 @@ public class SDMConstants {
   public static final String SDM_CONNECTIONPOOL_PREFIX = "cds.attachments.sdm.http.%s";
   public static final String USER_NOT_AUTHORISED_ERROR =
       "You do not have the required permissions to upload attachments. Please contact your administrator for access.";
+  public static final String MIMETYPE_INVALID_ERROR =
+      "This file type is not allowed in this repository. Contact your administrator for assistance.";
+  public static final String USER_NOT_AUTHORISED_ERROR_LINK =
+      "You do not have the required permissions to create links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
   public static final int CHUNK_SIZE = 20 * 1024 * 1024; // 20MB Chunk Size
   public static final String ONBOARD_REPO_MESSAGE =
       "Repository with name %s  and id %s onboarded successfully";
+  public static final String REPOSITORY_ALREADY_EXIST =
+      "Repository with name %s and id %s already exists. Skipping onboarding.";
   public static final String ONBOARD_REPO_ERROR_MESSAGE =
       "Error in onboarding repository with name %s";
   public static final String UPDATE_ATTACHMENT_ERROR = "Could not update the attachment";
@@ -95,6 +103,26 @@ public class SDMConstants {
       bulletPoints.append(String.format("\t• %s%n", file));
     }
     bulletPoints.append("\nRename the files and try again.");
+    return bulletPoints.toString();
+  }
+
+  public static String linkNameConstraintMessage(
+      List<String> fileNameWithRestrictedCharacters, String operation) {
+    // Create the base message
+    String prefixMessage =
+        "Link could not be %s. The following name(s) contain unsupported characters (/, \\). \n\n";
+
+    // Create the formatted prefix message
+    String formattedPrefixMessage = String.format(prefixMessage, operation);
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
+
+    // Append each unsupported file name to the StringBuilder
+    for (String file : fileNameWithRestrictedCharacters) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append("\nRename the link and try again.");
     return bulletPoints.toString();
   }
 

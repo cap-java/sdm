@@ -53,6 +53,10 @@ public class DocumentUploadService {
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     try {
+      if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
+        logger.info("LinkType detected, uploading as single chunk");
+        return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
+      }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
 
@@ -161,7 +165,8 @@ public class DocumentUploadService {
       throws IOException {
 
     InputStream originalStream = cmisDocument.getContent();
-    if (originalStream == null) {
+    if (!cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")
+        && originalStream == null) {
       throw new IOException("File stream is null!");
     }
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
@@ -170,12 +175,6 @@ public class DocumentUploadService {
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-    builder.addBinaryBody(
-        "filename",
-        cmisDocument.getContent(),
-        ContentType.create(cmisDocument.getMimeType()),
-        cmisDocument.getFileName());
-    // Add additional form fields
     builder.addTextBody("cmisaction", "createDocument", ContentType.TEXT_PLAIN);
     builder.addTextBody("objectId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
     builder.addTextBody("propertyId[0]", "cmis:name", ContentType.TEXT_PLAIN);
@@ -183,6 +182,24 @@ public class DocumentUploadService {
     builder.addTextBody("propertyId[1]", "cmis:objectTypeId", ContentType.TEXT_PLAIN);
     builder.addTextBody("propertyValue[1]", "cmis:document", ContentType.TEXT_PLAIN);
     builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+
+    if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+      builder.addTextBody("propertyId[2]", "cmis:secondaryObjectTypeIds", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[2]", "sap:createLink", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[3]", "sap:linkRepositoryId", ContentType.TEXT_PLAIN);
+      builder.addTextBody(
+          "propertyValue[3]", cmisDocument.getRepositoryId(), ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyId[4]", "sap:linkExternalURL", ContentType.TEXT_PLAIN);
+      builder.addTextBody("propertyValue[4]", cmisDocument.getUrl(), ContentType.TEXT_PLAIN);
+
+    } else {
+      builder.addBinaryBody(
+          "filename",
+          cmisDocument.getContent(),
+          ContentType.create(cmisDocument.getMimeType()),
+          cmisDocument.getFileName());
+    }
+
     HttpEntity entity = builder.build();
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
@@ -281,26 +298,37 @@ public class DocumentUploadService {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
-    String objectId = "";
+    String objectId = "", mimeType = "";
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
-      JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
       if (responseCode == 201 || responseCode == 200) {
+        JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        mimeType = succinctProperties.getString("cmis:contentStreamMimeType");
       } else {
-        String message = jsonResponse.getString("message");
-        if (responseCode == 409
-            && "Malware Service Exception: Virus found in the file!".equals(message)) {
-          status = "virus";
-        } else if (responseCode == 409) {
-          status = "duplicate";
-        } else if (responseCode == 403) {
+        if (responseCode == 409) {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
+          if ("Malware Service Exception: Virus found in the file!".equals(message)) {
+            status = "virus";
+          } else {
+            status = "duplicate";
+          }
+        } else if ((responseCode == 403)
+            && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
+        } else if (responseCode == 403) {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
+          if ("MIME type of the uploaded file is blocked according to your repository configuration."
+              .equals(message)) status = "blocked";
         } else {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
         }
@@ -312,6 +340,7 @@ public class DocumentUploadService {
       finalResponse.put("message", error);
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
+        finalResponse.put("mimeType", mimeType);
       }
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));

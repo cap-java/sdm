@@ -5,20 +5,17 @@ import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
-import com.sap.cds.sdm.caching.CacheConfig;
-import com.sap.cds.sdm.caching.RepoKey;
-import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
-import com.sap.cds.sdm.caching.SecondaryTypesKey;
+import com.sap.cds.sdm.caching.*;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
-import com.sap.cloud.sdk.cloudplatform.connectivity.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -81,6 +78,46 @@ public class SDMServiceImpl implements SDMService {
     return new JSONObject(finalResponse);
   }
 
+  @Override
+  public JSONObject editLink(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws ServiceException {
+
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    Map<String, String> finalResponse = new HashMap<>();
+
+    String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+
+    HttpPost uploadFile = new HttpPost(sdmUrl);
+
+    String urlShortcut = "[InternetShortcut]\nURL=" + cmisDocument.getUrl();
+    byte[] fileContent = urlShortcut.getBytes(StandardCharsets.UTF_8);
+
+    MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+    builder.addTextBody("cmisaction", "setContent", ContentType.TEXT_PLAIN);
+    builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+    builder.addTextBody(
+        "filename",
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url",
+        ContentType.TEXT_PLAIN);
+    builder.addTextBody("charset", "UTF-8", ContentType.TEXT_PLAIN);
+    builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
+
+    builder.addBinaryBody(
+        "media",
+        fileContent,
+        ContentType.create("application/internet-shortcut"),
+        cmisDocument.getFileName() != null ? cmisDocument.getFileName() + ".url" : "link.url");
+
+    HttpEntity multipart = builder.build();
+    uploadFile.setEntity(multipart);
+
+    executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    return new JSONObject(finalResponse);
+  }
+
   private void executeHttpPost(
       HttpClient httpClient,
       HttpPost uploadFile,
@@ -105,22 +142,30 @@ public class SDMServiceImpl implements SDMService {
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
-      JSONObject jsonResponse = new JSONObject(responseString);
       int responseCode = response.getStatusLine().getStatusCode();
+
       if (responseCode == 201 || responseCode == 200) {
-        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
+        JSONObject jsonResponse = new JSONObject(responseString);
+        JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         objectId = succinctProperties.getString("cmis:objectId");
       } else {
-        String message = jsonResponse.getString("message");
-        if (responseCode == 409
-            && "Malware Service Exception: Virus found in the file!".equals(message)) {
-          status = "virus";
-        } else if (responseCode == 409) {
-          status = "duplicate";
-        } else if (responseCode == 403) {
+        if (responseCode == 409) {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
+          JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
+          objectId = succinctProperties.getString("cmis:objectId");
+          if ("Malware Service Exception: Virus found in the file!".equals(message)) {
+            status = "virus";
+          } else {
+            status = "duplicate";
+          }
+        } else if ((responseCode == 403)
+            && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
         } else {
+          JSONObject jsonResponse = new JSONObject(responseString);
+          String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
         }
@@ -133,8 +178,8 @@ public class SDMServiceImpl implements SDMService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
-    } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
+    } catch (Exception e) {
+      throw new ServiceException(e.getMessage());
     }
   }
 
@@ -432,33 +477,23 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String checkRepositoryType(String repositoryId, String tenant) {
+  public RepoValue checkRepositoryType(String repositoryId, String tenant) {
     RepoKey repoKey = new RepoKey();
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
-    String type = CacheConfig.getVersionedRepoCache().get(repoKey);
-    Boolean isVersioned;
-    if (type == null) {
+    RepoValue repoValue = CacheConfig.getRepoCache().get(repoKey);
+    if (repoValue == null) {
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
-      isVersioned = isRepositoryVersioned(repoInfo, repositoryId);
-    } else {
-      isVersioned = "Versioned".equals(type);
-    }
-
-    if (Boolean.TRUE.equals(isVersioned)) {
+      Map<String, RepoValue> repoValueMap = fetchRepositoryData(repoInfo, repositoryId);
       repoKey = new RepoKey();
       repoKey.setSubdomain(tenant);
       repoKey.setRepoId(repositoryId);
-      CacheConfig.getVersionedRepoCache().put(repoKey, "Versioned");
-      return "Versioned";
-    } else {
-      repoKey = new RepoKey();
-      repoKey.setSubdomain(tenant);
-      repoKey.setRepoId(repositoryId);
-      CacheConfig.getVersionedRepoCache().put(repoKey, "Non Versioned");
-      return "Non Versioned";
+      RepoValue value = repoValueMap.get(repositoryId);
+      CacheConfig.getRepoCache().put(repoKey, value);
+      return repoValueMap.get(repositoryId);
     }
+    return repoValue;
   }
 
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
@@ -478,17 +513,28 @@ public class SDMServiceImpl implements SDMService {
     }
   }
 
-  public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) {
+  public Map<String, RepoValue> fetchRepositoryData(JSONObject repoInfo, String repositoryId) {
+    Map<String, RepoValue> repoValueMap = new HashMap<>();
     repoInfo = repoInfo.getJSONObject(repositoryId);
     JSONObject capabilities = repoInfo.getJSONObject("capabilities");
     String type = capabilities.getString("capabilityContentStreamUpdatability");
-    if ("pwconly".equals(type)) {
-      type = "Versioned";
-    } else {
-      type = "Non Versioned";
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVersionEnabled("pwconly".equals(type) ? true : false);
+    JSONArray extendedFeaturesArray = repoInfo.getJSONArray("extendedFeatures");
+    // Iterate over the array and find the object with featureData
+    for (int i = 0; i < extendedFeaturesArray.length(); i++) {
+      JSONObject feature = extendedFeaturesArray.getJSONObject(i);
+      if (feature.has("featureData")) {
+        JSONObject featureData = feature.getJSONObject("featureData");
+        // Fetch the 'virusScanner' value
+        repoValue.setVirusScanEnabled(featureData.getBoolean("virusScanner"));
+        // Fetch the disableVirusScannerForLargeFile
+        repoValue.setDisableVirusScannerForLargeFile(
+            featureData.getBoolean("disableVirusScannerForLargeFile"));
+      }
     }
-
-    return "Versioned".equals(type);
+    repoValueMap.put(repositoryId, repoValue);
+    return repoValueMap;
   }
 
   @Override
