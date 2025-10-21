@@ -54,15 +54,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
   public void updateName(CdsUpdateEventContext context, List<CdsData> data, String composition)
       throws IOException {
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
-    if (!duplicateFilenames.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(
-                  SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                  String.join(", ", duplicateFilenames)));
-    } else {
+    Boolean isError = false;
+    isError = SDMUtils.validateFileName(context, data, composition, "Update");
+    if (!isError) {
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(context.getTarget().getQualifiedName() + "." + composition);
       renameDocument(attachmentEntity, context, data, composition);

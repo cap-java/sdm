@@ -7,14 +7,13 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.AttachmentInfo;
-import com.sap.cds.services.cds.CdsCreateEventContext;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,10 +33,9 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static void validateFileName(
-      CdsCreateEventContext context, List<CdsData> data, String composition) {
-    StringBuilder invalidFilenameError = new StringBuilder();
-    Map<String, String> errorPerObject = new LinkedHashMap<>();
+  public static Boolean validateFileName(
+      EventContext context, List<CdsData> data, String composition, String operation) {
+    Boolean isError = false;
 
     // Validation for file names
     Set<String> whitespaceFilenames = isFileNameContainsWhitespace(data, composition);
@@ -46,36 +44,22 @@ public class SDMUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      errorPerObject.put("Whitespace", SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE);
       context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE);
+      isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
-      errorPerObject.put(
-          "Restricted", SDMConstants.nameConstraintMessage(restrictedFileNames, "Rename"));
       context
           .getMessages()
-          .error(SDMConstants.nameConstraintMessage(restrictedFileNames, "Rename"));
+          .error(SDMConstants.nameConstraintMessage(restrictedFileNames, operation));
+      isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
-          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames, "Rename"));
+          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames, operation));
       context.getMessages().error(formattedMessage);
-      errorPerObject.put("Duplicate", formattedMessage);
-    }
-
-    // Preparing the error message
-    if (!errorPerObject.isEmpty()) {
-      final String SEPERATOR = "-------------------------------------\n";
-      int count = 0;
-      invalidFilenameError.append("Invalid file names found:\n\n");
-      for (Map.Entry<String, String> entry : errorPerObject.entrySet()) {
-        if (count > 0 && count < errorPerObject.size()) invalidFilenameError.append(SEPERATOR);
-        invalidFilenameError.append("- ").append(entry.getValue()).append("\n");
-        count++;
-      }
     }
     // returning the error message
-    System.out.println("Final Error Message: !@" + invalidFilenameError.toString());
+    return isError;
   }
 
   public static Set<String> isFileNameContainsWhitespace(List<CdsData> data, String composition) {

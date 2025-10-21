@@ -62,11 +62,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       throws IOException {
     Map<String, String> propertyTitles = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
-    SDMUtils.validateFileName(context, data, composition);
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
-    if (!duplicateFilenames.isEmpty()) {
-      handleDuplicateFilenames(context, duplicateFilenames);
-    } else {
+    Boolean isError = false;
+    isError = SDMUtils.validateFileName(context, data, composition, "Create");
+    if (!isError) {
       List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       List<String> filesNotFound = new ArrayList<>();
