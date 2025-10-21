@@ -39,7 +39,8 @@ public class SDMConstants {
   public static final String SDM_ROLES_ERROR_MESSAGE =
       "Unable to rename the file due to an error at the server";
   public static final String SDM_ENV_NAME = "sdm";
-
+  public static final String ENTITY_PROCESSING_ERROR_LINK =
+      "Failed to create link due to error while processing entity";
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
   public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
   public static final String SDM_TOKEN_FETCH = "sdm-token-fetch";
