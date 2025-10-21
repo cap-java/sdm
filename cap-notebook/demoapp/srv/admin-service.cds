@@ -1,6 +1,4 @@
 using { sap.capire.bookshop as my } from '../db/schema';
-using './attachment-extension';
-
 service AdminService @(requires: 'admin') {
 
   entity Books as projection on my.Books;
