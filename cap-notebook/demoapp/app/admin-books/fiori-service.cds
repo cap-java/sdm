@@ -352,50 +352,13 @@ annotate AdminService.Books.texts {
   )
 };
 
-// Workaround for Fiori popup for asking user to enter a new UUID on Create
-annotate AdminService.Books with {
-  ID @Core.Computed;
+// In addition we need to expose Languages through AdminService as a target for ValueList
+using {sap} from '@sap/cds/common';
+
+extend service AdminService {
+  @readonly
+  entity Languages as projection on sap.common.Languages;
 }
-
-// Show Genre as drop down, not a dialog
-annotate AdminService.Books with {
-  genre @Common.ValueListWithFixedValues;
-}
-
-annotate AdminService.Books.texts with @(UI: {
-  Identification : [{Value: title}],
-  SelectionFields: [
-    locale,
-    title
-  ],
-  LineItem       : [
-    {
-      Value: locale,
-      Label: 'Locale'
-    },
-    {
-      Value: title,
-      Label: 'Title'
-    },
-    {
-      Value: descr,
-      Label: 'Description'
-    },
-  ]
-});
-
-annotate AdminService.Books.texts with {
-  ID       @UI.Hidden;
-  ID_texts @UI.Hidden;
-};
-
-// Add Value Help for Locales
-annotate AdminService.Books.texts {
-  locale @(
-    ValueList.entity: 'Languages',
-    Common.ValueListWithFixedValues, //show as drop down, not a dialog
-  )
-};
 
 // Workaround for Fiori popup for asking user to enter a new UUID on Create
 annotate AdminService.Books with {

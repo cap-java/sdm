@@ -132,6 +132,29 @@
                     "route": "PagesObjectPage"
                   }
                 }
+              },
+              "controlConfiguration": {
+                "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable",
+                    "selectionMode": "Auto",
+                    "rowPress": ".extension.books.controller.custom.onRowPress"
+                  }
+                },
+                "references/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable",
+                    "selectionMode": "Auto",
+                    "rowPress": ".extension.books.controller.custom.onRowPress"
+                  }
+                },
+                "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable",
+                    "selectionMode": "Auto",
+                    "rowPress": ".extension.books.controller.custom.onRowPress"
+                  }
+                }
               }
             }
           }
@@ -143,8 +166,30 @@
           "options": {
               "settings": {
                   "editableHeaderContent": false,
-                  "entitySet": "Chapters"
-
+                  "entitySet": "Chapters",
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "references/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    }
+                  }
               }
           }
         },
@@ -156,7 +201,30 @@
               "settings": {
                   "editableHeaderContent": false,
                   "entitySet": "Pages",
-                  "navigation": {}
+                  "navigation": {},
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "references/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    }
+                  }
               }
           }
         },
@@ -186,7 +254,16 @@
     },
     "extends": {
       "extensions": {
-        "sap.ui.controllerExtensions": {    
+        "sap.ui.controllerExtensions": {
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::ChaptersObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::PagesObjectPage": {
+              "controllerName": "books.controller.custom"
+          }
         }
       }
     },
