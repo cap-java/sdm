@@ -30,14 +30,16 @@ public class SDMAttachmentsService extends ServiceDelegator
   @Override
   public void copyAttachments(CopyAttachmentInput input, boolean isSystemUser) {
     logger.info(
-        "Copying attachments for upId: {}, facet: {}, objectIds: {}, isSystemUser: {}",
+        "Copying attachments for upId: {}, parentEntity: {}, compositionName: {}, objectIds: {}, isSystemUser: {}",
         input.upId(),
-        input.facet(),
+        input.parentEntity(),
+        input.compositionName(),
         input.objectIds(),
         isSystemUser);
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
-    copyContext.setFacet(input.facet());
+    copyContext.setParentEntity(input.parentEntity());
+    copyContext.setCompositionName(input.compositionName());
     copyContext.setObjectIds(input.objectIds());
     copyContext.setSystemUser(isSystemUser);
 

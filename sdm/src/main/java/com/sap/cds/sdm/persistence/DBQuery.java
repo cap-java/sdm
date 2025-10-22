@@ -7,10 +7,14 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
@@ -65,13 +69,44 @@ public class DBQuery {
 
   public CmisDocument getAttachmentForObjectID(
       PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
-    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(context.getFacet());
+
+    // Use the new API to resolve the target attachment entity
+    String parentEntity = context.getParentEntity();
+    String compositionName = context.getCompositionName();
+    CdsModel model = context.getModel();
+
+    // Find the parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      throw new ServiceException("Unable to find parent entity: " + parentEntity);
+    }
+
+    // Find the composition element in the parent entity
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      throw new ServiceException(
+          "Unable to find composition '" + compositionName + "' in entity: " + parentEntity);
+    }
+
+    // Get the target entity of the composition
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    // Find the target attachment entity
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isEmpty()) {
+      throw new ServiceException("Unable to find target attachment entity: " + targetEntityName);
+    }
+
+    // Search in active entity first
     CqnSelect q =
         Select.from(attachmentEntity.get())
             .columns("linkUrl", "type")
             .where(doc -> doc.get("objectId").eq(id));
     Result result = persistenceService.run(q);
     Optional<Row> res = result.first();
+
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
       Row row = res.get();
@@ -79,17 +114,19 @@ public class DBQuery {
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
     } else {
       // Check in draft table as well
-      attachmentEntity = context.getModel().findEntity(context.getFacet() + "_drafts");
-      q =
-          Select.from(attachmentEntity.get())
-              .columns("linkUrl", "type")
-              .where(doc -> doc.get("objectId").eq(id));
-      result = persistenceService.run(q);
-      res = result.first();
-      if (res.isPresent()) {
-        Row row = res.get();
-        cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
-        cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+      if (attachmentDraftEntity.isPresent()) {
+        q =
+            Select.from(attachmentDraftEntity.get())
+                .columns("linkUrl", "type")
+                .where(doc -> doc.get("objectId").eq(id));
+        result = persistenceService.run(q);
+        res = result.first();
+        if (res.isPresent()) {
+          Row row = res.get();
+          cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+          cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+        }
       }
     }
     return cmisDocument;
