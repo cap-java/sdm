@@ -113,20 +113,26 @@ public class SDMServiceGenericHandler implements EventHandler {
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
     Optional<CdsEntity> attachmentEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    System.out.println("attachmentEntity: " + attachmentEntity);
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     // get the objectId against the Id
     String id = targetKeys.get("ID").toString();
+    System.out.println("id: " + id);
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    System.out.println("cmisDocument: " + cmisDocument);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+      System.out.println("cmisDocument (non-draft): " + cmisDocument);
     }
     if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+      System.out.println("Link detected, fetching URL");
+      System.out.println("cmisDocument before fetching URL: " + cmisDocument.getUrl());
       context.setResult(cmisDocument.getUrl());
     } else {
       context.setResult("None");

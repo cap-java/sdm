@@ -78,7 +78,10 @@ public class SDMCustomServiceHandler {
         copyAttachmentsToSDM(
             context, objectIds, folderId, repositoryId, sdmCredentials, isSystemUser, folderExists);
 
+    System.out.println("attachmentsMetadata: " + attachmentsMetadata);
+
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
+    System.out.println("upIdKey: " + upIdKey);
     createDraftEntries(
         attachmentsMetadata,
         parentEntity,
