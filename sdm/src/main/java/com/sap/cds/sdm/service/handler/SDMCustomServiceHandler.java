@@ -33,6 +33,26 @@ public class SDMCustomServiceHandler {
   private final DBQuery dbQuery;
   private final PersistenceService persistenceService;
 
+  // Result class for copyAttachmentsToSDM method
+  private static class CopyAttachmentsResult {
+    private final List<List<String>> attachmentsMetadata;
+    private final List<CmisDocument> populatedDocuments;
+
+    public CopyAttachmentsResult(
+        List<List<String>> attachmentsMetadata, List<CmisDocument> populatedDocuments) {
+      this.attachmentsMetadata = attachmentsMetadata;
+      this.populatedDocuments = populatedDocuments;
+    }
+
+    public List<List<String>> getAttachmentsMetadata() {
+      return attachmentsMetadata;
+    }
+
+    public List<CmisDocument> getPopulatedDocuments() {
+      return populatedDocuments;
+    }
+  }
+
   public SDMCustomServiceHandler(
       SDMService sdmService,
       List<DraftService> draftService,
@@ -135,6 +155,179 @@ public class SDMCustomServiceHandler {
   //   context.setCompleted();
   // }
 
+  // @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
+  // public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
+
+  //   System.out.println("Inside copyAttachments handler of SDMCustomServiceHandler");
+  //   String parentEntity = context.getParentEntity();
+  //   System.out.println("parentEntity: " + parentEntity);
+  //   String compositionName = context.getCompositionName();
+  //   System.out.println("compositionName: " + compositionName);
+  //   String upID = context.getUpId();
+  //   System.out.println("upID: " + upID);
+  //   String folderName = upID + "__" + compositionName;
+  //   System.out.println("folderName: " + folderName);
+  //   String repositoryId = SDMConstants.REPOSITORY_ID;
+  //   System.out.println("repositoryId: " + repositoryId);
+  //   Boolean isSystemUser = context.getSystemUser();
+  //   System.out.println("isSystemUser: " + isSystemUser);
+  //   boolean folderExists = true;
+
+  //   SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+  //   String folderId =
+  //       sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser);
+  //   System.out.println("folderId: " + folderId);
+  //   if (folderId == null) {
+  //     folderExists = false;
+  //     folderId =
+  //         sdmService.createFolder(
+  //             folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
+  //     JSONObject jsonObject = new JSONObject(folderId);
+  //     JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
+  //     folderId = succinctProperties.getString("cmis:objectId");
+  //     System.out.println("Created new folder with folderId: " + folderId);
+  //   }
+  //   CmisDocument cmisDocument = new CmisDocument();
+
+  //   List<String> objectIds = context.getObjectIds();
+  //   System.out.println("objectIds: " + objectIds);
+  //   List<List<String>> attachmentsMetadata = new ArrayList<>();
+  //   for (String objectId : objectIds) {
+  //     // get Link Url from objectId and set to cmisDocument
+  //     cmisDocument = dbQuery.getAttachmentForObjectID(persistenceService, objectId, context);
+  //     System.out.println("cmisDocument: " + cmisDocument);
+  //     cmisDocument.setObjectId(objectId);
+  //     cmisDocument.setRepositoryId(repositoryId);
+  //     cmisDocument.setFolderId(folderId);
+  //     try {
+  //       attachmentsMetadata.add(
+  //           sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
+  //     } catch (ServiceException e) {
+  //       if (!folderExists) {
+  //         // deleteFolder
+  //         System.out.println(
+  //             "Exception occurred, deleting created folder with folderId: " + folderId);
+  //         sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
+  //         throw new ServiceException(e.getMessage());
+  //       } else {
+  //         System.out.println("Exception occurred, deleting copied attachments");
+  //         for (List<String> attachmentMetadata : attachmentsMetadata) {
+  //           // delete the copied attachments
+  //           sdmService.deleteDocument(
+  //               "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
+  //         }
+  //         throw new ServiceException(e.getMessage());
+  //       }
+  //     }
+  //   }
+
+  //   // Find the parent entity's draft table and composition
+  //   String upIdKey = null;
+  //   CdsModel model = context.getModel();
+
+  //   Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+  //   System.out.println("optionalParentEntity: " + optionalParentEntity);
+  //   if (optionalParentEntity.isEmpty()) {
+  //     throw new ServiceException("Unable to find parent entity: " + parentEntity);
+  //   }
+
+  //   // Find the composition element in the parent draft entity
+  //   Optional<CdsElement> compositionElement =
+  //       optionalParentEntity.get().findElement(compositionName);
+  //   System.out.println("compositionElement: " + compositionElement);
+  //   if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+  //     throw new ServiceException(
+  //         "Unable to find composition '" + compositionName + "' in entity: " + parentEntity);
+  //   }
+
+  //   // Get the target entity of the composition
+  //   CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+  //   System.out.println("assocType: " + assocType);
+  //   String targetEntityName = assocType.getTarget().getQualifiedName();
+  //   System.out.println("targetEntityName: " + targetEntityName);
+
+  //   // Find the target entity's draft table to get upIdKey
+  //   Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+  //   System.out.println("attachmentDraftEntity: " + attachmentDraftEntity);
+  //   if (attachmentDraftEntity.isPresent()) {
+  //     Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+  //     System.out.println("upAssociation: " + upAssociation);
+  //     if (upAssociation.isPresent()) {
+  //       CdsElement association = upAssociation.get();
+  //       System.out.println("association: " + association);
+  //       CdsAssociationType upAssocType = association.getType();
+  //       System.out.println("upAssocType: " + upAssocType);
+  //       List<String> fkElements = upAssocType.refs().map(ref -> "up__" + ref.path()).toList();
+  //       System.out.println("fkElements: " + fkElements);
+  //       upIdKey = fkElements.get(0);
+  //       System.out.println("upIdKey: " + upIdKey);
+  //     }
+  //   }
+
+  //   final String finalUpIdKey = upIdKey;
+
+  //   // Process attachments with new Insert pattern
+  //   Map<String, Object> updatedFields = new HashMap<>();
+  //   for (List<String> attachmentMetadata : attachmentsMetadata) {
+  //     String fileName = attachmentMetadata.get(0);
+  //     System.out.println("fileName: " + fileName);
+  //     String mimeType = attachmentMetadata.get(1);
+  //     System.out.println("mimeType: " + mimeType);
+  //     if (mimeType.equalsIgnoreCase("application/internet-shortcut")) {
+  //       int dotIndex = fileName.lastIndexOf('.');
+  //       fileName = fileName.substring(0, dotIndex);
+  //     }
+  //     String newObjectId = attachmentMetadata.get(2);
+
+  //     updatedFields.put("objectId", newObjectId);
+  //     updatedFields.put("repositoryId", repositoryId);
+  //     updatedFields.put("folderId", folderId);
+  //     updatedFields.put("status", "Clean");
+  //     updatedFields.put("mimeType", mimeType);
+  //     // updatedFields.put("type", cmisDocument.getType());
+  //     updatedFields.put("fileName", fileName);
+  //     updatedFields.put("HasDraftEntity", false);
+  //     updatedFields.put("HasActiveEntity", false);
+  //     // updatedFields.put("linkUrl", cmisDocument.getUrl());
+  //     updatedFields.put(
+  //         "contentId",
+  //         newObjectId
+  //             + ":"
+  //             + folderId
+  //             + ":"
+  //             + parentEntity
+  //             + "."
+  //             + compositionName
+  //             + ":"
+  //             + mimeType);
+  //     updatedFields.put(upIdKey, upID);
+
+  //     // Use the recommended Insert pattern for projection entities
+  //     // Remove "up__" prefix from finalUpIdKey for the filter condition
+  //     String baseKeyField = finalUpIdKey != null ? finalUpIdKey.replace("up__", "") : "ID";
+  //     var insert =
+  //         Insert.into(parentEntity, e ->
+  // e.filter(e.get(baseKeyField).eq(upID)).to(compositionName))
+  //             .entry(updatedFields);
+  //     System.out.println("Insert: " + insert);
+  //     System.out.println("Using baseKeyField: " + baseKeyField + " for filter");
+
+  //     DraftService matchingService =
+  //         draftService.stream()
+  //             .filter(ds -> parentEntity.contains(ds.getName()))
+  //             .findFirst()
+  //             .orElse(null);
+
+  //     if (matchingService != null) {
+  //       System.out.println("Using DraftService: " + matchingService.getName());
+  //       matchingService.newDraft(insert);
+  //     } else {
+  //       throw new ServiceException("No suitable service found for entity: " + parentEntity);
+  //     }
+  //   }
+  //   context.setCompleted();
+  // }
+
   @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
 
@@ -151,14 +344,47 @@ public class SDMCustomServiceHandler {
     System.out.println("repositoryId: " + repositoryId);
     Boolean isSystemUser = context.getSystemUser();
     System.out.println("isSystemUser: " + isSystemUser);
-    boolean folderExists = true;
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    // Check if folder exists before trying to create it
+    boolean folderExists =
+        sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser)
+            != null;
+    String folderId = ensureFolderExists(folderName, repositoryId, sdmCredentials, isSystemUser);
+
+    List<String> objectIds = context.getObjectIds();
+    System.out.println("objectIds: " + objectIds);
+
+    CopyAttachmentsResult copyResult =
+        copyAttachmentsToSDM(
+            context, objectIds, folderId, repositoryId, sdmCredentials, isSystemUser, folderExists);
+
+    List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
+    List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
+    System.out.println("attachmentsMetadata: " + attachmentsMetadata);
+
+    String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
+    System.out.println("upIdKey: " + upIdKey);
+    createDraftEntries(
+        attachmentsMetadata,
+        populatedDocuments,
+        parentEntity,
+        compositionName,
+        upID,
+        upIdKey,
+        repositoryId,
+        folderId);
+
+    context.setCompleted();
+  }
+
+  private String ensureFolderExists(
+      String folderName, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
+      throws IOException {
     String folderId =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser);
     System.out.println("folderId: " + folderId);
     if (folderId == null) {
-      folderExists = false;
       folderId =
           sdmService.createFolder(
               folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
@@ -167,51 +393,75 @@ public class SDMCustomServiceHandler {
       folderId = succinctProperties.getString("cmis:objectId");
       System.out.println("Created new folder with folderId: " + folderId);
     }
-    CmisDocument cmisDocument = new CmisDocument();
+    return folderId;
+  }
 
-    List<String> objectIds = context.getObjectIds();
-    System.out.println("objectIds: " + objectIds);
+  private CopyAttachmentsResult copyAttachmentsToSDM(
+      AttachmentCopyEventContext context,
+      List<String> objectIds,
+      String folderId,
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser,
+      boolean folderExists)
+      throws IOException {
     List<List<String>> attachmentsMetadata = new ArrayList<>();
+    List<CmisDocument> populatedDocuments = new ArrayList<>();
+
     for (String objectId : objectIds) {
-      // get Link Url from objectId and set to cmisDocument
-      cmisDocument = dbQuery.getAttachmentForObjectID(persistenceService, objectId, context);
+      CmisDocument cmisDocument =
+          dbQuery.getAttachmentForObjectID(persistenceService, objectId, context);
       System.out.println("cmisDocument: " + cmisDocument);
       cmisDocument.setObjectId(objectId);
       cmisDocument.setRepositoryId(repositoryId);
       cmisDocument.setFolderId(folderId);
+
+      // Create individual document for each attachment with its own type and linkUrl
+      CmisDocument populatedDocument = new CmisDocument();
+      // populatedDocument.setType(cmisDocument.getType());
+      // populatedDocument.setUrl(cmisDocument.getUrl());
+      populatedDocuments.add(populatedDocument);
+
       try {
         attachmentsMetadata.add(
             sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
       } catch (ServiceException e) {
-        if (!folderExists) {
-          // deleteFolder
-          System.out.println(
-              "Exception occurred, deleting created folder with folderId: " + folderId);
-          sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
-          throw new ServiceException(e.getMessage());
-        } else {
-          System.out.println("Exception occurred, deleting copied attachments");
-          for (List<String> attachmentMetadata : attachmentsMetadata) {
-            // delete the copied attachments
-            sdmService.deleteDocument(
-                "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
-          }
-          throw new ServiceException(e.getMessage());
-        }
+        handleCopyFailure(context, folderId, folderExists, attachmentsMetadata, e);
       }
     }
 
-    // Find the parent entity's draft table and composition
-    String upIdKey = null;
-    CdsModel model = context.getModel();
+    return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
+  }
 
+  private void handleCopyFailure(
+      AttachmentCopyEventContext context,
+      String folderId,
+      boolean folderExists,
+      List<List<String>> attachmentsMetadata,
+      ServiceException e)
+      throws IOException {
+    if (!folderExists) {
+      System.out.println("Exception occurred, deleting created folder with folderId: " + folderId);
+      sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
+    } else {
+      System.out.println("Exception occurred, deleting copied attachments");
+      for (List<String> attachmentMetadata : attachmentsMetadata) {
+        sdmService.deleteDocument(
+            "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
+      }
+    }
+    throw new ServiceException(e.getMessage());
+  }
+
+  private String resolveUpIdKey(
+      AttachmentCopyEventContext context, String parentEntity, String compositionName) {
+    CdsModel model = context.getModel();
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     System.out.println("optionalParentEntity: " + optionalParentEntity);
     if (optionalParentEntity.isEmpty()) {
       throw new ServiceException("Unable to find parent entity: " + parentEntity);
     }
 
-    // Find the composition element in the parent draft entity
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     System.out.println("compositionElement: " + compositionElement);
@@ -220,13 +470,11 @@ public class SDMCustomServiceHandler {
           "Unable to find composition '" + compositionName + "' in entity: " + parentEntity);
     }
 
-    // Get the target entity of the composition
     CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
     System.out.println("assocType: " + assocType);
     String targetEntityName = assocType.getTarget().getQualifiedName();
     System.out.println("targetEntityName: " + targetEntityName);
 
-    // Find the target entity's draft table to get upIdKey
     Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
     System.out.println("attachmentDraftEntity: " + attachmentDraftEntity);
     if (attachmentDraftEntity.isPresent()) {
@@ -239,16 +487,29 @@ public class SDMCustomServiceHandler {
         System.out.println("upAssocType: " + upAssocType);
         List<String> fkElements = upAssocType.refs().map(ref -> "up__" + ref.path()).toList();
         System.out.println("fkElements: " + fkElements);
-        upIdKey = fkElements.get(0);
+        String upIdKey = fkElements.get(0);
         System.out.println("upIdKey: " + upIdKey);
+        return upIdKey;
       }
     }
+    return null;
+  }
 
-    final String finalUpIdKey = upIdKey;
+  private void createDraftEntries(
+      List<List<String>> attachmentsMetadata,
+      List<CmisDocument> populatedDocuments,
+      String parentEntity,
+      String compositionName,
+      String upID,
+      String upIdKey,
+      String repositoryId,
+      String folderId) {
 
-    // Process attachments with new Insert pattern
-    Map<String, Object> updatedFields = new HashMap<>();
-    for (List<String> attachmentMetadata : attachmentsMetadata) {
+    for (int i = 0; i < attachmentsMetadata.size(); i++) {
+      List<String> attachmentMetadata = attachmentsMetadata.get(i);
+      CmisDocument cmisDocument = populatedDocuments.get(i);
+      Map<String, Object> updatedFields = new HashMap<>();
+
       String fileName = attachmentMetadata.get(0);
       System.out.println("fileName: " + fileName);
       String mimeType = attachmentMetadata.get(1);
@@ -264,11 +525,12 @@ public class SDMCustomServiceHandler {
       updatedFields.put("folderId", folderId);
       updatedFields.put("status", "Clean");
       updatedFields.put("mimeType", mimeType);
-      // updatedFields.put("type", cmisDocument.getType());
+      // updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
-      // updatedFields.put("linkUrl", cmisDocument.getUrl());
+      // updatedFields.put("linkUrl", cmisDocument.getUrl()); // Individual linkUrl for each
+      // attachment
       updatedFields.put(
           "contentId",
           newObjectId
@@ -281,17 +543,15 @@ public class SDMCustomServiceHandler {
               + ":"
               + mimeType);
       updatedFields.put(upIdKey, upID);
+      System.out.println("updatedFields: " + updatedFields);
 
-      // Use the recommended Insert pattern for projection entities
-      // Remove "up__" prefix from finalUpIdKey for the filter condition
-      String baseKeyField = finalUpIdKey != null ? finalUpIdKey.replace("up__", "") : "ID";
+      String baseKeyField = upIdKey != null ? upIdKey.replace("up__", "") : "ID";
       var insert =
           Insert.into(parentEntity, e -> e.filter(e.get(baseKeyField).eq(upID)).to(compositionName))
               .entry(updatedFields);
       System.out.println("Insert: " + insert);
       System.out.println("Using baseKeyField: " + baseKeyField + " for filter");
 
-      // Use DraftService with fallback to PersistenceService
       DraftService matchingService =
           draftService.stream()
               .filter(ds -> parentEntity.contains(ds.getName()))
@@ -305,6 +565,5 @@ public class SDMCustomServiceHandler {
         throw new ServiceException("No suitable service found for entity: " + parentEntity);
       }
     }
-    context.setCompleted();
   }
 }
