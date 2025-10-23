@@ -20,7 +20,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
 - Link as attachments: Provides the capability to support link or URL as attachments.
 - Edit Link-type attachments: Provides the capability to update URL of link-type attachments.
-
+- Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 ## Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
@@ -35,6 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Copy attachments](#support-for-copy-attachments)
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
+- [Support for Localization](#support-for-localization)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -859,7 +860,24 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Replace `AdminService` in `Action: 'AdminService.editLink'` with the name of your service.
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
+## Support for Localization
+If the UI fields have to be available in the local language of the leading application ensure to add the below fields in the i18n_[languagecode].properties file under app/_i18n folder.
+Default language translations are present in i18n.properties files. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
 
+Example i18n_de.properties for german language.
+```
+Attachment=Attachment
+Attachments=Attachments
+Note= Attachment Note
+Filename=File Name
+ ```
+For the exception messages as well the translation be provided by adding the translation to messages_[languagecode].properties files present under srv/src/main/resources.
+Default language translations are present in messages.properties. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
+
+Example for german language
+```
+SDM.Attachments.maxCountError = Maximum number of attachments reached in German......
+ ```
 ## Known Restrictions
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.
