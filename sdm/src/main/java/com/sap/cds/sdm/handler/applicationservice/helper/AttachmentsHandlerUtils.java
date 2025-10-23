@@ -145,54 +145,55 @@ public class AttachmentsHandlerUtils {
     return targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments");
   }
 
-  public static List<String> getAttachmentEntityPathsWithActualPropertyNames(
-      CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
-    try {
-      List<String> actualPaths = new ArrayList<>();
+  // public static List<String> getAttachmentEntityPathsWithActualPropertyNames(
+  //     CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
+  //   try {
+  //     List<String> actualPaths = new ArrayList<>();
 
-      // Get all compositions from the target entity
-      entity
-          .compositions()
-          .forEach(
-              composition -> {
-                String compositionName = composition.getName();
-                String compositionTargetEntityName = "";
-                if (composition.getType().isAssociation()) {
-                  CdsAssociationType assocType = (CdsAssociationType) composition.getType();
-                  compositionTargetEntityName = assocType.getTarget().getQualifiedName();
-                }
+  //     // Get all compositions from the target entity
+  //     entity
+  //         .compositions()
+  //         .forEach(
+  //             composition -> {
+  //               String compositionName = composition.getName();
+  //               String compositionTargetEntityName = "";
+  //               if (composition.getType().isAssociation()) {
+  //                 CdsAssociationType assocType = (CdsAssociationType) composition.getType();
+  //                 compositionTargetEntityName = assocType.getTarget().getQualifiedName();
+  //               }
 
-                // Check if the target entity of this composition has attachments
-                if (!compositionTargetEntityName.isEmpty()) {
-                  Optional<CdsEntity> targetEntityOpt =
-                      model.findEntity(compositionTargetEntityName);
-                  if (targetEntityOpt.isPresent()) {
-                    CdsEntity targetEntity = targetEntityOpt.get();
+  //               // Check if the target entity of this composition has attachments
+  //               if (!compositionTargetEntityName.isEmpty()) {
+  //                 Optional<CdsEntity> targetEntityOpt =
+  //                     model.findEntity(compositionTargetEntityName);
+  //                 if (targetEntityOpt.isPresent()) {
+  //                   CdsEntity targetEntity = targetEntityOpt.get();
 
-                    // Get attachment paths from the target entity
-                    SDMAssociationCascader cascader = new SDMAssociationCascader();
-                    SDMAttachmentsReader reader =
-                        new SDMAttachmentsReader(cascader, persistenceService);
-                    List<String> attachmentPaths =
-                        reader.getAttachmentEntityPaths(model, targetEntity);
+  //                   // Get attachment paths from the target entity
+  //                   SDMAssociationCascader cascader = new SDMAssociationCascader();
+  //                   SDMAttachmentsReader reader =
+  //                       new SDMAttachmentsReader(cascader, persistenceService);
+  //                   List<String> attachmentPaths =
+  //                       reader.getAttachmentEntityPaths(model, targetEntity);
 
-                    // Transform the paths to use the actual composition property name
-                    for (String attachmentPath : attachmentPaths) {
-                      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
-                      if (actualPath != null) {
-                        actualPaths.add(actualPath);
-                      }
-                    }
-                  }
-                }
-              });
+  //                   // Transform the paths to use the actual composition property name
+  //                   for (String attachmentPath : attachmentPaths) {
+  //                     String actualPath = buildActualPath(entity, compositionName,
+  // attachmentPath);
+  //                     if (actualPath != null) {
+  //                       actualPaths.add(actualPath);
+  //                     }
+  //                   }
+  //                 }
+  //               }
+  //             });
 
-      return actualPaths;
-    } catch (Exception e) {
-      logger.error("Error getting attachment entity paths with actual property names", e);
-      return new ArrayList<>();
-    }
-  }
+  //     return actualPaths;
+  //   } catch (Exception e) {
+  //     logger.error("Error getting attachment entity paths with actual property names", e);
+  //     return new ArrayList<>();
+  //   }
+  // }
 
   public static List<Map<String, Object>> fetchAttachments(
       String targetEntity, Map<String, Object> entity, String attachmentCompositionName) {
