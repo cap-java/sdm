@@ -30,16 +30,26 @@ public class SDMAttachmentsService extends ServiceDelegator
   @Override
   public void copyAttachments(CopyAttachmentInput input, boolean isSystemUser) {
     logger.info(
-        "Copying attachments for upId: {}, parentEntity: {}, compositionName: {}, objectIds: {}, isSystemUser: {}",
+        "Copying attachments for upId: {}, facet: {}, objectIds: {}, isSystemUser: {}",
         input.upId(),
-        input.parentEntity(),
-        input.compositionName(),
+        input.facet(),
         input.objectIds(),
         isSystemUser);
+
+    // Parse facet to extract parent entity and composition name
+    String[] facetParts = input.facet().split("\\.");
+    if (facetParts.length < 3) {
+      throw new IllegalArgumentException(
+          "Invalid facet format. Expected: Service.Entity.Composition, got: " + input.facet());
+    }
+
+    String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity
+    String compositionName = facetParts[2]; // composition name
+
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
-    copyContext.setParentEntity(input.parentEntity());
-    copyContext.setCompositionName(input.compositionName());
+    copyContext.setParentEntity(parentEntity);
+    copyContext.setCompositionName(compositionName);
     copyContext.setObjectIds(input.objectIds());
     copyContext.setSystemUser(isSystemUser);
 

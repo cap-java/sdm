@@ -248,6 +248,7 @@ public class SDMCustomServiceHandler {
               + ":"
               + mimeType);
       updatedFields.put(upIdKey, upID);
+      System.out.println("updatedFields: " + updatedFields);
 
       String baseKeyField = upIdKey != null ? upIdKey.replace("up__", "") : "ID";
       var insert =

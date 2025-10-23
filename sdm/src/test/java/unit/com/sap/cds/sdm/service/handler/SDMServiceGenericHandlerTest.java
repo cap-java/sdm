@@ -111,6 +111,7 @@ public class SDMServiceGenericHandlerTest {
     verify(attachmentService, times(1)).copyAttachments(captor.capture(), eq(false));
     CopyAttachmentInput input = captor.getValue();
     assert input.upId().equals("123");
+    assert input.facet().equals("MyService.MyEntity.attachments");
     assert input.objectIds().equals(List.of("abc", "xyz"));
     verify(mockContext, times(1)).setCompleted();
   }

@@ -72,24 +72,11 @@ public class SDMServiceGenericHandler implements EventHandler {
     System.out.println("objectIdsString: " + objectIdsString);
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
 
-    // Extract parent entity and composition from target
-    String targetQualifiedName = context.getTarget().getQualifiedName();
-    System.out.println("targetQualifiedName: " + targetQualifiedName);
-    String[] targetParts = targetQualifiedName.split("\\.");
-    System.out.println("targetParts: " + Arrays.toString(targetParts));
+    // Use the full target qualified name as the facet
+    String facet = context.getTarget().getQualifiedName();
+    System.out.println("facet: " + facet);
 
-    if (targetParts.length < 3) {
-      throw new ServiceException(
-          "Invalid target format. Expected: Service.Entity.Composition, got: "
-              + targetQualifiedName);
-    }
-
-    String parentEntity = targetParts[0] + "." + targetParts[1]; // Service.Entity
-    System.out.println("parentEntity: " + parentEntity);
-    String compositionName = targetParts[2]; // composition name
-    System.out.println("compositionName: " + compositionName);
-
-    var copyEventInput = new CopyAttachmentInput(upID, parentEntity, compositionName, objectIds);
+    var copyEventInput = new CopyAttachmentInput(upID, facet, objectIds);
 
     attachmentService.copyAttachments(copyEventInput, context.getUserInfo().isSystemUser());
     context.setCompleted();
