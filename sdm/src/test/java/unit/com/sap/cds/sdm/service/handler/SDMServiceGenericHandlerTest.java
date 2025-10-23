@@ -260,6 +260,10 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn("Maximum two links allowed");
     when(userInfo.isSystemUser()).thenReturn(false);
 
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
@@ -1105,6 +1109,10 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
     when(userInfo.isSystemUser()).thenReturn(false);

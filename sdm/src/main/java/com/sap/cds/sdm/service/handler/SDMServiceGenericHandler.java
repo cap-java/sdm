@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
+import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
@@ -262,7 +264,14 @@ public class SDMServiceGenericHandler implements EventHandler {
     String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
       if (message != null && !"null".equalsIgnoreCase(message)) {
-        throw new ServiceException(message);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Attachments.maxCountError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+        throw new ServiceException(errorMessage);
       }
       throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
     }

@@ -31,9 +31,6 @@ public class SDMConstants {
       "You cannot upload files that are larger than 400 MB";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
-  public static final String NOT_FOUND_ERROR = "Failed to read document.";
-  public static final String NAME_CONSTRAINT_WARNING_MESSAGE =
-      "Enter a valid file name for %s. The following characters are not supported: /, \\";
   public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
       "You do not have the required permissions to update attachments. Kindly contact the admin";
   public static final String SDM_ROLES_ERROR_MESSAGE =
