@@ -72,41 +72,30 @@ public class DBQuery {
 
     // Use the new API to resolve the target attachment entity
     String parentEntity = context.getParentEntity();
-    System.out.println("Parent Entity: " + parentEntity);
     String compositionName = context.getCompositionName();
-    System.out.println("Composition Name: " + compositionName);
     CdsModel model = context.getModel();
-    System.out.println("model: " + model);
 
     // Find the parent entity
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
-    System.out.println("optionalParentEntity: " + optionalParentEntity);
     if (optionalParentEntity.isEmpty()) {
-      System.out.println("optionalParentEntity is empty");
       throw new ServiceException("Unable to find parent entity: " + parentEntity);
     }
 
     // Find the composition element in the parent entity
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
-    System.out.println("compositionElement: " + compositionElement);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
-      System.out.println("compositionElement is empty or not an association");
       throw new ServiceException(
           "Unable to find composition '" + compositionName + "' in entity: " + parentEntity);
     }
 
     // Get the target entity of the composition
     CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
-    System.out.println("assocType: " + assocType);
     String targetEntityName = assocType.getTarget().getQualifiedName();
-    System.out.println("targetEntityName: " + targetEntityName);
 
     // Find the target attachment entity
     Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
-    System.out.println("attachmentEntity: " + attachmentEntity);
     if (attachmentEntity.isEmpty()) {
-      System.out.println("attachmentEntity is empty");
       throw new ServiceException("Unable to find target attachment entity: " + targetEntityName);
     }
 
@@ -116,41 +105,30 @@ public class DBQuery {
             .columns("linkUrl", "type")
             .where(doc -> doc.get("objectId").eq(id));
     Result result = persistenceService.run(q);
-    System.out.println("result: " + result);
     Optional<Row> res = result.first();
-    System.out.println("res: " + res);
 
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
       Row row = res.get();
-      System.out.println("row: " + row);
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
     } else {
       // Check in draft table as well
-      System.out.println("Inside else");
       Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
-      System.out.println("attachmentDraftEntity: " + attachmentDraftEntity);
       if (attachmentDraftEntity.isPresent()) {
-        System.out.println("attachmentDraftEntity is present");
         q =
             Select.from(attachmentDraftEntity.get())
                 .columns("linkUrl", "type")
                 .where(doc -> doc.get("objectId").eq(id));
         result = persistenceService.run(q);
-        System.out.println("result: " + result);
         res = result.first();
-        System.out.println("res: " + res);
         if (res.isPresent()) {
-          System.out.println("res is present");
           Row row = res.get();
-          System.out.println("row: " + row);
           cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
           cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
         }
       }
     }
-    System.out.println("cmisDocument: " + cmisDocument);
     return cmisDocument;
   }
 
