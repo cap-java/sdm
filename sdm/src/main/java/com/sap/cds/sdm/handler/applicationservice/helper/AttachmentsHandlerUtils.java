@@ -36,105 +36,113 @@ public class AttachmentsHandlerUtils {
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
     try {
       Map<String, String> pathMapping = new HashMap<>();
-
-      // First, check for direct attachments on the root entity itself
       SDMAssociationCascader cascader = new SDMAssociationCascader();
       SDMAttachmentsReader reader = new SDMAttachmentsReader(cascader, persistenceService);
 
-      // Check each composition to see if it's a direct attachment
+      // Process direct attachments
       entity
           .compositions()
           .forEach(
-              composition -> {
-                String compositionName = composition.getName();
-                if (composition.getType().isAssociation()) {
-                  CdsAssociationType assocType = (CdsAssociationType) composition.getType();
-                  String targetAspect =
-                      assocType.getTargetAspect().isPresent()
-                          ? assocType.getTargetAspect().get().getQualifiedName()
-                          : null;
+              composition -> processDirectAttachmentComposition(entity, pathMapping, composition));
 
-                  // Check if this is a direct attachment composition
-                  if (targetAspect != null
-                      && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
-                    String serviceName = entity.getQualifiedName().split("\\.")[0];
-                    String entityName = entity.getName();
-                    String directPath = serviceName + "." + entityName + "." + compositionName;
-
-                    // For direct attachments, entity path and actual path are the same
-                    pathMapping.put(directPath, directPath);
-                    System.out.println(
-                        "Mapped direct attachment path: " + directPath + " -> " + directPath);
-                  }
-                }
-              });
-
-      // Then, get all compositions from the target entity for nested attachments
+      // Process nested attachments
       entity
           .compositions()
           .forEach(
-              composition -> {
-                String compositionName = composition.getName();
-                String compositionTargetEntityName = "";
-                if (composition.getType().isAssociation()) {
-                  CdsAssociationType assocType = (CdsAssociationType) composition.getType();
-                  String targetAspect =
-                      assocType.getTargetAspect().isPresent()
-                          ? assocType.getTargetAspect().get().getQualifiedName()
-                          : null;
-
-                  // Skip direct attachment compositions (already handled above)
-                  if (targetAspect != null
-                      && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
-                    return; // Skip this composition as it's a direct attachment
-                  }
-
-                  compositionTargetEntityName = assocType.getTarget().getQualifiedName();
-                }
-
-                System.out.println(
-                    "Processing nested composition: "
-                        + compositionName
-                        + " -> "
-                        + compositionTargetEntityName);
-
-                // Check if the target entity of this composition has attachments
-                if (!compositionTargetEntityName.isEmpty()) {
-                  Optional<CdsEntity> targetEntityOpt =
-                      model.findEntity(compositionTargetEntityName);
-                  if (targetEntityOpt.isPresent()) {
-                    CdsEntity targetEntity = targetEntityOpt.get();
-
-                    // Get attachment paths from the target entity
-                    List<String> attachmentPaths =
-                        reader.getAttachmentEntityPaths(model, targetEntity);
-
-                    // For each attachment path, create both the entity path and actual path
-                    for (String attachmentPath : attachmentPaths) {
-                      // Build the entity-based path (using entity name from target)
-                      String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
-
-                      // Build the actual property-based path (using composition property name)
-                      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
-
-                      if (entityPath != null && actualPath != null) {
-                        pathMapping.put(entityPath, actualPath);
-                        System.out.println(
-                            "Mapped nested entity path: "
-                                + entityPath
-                                + " -> actual path: "
-                                + actualPath);
-                      }
-                    }
-                  }
-                }
-              });
+              composition ->
+                  processNestedAttachmentComposition(
+                      model, entity, reader, pathMapping, composition));
 
       return pathMapping;
     } catch (Exception e) {
       logger.error("Error getting attachment path mapping", e);
       return new HashMap<>();
     }
+  }
+
+  private static void processDirectAttachmentComposition(
+      CdsEntity entity, Map<String, String> pathMapping, Object composition) {
+    String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
+    if (((com.sap.cds.reflect.CdsElement) composition).getType().isAssociation()) {
+      CdsAssociationType assocType =
+          (CdsAssociationType) ((com.sap.cds.reflect.CdsElement) composition).getType();
+      String targetAspect =
+          assocType.getTargetAspect().isPresent()
+              ? assocType.getTargetAspect().get().getQualifiedName()
+              : null;
+
+      if (isDirectAttachmentTargetAspect(targetAspect)) {
+        String serviceName = entity.getQualifiedName().split("\\.")[0];
+        String entityName = entity.getName();
+        String directPath = serviceName + "." + entityName + "." + compositionName;
+        pathMapping.put(directPath, directPath);
+      }
+    }
+  }
+
+  private static void processNestedAttachmentComposition(
+      CdsModel model,
+      CdsEntity entity,
+      SDMAttachmentsReader reader,
+      Map<String, String> pathMapping,
+      Object composition) {
+    String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
+    String compositionTargetEntityName = "";
+
+    if (((com.sap.cds.reflect.CdsElement) composition).getType().isAssociation()) {
+      CdsAssociationType assocType =
+          (CdsAssociationType) ((com.sap.cds.reflect.CdsElement) composition).getType();
+      String targetAspect =
+          assocType.getTargetAspect().isPresent()
+              ? assocType.getTargetAspect().get().getQualifiedName()
+              : null;
+
+      if (isDirectAttachmentTargetAspect(targetAspect)) {
+        return; // Skip direct attachment compositions
+      }
+
+      compositionTargetEntityName = assocType.getTarget().getQualifiedName();
+    }
+
+    processCompositionTargetEntity(
+        model, entity, reader, pathMapping, compositionName, compositionTargetEntityName);
+  }
+
+  private static void processCompositionTargetEntity(
+      CdsModel model,
+      CdsEntity entity,
+      SDMAttachmentsReader reader,
+      Map<String, String> pathMapping,
+      String compositionName,
+      String compositionTargetEntityName) {
+    if (!compositionTargetEntityName.isEmpty()) {
+      Optional<CdsEntity> targetEntityOpt = model.findEntity(compositionTargetEntityName);
+      if (targetEntityOpt.isPresent()) {
+        CdsEntity targetEntity = targetEntityOpt.get();
+        List<String> attachmentPaths = reader.getAttachmentEntityPaths(model, targetEntity);
+        processAttachmentPaths(entity, pathMapping, compositionName, targetEntity, attachmentPaths);
+      }
+    }
+  }
+
+  private static void processAttachmentPaths(
+      CdsEntity entity,
+      Map<String, String> pathMapping,
+      String compositionName,
+      CdsEntity targetEntity,
+      List<String> attachmentPaths) {
+    for (String attachmentPath : attachmentPaths) {
+      String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
+      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
+
+      if (entityPath != null && actualPath != null) {
+        pathMapping.put(entityPath, actualPath);
+      }
+    }
+  }
+
+  private static boolean isDirectAttachmentTargetAspect(String targetAspect) {
+    return targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments");
   }
 
   public static List<String> getAttachmentEntityPathsWithActualPropertyNames(
@@ -200,10 +208,8 @@ public class AttachmentsHandlerUtils {
             : null; // Second last part (e.g., "chapters")
 
     // Find all attachment arrays in the nested entity structure
-    List<Map<String, Object>> attachments =
-        AttachmentsHandlerUtils.findNestedAttachments(
-            entity, attachmentKeyFromComposition, parentKeyFromComposition);
-    return attachments;
+    return AttachmentsHandlerUtils.findNestedAttachments(
+        entity, attachmentKeyFromComposition, parentKeyFromComposition);
   }
 
   private static List<Map<String, Object>> findNestedAttachments(
@@ -273,42 +279,69 @@ public class AttachmentsHandlerUtils {
 
       // If we found the attachment key
       if (attachmentKey.equals(key) && value instanceof List) {
-        // Check if the parent matches (if parentKey is specified)
-        if (parentKey == null || isCorrectParentContext(currentParentKey, parentKey)) {
-          try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
-            result.addAll(attachments);
-          } catch (ClassCastException e) {
-            logger.warn("Failed to cast attachments list for key '{}': {}", key, e.getMessage());
-          }
-        }
+        result.addAll(processAttachmentKey(value, key, parentKey, currentParentKey));
       }
       // Recursively search in nested objects
       else if (value instanceof Map) {
-        try {
-          @SuppressWarnings("unchecked")
-          Map<String, Object> nestedMap = (Map<String, Object>) value;
-          result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
-        } catch (ClassCastException e) {
-          logger.warn("Failed to cast nested map for key '{}': {}", key, e.getMessage());
-        }
+        result.addAll(processNestedMap(value, key, attachmentKey, parentKey));
       }
       // Recursively search in lists
       else if (value instanceof List) {
-        try {
-          List<?> list = (List<?>) value;
-          for (Object item : list) {
-            if (item instanceof Map) {
-              @SuppressWarnings("unchecked")
-              Map<String, Object> itemMap = (Map<String, Object>) item;
-              result.addAll(findNestedAttachments(itemMap, attachmentKey, parentKey, key));
-            }
-          }
-        } catch (ClassCastException e) {
-          logger.warn("Failed to process list for key '{}': {}", key, e.getMessage());
+        result.addAll(processNestedList(value, key, attachmentKey, parentKey));
+      }
+    }
+
+    return result;
+  }
+
+  private static List<Map<String, Object>> processAttachmentKey(
+      Object value, String key, String parentKey, String currentParentKey) {
+    List<Map<String, Object>> result = new ArrayList<>();
+
+    // Check if the parent matches (if parentKey is specified)
+    if (parentKey == null || isCorrectParentContext(currentParentKey, parentKey)) {
+      try {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
+        result.addAll(attachments);
+      } catch (ClassCastException e) {
+        logger.warn("Failed to cast attachments list for key '{}': {}", key, e.getMessage());
+      }
+    }
+
+    return result;
+  }
+
+  private static List<Map<String, Object>> processNestedMap(
+      Object value, String key, String attachmentKey, String parentKey) {
+    List<Map<String, Object>> result = new ArrayList<>();
+
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> nestedMap = (Map<String, Object>) value;
+      result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
+    } catch (ClassCastException e) {
+      logger.warn("Failed to cast nested map for key '{}': {}", key, e.getMessage());
+    }
+
+    return result;
+  }
+
+  private static List<Map<String, Object>> processNestedList(
+      Object value, String key, String attachmentKey, String parentKey) {
+    List<Map<String, Object>> result = new ArrayList<>();
+
+    try {
+      List<?> list = (List<?>) value;
+      for (Object item : list) {
+        if (item instanceof Map) {
+          @SuppressWarnings("unchecked")
+          Map<String, Object> itemMap = (Map<String, Object>) item;
+          result.addAll(findNestedAttachments(itemMap, attachmentKey, parentKey, key));
         }
       }
+    } catch (ClassCastException e) {
+      logger.warn("Failed to process list for key '{}': {}", key, e.getMessage());
     }
 
     return result;

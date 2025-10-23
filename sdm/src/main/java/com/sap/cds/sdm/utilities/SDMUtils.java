@@ -38,11 +38,8 @@ public class SDMUtils {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      // List<Map<String, Object>> attachments = (List<Map<String, Object>>)
-      // entity.get(composition);
       List<Map<String, Object>> attachments =
           AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
-      System.out.println("Attachments to check for duplicate for : " + composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {

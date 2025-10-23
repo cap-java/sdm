@@ -54,8 +54,6 @@ public class SDMAttachmentsReader {
       select.where(statement.where().get());
     }
 
-    System.out.println("Final select querty: " + select);
-
     Result result = persistence.run(select);
     return result.listOf(Attachments.class);
   }

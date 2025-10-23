@@ -312,7 +312,7 @@ public class SDMServiceGenericHandler implements EventHandler {
             }
           }
         } catch (Exception e) {
-          System.out.println("Exception in insert : " + e.getMessage());
+          logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
     }
