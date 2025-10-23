@@ -33,6 +33,26 @@ public class SDMCustomServiceHandler {
   private final TokenHandler tokenHandler;
   private final PersistenceService persistenceService;
 
+  // Result class for copyAttachmentsToSDM method
+  private static class CopyAttachmentsResult {
+    private final List<List<String>> attachmentsMetadata;
+    private final List<CmisDocument> populatedDocuments;
+
+    public CopyAttachmentsResult(
+        List<List<String>> attachmentsMetadata, List<CmisDocument> populatedDocuments) {
+      this.attachmentsMetadata = attachmentsMetadata;
+      this.populatedDocuments = populatedDocuments;
+    }
+
+    public List<List<String>> getAttachmentsMetadata() {
+      return attachmentsMetadata;
+    }
+
+    public List<CmisDocument> getPopulatedDocuments() {
+      return populatedDocuments;
+    }
+  }
+
   public SDMCustomServiceHandler(
       SDMService sdmService,
       List<DraftService> draftService,
@@ -70,27 +90,28 @@ public class SDMCustomServiceHandler {
             != null;
     String folderId = ensureFolderExists(folderName, repositoryId, sdmCredentials, isSystemUser);
 
-    CmisDocument cmisDocument = new CmisDocument();
     List<String> objectIds = context.getObjectIds();
     System.out.println("objectIds: " + objectIds);
 
-    List<List<String>> attachmentsMetadata =
+    CopyAttachmentsResult copyResult =
         copyAttachmentsToSDM(
             context, objectIds, folderId, repositoryId, sdmCredentials, isSystemUser, folderExists);
 
+    List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
+    List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
     System.out.println("attachmentsMetadata: " + attachmentsMetadata);
 
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
     System.out.println("upIdKey: " + upIdKey);
     createDraftEntries(
         attachmentsMetadata,
+        populatedDocuments,
         parentEntity,
         compositionName,
         upID,
         upIdKey,
         repositoryId,
-        folderId,
-        cmisDocument);
+        folderId);
 
     context.setCompleted();
   }
@@ -113,7 +134,7 @@ public class SDMCustomServiceHandler {
     return folderId;
   }
 
-  private List<List<String>> copyAttachmentsToSDM(
+  private CopyAttachmentsResult copyAttachmentsToSDM(
       AttachmentCopyEventContext context,
       List<String> objectIds,
       String folderId,
@@ -123,6 +144,7 @@ public class SDMCustomServiceHandler {
       boolean folderExists)
       throws IOException {
     List<List<String>> attachmentsMetadata = new ArrayList<>();
+    List<CmisDocument> populatedDocuments = new ArrayList<>();
 
     for (String objectId : objectIds) {
       CmisDocument cmisDocument =
@@ -132,6 +154,12 @@ public class SDMCustomServiceHandler {
       cmisDocument.setRepositoryId(repositoryId);
       cmisDocument.setFolderId(folderId);
 
+      // Create individual document for each attachment with its own type and linkUrl
+      CmisDocument populatedDocument = new CmisDocument();
+      populatedDocument.setType(cmisDocument.getType());
+      populatedDocument.setUrl(cmisDocument.getUrl());
+      populatedDocuments.add(populatedDocument);
+
       try {
         attachmentsMetadata.add(
             sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
@@ -139,7 +167,8 @@ public class SDMCustomServiceHandler {
         handleCopyFailure(context, folderId, folderExists, attachmentsMetadata, e);
       }
     }
-    return attachmentsMetadata;
+
+    return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
   }
 
   private void handleCopyFailure(
@@ -206,16 +235,19 @@ public class SDMCustomServiceHandler {
 
   private void createDraftEntries(
       List<List<String>> attachmentsMetadata,
+      List<CmisDocument> populatedDocuments,
       String parentEntity,
       String compositionName,
       String upID,
       String upIdKey,
       String repositoryId,
-      String folderId,
-      CmisDocument cmisDocument) {
-    Map<String, Object> updatedFields = new HashMap<>();
+      String folderId) {
 
-    for (List<String> attachmentMetadata : attachmentsMetadata) {
+    for (int i = 0; i < attachmentsMetadata.size(); i++) {
+      List<String> attachmentMetadata = attachmentsMetadata.get(i);
+      CmisDocument cmisDocument = populatedDocuments.get(i);
+      Map<String, Object> updatedFields = new HashMap<>();
+
       String fileName = attachmentMetadata.get(0);
       System.out.println("fileName: " + fileName);
       String mimeType = attachmentMetadata.get(1);
@@ -231,11 +263,11 @@ public class SDMCustomServiceHandler {
       updatedFields.put("folderId", folderId);
       updatedFields.put("status", "Clean");
       updatedFields.put("mimeType", mimeType);
-      updatedFields.put("type", cmisDocument.getType());
+      updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
-      updatedFields.put("linkUrl", cmisDocument.getUrl());
+      updatedFields.put("linkUrl", cmisDocument.getUrl()); // Individual linkUrl for each attachment
       updatedFields.put(
           "contentId",
           newObjectId
