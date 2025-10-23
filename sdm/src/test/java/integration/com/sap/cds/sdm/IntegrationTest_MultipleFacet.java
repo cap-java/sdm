@@ -603,7 +603,6 @@ class IntegrationTest_MultipleFacet {
       if (counter >= 2) {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        System.out.println("Response after saving draft: " + response);
         String expected =
             "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
                 + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
@@ -719,7 +718,6 @@ class IntegrationTest_MultipleFacet {
 
       if (successCount >= 2) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        System.out.println("Test 13 actual response : " + response);
         String expected =
             "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
                 + " (/, \\\\). \\n\\n\\t\\u2022 note/invalid\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";

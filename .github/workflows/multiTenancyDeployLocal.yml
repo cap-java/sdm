@@ -37,7 +37,7 @@ jobs:
       - name: Build and package 📦
         run: |
             echo "🔨 Building and packaging..."
-            mvn clean install -DskipUnitTests -DskipIntegrationTests
+            mvn clean install -P unit-tests -DskipIntegrationTests
             echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢
@@ -54,7 +54,7 @@ jobs:
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
             echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests_mle_fix https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
             echo "✅ Repository cloned!"
 
       - name: Change directory to cloud-cap-samples-java 📂
