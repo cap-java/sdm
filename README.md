@@ -873,7 +873,7 @@ Filename=File Name
 linkUrl=Link Url
 type=Type
  ```
-For the exception messages as well the translation be provided by adding the translation to messages_[languagecode].properties files present under srv/src/main/resources.
+For the exception messages as well the translation can be done by adding the translation to messages_[languagecode].properties files present under srv/src/main/resources.
 Default language translations are present in messages.properties. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
 
 Example for german language
