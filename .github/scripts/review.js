@@ -482,6 +482,11 @@ function cosineSimilarity(a,b){
     }
     return dot/((Math.sqrt(na)*Math.sqrt(nb))||1);
 }
+/**
+ * Scan the repository for lines possibly related to an issue by keyword intersection.
+ * Heuristic: collect tokens >3 chars from title/body; walk allowed extensions; count hits; return up to 40 lines containing any keyword per file.
+ */
+function scanRepositoryForIssue(issueTitle, issueBody, rootDir) {
     const keywords = [...new Set([...tokenize(issueTitle), ...tokenize(issueBody)]).values()].filter(k => k.length > 3);
     const matches = [];
     const exts = new Set([".js", ".ts", ".java", ".md", ".yml", ".yaml", ".xml", ".json"]);
@@ -498,14 +503,12 @@ function cosineSimilarity(a,b){
                 if (!exts.has(ext)) continue;
                 let content;
                 try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
-                // Simple keyword hit count
                 const lower = content.toLowerCase();
                 let hitCount = 0;
                 for (const kw of keywords) {
                     if (lower.includes(kw)) hitCount++;
                 }
                 if (hitCount > 0) {
-                    // Extract up to first 40 lines containing keywords
                     const lines = content.split(/\r?\n/);
                     const relevant = lines.filter(l => keywords.some(k => l.toLowerCase().includes(k))).slice(0, 40);
                     matches.push({ file: path.relative(rootDir, full), snippet: relevant.join("\n") });
