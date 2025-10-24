@@ -38,7 +38,7 @@
         <lombok.version>1.18.36</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <ehcache-version>3.10.8</ehcache-version>
-        <token-client-version>3.5.7</token-client-version>
+        <token-client-version>3.6.5</token-client-version>
         <jackson-databind-version>2.18.2</jackson-databind-version>
         <json-version>20250107</json-version>
         <commons-codec-version>1.18.0</commons-codec-version>
