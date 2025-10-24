@@ -10,6 +10,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.ServiceDelegator;
@@ -40,7 +41,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     String[] facetParts = input.facet().split("\\.");
     if (facetParts.length < 3) {
       throw new IllegalArgumentException(
-          "Invalid facet format. Expected: Service.Entity.Composition, got: " + input.facet());
+          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
     }
 
     String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity

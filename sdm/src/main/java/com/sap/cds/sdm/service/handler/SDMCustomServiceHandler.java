@@ -8,6 +8,8 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.CopyAttachmentsRequest;
+import com.sap.cds.sdm.model.CreateDraftEntriesRequest;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.RegisterService;
@@ -85,23 +87,37 @@ public class SDMCustomServiceHandler {
 
     List<String> objectIds = context.getObjectIds();
 
-    CopyAttachmentsResult copyResult =
-        copyAttachmentsToSDM(
-            context, objectIds, folderId, repositoryId, sdmCredentials, isSystemUser, folderExists);
+    CopyAttachmentsRequest request =
+        CopyAttachmentsRequest.builder()
+            .context(context)
+            .objectIds(objectIds)
+            .folderId(folderId)
+            .repositoryId(repositoryId)
+            .sdmCredentials(sdmCredentials)
+            .isSystemUser(isSystemUser)
+            .folderExists(folderExists)
+            .build();
+
+    CopyAttachmentsResult copyResult = copyAttachmentsToSDM(request);
 
     List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
 
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
-    createDraftEntries(
-        attachmentsMetadata,
-        populatedDocuments,
-        parentEntity,
-        compositionName,
-        upID,
-        upIdKey,
-        repositoryId,
-        folderId);
+
+    CreateDraftEntriesRequest draftRequest =
+        CreateDraftEntriesRequest.builder()
+            .attachmentsMetadata(attachmentsMetadata)
+            .populatedDocuments(populatedDocuments)
+            .parentEntity(parentEntity)
+            .compositionName(compositionName)
+            .upID(upID)
+            .upIdKey(upIdKey)
+            .repositoryId(repositoryId)
+            .folderId(folderId)
+            .build();
+
+    createDraftEntries(draftRequest);
 
     context.setCompleted();
   }
@@ -122,24 +138,17 @@ public class SDMCustomServiceHandler {
     return folderId;
   }
 
-  private CopyAttachmentsResult copyAttachmentsToSDM(
-      AttachmentCopyEventContext context,
-      List<String> objectIds,
-      String folderId,
-      String repositoryId,
-      SDMCredentials sdmCredentials,
-      Boolean isSystemUser,
-      boolean folderExists)
+  private CopyAttachmentsResult copyAttachmentsToSDM(CopyAttachmentsRequest request)
       throws IOException {
     List<List<String>> attachmentsMetadata = new ArrayList<>();
     List<CmisDocument> populatedDocuments = new ArrayList<>();
 
-    for (String objectId : objectIds) {
+    for (String objectId : request.getObjectIds()) {
       CmisDocument cmisDocument =
-          dbQuery.getAttachmentForObjectID(persistenceService, objectId, context);
+          dbQuery.getAttachmentForObjectID(persistenceService, objectId, request.getContext());
       cmisDocument.setObjectId(objectId);
-      cmisDocument.setRepositoryId(repositoryId);
-      cmisDocument.setFolderId(folderId);
+      cmisDocument.setRepositoryId(request.getRepositoryId());
+      cmisDocument.setFolderId(request.getFolderId());
 
       // Create individual document for each attachment with its own type and linkUrl
       CmisDocument populatedDocument = new CmisDocument();
@@ -149,9 +158,15 @@ public class SDMCustomServiceHandler {
 
       try {
         attachmentsMetadata.add(
-            sdmService.copyAttachment(cmisDocument, sdmCredentials, isSystemUser));
+            sdmService.copyAttachment(
+                cmisDocument, request.getSdmCredentials(), request.getIsSystemUser()));
       } catch (ServiceException e) {
-        handleCopyFailure(context, folderId, folderExists, attachmentsMetadata, e);
+        handleCopyFailure(
+            request.getContext(),
+            request.getFolderId(),
+            request.isFolderExists(),
+            attachmentsMetadata,
+            e);
       }
     }
 
@@ -208,19 +223,11 @@ public class SDMCustomServiceHandler {
     return null;
   }
 
-  private void createDraftEntries(
-      List<List<String>> attachmentsMetadata,
-      List<CmisDocument> populatedDocuments,
-      String parentEntity,
-      String compositionName,
-      String upID,
-      String upIdKey,
-      String repositoryId,
-      String folderId) {
+  private void createDraftEntries(CreateDraftEntriesRequest request) {
 
-    for (int i = 0; i < attachmentsMetadata.size(); i++) {
-      List<String> attachmentMetadata = attachmentsMetadata.get(i);
-      CmisDocument cmisDocument = populatedDocuments.get(i);
+    for (int i = 0; i < request.getAttachmentsMetadata().size(); i++) {
+      List<String> attachmentMetadata = request.getAttachmentsMetadata().get(i);
+      CmisDocument cmisDocument = request.getPopulatedDocuments().get(i);
       Map<String, Object> updatedFields = new HashMap<>();
 
       String fileName = attachmentMetadata.get(0);
@@ -232,8 +239,8 @@ public class SDMCustomServiceHandler {
       String newObjectId = attachmentMetadata.get(2);
 
       updatedFields.put("objectId", newObjectId);
-      updatedFields.put("repositoryId", repositoryId);
-      updatedFields.put("folderId", folderId);
+      updatedFields.put("repositoryId", request.getRepositoryId());
+      updatedFields.put("folderId", request.getFolderId());
       updatedFields.put("status", "Clean");
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
@@ -245,30 +252,36 @@ public class SDMCustomServiceHandler {
           "contentId",
           newObjectId
               + ":"
-              + folderId
+              + request.getFolderId()
               + ":"
-              + parentEntity
+              + request.getParentEntity()
               + "."
-              + compositionName
+              + request.getCompositionName()
               + ":"
               + mimeType);
-      updatedFields.put(upIdKey, upID);
+      updatedFields.put(request.getUpIdKey(), request.getUpID());
 
-      String baseKeyField = upIdKey != null ? upIdKey.replace("up__", "") : "ID";
+      String baseKeyField =
+          request.getUpIdKey() != null ? request.getUpIdKey().replace("up__", "") : "ID";
       var insert =
-          Insert.into(parentEntity, e -> e.filter(e.get(baseKeyField).eq(upID)).to(compositionName))
+          Insert.into(
+                  request.getParentEntity(),
+                  e ->
+                      e.filter(e.get(baseKeyField).eq(request.getUpID()))
+                          .to(request.getCompositionName()))
               .entry(updatedFields);
 
       DraftService matchingService =
           draftService.stream()
-              .filter(ds -> parentEntity.contains(ds.getName()))
+              .filter(ds -> request.getParentEntity().contains(ds.getName()))
               .findFirst()
               .orElse(null);
 
       if (matchingService != null) {
         matchingService.newDraft(insert);
       } else {
-        throw new ServiceException("No suitable service found for entity: " + parentEntity);
+        throw new ServiceException(
+            "No suitable service found for entity: " + request.getParentEntity());
       }
     }
   }
