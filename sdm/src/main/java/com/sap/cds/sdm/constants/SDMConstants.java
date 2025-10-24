@@ -29,7 +29,9 @@ public class SDMConstants {
       "Upload not supported for versioned repositories.";
   public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
       "You cannot upload files that are larger than 400 MB";
+  public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE = "SDM.VirusRepoErrorMessage";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
+  public static final String VIRUS_ERROR_MESSAGE = "SDM.VirusErrorMessage";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String SDM_MISSING_ROLES_EXCEPTION_MSG =
       "You do not have the required permissions to update attachments. Kindly contact the admin";

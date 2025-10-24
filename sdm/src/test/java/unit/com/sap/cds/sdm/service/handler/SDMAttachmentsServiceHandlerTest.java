@@ -283,6 +283,10 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       headers.put("content-length", "900000089999");
+      when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+          .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
@@ -521,7 +525,10 @@ public class SDMAttachmentsServiceHandlerTest {
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
-
+      when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+          .thenReturn(SDMConstants.getVirusFilesError("sample.pdf"));
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -1697,7 +1704,10 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
-
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     ServiceException thrown =
         assertThrows(
             ServiceException.class,

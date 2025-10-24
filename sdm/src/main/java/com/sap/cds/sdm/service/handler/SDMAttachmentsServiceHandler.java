@@ -164,7 +164,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (repoValue.getVirusScanEnabled()
         && contentLen > 400 * 1024 * 1024
         && !repoValue.getDisableVirusScannerForLargeFile()) {
-      throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE))
+        throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
+      throw new ServiceException(errorMessage);
     }
   }
 
@@ -316,7 +325,19 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       case "duplicate":
         throw new ServiceException(SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
       case "virus":
-        throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
+        Object[] message = new Object[1];
+        message[0] = cmisDocument.getFileName();
+        String virusErrorMessage =
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    SDMConstants.VIRUS_ERROR_MESSAGE,
+                    message,
+                    eventContext.getParameterInfo().getLocale());
+        if (virusErrorMessage.equalsIgnoreCase(SDMConstants.VIRUS_ERROR_MESSAGE))
+          throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
+        throw new ServiceException(virusErrorMessage);
+
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
