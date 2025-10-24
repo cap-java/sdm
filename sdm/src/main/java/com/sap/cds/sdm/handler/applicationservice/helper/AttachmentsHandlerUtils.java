@@ -3,6 +3,7 @@ package com.sap.cds.sdm.handler.applicationservice.helper;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -81,7 +82,7 @@ public class AttachmentsHandlerUtils {
 
       return pathMapping;
     } catch (Exception e) {
-      logger.error("Error getting attachment path mapping", e.getMessage());
+      logger.error(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
       return new HashMap<>();
     }
   }
@@ -228,11 +229,7 @@ public class AttachmentsHandlerUtils {
         return serviceName + "." + targetEntityName + "." + attachmentPart;
       }
     } catch (Exception e) {
-      logger.warn(
-          "Failed to build entity path for target entity '{}' and attachment path '{}'",
-          targetEntity.getName(),
-          attachmentPath,
-          e);
+      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
     }
     return null;
   }
@@ -253,11 +250,7 @@ public class AttachmentsHandlerUtils {
         return serviceName + "." + compositionPropertyName + "." + attachmentPart;
       }
     } catch (Exception e) {
-      logger.warn(
-          "Failed to build actual path for composition '{}' and attachment path '{}'",
-          compositionPropertyName,
-          attachmentPath,
-          e);
+      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
     }
     return null;
   }
@@ -297,7 +290,7 @@ public class AttachmentsHandlerUtils {
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
         result.addAll(attachments);
       } catch (ClassCastException e) {
-        logger.warn("Failed to cast attachments list for key '{}': {}", key, e.getMessage());
+        logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
       }
     }
 
@@ -312,7 +305,7 @@ public class AttachmentsHandlerUtils {
       Map<String, Object> nestedMap = (Map<String, Object>) value;
       result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
     } catch (ClassCastException e) {
-      logger.warn("Failed to cast nested map for key '{}': {}", key, e.getMessage());
+      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
     }
 
     return result;
@@ -331,7 +324,7 @@ public class AttachmentsHandlerUtils {
         }
       }
     } catch (ClassCastException e) {
-      logger.warn("Failed to process list for key '{}': {}", key, e.getMessage());
+      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
     }
 
     return result;

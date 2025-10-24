@@ -14,8 +14,6 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The class {@link SDMAttachmentsReader} is used to deep read attachments from the database for a
@@ -25,8 +23,6 @@ import org.slf4j.LoggerFactory;
  * <p>The returned data is deep including the path structure to the media entity.
  */
 public class SDMAttachmentsReader {
-
-  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsReader.class);
 
   private final SDMAssociationCascader cascader;
   private final PersistenceService persistence;
@@ -38,7 +34,6 @@ public class SDMAttachmentsReader {
 
   public List<Attachments> readAttachments(
       CdsModel model, CdsEntity entity, CqnFilterableStatement statement) {
-    logger.debug("Start reading attachments for entity {}", entity.getQualifiedName());
 
     SDMNodeTree nodePath = cascader.findEntityPath(model, entity);
     List<Expand<?>> expandList = buildExpandList(nodePath);

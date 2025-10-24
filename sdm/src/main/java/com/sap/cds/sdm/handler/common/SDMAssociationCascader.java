@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The class {@link SDMAssociationCascader} is used to find entity paths to all media resource
@@ -20,10 +18,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SDMAssociationCascader {
 
-  private static final Logger logger = LoggerFactory.getLogger(SDMAssociationCascader.class);
-
   public SDMNodeTree findEntityPath(CdsModel model, CdsEntity entity) {
-    logger.debug("Start finding path to attachments for entity {}", entity.getQualifiedName());
     var firstList = new LinkedList<SDMAssociationIdentifier>();
     var internalResultList =
         getAttachmentAssociationPath(
@@ -31,9 +26,6 @@ public class SDMAssociationCascader {
 
     var rootTree = new SDMNodeTree(new SDMAssociationIdentifier("", entity.getQualifiedName()));
     internalResultList.forEach(rootTree::addPath);
-
-    logger.debug(
-        "Found path to attachments for entity {}: {}", entity.getQualifiedName(), rootTree);
     return rootTree;
   }
 
