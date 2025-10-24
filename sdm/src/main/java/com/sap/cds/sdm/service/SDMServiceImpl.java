@@ -507,16 +507,15 @@ public class SDMServiceImpl implements SDMService {
     // Add additional form fields
     builder.addTextBody("cmisaction", cmisaction, ContentType.TEXT_PLAIN);
     builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
-    System.out.println("Marking attachment IMPL BUILDER SDM @123" + builder);
     HttpEntity multipart = builder.build();
     deleteDocumentRequest.setEntity(multipart);
-    System.out.println("Marking attachment IMPL DELETEDOCS SDM @123" + deleteDocumentRequest);
+    System.out.println("Marking attachment IMPL DELETEDOCS SDM @123 -> " + deleteDocumentRequest);
     try (var response = (CloseableHttpResponse) httpClient.execute(deleteDocumentRequest)) {
       System.out.println(
-          "Marking attachment IMPL CODE SDM @123" + response.getStatusLine().getStatusCode());
+          "Marking attachment IMPL CODE SDM @123 -> " + response.getStatusLine().getStatusCode());
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      System.out.println("Marking attachment IMPL CATCH SDM @123" + e.getMessage());
+      System.out.println("Marking attachment IMPL CATCH SDM @123 -> " + e.getMessage());
       throw new ServiceException(SDMConstants.getGenericError("delete"));
     }
   }
