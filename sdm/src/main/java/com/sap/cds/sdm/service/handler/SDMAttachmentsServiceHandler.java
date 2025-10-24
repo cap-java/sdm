@@ -70,6 +70,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
       throws IOException {
     String[] contextValues = context.getContentId().split(":");
+    System.out.println("Marking attachment INNER CONTEXTVALUES SDM @123" + contextValues);
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
@@ -77,12 +78,17 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
           dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
+      System.out.println("Marking attachment INNER CMISDOCUMENTS SDM @123" + cmisDocuments);
       if (cmisDocuments.isEmpty()) {
+        System.out.println("Marking attachment INNER EMPTY SDM @123" + cmisDocuments);
         // deleteFolder API
         sdmService.deleteDocument("deleteTree", folderId, context.getDeletionUserInfo().getName());
+        System.out.println("Marking attachment INNER EMPTY DELETED SDM @123" + contextValues);
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
+          System.out.println("Marking attachment INNER PRESENT SDM @123" + contextValues);
           sdmService.deleteDocument("delete", objectId, context.getDeletionUserInfo().getName());
+          System.out.println("Marking attachment INNER PRESENT DELETED SDM @123" + contextValues);
         }
       }
     }

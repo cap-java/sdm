@@ -81,10 +81,11 @@ public class SDMAttachmentsService extends ServiceDelegator
   @Override
   public void markAttachmentAsDeleted(MarkAsDeletedInput input) {
     logger.info("Marking attachment as deleted for document id in SDM{}", input.contentId());
-
+    System.out.println("Marking attachment OUTER INPUT SDM @123" + input.contentId());
     var deleteContext = AttachmentMarkAsDeletedEventContext.create();
     deleteContext.setContentId(input.contentId());
     deleteContext.setDeletionUserInfo(fillDeletionUserInfo(input.userInfo()));
+    System.out.println("Marking attachment OUTER DELETECONTEXT SDM @123" + deleteContext);
 
     emit(deleteContext);
   }
