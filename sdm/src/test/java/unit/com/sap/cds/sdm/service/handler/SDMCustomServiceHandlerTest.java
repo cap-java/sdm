@@ -21,7 +21,9 @@ import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,8 @@ public class SDMCustomServiceHandlerTest {
   private static final String FOLDER_ID = "mockFolderId";
   private static final String UP_ID = "mockUpId";
   private static final String FACET = "mockFacet";
+  @Mock private CdsRuntime cdsRuntime;
+  @Mock ParameterInfo parameterInfo;
 
   @BeforeEach
   void setUp() {

@@ -83,7 +83,7 @@ public class DocumentUploadService {
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException("Error in setting timeout", e);
+      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT, e);
     }
   }
 

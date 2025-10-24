@@ -127,7 +127,7 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException("Error in setting timeout", e.getMessage());
+      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT_MESSAGE, e.getMessage());
     }
   }
 
@@ -356,7 +356,14 @@ public class SDMServiceImpl implements SDMService {
       if (responseCode != 200) {
         response.close();
         if (responseCode == 404) {
-          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+          String errorMessage =
+              context
+                  .getCdsRuntime()
+                  .getLocalizedMessage(
+                      "SDM.File.fileNotFoundError", null, context.getParameterInfo().getLocale());
+          if (errorMessage.equalsIgnoreCase(SDMConstants.FILE_NOT_FOUND_ERROR_MSG))
+            throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+          throw new ServiceException(errorMessage);
         }
         throw new ServiceException("Unexpected code");
       }
@@ -469,10 +476,10 @@ public class SDMServiceImpl implements SDMService {
       else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       } else {
-        throw new ServiceException("Failed to create folder. " + responseBody);
+        throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + ". " + responseBody);
       }
     } catch (IOException e) {
-      throw new ServiceException("Failed to create folder " + e.getMessage());
+      throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + " " + e.getMessage());
     }
   }
 

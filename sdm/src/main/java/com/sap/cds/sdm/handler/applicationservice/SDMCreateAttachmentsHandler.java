@@ -1,8 +1,6 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.reflect.CdsAssociationType;
-import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
@@ -382,23 +380,5 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!noSDMRoles.isEmpty()) {
       context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create"));
     }
-  }
-
-  private List<String> getEntityCompositions(CdsCreateEventContext context) {
-    List<CdsElement> compositions = context.getTarget().compositions().toList();
-    List<String> attachmentsCompositionList = new ArrayList<>();
-    for (CdsElement cdsElement : compositions) {
-      if (cdsElement != null) {
-        CdsAssociationType cdsAssociationType = cdsElement.getType();
-        String targetAspect =
-            cdsAssociationType.getTargetAspect().isPresent()
-                ? cdsAssociationType.getTargetAspect().get().getQualifiedName()
-                : null;
-        if (targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
-          attachmentsCompositionList.add(cdsElement.getName());
-        }
-      }
-    }
-    return attachmentsCompositionList;
   }
 }

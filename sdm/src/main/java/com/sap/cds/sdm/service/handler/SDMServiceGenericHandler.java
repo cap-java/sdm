@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
+import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
@@ -124,7 +126,16 @@ public class SDMServiceGenericHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Repository.versionedRepoError",
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.VERSIONED_REPO_ERROR_MSG))
+        throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      throw new ServiceException(errorMessage);
     }
   }
 
@@ -200,9 +211,25 @@ public class SDMServiceGenericHandler implements EventHandler {
       logger.info("Successfully edited link");
     } else {
       if (status.equals("unauthorized")) {
-        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Authorization.userNotAuthorizedError",
+                    null,
+                    context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG))
+          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+        throw new ServiceException(errorMessage);
       } else {
-        throw new ServiceException("Failed to edit link");
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Link.failedToEditLinkError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.FAILED_TO_EDIT_LINK_MSG))
+          throw new ServiceException(SDMConstants.FAILED_TO_EDIT_LINK);
+        throw new ServiceException(errorMessage);
       }
     }
     context.setCompleted();
@@ -241,7 +268,14 @@ public class SDMServiceGenericHandler implements EventHandler {
     String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
       if (message != null && !"null".equalsIgnoreCase(message)) {
-        throw new ServiceException(message);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Attachments.maxCountError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+        throw new ServiceException(errorMessage);
       }
       throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
     }
@@ -283,7 +317,16 @@ public class SDMServiceGenericHandler implements EventHandler {
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Authorization.userNotAuthorizedLinkError",
+                    null,
+                    context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG))
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        throw new ServiceException(errorMessage);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         cmisDocument.setParentId(upID);

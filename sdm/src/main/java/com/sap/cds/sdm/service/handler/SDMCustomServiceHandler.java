@@ -70,7 +70,6 @@ public class SDMCustomServiceHandler {
 
   @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
-
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
     String upID = context.getUpId();
