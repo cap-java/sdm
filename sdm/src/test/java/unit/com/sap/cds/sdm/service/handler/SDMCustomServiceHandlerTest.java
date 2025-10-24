@@ -1,6 +1,5 @@
 package unit.com.sap.cds.sdm.service.handler;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,7 +11,6 @@ import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -28,7 +26,6 @@ import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;

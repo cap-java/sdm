@@ -1,8 +1,6 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.CdsData;
-import com.sap.cds.reflect.CdsAssociationType;
-import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
