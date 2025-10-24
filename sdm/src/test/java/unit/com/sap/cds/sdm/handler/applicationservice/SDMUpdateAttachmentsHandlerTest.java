@@ -9,9 +9,11 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.*;
+import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMUpdateAttachmentsHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
@@ -26,7 +28,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Stream;
+import org.ehcache.Cache;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -74,52 +76,67 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testProcessBefore() throws IOException {
-    // Arrange
-    List<String> expectedCompositionNames = Arrays.asList("Name1", "Name2");
+    try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =
+            mockStatic(AttachmentsHandlerUtils.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
 
-    // Simulate a stream of CdsElement instances returned from the mock target's compositions
-    Stream<CdsElement> compositionsStream = Stream.of(cdsElement, cdsElement);
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
-    // mock the target and model of the context
-    when(context.getTarget()).thenReturn(targetEntity);
-    when(targetEntity.compositions()).thenReturn(compositionsStream);
-    when(context.getModel()).thenReturn(model);
+      // Arrange the mock compositions scenario
+      Map<String, String> expectedCompositionMapping = new HashMap<>();
+      expectedCompositionMapping.put("Name1", "Name1");
+      expectedCompositionMapping.put("Name2", "Name2");
 
-    // Mock findEntity to return an optional containing attachmentDraftEntity
-    when(model.findEntity(anyString())).thenReturn(Optional.of(targetEntity));
+      // Mock context.getTarget() and context.getModel()
+      when(context.getTarget()).thenReturn(targetEntity);
+      when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
+      when(context.getModel()).thenReturn(model);
+      when(model.findEntity(anyString())).thenReturn(Optional.of(targetEntity));
 
-    // Mock the elements and their associations
-    when(cdsElement.getType()).thenReturn(cdsAssociationType);
-    when(cdsAssociationType.getTargetAspect()).thenReturn(Optional.of(targetAspect));
-    when(targetAspect.getQualifiedName()).thenReturn("sap.attachments.Attachments");
-    when(cdsElement.getName()).thenReturn("Name1").thenReturn("Name2");
+      // Mock AttachmentsHandlerUtils.getAttachmentPathMapping to return the expected mapping
+      attachmentsHandlerUtilsMocked
+          .when(() -> AttachmentsHandlerUtils.getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(expectedCompositionMapping);
 
-    List<CdsData> dataList = new ArrayList<>();
+      List<CdsData> dataList = new ArrayList<>();
 
-    // Act
-    handler.processBefore(context, dataList);
+      // Act
+      handler.processBefore(context, dataList);
 
-    // Assert that updateName was called with the compositions detected
-    for (String compositionName : expectedCompositionNames) {
-      verify(handler).updateName(context, dataList, compositionName);
+      // Assert that updateName was called with the compositions detected
+      for (Map.Entry<String, String> entry : expectedCompositionMapping.entrySet()) {
+        verify(handler).updateName(context, dataList, entry.getKey(), entry.getValue());
+      }
     }
   }
 
   @Test
   public void testRenameWithDuplicateFilenames() throws IOException {
-    List<CdsData> data = new ArrayList<>();
-    Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
-    when(context.getMessages()).thenReturn(messages);
-    sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
-    sdmUtilsMockedStatic
-        .when(() -> isFileNameDuplicateInDrafts(data, "composition"))
-        .thenReturn(duplicateFilenames);
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
-    handler.updateName(context, data, "composition");
+      List<CdsData> data = new ArrayList<>();
+      Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
+      when(context.getMessages()).thenReturn(messages);
 
-    verify(messages, times(1))
-        .error(
-            "The file(s) file1.txt, file2.txt have been added multiple times. Please rename and try again.");
+      // Mock the target entity
+      CdsEntity targetEntity = mock(CdsEntity.class);
+      when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
+      when(context.getTarget()).thenReturn(targetEntity);
+
+      sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+      sdmUtilsMockedStatic
+          .when(() -> isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
+          .thenReturn(duplicateFilenames);
+
+      handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+      verify(messages, times(1))
+          .error(
+              "The file(s) file1.txt, file2.txt have been added multiple times. Please rename and try again.");
+    }
   }
 
   //   @Test
@@ -212,62 +229,125 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testRenameWithNoSDMRoles() throws IOException {
-    // Mock the data structure to simulate the attachments
-    List<CdsData> data = new ArrayList<>();
-    Map<String, Object> entity = new HashMap<>();
-    List<Map<String, Object>> attachments = new ArrayList<>();
-    Map<String, Object> attachment = spy(new HashMap<>());
-    Map<String, String> secondaryProperties = new HashMap<>();
-    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
-    secondaryProperties.put("filename", "file1.txt");
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class);
+        MockedStatic<AttachmentsHandlerUtils> attachmentsMockStatic =
+            mockStatic(AttachmentsHandlerUtils.class)) {
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
-    CmisDocument document = new CmisDocument();
-    document.setFileName("file1.txt");
+      // Mock the data structure to simulate the attachments
+      List<CdsData> data = new ArrayList<>();
+      Map<String, Object> entity = new HashMap<>();
+      List<Map<String, Object>> attachments = new ArrayList<>();
+      Map<String, Object> attachment = spy(new HashMap<>());
+      Map<String, String> secondaryProperties = new HashMap<>();
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+      secondaryProperties.put("filename", "file1.txt");
 
-    attachment.put("fileName", "file1.txt");
-    attachment.put("url", "objectId");
-    attachment.put("ID", "test-id");
-    attachments.add(attachment);
+      CmisDocument document = new CmisDocument();
+      document.setFileName("file1.txt");
 
-    entity.put("attachments", attachments);
-    CdsData mockCdsData = mock(CdsData.class);
-    when(mockCdsData.get("composition")).thenReturn(attachments);
-    data.add(mockCdsData);
+      attachment.put("fileName", "file1.txt");
+      attachment.put("url", "objectId");
+      attachment.put("ID", "test-id");
+      attachments.add(attachment);
 
-    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
-    when(context.getTarget()).thenReturn(attachmentDraftEntity);
-    when(context.getModel()).thenReturn(model);
-    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
-    when(model.findEntity("some.qualified.Name.composition"))
-        .thenReturn(Optional.of(attachmentDraftEntity));
-    when(context.getMessages()).thenReturn(messages);
-    UserInfo userInfo = Mockito.mock(UserInfo.class);
-    when(context.getUserInfo()).thenReturn(userInfo);
-    when(userInfo.isSystemUser()).thenReturn(false);
-    when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
-    when(dbQuery.getAttachmentForID(
-            any(CdsEntity.class), any(PersistenceService.class), anyString()))
-        .thenReturn("file123.txt");
+      entity.put("compositionName", attachments);
+      CdsData mockCdsData = mock(CdsData.class);
+      data.add(mockCdsData);
 
-    when(sdmService.updateAttachments(
-            mockCredentials,
-            document,
-            secondaryProperties,
-            secondaryPropertiesWithInvalidDefinitions,
-            false))
-        .thenReturn(403); // Forbidden
+      CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+      when(context.getTarget()).thenReturn(attachmentDraftEntity);
+      when(context.getModel()).thenReturn(model);
+      when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+      when(model.findEntity("compositionDefinition"))
+          .thenReturn(Optional.of(attachmentDraftEntity));
+      when(context.getMessages()).thenReturn(messages);
+      UserInfo userInfo = Mockito.mock(UserInfo.class);
+      when(context.getUserInfo()).thenReturn(userInfo);
+      when(userInfo.isSystemUser()).thenReturn(false);
+      when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+      when(dbQuery.getAttachmentForID(
+              any(CdsEntity.class), any(PersistenceService.class), anyString()))
+          .thenReturn("file123.txt");
 
-    // Call the method
-    handler.updateName(context, data, "composition");
+      when(sdmService.updateAttachments(
+              mockCredentials,
+              document,
+              secondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions,
+              false))
+          .thenReturn(403); // Forbidden
 
-    // Capture and assert the warning message
-    ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
-    verify(messages).warn(warningCaptor.capture());
-    String warningMessage = warningCaptor.getValue();
+      // Mock AttachmentsHandlerUtils.fetchAttachments
+      attachmentsMockStatic
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments(
+                      anyString(), any(Map.class), eq("compositionName")))
+          .thenReturn(attachments);
 
-    String expectedMessage =
-        SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
-    assertEquals(expectedMessage, warningMessage);
+      // Mock SDMUtils methods
+      try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class)) {
+        sdmUtilsMock
+            .when(
+                () ->
+                    SDMUtils.isFileNameDuplicateInDrafts(
+                        any(List.class), eq("compositionName"), anyString()))
+            .thenReturn(Collections.emptySet());
+
+        sdmUtilsMock
+            .when(() -> SDMUtils.getPropertyTitles(any(Optional.class), any(Map.class)))
+            .thenReturn(Collections.emptyMap());
+
+        sdmUtilsMock
+            .when(
+                () ->
+                    SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                        any(Optional.class), any(Map.class)))
+            .thenReturn(Collections.emptyMap());
+
+        sdmUtilsMock
+            .when(() -> SDMUtils.getSecondaryTypeProperties(any(Optional.class), any(Map.class)))
+            .thenReturn(Collections.emptyMap());
+
+        sdmUtilsMock
+            .when(
+                () ->
+                    SDMUtils.getUpdatedSecondaryProperties(
+                        any(Optional.class),
+                        any(Map.class),
+                        any(PersistenceService.class),
+                        any(Map.class),
+                        any(Map.class)))
+            .thenReturn(secondaryProperties);
+
+        sdmUtilsMock
+            .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+            .thenReturn(false);
+
+        // Call the method
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+        // Capture and assert the warning message
+        ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
+        verify(messages).warn(warningCaptor.capture());
+        String warningMessage = warningCaptor.getValue();
+
+        String expectedMessage =
+            SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
+        assertEquals(expectedMessage, warningMessage);
+      }
+
+      // Capture and assert the warning message
+      ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
+      verify(messages).warn(warningCaptor.capture());
+      String warningMessage = warningCaptor.getValue();
+
+      String expectedMessage =
+          SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
+      assertEquals(expectedMessage, warningMessage);
+    }
   }
 
   //   @Test
@@ -409,35 +489,41 @@ public class SDMUpdateAttachmentsHandlerTest {
 
   @Test
   public void testRenameWithNoAttachments() throws IOException {
-    // Arrange
-    List<CdsData> data = new ArrayList<>();
-    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
-    Map<String, String> secondaryProperties = new HashMap<>();
-    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
-    CmisDocument document = new CmisDocument();
-    when(context.getTarget()).thenReturn(attachmentDraftEntity);
-    when(context.getModel()).thenReturn(model);
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
-    when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+      // Arrange
+      List<CdsData> data = new ArrayList<>();
+      CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+      Map<String, String> secondaryProperties = new HashMap<>();
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+      CmisDocument document = new CmisDocument();
+      when(context.getTarget()).thenReturn(attachmentDraftEntity);
+      when(context.getModel()).thenReturn(model);
 
-    String expectedEntityName = "some.qualified.Name.attachments";
-    when(model.findEntity(expectedEntityName)).thenReturn(Optional.of(attachmentDraftEntity));
+      when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
 
-    CdsData mockCdsData = mock(CdsData.class);
-    when(mockCdsData.get("attachments")).thenReturn(null);
-    data.add(mockCdsData);
+      // Mock the correct entity name that the handler will look for
+      when(model.findEntity("compositionDefinition"))
+          .thenReturn(Optional.of(attachmentDraftEntity));
 
-    // Act
-    handler.updateName(context, data, "attachments");
+      Map<String, Object> entity = new HashMap<>();
+      CdsData cdsDataEntity = CdsData.create(entity);
+      data.add(cdsDataEntity);
 
-    // Assert
-    verify(sdmService, never())
-        .updateAttachments(
-            eq(mockCredentials),
-            eq(document),
-            eq(secondaryProperties),
-            eq(secondaryPropertiesWithInvalidDefinitions),
-            eq(false));
+      // Act
+      handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+      // Assert
+      verify(sdmService, never())
+          .updateAttachments(
+              eq(mockCredentials),
+              eq(document),
+              eq(secondaryProperties),
+              eq(secondaryPropertiesWithInvalidDefinitions),
+              eq(false));
+    }
   }
 
   //   @Test

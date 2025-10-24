@@ -604,8 +604,8 @@ class IntegrationTest_MultipleFacet {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
                 + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 footnote1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
@@ -673,7 +673,7 @@ class IntegrationTest_MultipleFacet {
                     + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},"
                     + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}"
                     + "]}}",
-                name[0], name[1], name[2]);
+                name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
             // Attempt to rename again with a different name
@@ -757,7 +757,7 @@ class IntegrationTest_MultipleFacet {
                   + //
                   "\\n"
                   + //
-                  "\\t\\u2022 sample123\\n"
+                  "\\t\\u2022 reference123\\n"
                   + //
                   "\\n"
                   + //
@@ -765,7 +765,7 @@ class IntegrationTest_MultipleFacet {
                   + //
                   "\\n"
                   + //
-                  "\\t\\u2022 reference123\\n"
+                  "\\t\\u2022 sample123\\n"
                   + //
                   "\\n"
                   + //

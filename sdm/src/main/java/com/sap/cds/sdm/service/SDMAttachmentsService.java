@@ -10,6 +10,7 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.ServiceDelegator;
@@ -35,9 +36,21 @@ public class SDMAttachmentsService extends ServiceDelegator
         input.facet(),
         input.objectIds(),
         isSystemUser);
+
+    // Parse facet to extract parent entity and composition name
+    String[] facetParts = input.facet().split("\\.");
+    if (facetParts.length < 3) {
+      throw new IllegalArgumentException(
+          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
+    }
+
+    String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity
+    String compositionName = facetParts[2]; // composition name
+
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
-    copyContext.setFacet(input.facet());
+    copyContext.setParentEntity(parentEntity);
+    copyContext.setCompositionName(compositionName);
     copyContext.setObjectIds(input.objectIds());
     copyContext.setSystemUser(isSystemUser);
 

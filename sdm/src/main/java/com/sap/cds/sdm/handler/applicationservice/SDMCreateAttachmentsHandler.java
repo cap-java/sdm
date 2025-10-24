@@ -8,6 +8,7 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
@@ -29,14 +30,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = ApplicationService.class)
 public class SDMCreateAttachmentsHandler implements EventHandler {
-
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
   private final TokenHandler tokenHandler;
   private final DBQuery dbQuery;
+  private static final Logger logger = LoggerFactory.getLogger(SDMCreateAttachmentsHandler.class);
 
   public SDMCreateAttachmentsHandler(
       PersistenceService persistenceService,
@@ -52,17 +55,29 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    List<String> attachmentCompositions = getEntityCompositions(context);
-    for (String composition : attachmentCompositions) {
-      updateName(context, data, composition);
+    // Get the combined mapping of attachment composition paths and names
+    Map<String, String> compositionPathMapping =
+        AttachmentsHandlerUtils.getAttachmentPathMapping(
+            context.getModel(), context.getTarget(), persistenceService);
+    logger.info("Attachment compositions present in CDS Model : " + compositionPathMapping);
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      String attachmentCompositionName = entry.getValue();
+      updateName(context, data, attachmentCompositionDefinition, attachmentCompositionName);
     }
   }
 
-  public void updateName(CdsCreateEventContext context, List<CdsData> data, String composition)
+  public void updateName(
+      CdsCreateEventContext context,
+      List<CdsData> data,
+      String attachmentCompositionDefinition,
+      String attachmentCompositionName)
       throws IOException {
     Map<String, String> propertyTitles = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, composition);
+    String targetEntity = context.getTarget().getQualifiedName();
+    Set<String> duplicateFilenames =
+        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
     if (!duplicateFilenames.isEmpty()) {
       handleDuplicateFilenames(context, duplicateFilenames);
     } else {
@@ -73,11 +88,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest = new HashMap<>();
       List<String> noSDMRoles = new ArrayList<>();
       for (Map<String, Object> entity : data) {
-        List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+        List<Map<String, Object>> attachments =
+            AttachmentsHandlerUtils.fetchAttachments(
+                targetEntity, entity, attachmentCompositionName);
         Optional<CdsEntity> attachmentEntity =
-            context
-                .getModel()
-                .findEntity(context.getTarget().getQualifiedName() + "." + composition);
+            context.getModel().findEntity(attachmentCompositionDefinition);
         if (attachments != null && !attachments.isEmpty()) {
           propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
           secondaryPropertiesWithInvalidDefinitions =
@@ -92,10 +107,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            composition,
+            attachmentCompositionDefinition,
             attachmentEntity,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles);
+            noSDMRoles,
+            attachmentCompositionName);
         handleWarnings(
             context,
             fileNameWithRestrictedCharacters,
@@ -130,9 +146,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String composition,
       Optional<CdsEntity> attachmentEntity,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      String attachmentCompositionName)
       throws IOException {
-    List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+    String targetEntity = context.getTarget().getQualifiedName();
+    List<Map<String, Object>> attachments =
+        AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
@@ -363,23 +382,5 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!noSDMRoles.isEmpty()) {
       context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create"));
     }
-  }
-
-  private List<String> getEntityCompositions(CdsCreateEventContext context) {
-    List<CdsElement> compositions = context.getTarget().compositions().toList();
-    List<String> attachmentsCompositionList = new ArrayList<>();
-    for (CdsElement cdsElement : compositions) {
-      if (cdsElement != null) {
-        CdsAssociationType cdsAssociationType = cdsElement.getType();
-        String targetAspect =
-            cdsAssociationType.getTargetAspect().isPresent()
-                ? cdsAssociationType.getTargetAspect().get().getQualifiedName()
-                : null;
-        if (targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments")) {
-          attachmentsCompositionList.add(cdsElement.getName());
-        }
-      }
-    }
-    return attachmentsCompositionList;
   }
 }
