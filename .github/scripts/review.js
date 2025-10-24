@@ -1,5 +1,7 @@
 const { context, getOctokit } = require("@actions/github");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fs = require("fs");
+const path = require("path");
 
 // Utility functions
 //----------------------------------------------------------------------------------------------------------------
@@ -339,34 +341,192 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
 
 async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
-    
-    // FIX: Using gemini-2.5-flash
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Primary lightweight model for generation
+    const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `You are a helpful and expert AI assistant for a software development team. A new issue has been created. Your task is to:
-    1.  Provide a concise, one-paragraph summary of the issue.
-    2.  Provide an initial recommendation or a set of actionable steps to solve the issue.
-    
-    Issue Title: ${issueTitle}
-    Issue Body: ${issueBody}
-    `;
+    // Fetch historical issues (open + closed) excluding current
+    const pastIssues = await fetchPastIssues(octokit, owner, repo, issueNumber);
 
-    let responseBody = "Error: Could not generate a summary and recommendations for this issue.";
-    try {
-        const result = await fetchWithBackoff(() => model.generateContent(prompt));
-        responseBody = result.response.text();
-        console.log("AI-generated summary and recommendations received successfully.");
-    } catch (error) {
-        console.error("Error generating response for new issue:", error);
+    // Perform semantic + lexical similarity search
+    const similar = await findSimilarIssueSemantic(issueTitle, issueBody, pastIssues, genAI);
+    if (similar) {
+        console.log(`Semantic similar issue found: #${similar.number} (score=${(similar.score || 0).toFixed(3)})`);
+        await ensureLabel(octokit, owner, repo, "duplicate", { description: "Indicates this issue duplicates an existing one", color: "d73a4a" });
+        await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["duplicate"] });
+        const status = similar.state === "closed" ? "closed" : "in progress";
+        const resolution = extractResolution(similar.body);
+        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nA related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;
+        await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
+        return;
     }
-    
-    await octokit.rest.issues.createComment({
-        owner,
-        repo,
-        issue_number: issueNumber,
-        body: `## 🤖 AI Summary & Recommendations\n\n${responseBody}`
-    });
-    console.log("AI response posted as a comment on the new issue.");
+
+    // No match: scan repository for potential causes
+    const repoScan = scanRepositoryForIssue(issueTitle, issueBody, process.cwd());
+    console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
+    const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
+    const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a prioritized remediation checklist. Output strictly in markdown with sections: Summary, Potential Root Causes, Recommended Remediation Steps (each step with rationale), Risk Assessment.\n\nIssue Title: ${issueTitle}\nIssue Body: ${issueBody}\nRelevant Code Contexts (truncated):\n${truncate(joinedContexts, 12000)}\n`;
+    let recommendations = "Failed to generate recommendations.";
+    try {
+        const recResult = await fetchWithBackoff(() => flashModel.generateContent(recPrompt));
+        recommendations = recResult.response.text();
+    } catch (e) {
+        console.error("Error generating remediation recommendations", e);
+    }
+    await ensureLabel(octokit, owner, repo, "awaiting-confirmation", { description: "Pending maintainer confirmation for remediation", color: "5319e7" });
+    await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["awaiting-confirmation"] });
+    const confirmComment = `## 🧪 Initial Analysis & Proposed Remediation (Needs Confirmation)\nNo similar past issue was found by semantic search.\n\n${recommendations}\n\n**Next Step:** Reply with \`confirm remediation\` to approve moving forward (e.g., drafting a PR or creating task list). Reply with \`refine analysis\` for a deeper pass, or \`discard recommendations\` to remove them.`;
+    await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: confirmComment });
+    console.log("Posted remediation proposal awaiting confirmation.");
+}
+
+/**
+ * Handle a newly opened issue: semantic duplicate detection then remediation proposal.
+ */
+// (handleNewIssue already defined below)
+
+/** Lightweight lexical similarity pre-filter */
+// lexicalSimilarityCandidate definition already present below
+/** Semantic duplicate detection with embeddings + LLM confirmation */
+// findSimilarIssueSemantic definition already present below
+/** Obtain embedding safely with backoff */
+// getEmbeddingSafe definition already present below
+/** Cosine similarity helper */
+// cosineSimilarity definition already present below
+
+// ----------------------------------------------------------------------------------------------
+// Duplicate Issue Detection & Repository Scan Helpers
+// ----------------------------------------------------------------------------------------------
+
+function tokenize(text) {
+    return (text || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+}
+
+function jaccardSimilarity(aTokens, bTokens) {
+    const a = new Set(aTokens);
+    const b = new Set(bTokens);
+    const intersection = [...a].filter(t => b.has(t));
+    const unionSize = new Set([...a, ...b]).size || 1;
+    return intersection.length / unionSize;
+}
+
+async function fetchPastIssues(octokit, owner, repo, currentIssueNumber) {
+    const issues = await octokit.paginate(octokit.rest.issues.listForRepo, { owner, repo, state: "all", per_page: 100 });
+    return issues.filter(i => i.number !== currentIssueNumber); // exclude current
+}
+
+function extractResolution(body) {
+    if (!body) return null;
+    const resolutionMatch = body.match(/(?:Resolution|Fix|Root Cause)[:\-]\s*([\s\S]{0,400})/i);
+    return resolutionMatch ? resolutionMatch[1].trim() : null;
+}
+
+function truncate(str, max) {
+    if (!str) return "";
+    return str.length <= max ? str : str.slice(0, max) + "...";
+}
+
+function lexicalSimilarityCandidate(newTitleTokens, newBodyTokens, issue) {
+    const titleScore = jaccardSimilarity(newTitleTokens, tokenize(issue.title));
+    const bodyScore = jaccardSimilarity(newBodyTokens, tokenize(issue.body));
+    return (titleScore * 0.7) + (bodyScore * 0.3);
+}
+
+async function findSimilarIssueSemantic(title, body, pastIssues, genAI) {
+    const MAX_EMBED_ISSUES = safeParseInt(process.env.MAX_SEMANTIC_ISSUES, 150);
+    let embeddingModel;
+    try { embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" }); } catch { embeddingModel = null; }
+    const newTitleTokens = tokenize(title); const newBodyTokens = tokenize(body);
+    const newText = `${title}\n${body}`;
+    let newEmbedding = null;
+    if (embeddingModel) {
+        try { newEmbedding = await getEmbeddingSafe(embeddingModel, newText); } catch (e) { console.warn("New issue embedding failed", e.message); }
+    }
+    const scored = pastIssues.map(i => ({ issue: i, score: lexicalSimilarityCandidate(newTitleTokens, newBodyTokens, i) }))
+        .sort((a,b)=>b.score-a.score).slice(0, MAX_EMBED_ISSUES);
+    let best = null;
+    if (newEmbedding) {
+        for (const candidate of scored) {
+            let emb; try { emb = await getEmbeddingSafe(embeddingModel, `${candidate.issue.title}\n${candidate.issue.body}`); } catch { continue; }
+            const cosine = cosineSimilarity(newEmbedding, emb);
+            const combined = (cosine * 0.85) + (candidate.score * 0.15);
+            if (!best || combined > best.score) best = { ...candidate.issue, score: combined };
+        }
+        if (best && best.score >= 0.78) return best; // threshold for semantic duplicate
+    }
+    const lexicalBest = scored[0];
+    if (lexicalBest && lexicalBest.score >= 0.5) {
+        try {
+            const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const similarityPrompt = `Determine if Issue A duplicates Issue B. Respond only with YES or NO.\nIssue A Title: ${title}\nIssue A Body: ${truncate(body, 1000)}\nIssue B Title: ${lexicalBest.issue.title}\nIssue B Body: ${truncate(lexicalBest.issue.body, 1000)}\n`;
+            const res = await fetchWithBackoff(() => flashModel.generateContent(similarityPrompt));
+            if (/YES/.test(res.response.text().trim().toUpperCase())) return { ...lexicalBest.issue, score: lexicalBest.score };
+        } catch (e) { console.warn("LLM similarity refinement failed", e.message); }
+    }
+    return null;
+}
+
+async function getEmbeddingSafe(embeddingModel, text) {
+    const result = await fetchWithBackoff(() => embeddingModel.embedContent(text));
+    const vector = result.embedding?.values || result.embedding || result?.data || [];
+    if (!Array.isArray(vector) || vector.length === 0) throw new Error("Empty embedding vector");
+    return vector;
+}
+
+function cosineSimilarity(a,b){
+    if(!a||!b||a.length!==b.length) return 0;
+    let dot=0; let na=0; let nb=0;
+    for(let i=0;i<a.length;i++){
+        dot += a[i]*b[i];
+        na += a[i]*a[i];
+        nb += b[i]*b[i];
+    }
+    return dot/((Math.sqrt(na)*Math.sqrt(nb))||1);
+}
+    const keywords = [...new Set([...tokenize(issueTitle), ...tokenize(issueBody)]).values()].filter(k => k.length > 3);
+    const matches = [];
+    const exts = new Set([".js", ".ts", ".java", ".md", ".yml", ".yaml", ".xml", ".json"]);
+    function walk(dir) {
+        let entries;
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+        for (const entry of entries) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'target') continue;
+                walk(full);
+            } else {
+                const ext = path.extname(entry.name);
+                if (!exts.has(ext)) continue;
+                let content;
+                try { content = fs.readFileSync(full, 'utf8'); } catch { continue; }
+                // Simple keyword hit count
+                const lower = content.toLowerCase();
+                let hitCount = 0;
+                for (const kw of keywords) {
+                    if (lower.includes(kw)) hitCount++;
+                }
+                if (hitCount > 0) {
+                    // Extract up to first 40 lines containing keywords
+                    const lines = content.split(/\r?\n/);
+                    const relevant = lines.filter(l => keywords.some(k => l.toLowerCase().includes(k))).slice(0, 40);
+                    matches.push({ file: path.relative(rootDir, full), snippet: relevant.join("\n") });
+                }
+            }
+        }
+    }
+    walk(rootDir);
+    return { keywords, matches };
+}
+
+async function ensureLabel(octokit, owner, repo, name, meta) {
+    try {
+        await octokit.rest.issues.getLabel({ owner, repo, name });
+    } catch (e) {
+        if (e.status === 404) {
+            await octokit.rest.issues.createLabel({ owner, repo, name, color: meta.color || 'cccccc', description: meta.description || '' });
+        } else {
+            console.warn(`Could not verify/create label ${name}:`, e.message);
+        }
+    }
 }
 
 // Main function
@@ -422,7 +582,31 @@ async function run() {
                 
             } else {
                 // This is a comment on a regular Issue
-                 if (commentBody.startsWith("hey gemini,")) {
+                 if (commentBody === 'confirm remediation') {
+                    // Maintainer confirmation flow
+                    const issueLabels = context.payload.issue.labels.map(l => l.name);
+                    if (issueLabels.includes('awaiting-confirmation')) {
+                        console.log('Remediation confirmed. Updating labels.');
+                        await ensureLabel(octokit, owner, repo, 'remediation-approved', { description: 'Remediation steps approved by maintainer', color: '0e8a16' });
+                        await octokit.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['remediation-approved'] });
+                        // Remove awaiting-confirmation label
+                        const remaining = issueLabels.filter(l => l !== 'awaiting-confirmation');
+                        // (GitHub API lacks direct replace; we just remove label)
+                        try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
+                        await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '✅ Remediation confirmed. Automated follow-up actions may proceed (none implemented yet).'});
+                    } else {
+                        console.log('Confirmation comment received but issue not in awaiting-confirmation state.');
+                    }
+                } else if (commentBody === 'refine analysis') {
+                    console.log('Refine analysis requested.');
+                    const issueTitle = context.payload.issue.title;
+                    const issueBody = context.payload.issue.body;
+                    await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI); // Re-run with fresh model pass
+                } else if (commentBody === 'discard recommendations') {
+                    console.log('Discard recommendations requested.');
+                    try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
+                    await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '🗑️ Recommendations discarded. Provide new details or ask for re-analysis if needed.' });
+                } else if (commentBody.startsWith("hey gemini,")) {
                     console.log(`"Hey Gemini," comment detected on Issue #${number}. Initiating response.`);
                     await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
                 } else {
