@@ -323,7 +323,19 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     switch (status) {
       case "duplicate":
-        throw new ServiceException(SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
+        Object[] duplicatemessage = new Object[1];
+        duplicatemessage[0] = cmisDocument.getFileName();
+        String duplicateErrorMessage =
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    SDMConstants.SDM_DUPLICATE_ATTACHMENT,
+                    duplicatemessage,
+                    eventContext.getParameterInfo().getLocale());
+        if (duplicateErrorMessage.equalsIgnoreCase(SDMConstants.SDM_DUPLICATE_ATTACHMENT))
+          throw new ServiceException(
+              SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
+        throw new ServiceException(duplicateErrorMessage);
       case "virus":
         Object[] message = new Object[1];
         message[0] = cmisDocument.getFileName();

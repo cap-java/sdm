@@ -444,6 +444,10 @@ public class SDMAttachmentsServiceHandlerTest {
 
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
+      when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+          .thenReturn(SDMConstants.getDuplicateFilesError("sample.pdf"));
+      when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       // Validate ServiceException for duplicate detection
       ServiceException thrown =
           assertThrows(
