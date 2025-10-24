@@ -643,7 +643,6 @@ public class SDMUtilsTest {
   void testElementWithAnnotation() {
     CdsEntity entity = mock(CdsEntity.class);
     CdsElement element = mock(CdsElement.class);
-    @SuppressWarnings("unchecked")
     CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
     when(annotation.getValue()).thenReturn("name");
 

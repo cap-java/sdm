@@ -106,8 +106,8 @@ public class SDMCustomServiceHandler {
     Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
-      CdsAssociationType assocType = association.getType();
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      CdsAssociationType associationType = association.getType();
+      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
     Map<String, Object> updatedFields = new HashMap<>();

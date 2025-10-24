@@ -210,9 +210,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
       // get association type
-      CdsAssociationType assocType = association.getType();
+      CdsAssociationType associationType = association.getType();
       // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
     return upIdKey;

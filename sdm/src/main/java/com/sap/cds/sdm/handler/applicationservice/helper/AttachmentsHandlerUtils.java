@@ -12,7 +12,6 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName(value = "*", type = ApplicationService.class)
 public class AttachmentsHandlerUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(AttachmentsHandlerUtils.class);
@@ -55,7 +54,7 @@ public class AttachmentsHandlerUtils {
 
       return pathMapping;
     } catch (Exception e) {
-      logger.error("Error getting attachment path mapping", e);
+      logger.error("Error getting attachment path mapping", e.getMessage());
       return new HashMap<>();
     }
   }
@@ -64,11 +63,11 @@ public class AttachmentsHandlerUtils {
       CdsEntity entity, Map<String, String> pathMapping, Object composition) {
     String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
     if (((com.sap.cds.reflect.CdsElement) composition).getType().isAssociation()) {
-      CdsAssociationType assocType =
+      CdsAssociationType associationType =
           (CdsAssociationType) ((com.sap.cds.reflect.CdsElement) composition).getType();
       String targetAspect =
-          assocType.getTargetAspect().isPresent()
-              ? assocType.getTargetAspect().get().getQualifiedName()
+          associationType.getTargetAspect().isPresent()
+              ? associationType.getTargetAspect().get().getQualifiedName()
               : null;
 
       if (isDirectAttachmentTargetAspect(targetAspect)) {
@@ -90,18 +89,18 @@ public class AttachmentsHandlerUtils {
     String compositionTargetEntityName = "";
 
     if (((com.sap.cds.reflect.CdsElement) composition).getType().isAssociation()) {
-      CdsAssociationType assocType =
+      CdsAssociationType associationType =
           (CdsAssociationType) ((com.sap.cds.reflect.CdsElement) composition).getType();
       String targetAspect =
-          assocType.getTargetAspect().isPresent()
-              ? assocType.getTargetAspect().get().getQualifiedName()
+          associationType.getTargetAspect().isPresent()
+              ? associationType.getTargetAspect().get().getQualifiedName()
               : null;
 
       if (isDirectAttachmentTargetAspect(targetAspect)) {
         return; // Skip direct attachment compositions
       }
 
-      compositionTargetEntityName = assocType.getTarget().getQualifiedName();
+      compositionTargetEntityName = associationType.getTarget().getQualifiedName();
     }
 
     processCompositionTargetEntity(
@@ -252,7 +251,6 @@ public class AttachmentsHandlerUtils {
     // Check if the parent matches (if parentKey is specified)
     if (parentKey == null || isCorrectParentContext(currentParentKey, parentKey)) {
       try {
-        @SuppressWarnings("unchecked")
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
         result.addAll(attachments);
       } catch (ClassCastException e) {
@@ -268,7 +266,6 @@ public class AttachmentsHandlerUtils {
     List<Map<String, Object>> result = new ArrayList<>();
 
     try {
-      @SuppressWarnings("unchecked")
       Map<String, Object> nestedMap = (Map<String, Object>) value;
       result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
     } catch (ClassCastException e) {
@@ -286,7 +283,6 @@ public class AttachmentsHandlerUtils {
       List<?> list = (List<?>) value;
       for (Object item : list) {
         if (item instanceof Map) {
-          @SuppressWarnings("unchecked")
           Map<String, Object> itemMap = (Map<String, Object>) item;
           result.addAll(findNestedAttachments(itemMap, attachmentKey, parentKey, key));
         }
