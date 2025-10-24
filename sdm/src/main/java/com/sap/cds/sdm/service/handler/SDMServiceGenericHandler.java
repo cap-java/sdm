@@ -71,8 +71,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upID = context.get("up__ID").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
-    var copyEventInput =
-        new CopyAttachmentInput(upID, context.getTarget().getQualifiedName(), objectIds);
+
+    // Use the full target qualified name as the facet
+    String facet = context.getTarget().getQualifiedName();
+
+    var copyEventInput = new CopyAttachmentInput(upID, facet, objectIds);
+
     attachmentService.copyAttachments(copyEventInput, context.getUserInfo().isSystemUser());
     context.setCompleted();
   }

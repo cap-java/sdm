@@ -153,6 +153,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -247,6 +248,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -266,7 +268,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -306,6 +309,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -325,7 +329,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -365,6 +370,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -384,7 +390,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -426,6 +433,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -489,6 +497,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -559,6 +568,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -630,6 +640,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -700,6 +711,7 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);

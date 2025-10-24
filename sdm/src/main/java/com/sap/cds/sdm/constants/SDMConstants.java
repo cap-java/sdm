@@ -86,6 +86,13 @@ public class SDMConstants {
   public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
+  public static final String PARENT_ENTITY_NOT_FOUND_ERROR = "Unable to find parent entity: %s";
+  public static final String COMPOSITION_NOT_FOUND_ERROR =
+      "Unable to find composition '%s' in entity: %s";
+  public static final String TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR =
+      "Unable to find target attachment entity: %s";
+  public static final String INVALID_FACET_FORMAT_ERROR =
+      "Invalid facet format. Expected: Service.Entity.Composition, got: %s";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
