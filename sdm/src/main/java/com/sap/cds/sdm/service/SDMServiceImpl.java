@@ -516,8 +516,7 @@ public class SDMServiceImpl implements SDMService {
           "Marking attachment IMPL CODE SDM @123" + response.getStatusLine().getStatusCode());
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      System.out.println(
-          "Marking attachment IMPL CATCH SDM @123" + e.getMessage());
+      System.out.println("Marking attachment IMPL CATCH SDM @123" + e.getMessage());
       throw new ServiceException(SDMConstants.getGenericError("delete"));
     }
   }
