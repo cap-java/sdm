@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
@@ -136,9 +138,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-    String id = upIdKey.replaceFirst("^up__", "");
-    String upID = cqnAnalyzer.analyze(select).rootKeys().get(id).toString();
+    String upID = fetchUPIDFromCQN(select);
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -214,9 +214,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
       // get association type
-      CdsAssociationType assocType = association.getType();
+      CdsAssociationType associationType = association.getType();
       // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
     return upIdKey;
@@ -308,14 +308,45 @@ public class SDMServiceGenericHandler implements EventHandler {
                 + ":"
                 + context.getTarget());
 
-        var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
-        for (DraftService draftS : draftService) {
-          // Process each draftService object
-          if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
-            draftS.newDraft(insert);
+        try {
+          var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
+          for (DraftService draftS : draftService) {
+            if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
+              draftS.newDraft(insert);
+            }
           }
+        } catch (Exception e) {
+          logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
+    }
+  }
+
+  private String fetchUPIDFromCQN(CqnSelect select) {
+    try {
+      String upID = null;
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode root = mapper.readTree(select.toString());
+      JsonNode refArray = root.path("SELECT").path("from").path("ref");
+      JsonNode secondLast = refArray.get(refArray.size() - 2);
+      JsonNode whereArray = secondLast.path("where");
+      for (int i = 0; i < whereArray.size(); i++) {
+        JsonNode node = whereArray.get(i);
+        if (node.has("ref")
+            && node.get("ref").isArray()
+            && node.get("ref").get(0).asText().equals("ID")) {
+          JsonNode valNode = whereArray.get(i + 2);
+          upID = valNode.path("val").asText();
+          break;
+        }
+      }
+      if (upID == null) {
+        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+      }
+      return upID;
+    } catch (Exception e) {
+      logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
   }
 }

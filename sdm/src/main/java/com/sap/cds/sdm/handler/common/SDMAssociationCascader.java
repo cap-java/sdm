@@ -1,0 +1,97 @@
+package com.sap.cds.sdm.handler.common;
+
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElementDefinition;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+/**
+ * The class {@link SDMAssociationCascader} is used to find entity paths to all media resource
+ * entities for a given data model. The path information is returned in a node tree which starts
+ * from the given entity. Only composition associations are considered.
+ */
+public class SDMAssociationCascader {
+
+  public SDMNodeTree findEntityPath(CdsModel model, CdsEntity entity) {
+    var firstList = new LinkedList<SDMAssociationIdentifier>();
+    var internalResultList =
+        getAttachmentAssociationPath(
+            model, entity, "", firstList, new ArrayList<>(List.of(entity.getQualifiedName())));
+
+    var rootTree = new SDMNodeTree(new SDMAssociationIdentifier("", entity.getQualifiedName()));
+    internalResultList.forEach(rootTree::addPath);
+    return rootTree;
+  }
+
+  private List<LinkedList<SDMAssociationIdentifier>> getAttachmentAssociationPath(
+      CdsModel model,
+      CdsEntity entity,
+      String associationName,
+      LinkedList<SDMAssociationIdentifier> firstList,
+      List<String> processedEntities) {
+    var internalResultList = new ArrayList<LinkedList<SDMAssociationIdentifier>>();
+    var currentList = new AtomicReference<LinkedList<SDMAssociationIdentifier>>();
+    var localProcessEntities = new ArrayList<String>();
+    currentList.set(new LinkedList<>());
+
+    var isMediaEntity = SDMApplicationHandlerHelper.isMediaEntity(entity);
+    if (isMediaEntity) {
+      var identifier = new SDMAssociationIdentifier(associationName, entity.getQualifiedName());
+      firstList.addLast(identifier);
+    }
+
+    if (isMediaEntity) {
+      internalResultList.add(firstList);
+      return internalResultList;
+    }
+
+    Map<String, CdsEntity> associations =
+        entity
+            .elements()
+            .filter(
+                element ->
+                    element.getType().isAssociation()
+                        && element.getType().as(CdsAssociationType.class).isComposition())
+            .collect(
+                Collectors.toMap(
+                    CdsElementDefinition::getName,
+                    element -> element.getType().as(CdsAssociationType.class).getTarget()));
+
+    if (associations.isEmpty()) {
+      return internalResultList;
+    }
+
+    var newListNeeded = false;
+    for (var associatedElement : associations.entrySet()) {
+      if (!processedEntities.contains(associatedElement.getValue().getQualifiedName())) {
+        if (newListNeeded) {
+          currentList.set(new LinkedList<>());
+          currentList.get().addAll(firstList);
+          processedEntities = localProcessEntities;
+        } else {
+          firstList.add(new SDMAssociationIdentifier(associationName, entity.getQualifiedName()));
+          currentList.get().addAll(firstList);
+          localProcessEntities = new ArrayList<>(processedEntities);
+        }
+        processedEntities.add(associatedElement.getValue().getQualifiedName());
+        newListNeeded = true;
+        var result =
+            getAttachmentAssociationPath(
+                model,
+                associatedElement.getValue(),
+                associatedElement.getKey(),
+                currentList.get(),
+                processedEntities);
+        internalResultList.addAll(result);
+      }
+    }
+
+    return internalResultList;
+  }
+}

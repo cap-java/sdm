@@ -39,7 +39,8 @@ public class SDMConstants {
   public static final String SDM_ROLES_ERROR_MESSAGE =
       "Unable to rename the file due to an error at the server";
   public static final String SDM_ENV_NAME = "sdm";
-
+  public static final String ENTITY_PROCESSING_ERROR_LINK =
+      "Failed to create link due to error while processing entity";
   public static final String SDM_TOKEN_EXCHANGE_DESTINATION = "sdm-token-exchange-flow";
   public static final String SDM_TECHNICAL_CREDENTIALS_FLOW_DESTINATION = "sdm-technical-user-flow";
   public static final String SDM_TOKEN_FETCH = "sdm-token-fetch";
@@ -92,6 +93,8 @@ public class SDMConstants {
       "Unable to find target attachment entity: %s";
   public static final String INVALID_FACET_FORMAT_ERROR =
       "Invalid facet format. Expected: Service.Entity.Composition, got: %s";
+  public static final String FETCH_ATTACHMENT_COMPOSITION_ERROR =
+      "Failed to fetch attachment composition";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
