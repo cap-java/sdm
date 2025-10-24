@@ -530,7 +530,7 @@ public class Api implements ApiInterface {
             .build();
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
-      if (renameResponse.code() != 200) {
+      if (!renameResponse.isSuccessful()) {
         System.out.println(
             "Rename Attachment failed in the "
                 + facetName
