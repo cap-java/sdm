@@ -5,8 +5,6 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
-import com.sap.cds.services.cds.ApplicationService;
-import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 import org.slf4j.Logger;
@@ -20,6 +18,20 @@ public class AttachmentsHandlerUtils {
     // Doesn't do anything
   }
 
+  /**
+   * Retrieves a list of attachment entity paths for the given CDS entity.
+   *
+   * <p>This method creates an SDMAttachmentsReader instance to traverse the entity's structure and
+   * identify all paths that lead to attachment entities within the CDS model. It uses an
+   * SDMAssociationCascader to handle cascading through entity associations and compositions to find
+   * nested attachment relationships.
+   *
+   * @param model the CDS model containing entity definitions and relationships
+   * @param entity the target CDS entity to analyze for attachment paths
+   * @param persistenceService the persistence service used for data access operations
+   * @return a list of strings representing paths to attachment entities, or an empty list if no
+   *     attachments are found or if an error occurs during processing
+   */
   public static List<String> getAttachmentEntityPaths(
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
     try {
@@ -31,6 +43,21 @@ public class AttachmentsHandlerUtils {
     }
   }
 
+  /**
+   * Creates a mapping of attachment entity paths to their corresponding actual paths within the CDS
+   * model.
+   *
+   * <p>This method analyzes both direct and nested attachment compositions within the given entity.
+   * It processes direct attachments that are immediate compositions of the entity, and also
+   * traverses nested compositions to find attachments in related entities. The resulting mapping
+   * provides a translation between logical attachment paths and their actual implementation paths.
+   *
+   * @param model the CDS model containing entity definitions and relationships
+   * @param entity the target CDS entity to analyze for attachment path mappings
+   * @param persistenceService the persistence service used for data access operations
+   * @return a map where keys are attachment entity paths and values are the corresponding actual
+   *     paths, or an empty map if no attachments are found or if an error occurs during processing
+   */
   public static Map<String, String> getAttachmentPathMapping(
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
     try {
@@ -144,6 +171,22 @@ public class AttachmentsHandlerUtils {
     return targetAspect != null && targetAspect.equalsIgnoreCase("sap.attachments.Attachments");
   }
 
+  /**
+   * Fetches attachment data from a nested entity structure based on the target entity and
+   * composition name.
+   *
+   * <p>This method processes the target entity path to extract the entity name, wraps the provided
+   * entity data with a parent structure, and then searches for attachments within the nested
+   * structure. It parses the attachment composition name to identify both the attachment key (e.g.,
+   * "attachments") and the parent key (e.g., "chapters") for precise attachment location.
+   *
+   * @param targetEntity the qualified name of the target entity (e.g., "ServiceName.EntityName")
+   * @param entity the entity data structure containing potential attachment information
+   * @param attachmentCompositionName the composition path to the attachments (e.g.,
+   *     "chapters.attachments")
+   * @return a list of maps representing attachment objects found in the entity structure, or an
+   *     empty list if no attachments are found
+   */
   public static List<Map<String, Object>> fetchAttachments(
       String targetEntity, Map<String, Object> entity, String attachmentCompositionName) {
     String[] targetEntityPath = targetEntity.split("\\.");
@@ -309,6 +352,18 @@ public class AttachmentsHandlerUtils {
     return expectedParentKey.equals(currentParentKey);
   }
 
+  /**
+   * Wraps an entity data structure with a parent container using the specified target entity name.
+   *
+   * <p>This utility method creates a new map with the target entity name as the key and the
+   * provided entity data as the value. This is necessary because the root of the target entity in
+   * the CdsData object is not mentioned explicitly, and hence interferes with the recursive
+   * fetching of attachment compositions.
+   *
+   * @param root the entity data structure to be wrapped
+   * @param targetEntity the name to use as the parent key for wrapping the entity data
+   * @return a new map containing the target entity name as key and the root entity data as value
+   */
   public static Map<String, Object> wrapEntityWithParent(
       Map<String, Object> root, String targetEntity) {
     Map<String, Object> wrapper = new HashMap<>();
