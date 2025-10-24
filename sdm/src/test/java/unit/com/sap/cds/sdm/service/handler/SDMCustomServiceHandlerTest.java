@@ -127,21 +127,6 @@ public class SDMCustomServiceHandlerTest {
   }
 
   @Test
-  void testCopyAttachments_InvalidFacetFormat_ThrowsException() throws IOException {
-    AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
-    when(context.getFacet()).thenReturn("invalid.facet"); // Only 2 parts
-    // Other mocks not needed as exception is thrown before they're used
-
-    ServiceException ex =
-        assertThrows(
-            ServiceException.class,
-            () -> {
-              sdmCustomServiceHandler.copyAttachments(context);
-            });
-    assertTrue(ex.getMessage().contains("Invalid facet format"));
-  }
-
-  @Test
   void testCopyAttachments_FolderDoesNotExist() throws IOException {
     // Mock SDMCredentials
     SDMCredentials sdmCredentials = mock(SDMCredentials.class);
@@ -203,14 +188,25 @@ public class SDMCustomServiceHandlerTest {
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
-    context.setObjectIds(List.of(OBJECT_ID, "mockObjectId2"));
+    // Override the getObjectIds mock to return multiple objects for this test
+    when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID, "mockObjectId2"));
+
+    // Mock UserInfo for cleanup operations
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
 
     // Act & Assert
-    try {
-      sdmCustomServiceHandler.copyAttachments(context);
-    } catch (ServiceException e) {
-      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class), any());
-    }
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmCustomServiceHandler.copyAttachments(context);
+            });
+
+    // Verify that deleteDocument was called for cleanup of the first successful attachment
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), eq("testUser"));
+    assertTrue(exception.getMessage().contains("Copy failed"));
   }
 
   @Test
@@ -291,19 +287,36 @@ public class SDMCustomServiceHandlerTest {
     CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
     CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
 
-    when(context.getFacet()).thenReturn("prefix.someIdentifier." + FACET);
+    when(context.getParentEntity()).thenReturn("prefix.someIdentifier." + FACET);
+    when(context.getCompositionName()).thenReturn(FACET);
     when(context.getUpId()).thenReturn(UP_ID);
     when(context.getSystemUser()).thenReturn(true);
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
 
     // Mock CdsModel and relevant entities and associations
     CdsModel model = mock(CdsModel.class);
-    CdsEntity entity = mock(CdsEntity.class);
+    CdsEntity parentEntity = mock(CdsEntity.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
 
-    // Setup expected behavior
+    // Mock composition element and its type
+    CdsElement compositionElement = mock(CdsElement.class);
+    CdsAssociationType compositionType = mock(CdsAssociationType.class);
+
+    // Setup expected behavior for model and parent entity
     when(context.getModel()).thenReturn(model);
-    when(model.findEntity(any(String.class))).thenReturn(Optional.of(entity));
-    when(entity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(model.findEntity("prefix.someIdentifier." + FACET)).thenReturn(Optional.of(parentEntity));
+    when(model.findEntity(endsWith("_drafts"))).thenReturn(Optional.of(draftEntity));
+
+    // Mock the composition element in parent entity
+    when(parentEntity.findElement(FACET)).thenReturn(Optional.of(compositionElement));
+    when(compositionElement.getType()).thenReturn(compositionType);
+    when(compositionType.isAssociation()).thenReturn(true);
+    when(compositionType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("target.entity.name");
+
+    // Mock the draft entity's up_ association
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
