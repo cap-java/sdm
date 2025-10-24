@@ -93,7 +93,8 @@ public class SDMConstants {
       "Unable to find target attachment entity: %s";
   public static final String INVALID_FACET_FORMAT_ERROR =
       "Invalid facet format. Expected: Service.Entity.Composition, got: %s";
-  public static final String FETCH_ATTACHMENT_COMPOSITION_ERROR = "Failed to fetch attachment composition";
+  public static final String FETCH_ATTACHMENT_COMPOSITION_ERROR =
+      "Failed to fetch attachment composition";
 
   public static String nameConstraintMessage(
       List<String> fileNameWithRestrictedCharacters, String operation) {
