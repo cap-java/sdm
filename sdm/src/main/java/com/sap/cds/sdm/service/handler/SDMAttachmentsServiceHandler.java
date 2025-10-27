@@ -376,7 +376,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(errorMessage2);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
-        cmisDocument.setMimeType(createResult.get("mimeType").toString());
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

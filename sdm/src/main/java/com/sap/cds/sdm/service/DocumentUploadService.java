@@ -128,6 +128,7 @@ public class DocumentUploadService {
 
     try {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
+      cmisDocument.setMimeType(finalResponse.get("mimeType"));
 
     } catch (Exception e) {
       logger.error("Error in appending content: {}", e.getMessage());
