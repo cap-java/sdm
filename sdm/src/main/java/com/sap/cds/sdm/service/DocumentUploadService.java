@@ -308,7 +308,10 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
-        mimeType = succinctProperties.getString("cmis:contentStreamMimeType");
+        mimeType =
+            succinctProperties.has("cmis:contentStreamMimeType")
+                ? succinctProperties.getString("cmis:contentStreamMimeType")
+                : null;
       } else {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
