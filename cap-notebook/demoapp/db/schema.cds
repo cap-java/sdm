@@ -64,11 +64,32 @@ entity Chapters : cuid, managed {
   chapterType  : String @title: 'Chapter Type';
 }
 
+/** Adding {Notebooks,Writers} for user service */
+entity Notebooks : managed, cuid {
+  @mandatory title  : localized String(111);
+  descr             : localized String(1111);
+  @mandatory writer : Association to Writers;
+  stock             : Integer;
+  price             : Decimal;
+  currency          : Currency;
+  image             : LargeBinary @Core.MediaType: 'image/png';
+}
+
 entity Pages : cuid, managed {
   book       : Association to Books;
   title          : String @title: 'Page Title';
   description    : String;
   url            : String;
   pageType  : String @title: 'Page Type';
+}
+
+entity Writers : managed, cuid {
+  @mandatory name : String(111);
+  dateOfBirth     : Date;
+  dateOfDeath     : Date;
+  placeOfBirth    : String;
+  placeOfDeath    : String;
+  notebooks       : Association to many Notebooks
+                      on notebooks.writer = $self;
 }
 

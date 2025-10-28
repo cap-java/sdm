@@ -1,4 +1,4 @@
-using {sap.capire.bookshop.Books, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages} from '../db/schema';
+using {sap.capire.bookshop.Books, sap.capire.bookshop.Notebooks, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages} from '../db/schema';
 using {sap.attachments.Attachments, sap.attachments.StatusCode} from 'com.sap.cds/sdm';
 using {sap,managed,sap.common.CodeList} from '@sap/cds/common';
 
@@ -8,6 +8,9 @@ extend entity Books with {
   references  : Composition of many Attachments  @SDM.Attachments:{maxCount: 5, maxCountError:'Only 5 attachments allowed.'};
   footnotes   : Composition of many Attachments;
 }
+
+extend entity Notebooks with {
+    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
 
 extend entity Chapters with { 
   attachments: Composition of many Attachments;
