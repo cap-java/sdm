@@ -687,7 +687,7 @@ public class SDMServiceImpl implements SDMService {
 
         JSONObject jsonObject = new JSONObject(responseBody);
         JSONObject props = jsonObject.getJSONObject("succinctProperties");
-        String fileName = props.optString("cmis:contentStreamFileName");
+        String fileName = props.optString("cmis:name");
         String mimeType = props.optString("cmis:contentStreamMimeType");
         String objectId = props.optString("cmis:objectId");
         return List.of(fileName, mimeType, objectId);
