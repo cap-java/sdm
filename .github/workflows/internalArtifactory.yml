@@ -1,0 +1,123 @@
+name: Internal Artifactory snapshot deploy
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.6.3'
+  ARTIFACTORY_URL: 'https://common.repositories.cloud.sap/artifactory/cap-sdm-java'
+
+on:
+  push:
+    branches: [ 'develop', 'internal-repo' ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy-artifactory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: sapmachine
+          cache: maven
+          server-id: artifactory
+          server-username: CAP_DEPLOYMENT_USER
+          server-password: CAP_DEPLOYMENT_PASS
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+
+      - name: Set up Maven ${{ env.MAVEN_VERSION }}
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: ${{ env.MAVEN_VERSION }}
+
+      - name: Read current revision
+        id: read-revision
+        run: |
+          current_version=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          echo "Current version: $current_version"
+          echo "revision=$current_version" >> $GITHUB_OUTPUT
+          echo "updated_version=$current_version" >> $GITHUB_OUTPUT
+
+      - name: Bump version if needed
+        id: bump-version
+        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/internal-repo' }}
+        run: |
+          current_version="${{ steps.read-revision.outputs.revision }}"
+            if [[ $current_version != *-SNAPSHOT ]]; then
+              echo "Version lacks -SNAPSHOT; incrementing patch."
+              IFS='.' read -r major minor patch <<< "$(echo $current_version | tr '-' '.')"
+              new_patch=$((patch + 1))
+              new_version="${major}.${minor}.${new_patch}-SNAPSHOT"
+              sed -i "s|<revision>.*</revision>|<revision>${new_version}</revision>|" pom.xml
+              echo "Updated version to $new_version"
+              git config user.name github-actions
+              git config user.email github-actions@github.com
+              git add pom.xml
+              branch_name="${GITHUB_REF#refs/heads/}"
+              git commit -m "Increment version to ${new_version}" || echo "No changes to commit"
+              git push origin HEAD:"${branch_name}"
+            else
+              echo "Already a -SNAPSHOT version; no bump performed."
+            fi
+          updated_version=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          echo "updated_version=$updated_version" >> $GITHUB_OUTPUT
+
+      - name: Preflight Artifactory auth
+        run: |
+          base="${{ env.ARTIFACTORY_URL }}"
+          echo "Testing authentication against $base" 
+          status=$(curl -u "${{ secrets.CAP_DEPLOYMENT_USER }}:${{ secrets.CAP_DEPLOYMENT_PASS }}" -s -o /dev/null -w "%{http_code}" "$base/" || true)
+          echo "HTTP status root: $status"
+          if [ "$status" = "401" ] || [ "$status" = "403" ]; then
+            echo "Authentication failed preflight (status $status)." >&2
+            exit 1
+          fi
+          echo "Preflight auth appears OK (status $status)."
+
+      - name: Deploy snapshot to Artifactory
+        if: ${{ endsWith(steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version, '-SNAPSHOT') }}
+        run: |
+          final_version="${{ steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version }}"
+          echo "Deploying ${final_version} to Artifactory"
+          for attempt in 1 2; do
+            echo "Deploy attempt $attempt";
+            mvn -B -ntp -fae \
+              -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true \
+              -DaltDeploymentRepository=artifactory::${{ env.ARTIFACTORY_URL }} deploy && break || {
+                echo "Deploy failed on attempt $attempt" >&2
+                if [ $attempt -eq 2 ]; then
+                  echo "Running debug deploy with -X" >&2
+                  mvn -X -B -ntp -fae \
+                    -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true \
+                    -DaltDeploymentRepository=artifactory::${{ env.ARTIFACTORY_URL }} deploy || exit 1
+                else
+                  echo "Retrying in 5s..."; sleep 5;
+                fi
+              }
+          done
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
+
+      - name: Verify artifact in Artifactory
+        if: ${{ endsWith(steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version, '-SNAPSHOT') }}
+        run: |
+          group_path="com/sap/cds/sdm"
+          version="${{ steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version }}"
+          echo "Checking metadata for $version"
+          curl -u "${{ secrets.CAP_DEPLOYMENT_USER }}:${{ secrets.CAP_DEPLOYMENT_PASS }}" -f -I \
+            "$ARTIFACTORY_URL/$group_path/$version/maven-metadata.xml" || { echo "Metadata not found"; exit 1; }
+          echo "Artifact metadata accessible for $version"
+
+      - name: Summary
+        run: |
+          echo "Revision: ${{ steps.read-revision.outputs.revision }}"
+          echo "Final version: ${{ steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version }}"
+          echo "Deployment target: ${{ env.ARTIFACTORY_URL }}"
