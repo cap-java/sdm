@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "develop", "internal-repo" ]
+    branches: [ "develop" ]
   workflow_dispatch:
 
 jobs:
@@ -55,13 +55,10 @@ jobs:
           current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "Current version: $current_version"
           echo "REVISION=$current_version" >> $GITHUB_ENV
-          # Pre-populate UPDATED_VERSION so downstream condition works even if bump step is skipped
-          echo "UPDATED_VERSION=$current_version" >> $GITHUB_ENV
         shell: bash
 
       - name: Check and Update Version
-        # Run on both develop and internal-repo branches
-        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/internal-repo' }}
+        if: github.ref == 'refs/heads/develop'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
@@ -82,9 +79,7 @@ jobs:
             git config --local user.email "github-actions@github.com"
             git add pom.xml
             git commit -m "Increment version to ${new_version}"
-            current_branch="${GITHUB_REF#refs/heads/}"
-            echo "Pushing version bump to $current_branch"
-            git push origin HEAD:${current_branch}
+            git push origin HEAD:develop
           else
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
@@ -99,8 +94,7 @@ jobs:
         shell: bash
 
       - name: Deploy snapshot
-        # Deploy only if we have a snapshot version
-        if: ${{ env.UPDATED_VERSION && endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
+        if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
           mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/cap-java/sdm deploy
         env:
