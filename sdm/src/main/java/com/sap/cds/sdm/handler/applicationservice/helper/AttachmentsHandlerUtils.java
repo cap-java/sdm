@@ -363,4 +363,170 @@ public class AttachmentsHandlerUtils {
     wrapper.put(targetEntity, root);
     return wrapper;
   }
+
+  /**
+   * Retrieves comprehensive attachment composition details including parent titles.
+   *
+   * <p>This method combines attachment composition path mapping with parent title extraction to
+   * provide complete details for each attachment composition. Each entry contains the composition
+   * name, definition, and parent entity title.
+   *
+   * @param model the CDS model containing entity definitions and relationships
+   * @param entity the target CDS entity to analyze for attachment path mappings
+   * @param persistenceService the persistence service used for data access operations
+   * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
+   * @param entityData the entity data structure containing potential attachment information
+   * @return a map where keys are attachment composition definitions and values are maps containing
+   *     name, definition, and parentTitle, or an empty map if no attachments are found
+   */
+  public static Map<String, Map<String, String>> getAttachmentCompositionDetails(
+      CdsModel model,
+      CdsEntity entity,
+      PersistenceService persistenceService,
+      String targetEntity,
+      Map<String, Object> entityData) {
+    Map<String, Map<String, String>> attachmentDetails = new HashMap<>();
+
+    // Get the composition path mapping
+    Map<String, String> compositionPathMapping =
+        getAttachmentPathMapping(model, entity, persistenceService);
+
+    // Get parent titles
+    Map<String, String> parentTitles =
+        getAttachmentParentTitles(targetEntity, entityData, compositionPathMapping);
+
+    // Combine into comprehensive details
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String definition = entry.getKey();
+      String name = entry.getValue();
+      String parentTitle = parentTitles.get(name);
+
+      Map<String, String> details = new HashMap<>();
+      details.put("name", name);
+      details.put("definition", definition);
+      details.put("parentTitle", parentTitle);
+
+      attachmentDetails.put(definition, details);
+    }
+
+    return attachmentDetails;
+  }
+
+  /**
+   * Retrieves parent entity titles for each attachment composition found in the entity structure.
+   *
+   * <p>This method analyzes the entity data structure to identify attachment compositions and
+   * extracts the title (or other identifying field) of the parent entity containing each attachment
+   * composition. It handles both direct attachments at the root level and nested attachments within
+   * composed entities.
+   *
+   * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
+   * @param entity the entity data structure containing potential attachment information
+   * @param compositionPathMapping the mapping of attachment composition paths obtained from
+   *     getAttachmentPathMapping
+   * @return a map where keys are attachment composition names and values are the parent entity
+   *     titles, or an empty map if no attachments are found
+   */
+  public static Map<String, String> getAttachmentParentTitles(
+      String targetEntity, Map<String, Object> entity, Map<String, String> compositionPathMapping) {
+    Map<String, String> parentTitles = new HashMap<>();
+
+    String[] targetEntityPath = targetEntity.split("\\.");
+    String entityName = targetEntityPath[targetEntityPath.length - 1];
+    Map<String, Object> wrappedEntity = wrapEntityWithParent(entity, entityName.toLowerCase());
+
+    for (Map.Entry<String, String> compositionEntry : compositionPathMapping.entrySet()) {
+      String compositionPath = compositionEntry.getValue();
+      String parentTitle =
+          findParentTitle(wrappedEntity, compositionPath, entityName.toLowerCase());
+      if (parentTitle != null) {
+        parentTitles.put(compositionPath, parentTitle);
+      }
+    }
+
+    return parentTitles;
+  }
+
+  /**
+   * Finds the parent title for a given attachment composition path.
+   *
+   * @param entity the wrapped entity data structure
+   * @param compositionPath the composition path (e.g., "AdminService.chapters123.attachments" or
+   *     "AdminService.Books.references")
+   * @param rootEntityName the name of the root entity
+   * @return the title of the parent entity containing the attachment composition, or null if not
+   *     found
+   */
+  private static String findParentTitle(
+      Map<String, Object> entity, String compositionPath, String rootEntityName) {
+    try {
+      String[] pathParts = compositionPath.split("\\.");
+
+      if (pathParts.length >= 3) {
+        String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
+
+        // Check if this is a direct composition (entity matches root entity)
+        if (entityPart.equalsIgnoreCase(rootEntityName)) {
+          // Direct attachment at root level (e.g., "AdminService.Books.references")
+          return extractTitleFromEntity(entity.get(rootEntityName));
+        } else {
+          // Nested attachment (e.g., "AdminService.chapters123.attachments")
+          // Navigate to the parent entity
+          Object rootEntity = entity.get(rootEntityName);
+          if (rootEntity instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
+            Object parentCollection = rootMap.get(entityPart);
+
+            if (parentCollection instanceof List) {
+              @SuppressWarnings("unchecked")
+              List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
+              if (!parentList.isEmpty()) {
+                // Get title from the first item in the collection
+                return extractTitleFromEntity(parentList.get(0));
+              }
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
+    }
+
+    return null;
+  }
+
+  /**
+   * Extracts the title field from an entity object, with fallback options.
+   *
+   * @param entityObj the entity object to extract title from
+   * @return the title string, or a fallback identifier, or null if not found
+   */
+  private static String extractTitleFromEntity(Object entityObj) {
+    if (!(entityObj instanceof Map)) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> entityMap = (Map<String, Object>) entityObj;
+
+    // Priority order: title -> name -> ID -> first non-null string value
+    String[] titleFields = {"title", "name", "ID", "id"};
+
+    for (String field : titleFields) {
+      Object value = entityMap.get(field);
+      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+        return (String) value;
+      }
+    }
+
+    // Fallback: find any string value
+    for (Object value : entityMap.values()) {
+      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+        return (String) value;
+      }
+    }
+
+    return null;
+  }
 }

@@ -49,7 +49,7 @@ jobs:
       - name: Build and package 🔨
         run: |
           echo "🚀 Building and packaging..."
-          mvn clean install -P unit-tests -DskipIntegrationTests
+          mvn clean install -DskipUnitTests -DskipIntegrationTests
           echo "✅ Build and packaging completed successfully!"
 
       - name: Verify and Checkout Deploy Branch 🔄
