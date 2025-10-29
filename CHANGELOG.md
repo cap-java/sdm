@@ -7,29 +7,29 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Version 1.6.0
 
 ### Added
-- Support for Link type Attachments
-- Support to Edit URL in Link type Attachments
-- Support for translation of error messages in the plugin
+- Support for Link type Attachments.
+- Support to Edit URL in Link type Attachments.
+- Support for translation of error messages in the plugin.
 
 ### Fixed
-- Allow update or creation of subscription in case a repository with the configured external ID already exists by skipping the onboarding step
-- Improved error handling for cases where the mimetype of the uploaded attachment is blocked on a repository level
-- Improved error handling for cases where repository offboarding fails during unsubscription
-- Issue where repository offboarding was failing if the instance only contains a single repository
-- Improved error handling for repository onboarding during subscription
-- Blocked upload for scenarios where file size > 400mb and repository is virus scan enabled
-- Improved error handling for large file upload 
-- Update of attachments present in entities which are not direct compositions to the root entity
-- Copying of attachments present in projection entities 
+- Allow update or creation of subscription in case a repository with the configured external ID already exists by skipping the onboarding step.
+- Improved error handling for cases where the mimetype of the uploaded attachment is blocked on a repository level.
+- Improved error handling for cases where repository offboarding fails during unsubscription.
+- Issue where repository offboarding was failing if the instance only contains a single repository.
+- Improved error handling for repository onboarding during subscription.
+- Blocked upload for scenarios where file size > 400mb and repository is virus scan enabled.
+- Improved error handling for large file upload. 
+- Update of attachments present in entities which are not direct compositions to the root entity.
+- Copying of attachments present in projection entities. 
 
 ## Version 1.5.0
 
 ### Added
-- Ability to copy attachments between entities
+- Ability to copy attachments between entities.
 
 ### Fixed
-- Added authorities to token to improve logging during deletion of attachment
-- Improved error handling for cases where the user lacks SDM roles
+- Added authorities to token to improve logging during deletion of attachment.
+- Improved error handling for cases where the user lacks SDM roles.
 
 ## Version 1.4.1
 
