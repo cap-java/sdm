@@ -65,17 +65,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionDefinition,
       String attachmentCompositionName)
       throws IOException {
-    String targetEntity = context.getTarget().getQualifiedName();
-    Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
-    if (!duplicateFilenames.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(
-                  SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                  String.join(", ", duplicateFilenames)));
-    } else {
+    Boolean isError = false;
+    isError = SDMUtils.validateFileName(context, data, attachmentCompositionName);
+    if (!isError) {
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);
       renameDocument(
@@ -339,7 +331,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context

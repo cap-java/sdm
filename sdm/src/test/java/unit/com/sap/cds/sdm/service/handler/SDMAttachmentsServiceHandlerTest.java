@@ -1183,7 +1183,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
       // Verify the exception message
       assertEquals(
-          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf"), "Upload"),
+          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf")),
           thrown.getMessage());
     }
   }

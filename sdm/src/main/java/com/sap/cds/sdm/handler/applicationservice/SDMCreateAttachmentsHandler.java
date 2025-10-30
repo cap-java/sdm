@@ -74,11 +74,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Map<String, String> propertyTitles = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
     String targetEntity = context.getTarget().getQualifiedName();
-    Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
-    if (!duplicateFilenames.isEmpty()) {
-      handleDuplicateFilenames(context, duplicateFilenames);
-    } else {
+    Boolean isError = false;
+    isError = SDMUtils.validateFileName(context, data, attachmentCompositionName);
+    if (!isError) {
       List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       List<String> filesNotFound = new ArrayList<>();
@@ -343,7 +341,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context

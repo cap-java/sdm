@@ -1,14 +1,16 @@
 package com.sap.cds.sdm.constants;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class SDMConstants {
   private SDMConstants() {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "09fee3cd-86c3-4ebf-b222-9456b9c692ef";
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
       "Unable to get the destination for sdm service binding";
@@ -140,25 +142,34 @@ public class SDMConstants {
       "Failed to parse repository response";
   public static final String ERROR_IN_SETTING_TIMEOUT_MESSAGE = "Error in setting timeout";
   public static final String FAILED_TO_CREATE_FOLDER = "Failed to create folder";
+  public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
+      "The object name cannot be empty or consist entirely of space characters. Enter a value.";
 
-  public static String nameConstraintMessage(
-      List<String> fileNameWithRestrictedCharacters, String operation) {
-    // Create the base message
-    String prefixMessage =
-        "%s unsuccessful. The following filename(s) contain unsupported characters (/, \\). \n\n";
-
-    // Create the formatted prefix message
-    String formattedPrefixMessage = String.format(prefixMessage, operation);
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
-
-    // Append each unsupported file name to the StringBuilder
-    for (String file : fileNameWithRestrictedCharacters) {
-      bulletPoints.append(String.format("\t• %s%n", file));
+  // Helper Methods to create error/warning messages
+  public static String buildErrorMessage(
+      Collection<String> filenames, StringBuilder prefixTemplate, String closingRemark) {
+    for (String file : filenames) {
+      prefixTemplate.append(String.format("\t• %s%n", file));
     }
-    bulletPoints.append("\nRename the files and try again.");
-    return bulletPoints.toString();
+    if (closingRemark != null && !closingRemark.isEmpty())
+      prefixTemplate.append("\n ").append(closingRemark);
+    return prefixTemplate.toString();
+  }
+
+  // Restricted characters: / and \
+  public static String nameConstraintMessage(List<String> invalidFileNames) {
+    StringBuilder prefix = new StringBuilder();
+    prefix.append(
+        "The following name(s) contain unsupported characters (‘/’ or ‘\\’). Rename and try again:\n\n");
+    return buildErrorMessage(invalidFileNames, prefix, null);
+  }
+
+  // Duplicate file names error message
+  public static String duplicateFilenameFormat(Set<String> duplicateFileNames) {
+    StringBuilder prefix = new StringBuilder();
+    prefix.append("Objects with the following name(s) already exist:\n\n");
+    String closingRemark = "Rename the objects and try again";
+    return buildErrorMessage(duplicateFileNames, prefix, closingRemark);
   }
 
   public static String linkNameConstraintMessage(

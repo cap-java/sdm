@@ -254,7 +254,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException {
     if (SDMUtils.isRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     String fileid = (String) attachmentIds.get("ID");
     if (duplicateCheck(filename, fileid, result)) {
