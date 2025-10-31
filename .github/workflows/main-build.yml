@@ -6,7 +6,7 @@ env:
 
 on:
   push:
-    branches: [ "develop", "jenkins" ]
+    branches: [ "develop" ]
   workflow_dispatch:
 
 jobs:
@@ -58,8 +58,7 @@ jobs:
         shell: bash
 
       - name: Check and Update Version
-        #if: github.ref == 'refs/heads/develop'
-        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/jenkins' }}
+        if: github.ref == 'refs/heads/develop'
         id: check-and-update-version
         run: |
           current_version=${{ env.REVISION }}
