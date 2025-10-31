@@ -348,22 +348,6 @@
         </profile>
     </profiles>    
     <distributionManagement>
-<!--         <snapshotRepository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </snapshotRepository>
-        <repository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </repository> -->
-             <!-- GitHub Packages Repositories -->
-<!--         <repository>
-            <id>github-release</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/cap-java/sdm</url>
-        </repository> -->
         <snapshotRepository>
             <id>github-snapshot</id>
             <name>GitHub Packages Snapshots</name>
