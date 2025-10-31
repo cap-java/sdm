@@ -9,7 +9,6 @@ on:
   push:
     branches: [ 'develop', 'internal-repo', 'jenkins' ]
   workflow_dispatch:
-
 jobs:
   build-and-deploy-artifactory:
     runs-on: ubuntu-latest
