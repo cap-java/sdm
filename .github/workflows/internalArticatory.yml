@@ -7,7 +7,7 @@ env:
 
 on:
   push:
-    branches: [ 'develop' ]
+    branches: [ 'develop', 'test-artifactory-workflow']
   workflow_dispatch:
 jobs:
   build-and-deploy-artifactory:
@@ -45,7 +45,7 @@ jobs:
           echo "updated_version=$current_version" >> $GITHUB_OUTPUT
       - name: Bump version if needed
         id: bump-version
-        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/jenkins' }}
+        if: ${{ github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/test-artifactory-workflow' }}
         run: |
           current_version="${{ steps.read-revision.outputs.revision }}"
           if [[ $current_version != *-SNAPSHOT ]]; then
