@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.constants;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,7 +26,6 @@ public class SDMConstants {
       "The following files could not be renamed as they already exist:\n%s\n";
   public static final String COULD_NOT_UPDATE_THE_ATTACHMENT = "Could not update the attachment";
   public static final String ATTACHMENT_NOT_FOUND = "Attachment not found";
-  public static final String DUPLICATE_FILES_ERROR = "%s already exists.";
   public static final String GENERIC_ERROR = "Could not %s the document.";
   public static final String VERSIONED_REPO_ERROR =
       "Upload not supported for versioned repositories.";
@@ -142,8 +142,12 @@ public class SDMConstants {
       "Failed to parse repository response";
   public static final String ERROR_IN_SETTING_TIMEOUT_MESSAGE = "Error in setting timeout";
   public static final String FAILED_TO_CREATE_FOLDER = "Failed to create folder";
-  public static final String FILENAME_WHITESPACE_WARNING_MESSAGE =
+  public static final String FILENAME_WHITESPACE_ERROR_MESSAGE =
       "The object name cannot be empty or consist entirely of space characters. Enter a value.";
+  public static final String SINGLE_RESTRICTED_CHARACTER_IN_FILE =
+      "\"%s\" contains unsupported characters (‘/’ or ‘\\’). Rename and try again.";
+  public static final String SINGLE_DUPLICATE_FILENAME =
+      "An object named \"%s\" already exists. Rename the object and try again.";
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(
@@ -158,16 +162,24 @@ public class SDMConstants {
 
   // Restricted characters: / and \
   public static String nameConstraintMessage(List<String> invalidFileNames) {
+    // if only 1 restricted character is there in file, so different error will throw
+    if (invalidFileNames.size() == 1) {
+      return String.format(SINGLE_RESTRICTED_CHARACTER_IN_FILE, invalidFileNames.iterator().next());
+    }
     StringBuilder prefix = new StringBuilder();
     prefix.append(
-        "The following name(s) contain unsupported characters (‘/’ or ‘\\’). Rename and try again:\n\n");
+        "The following names contain unsupported characters (‘/’ or ‘\\’). Rename and try again:\n\n");
     return buildErrorMessage(invalidFileNames, prefix, null);
   }
 
   // Duplicate file names error message
   public static String duplicateFilenameFormat(Set<String> duplicateFileNames) {
+    //if only 1 duplicate file, so different error will throw
+    if (duplicateFileNames.size() == 1) {
+      return String.format(SINGLE_DUPLICATE_FILENAME, duplicateFileNames.iterator().next());
+    }
     StringBuilder prefix = new StringBuilder();
-    prefix.append("Objects with the following name(s) already exist:\n\n");
+    prefix.append("Objects with the following names already exist:\n\n");
     String closingRemark = "Rename the objects and try again";
     return buildErrorMessage(duplicateFileNames, prefix, closingRemark);
   }
@@ -264,7 +276,9 @@ public class SDMConstants {
   }
 
   public static String getDuplicateFilesError(String filename) {
-    return String.format(DUPLICATE_FILES_ERROR, filename);
+    Set<String> filenames = new HashSet<>();
+    filenames.add(filename);
+    return duplicateFilenameFormat(filenames);
   }
 
   public static String getGenericError(String event) {

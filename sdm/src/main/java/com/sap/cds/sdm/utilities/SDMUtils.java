@@ -46,7 +46,7 @@ public class SDMUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_WARNING_MESSAGE);
+      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
@@ -93,10 +93,12 @@ public class SDMUtils {
         while (iterator.hasNext()) {
           Map<String, Object> attachment = iterator.next();
           String filenameInRequest = (String) attachment.get("fileName");
-          String repositoryInRequest = (String) attachment.get("repositoryId");
-          String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
-          if (!uniqueFilenames.add(fileRepositorySpecific)) {
-            duplicateFilenames.add(filenameInRequest);
+          if (filenameInRequest != null && !filenameInRequest.isBlank()) {
+            String repositoryInRequest = (String) attachment.get("repositoryId");
+            String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
+            if (!uniqueFilenames.add(fileRepositorySpecific)) {
+              duplicateFilenames.add(filenameInRequest);
+            }
           }
         }
       }

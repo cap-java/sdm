@@ -252,6 +252,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void validateFileName(String filename, Result result, Map<String, Object> attachmentIds)
       throws ServiceException {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+    }
     if (SDMUtils.isRestrictedCharactersInName(filename)) {
       throw new ServiceException(
           SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
