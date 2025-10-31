@@ -3,7 +3,7 @@ name: Internal Artifactory snapshot deploy
 env:
   JAVA_VERSION: '17'
   MAVEN_VERSION: '3.6.3'
-  ARTIFACTORY_URL: 'https://common.repositories.cloud.sap/artifactory/cap-sdm-java'
+  ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
 
 on:
   push:
