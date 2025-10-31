@@ -427,8 +427,7 @@ public class SDMServiceGenericHandlerTest {
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
-        SDMConstants.linkNameConstraintMessage(Collections.singletonList("test/URL"), "created"),
-        ex.getMessage());
+        SDMConstants.nameConstraintMessage(Collections.singletonList("test/URL")), ex.getMessage());
   }
 
   @Test

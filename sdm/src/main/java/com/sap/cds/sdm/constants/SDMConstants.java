@@ -11,7 +11,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = "09fee3cd-86c3-4ebf-b222-9456b9c692ef";
+  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
       "Unable to get the destination for sdm service binding";
@@ -174,7 +174,7 @@ public class SDMConstants {
 
   // Duplicate file names error message
   public static String duplicateFilenameFormat(Set<String> duplicateFileNames) {
-    //if only 1 duplicate file, so different error will throw
+    // if only 1 duplicate file, so different error will throw
     if (duplicateFileNames.size() == 1) {
       return String.format(SINGLE_DUPLICATE_FILENAME, duplicateFileNames.iterator().next());
     }
@@ -182,26 +182,6 @@ public class SDMConstants {
     prefix.append("Objects with the following names already exist:\n\n");
     String closingRemark = "Rename the objects and try again";
     return buildErrorMessage(duplicateFileNames, prefix, closingRemark);
-  }
-
-  public static String linkNameConstraintMessage(
-      List<String> fileNameWithRestrictedCharacters, String operation) {
-    // Create the base message
-    String prefixMessage =
-        "Link could not be %s. The following name(s) contain unsupported characters (/, \\). \n\n";
-
-    // Create the formatted prefix message
-    String formattedPrefixMessage = String.format(prefixMessage, operation);
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
-
-    // Append each unsupported file name to the StringBuilder
-    for (String file : fileNameWithRestrictedCharacters) {
-      bulletPoints.append(String.format("\t• %s%n", file));
-    }
-    bulletPoints.append("\nRename the link and try again.");
-    return bulletPoints.toString();
   }
 
   public static String fileNotFound(List<String> fileNameNotFound) {

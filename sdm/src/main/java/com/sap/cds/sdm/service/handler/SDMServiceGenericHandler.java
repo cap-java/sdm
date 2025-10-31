@@ -287,7 +287,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
     if (SDMUtils.isRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
       throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
