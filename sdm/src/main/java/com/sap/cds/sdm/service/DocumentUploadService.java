@@ -83,7 +83,7 @@ public class DocumentUploadService {
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException("Error in setting timeout", e);
+      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT, e);
     }
   }
 
@@ -128,6 +128,7 @@ public class DocumentUploadService {
 
     try {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
+      cmisDocument.setMimeType(finalResponse.get("mimeType"));
 
     } catch (Exception e) {
       logger.error("Error in appending content: {}", e.getMessage());
@@ -308,7 +309,10 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
-        mimeType = succinctProperties.getString("cmis:contentStreamMimeType");
+        mimeType =
+            succinctProperties.has("cmis:contentStreamMimeType")
+                ? succinctProperties.getString("cmis:contentStreamMimeType")
+                : null;
       } else {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
