@@ -166,7 +166,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         
-        // --- PROMPT FIX: Instructing for point-by-point, structured feedback with code ---
+        // --- PROMPT: Instructing for point-by-point, structured feedback with code ---
         const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
 
         For each issue found, format your finding with a clear bullet point and, if the fix is simple, provide the recommended code change directly beneath it in a code block.
@@ -184,7 +184,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         
         Provide only the structured list of findings and nothing else.
         `;
-        // --- END PROMPT FIX ---
+        // --- END PROMPT ---
 
         try {
             const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
@@ -196,7 +196,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         }
     }
 
-    // --- PROMPT FIX: Instructing for highly actionable synthesis with code snippets ---
+    // --- PROMPT: Instructing for highly actionable synthesis with code snippets ---
     const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and highly actionable final review. The partial reviews already contain point-by-point findings and recommended code changes.
 
     Your review must strictly follow this exact markdown format and content. Prioritize clear, point-by-point feedback. Ensure the Recommendations section includes the actual code snippets gathered from the partial reviews, not just descriptions.
@@ -220,7 +220,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     Partial Reviews to Synthesize:
     ${chunkReviews.join('\n\n---\n\n')}
     `;
-    // --- END PROMPT FIX ---
+    // --- END PROMPT ---
     
     let reviewBody = "Review generation failed.";
     try {
@@ -364,7 +364,28 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     const repoScan = scanRepositoryForIssue(issueTitle, issueBody, process.cwd());
     console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
     const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
-    const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a prioritized remediation checklist. Output strictly in markdown with sections: Summary, Potential Root Causes, Recommended Remediation Steps (each step with rationale), Risk Assessment.\n\nIssue Title: ${issueTitle}\nIssue Body: ${issueBody}\nRelevant Code Contexts (truncated):\n${truncate(joinedContexts, 12000)}\n`;
+    
+    // --- CONCISE PROMPT FIX: Only generate Summary and Top 3 Steps ---
+    const recPrompt = `You are a helpful and expert triage AI. Analyze the issue and the available code context. Generate a concise, prioritized response that only contains the Summary and the Top 3 Recommended Remediation Steps.
+
+    The output must strictly follow this exact markdown structure and contain no other commentary, preamble, or sections (e.g., no 'Potential Root Causes' or 'Risk Assessment'). The steps should be action-oriented and highly relevant to solving the issue.
+
+    ## 🤖 Concise Triage Analysis
+    **Issue Summary**
+    [A single-paragraph summary of the core problem.]
+
+    **Top 3 Remediation Steps** 🥇
+    * **Step 1:** [The single most important and actionable step.]
+    * **Step 2:** [The second most important and actionable step.]
+    * **Step 3:** [The third most important, actionable step or investigation.]
+    
+    Issue Title: ${issueTitle}
+    Issue Body: ${issueBody}
+    Relevant Code Contexts (truncated):
+    ${truncate(joinedContexts, 12000)}
+    `;
+    // --- END CONCISE PROMPT FIX ---
+    
     let recommendations = "Failed to generate recommendations.";
     try {
         const recResult = await fetchWithBackoff(() => flashModel.generateContent(recPrompt));
@@ -374,24 +395,10 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     }
     await ensureLabel(octokit, owner, repo, "awaiting-confirmation", { description: "Pending maintainer confirmation for remediation", color: "5319e7" });
     await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["awaiting-confirmation"] });
-    const confirmComment = `## 🧪 Initial Analysis & Proposed Remediation (Needs Confirmation)\nNo similar past issue was found by semantic search.\n\n${recommendations}\n\n**Next Step:** Reply with \`confirm remediation\` to approve moving forward (e.g., drafting a PR or creating task list). Reply with \`refine analysis\` for a deeper pass, or \`discard recommendations\` to remove them.`;
+    const confirmComment = `${recommendations}\n\n**Next Step:** Reply with \`confirm remediation\` to approve moving forward (e.g., drafting a PR or creating task list). Reply with \`refine analysis\` for a deeper pass, or \`discard recommendations\` to remove them.`;
     await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: confirmComment });
     console.log("Posted remediation proposal awaiting confirmation.");
 }
-
-/**
- * Handle a newly opened issue: semantic duplicate detection then remediation proposal.
- */
-// (handleNewIssue already defined below)
-
-/** Lightweight lexical similarity pre-filter */
-// lexicalSimilarityCandidate definition already present below
-/** Semantic duplicate detection with embeddings + LLM confirmation */
-// findSimilarIssueSemantic definition already present below
-/** Obtain embedding safely with backoff */
-// getEmbeddingSafe definition already present below
-/** Cosine similarity helper */
-// cosineSimilarity definition already present below
 
 // ----------------------------------------------------------------------------------------------
 // Duplicate Issue Detection & Repository Scan Helpers
@@ -594,7 +601,6 @@ async function run() {
                         await octokit.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['remediation-approved'] });
                         // Remove awaiting-confirmation label
                         const remaining = issueLabels.filter(l => l !== 'awaiting-confirmation');
-                        // (GitHub API lacks direct replace; we just remove label)
                         try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
                         await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '✅ Remediation confirmed. Automated follow-up actions may proceed (none implemented yet).'});
                     } else {
@@ -618,7 +624,7 @@ async function run() {
             }
             
         } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
-            // New Issue Handling (assuming this is still desired)
+            // New Issue Handling 
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
