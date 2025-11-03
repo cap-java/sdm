@@ -55,7 +55,6 @@ async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
     if (!diff || diff.length === 0) {
         return [];
     }
-    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const lines = diff.split('\n');
     const chunks = [];
@@ -151,7 +150,6 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
 }
 
 async function performPRReview(octokit, diffContent, pull_number, genAI) {
-    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const chunks = await splitDiffIntoTokens(genAI, diffContent);
     const chunkReviews = [];
@@ -171,11 +169,11 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 
         For each issue found, format your finding with a clear bullet point and, if the fix is simple, provide the recommended code change directly beneath it in a code block.
 
+        Issue Types must include: BEST_PRACTICE, POTENTIAL_BUG, REFACTOR, DEPENDENCY_ISSUE.
+
         Format your findings strictly as:
         - [ISSUE TYPE]: [Concise description of the issue.]
         [Optional Code Snippet with FIX]
-
-        Issue Types must include: BEST_PRACTICE, POTENTIAL_BUG, REFACTOR, DEPENDENCY_ISSUE.
 
         Git Diff Chunk:
         \`\`\`diff
@@ -282,7 +280,6 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 }
 
 async function handleCommentResponse(octokit, commentBody, number, genAI) {
-    // FIX: Using gemini-2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
     let prompt;
@@ -355,7 +352,11 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
         await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["duplicate"] });
         const status = similar.state === "closed" ? "closed" : "in progress";
         const resolution = extractResolution(similar.body);
-        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nA related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;
+        
+        // --- UPDATED COMMENT TO REFLECT CONTENT CHECK ---
+        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nBased on **issue context and body**, a related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;
+        // --- END UPDATED COMMENT ---
+
         await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
         return;
     }
@@ -365,26 +366,47 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
     const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
     
-    // --- CONCISE PROMPT FIX: Only generate Summary and Top 3 Steps ---
-    const recPrompt = `You are a helpful and expert triage AI. Analyze the issue and the available code context. Generate a concise, prioritized response that only contains the Summary and the Top 3 Recommended Remediation Steps.
+    // --- DETAILED PROMPT FIX (from previous request) ---
+    const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a detailed, prioritized remediation checklist. Your output must strictly follow the required markdown structure below.
 
-    The output must strictly follow this exact markdown structure and contain no other commentary, preamble, or sections (e.g., no 'Potential Root Causes' or 'Risk Assessment'). The steps should be action-oriented and highly relevant to solving the issue.
+    Crucially, for the most likely and actionable remediation steps, you **must include the exact code snippet** showing the required change in a markdown code block. Do not just describe the fix—show the code.
 
-    ## 🤖 Concise Triage Analysis
-    **Issue Summary**
-    [A single-paragraph summary of the core problem.]
-
-    **Top 3 Remediation Steps** 🥇
-    * **Step 1:** [The single most important and actionable step.]
-    * **Step 2:** [The second most important and actionable step.]
-    * **Step 3:** [The third most important, actionable step or investigation.]
+    Format your output strictly as:
     
+    ######
+    ## 🧪 Initial Analysis & Proposed Remediation
+    
+    **Summary & Root Cause Hypothesis**
+    [A detailed summary of the issue, including an hypothesis on the root cause.]
+
+    ---
+    
+    ### 🥇 Prioritized Remediation Steps (with Code Fixes)
+    
+    1. **Verify Annotation Placement (High Priority):**
+        * **Rationale:** [Explain why this is the most likely fix, e.g., technical fields require a specific placement.]
+        * **Action & Required Change:** [State the action clearly, followed by the specific code snippet showing the fix in CDS or a relevant configuration file (e.g., manifest.json). If no change is required, state the expected state.]
+    
+    2. **Inspect OData $metadata Output (High Priority):**
+        * **Rationale:** [Explain what inspecting the metadata will confirm (backend generation vs. UI rendering issue).]
+        * **Action & Command:** [Provide the exact command/URL to check, e.g., \`https://<service>/$metadata\`]
+    
+    3. **Test UI-Level Override (Medium Priority):**
+        * **Rationale:** [Explain why a UI override might be necessary if the backend annotation is ignored.]
+        * **Action & Required Change:** [Provide the action and the specific code snippet for the change, likely in \`manifest.json\` or a similar UI config.]
+    
+    ---
+    
+    **Risk Assessment**
+    [A brief assessment of the risk/impact of applying the proposed fixes.]
+    ######
+
     Issue Title: ${issueTitle}
     Issue Body: ${issueBody}
     Relevant Code Contexts (truncated):
     ${truncate(joinedContexts, 12000)}
     `;
-    // --- END CONCISE PROMPT FIX ---
+    // --- END DETAILED PROMPT FIX ---
     
     let recommendations = "Failed to generate recommendations.";
     try {
@@ -455,16 +477,20 @@ async function findSimilarIssueSemantic(title, body, pastIssues, genAI) {
         for (const candidate of scored) {
             let emb; try { emb = await getEmbeddingSafe(embeddingModel, `${candidate.issue.title}\n${candidate.issue.body}`); } catch { continue; }
             const cosine = cosineSimilarity(newEmbedding, emb);
-            const combined = (cosine * 0.85) + (candidate.score * 0.15);
+            // Semantic match is weighted much higher here for better accuracy based on content
+            const combined = (cosine * 0.85) + (candidate.score * 0.15); 
             if (!best || combined > best.score) best = { ...candidate.issue, score: combined };
         }
-        if (best && best.score >= 0.78) return best; // threshold for semantic duplicate
+        // Higher threshold for semantic duplicate since it's based on content vectors
+        if (best && best.score >= 0.78) return best; 
     }
+    
+    // Fallback: If no embedding model or no strong semantic match, use LLM for refinement on best lexical match
     const lexicalBest = scored[0];
     if (lexicalBest && lexicalBest.score >= 0.5) {
         try {
             const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const similarityPrompt = `Determine if Issue A duplicates Issue B. Respond only with YES or NO.\nIssue A Title: ${title}\nIssue A Body: ${truncate(body, 1000)}\nIssue B Title: ${lexicalBest.issue.title}\nIssue B Body: ${truncate(lexicalBest.issue.body, 1000)}\n`;
+            const similarityPrompt = `Determine if Issue A duplicates Issue B based on the **full context (title and body)**. Respond only with YES or NO.\nIssue A Title: ${title}\nIssue A Body: ${truncate(body, 1000)}\nIssue B Title: ${lexicalBest.issue.title}\nIssue B Body: ${truncate(lexicalBest.issue.body, 1000)}\n`;
             const res = await fetchWithBackoff(() => flashModel.generateContent(similarityPrompt));
             if (/YES/.test(res.response.text().trim().toUpperCase())) return { ...lexicalBest.issue, score: lexicalBest.score };
         } catch (e) { console.warn("LLM similarity refinement failed", e.message); }
@@ -496,7 +522,7 @@ function cosineSimilarity(a,b){
 function scanRepositoryForIssue(issueTitle, issueBody, rootDir) {
     const keywords = [...new Set([...tokenize(issueTitle), ...tokenize(issueBody)]).values()].filter(k => k.length > 3);
     const matches = [];
-    const exts = new Set([".js", ".ts", ".java", ".md", ".yml", ".yaml", ".xml", ".json"]);
+    const exts = new Set([".js", ".ts", ".java", ".md", ".yml", ".yaml", ".xml", ".json", ".cds", ".mta"]);
     function walk(dir) {
         let entries;
         try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
