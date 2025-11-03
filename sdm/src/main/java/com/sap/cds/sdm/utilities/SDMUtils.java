@@ -40,8 +40,9 @@ public class SDMUtils {
     String targetEntity = context.getTarget().getQualifiedName();
 
     // Validation for file names
-    Set<String> whitespaceFilenames = isFileNameContainsWhitespace(data);
-    List<String> restrictedFileNames = isFileNameContainsRestrictedCharaters(data);
+    Set<String> whitespaceFilenames = isFileNameContainsWhitespace(data, composition, targetEntity);
+    List<String> restrictedFileNames =
+        isFileNameContainsRestrictedCharaters(data, composition, targetEntity);
     Set<String> duplicateFilenames = isFileNameDuplicateInDrafts(data, composition, targetEntity);
 
     // Collecting all the errors
@@ -63,10 +64,12 @@ public class SDMUtils {
     return isError;
   }
 
-  public static Set<String> isFileNameContainsWhitespace(List<CdsData> data) {
+  public static Set<String> isFileNameContainsWhitespace(
+      List<CdsData> data, String composition, String targetEntity) {
     Set<String> filenamesWithWhitespace = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+      List<Map<String, Object>> attachments =
+          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {
@@ -106,10 +109,12 @@ public class SDMUtils {
     return duplicateFilenames;
   }
 
-  public static List<String> isFileNameContainsRestrictedCharaters(List<CdsData> data) {
+  public static List<String> isFileNameContainsRestrictedCharaters(
+      List<CdsData> data, String composition, String targetEntity) {
     List<String> restrictedFilenames = new ArrayList();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get("attachments");
+      List<Map<String, Object>> attachments =
+          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {

@@ -102,7 +102,8 @@ public class SDMUtilsTest {
     when(mockCdsData.get("attachments")).thenReturn(null); // Correctly mock get method
     data.add(mockCdsData);
 
-    List<String> restrictedFilenames = SDMUtils.isFileNameContainsRestrictedCharaters(data);
+    List<String> restrictedFilenames =
+        SDMUtils.isFileNameContainsRestrictedCharaters(data, "attachmentCompositionName", "entity");
 
     assertEquals(0, restrictedFilenames.size());
   }
@@ -127,7 +128,8 @@ public class SDMUtilsTest {
     when(mockCdsData.get("attachments")).thenReturn(attachments); // Correctly mock get method
     data.add(mockCdsData);
 
-    List<String> restrictedFilenames = SDMUtils.isFileNameContainsRestrictedCharaters(data);
+    List<String> restrictedFilenames =
+        SDMUtils.isFileNameContainsRestrictedCharaters(data, "attachmentCompositionName", "entity");
 
     assertEquals(2, restrictedFilenames.size());
     assertTrue(restrictedFilenames.contains("file2/abc.txt"));

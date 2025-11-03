@@ -85,6 +85,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         List<Map<String, Object>> attachments =
             AttachmentsHandlerUtils.fetchAttachments(
                 targetEntity, entity, attachmentCompositionName);
+        if (attachments == null || attachments.isEmpty()) {
+          logger.info(
+              "No attachments found for composition [{}] in entity [{}]. Skipping processing.",
+              attachmentCompositionName,
+              targetEntity);
+          continue;
+        }
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
         propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
