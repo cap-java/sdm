@@ -196,7 +196,7 @@ public class ApiMT implements ApiInterface {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
       }
-      return "Entity Deleted";
+      return "Entity Draft Deleted";
     } catch (IOException e) {
       System.out.println("Could not delete entity : " + e);
     }
@@ -504,12 +504,7 @@ public class ApiMT implements ApiInterface {
             .build();
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
-      if (renameResponse.code() != 200) {
-        System.out.println(
-            "Rename Attachment failed in the "
-                + facetName
-                + " section. Error : "
-                + renameResponse.body().string());
+      if (!renameResponse.isSuccessful()) {
         throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
@@ -640,6 +635,132 @@ public class ApiMT implements ApiInterface {
     }
   }
 
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + "AdminService.createLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+        "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not create link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link created successfully";
+    }
+  }
+
+  public String editLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String linkUrl)
+      throws IOException {
+
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/"
+            + "AdminService.editLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{" + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not edit link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link edited successfully";
+    } catch (IOException e) {
+      System.out.println("Error while editing link: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=true)"
+            + "/"
+            + "AdminService.openAttachment";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not open attachment: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachment opened successfully";
+    } catch (IOException e) {
+      System.out.println("Error while opening attachment: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException {
@@ -679,6 +800,45 @@ public class ApiMT implements ApiInterface {
     }
   }
 
+  public Map<String, Object> fetchMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "_"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)";
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println(
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
+      } else {
+        // Parse the JSON response to extract metadata
+        return objectMapper.readValue(
+            response.body().string(),
+            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+      }
+    }
+  }
+
   public List<Map<String, Object>> fetchEntityMetadata(
       String appUrl, String entityName, String facetName, String entityID) throws IOException {
 
@@ -691,6 +851,48 @@ public class ApiMT implements ApiInterface {
             + "(ID="
             + entityID
             + ",IsActiveEntity=true)/"
+            + facetName;
+
+    // Make a GET request to fetch the attachment metadata
+    Request request =
+        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+
+    try (Response response = httpClient.newCall(request).execute()) {
+      if (response.code() != 200) {
+        System.out.println("Response code: " + response.code());
+        System.out.println(
+            "Fetch metadata failed for "
+                + facetName
+                + " Section. Error: "
+                + response.body().string());
+        throw new IOException("Could not fetch " + facetName + " metadata");
+      } else {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> entityData =
+            objectMapper.readValue(
+                response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        Object value = entityData.get("value");
+        List<Map<String, Object>> result =
+            objectMapper.convertValue(
+                value,
+                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+        return result;
+      }
+    }
+  }
+
+  public List<Map<String, Object>> fetchEntityMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+
+    // Construct the URL for fetching attachment metadata
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
             + facetName;
 
     // Make a GET request to fetch the attachment metadata

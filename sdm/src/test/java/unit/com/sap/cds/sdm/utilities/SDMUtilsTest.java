@@ -71,7 +71,6 @@ public class SDMUtilsTest {
   @Test
   public void testIsFileNameDuplicateInDrafts() {
     List<CdsData> data = new ArrayList<>();
-    CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment1 = new HashMap<>();
@@ -82,11 +81,15 @@ public class SDMUtilsTest {
     attachment2.put("repositoryId", "repo1");
     attachments.add(attachment1);
     attachments.add(attachment2);
-    entity.put("attachments", attachments);
-    when(mockCdsData.get("attachments")).thenReturn(attachments); // Correctly mock get method
-    data.add(mockCdsData);
 
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, "attachments");
+    // Create the nested structure that fetchAttachments expects
+    Map<String, Object> entityData = new HashMap<>();
+    entityData.put("attachmentCompositionName", attachments);
+    entity.put("entity", entityData);
+    data.add(CdsData.create(entity));
+
+    Set<String> duplicateFilenames =
+        SDMUtils.isFileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }
@@ -640,7 +643,6 @@ public class SDMUtilsTest {
   void testElementWithAnnotation() {
     CdsEntity entity = mock(CdsEntity.class);
     CdsElement element = mock(CdsElement.class);
-    @SuppressWarnings("unchecked")
     CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
     when(annotation.getValue()).thenReturn("name");
 

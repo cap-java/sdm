@@ -70,8 +70,37 @@ public interface ApiInterface {
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
 
+  public Map<String, Object> fetchMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
+
   public List<Map<String, Object>> fetchEntityMetadata(
       String appUrl, String entityName, String facetName, String entityID) throws IOException;
+
+  public List<Map<String, Object>> fetchEntityMetadataDraft(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException;
+
+  public String createLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String linkName,
+      String linkUrl)
+      throws IOException;
+
+  public String editLink(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String entityID,
+      String ID,
+      String linkUrl)
+      throws IOException;
+
+  public String openAttachment(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
 
   String deleteEntityDraft(String appUrl, String entityName, String entityID);
 }

@@ -6,6 +6,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.AttachmentInfo;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
@@ -32,11 +33,13 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static Set<String> isFileNameDuplicateInDrafts(List<CdsData> data, String composition) {
+  public static Set<String> isFileNameDuplicateInDrafts(
+      List<CdsData> data, String composition, String targetEntity) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments = (List<Map<String, Object>>) entity.get(composition);
+      List<Map<String, Object>> attachments =
+          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {

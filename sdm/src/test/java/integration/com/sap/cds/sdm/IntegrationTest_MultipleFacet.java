@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import okhttp3.*;
 import okio.ByteString;
+import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -52,8 +53,13 @@ class IntegrationTest_MultipleFacet {
   private static String copyAttachmentSourceEntity;
   private static String copyAttachmentTargetEntity;
   private static String copyAttachmentTargetEntityEmpty;
+  private static String copyLinkSourceEntity;
+  private static String copyLinkTargetEntity;
+  private static String createLinkEntity;
+  private static String editLinkEntity;
   private static List<String> sourceObjectIds = new ArrayList<>();
   private static List<String> targetAttachmentIds = new ArrayList<>();
+  private static List<String> successfullyRenamedAttachments = new ArrayList<>();
 
   @BeforeAll
   static void setup() throws IOException {
@@ -598,8 +604,8 @@ class IntegrationTest_MultipleFacet {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
                 + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 footnote1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
         if (response.equals(expected)) {
           testStatus = true;
@@ -667,7 +673,7 @@ class IntegrationTest_MultipleFacet {
                     + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},"
                     + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}"
                     + "]}}",
-                name[0], name[1], name[2]);
+                name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
             // Attempt to rename again with a different name
@@ -751,7 +757,7 @@ class IntegrationTest_MultipleFacet {
                   + //
                   "\\n"
                   + //
-                  "\\t\\u2022 sample123\\n"
+                  "\\t\\u2022 reference123\\n"
                   + //
                   "\\n"
                   + //
@@ -759,7 +765,7 @@ class IntegrationTest_MultipleFacet {
                   + //
                   "\\n"
                   + //
-                  "\\t\\u2022 reference123\\n"
+                  "\\t\\u2022 sample123\\n"
                   + //
                   "\\n"
                   + //
@@ -845,8 +851,55 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(17)
+  void testUploadBlockedMimeType() throws IOException {
+    System.out.println("Test (17) : Upload blocked mimeType .rtf");
+    Boolean testStatus = false;
+
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (!"Could not create entity".equals(response)) {
+      entityID2 = response;
+
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(Objects.requireNonNull(classLoader.getResource("sample.rtf")).getFile());
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", entityID2);
+      postData.put("mimeType", "application/rtf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      boolean allBlocked = true;
+      for (int i = 0; i < facet.length; i++) {
+        List<String> createResponse =
+            api.createAttachment(appUrl, entityName, facet[i], entityID2, srvpath, postData, file);
+
+        String actualResponse = createResponse.get(0);
+        String expectedJson =
+            "{\"error\":{\"code\":\"500\",\"message\":\"This file type is not allowed in this repository. Contact your administrator for assistance.\"}}";
+
+        if (!expectedJson.equals(actualResponse)) {
+          allBlocked = false;
+          System.out.println(
+              "Facet " + facet[i] + " incorrectly accepted blocked mimeType: " + actualResponse);
+        }
+      }
+
+      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID2);
+      if ("Saved".equals(response) && allBlocked) {
+        testStatus = true;
+      }
+    }
+
+    if (!testStatus) {
+      fail("Attachment got uploaded with blocked .rtf MIME type");
+    }
+  }
+
+  @Test
+  @Order(18)
   void testDeleteEntity() {
-    System.out.println("Test (17) : Delete entity");
+    System.out.println("Test (18) : Delete entity");
     Boolean testStatus = false;
     String response = api.deleteEntity(appUrl, entityName, entityID);
     String response2 = api.deleteEntity(appUrl, entityName, entityID2);
@@ -855,9 +908,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(18)
+  @Order(19)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_single() throws IOException {
-    System.out.println("Test (18) : Rename & Update secondary property before entity is saved");
+    System.out.println("Test (19) : Rename & Update secondary property before entity is saved");
     System.out.println("Creating entity");
 
     Boolean testStatus = false;
@@ -954,9 +1007,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(19)
+  @Order(20)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_single() {
-    System.out.println("Test (19): Rename & Update secondary property after entity is saved");
+    System.out.println("Test (20): Rename & Update secondary property after entity is saved");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
     System.out.println("Editing entity");
@@ -1022,10 +1075,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(20)
+  @Order(21)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_single() throws IOException {
     System.out.println(
-        "Test (20): Rename & Update invalid secondary property before entity is saved");
+        "Test (21): Rename & Update invalid secondary property before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1141,10 +1194,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(21)
+  @Order(22)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_single() throws IOException {
     System.out.println(
-        "Test (21): Rename & Update invalid secondary property after entity is saved");
+        "Test (22): Rename & Update invalid secondary property after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
 
@@ -1249,11 +1302,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(22)
+  @Order(23)
   void testUpdateValidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (22): Rename & Update valid secondary properties for multiple facets before entity is saved");
+        "Test (23): Rename & Update valid secondary properties for multiple facets before entity is saved");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -1422,10 +1475,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(23)
+  @Order(24)
   void testUpdateValidSecondaryProperty_afterEntityIsSaved_multipleAttachments() {
     System.out.println(
-        "Test (23): Rename & Update  valid secondary properties for multiple facets after entity is saved");
+        "Test (24): Rename & Update  valid secondary properties for multiple facets after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1562,11 +1615,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(24)
+  @Order(25)
   void testUpdateInvalidSecondaryProperty_beforeEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (24): Rename & Update invalid and valid secondary properties for multiple facets before entity is saved");
+        "Test (25): Rename & Update invalid and valid secondary properties for multiple facets before entity is saved");
     System.out.println("Creating entity");
 
     Boolean testStatus = false;
@@ -1792,11 +1845,11 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(25)
+  @Order(26)
   void testUpdateInvalidSecondaryProperty_afterEntityIsSaved_multipleAttachments()
       throws IOException {
     System.out.println(
-        "Test (25): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
+        "Test (26): Rename & Update invalid and valid secondary properties for multiple attachments after entity is saved");
     System.out.println("Editing entity");
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
@@ -1996,10 +2049,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(26)
+  @Order(27)
   void testNAttachments_NewEntity() throws IOException {
     System.out.println(
-        "Test (26): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
+        "Test (27): Creating new entity and checking only max 4 attachments are allowed to be uploaded");
     System.out.println("Creating entity");
     Boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2097,7 +2150,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID4);
         if (response.equals("Saved")) {
           String expectedJson =
-              "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(check);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -2113,9 +2166,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(27)
+  @Order(28)
   void testUploadNAttachments() throws IOException {
-    System.out.println("Test (27): Upload maximum 4 attachments in an exsisting entity");
+    System.out.println("Test (28): Upload maximum 4 attachments in an exsisting entity");
 
     ClassLoader classLoader = getClass().getClassLoader();
     File originalFile = new File(classLoader.getResource("sample.exe").getFile());
@@ -2145,7 +2198,7 @@ class IntegrationTest_MultipleFacet {
         System.out.println("Result message for attachment " + i + ": " + resultMessage);
 
         String expectedResponse =
-            "{\"error\":{\"code\":\"500\",\"message\":\"Only 4 attachments allowed.\"}}";
+            "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
         if (resultMessage.equals(expectedResponse)) {
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
@@ -2172,16 +2225,16 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(28)
+  @Order(29)
   void testDiscardDraftWithoutAttachments() {
-    System.out.println("Test (28) : Discard draft without adding attachments");
+    System.out.println("Test (29) : Discard draft without adding attachments");
     Boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
       entityID6 = response;
       response = api.deleteEntityDraft(appUrl, entityName, entityID6);
-      if (response.equals("Entity Deleted")) {
+      if (response.equals("Entity Draft Deleted")) {
         testStatus = true;
       }
     }
@@ -2191,9 +2244,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(29)
+  @Order(30)
   void testDiscardDraftWithAttachments() throws IOException {
-    System.out.println("Test (29): Discard draft with attachments, references, and footnotes");
+    System.out.println("Test (30): Discard draft with attachments, references, and footnotes");
     boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2218,7 +2271,7 @@ class IntegrationTest_MultipleFacet {
         }
       }
       response = api.deleteEntityDraft(appUrl, entityName, entityID6);
-      if ("Entity Deleted".equals(response)) {
+      if ("Entity Draft Deleted".equals(response)) {
         testStatus = true;
       }
     }
@@ -2228,9 +2281,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(30)
+  @Order(31)
   void testDraftUpdateUploadTwoDeleteOneAndCreate() throws IOException {
-    System.out.println("Test (30): Upload to all facets, delete one, and create entity");
+    System.out.println("Test (31): Upload to all facets, delete one, and create entity");
 
     boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2298,9 +2351,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(31)
+  @Order(32)
   void testUpdateEntityDraft() throws IOException {
-    System.out.println("Test (31): Update entity draft with new facet content");
+    System.out.println("Test (32): Update entity draft with new facet content");
     boolean testStatus = false;
 
     ClassLoader classLoader = getClass().getClassLoader();
@@ -2343,9 +2396,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(32)
+  @Order(33)
   void testUploadAttachmentWithoutSDMRole() throws IOException {
-    System.out.println("Test (32): Upload attachment across facets without SDM role");
+    System.out.println("Test (33): Upload attachment across facets without SDM role");
     boolean testStatus = true;
 
     String response = apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2383,9 +2436,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(33)
+  @Order(34)
   void testCopyAttachmentsSuccessNewEntity() throws IOException {
-    System.out.println("Test (33): Copy attachments from one entity to another new entity");
+    System.out.println("Test (34): Copy attachments from one entity to another new entity");
     List<List<String>> attachments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       attachments.add(new ArrayList<>());
@@ -2507,10 +2560,10 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(34)
+  @Order(35)
   void testCopyAttachmentsUnsuccessfulNewEntity() throws IOException {
     System.out.println(
-        "Test (34): Copy incorrect attachments from one entity to another new entity");
+        "Test (35): Copy incorrect attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     copyAttachmentTargetEntityEmpty =
@@ -2554,9 +2607,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(35)
+  @Order(36)
   void testCopyAttachmentsSuccessExistingEntity() throws IOException {
-    System.out.println("Test (35): Copy attachments from one entity to another existing entity");
+    System.out.println("Test (36): Copy attachments from one entity to another existing entity");
     List<List<String>> attachments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       attachments.add(new ArrayList<>());
@@ -2690,9 +2743,9 @@ class IntegrationTest_MultipleFacet {
   }
 
   @Test
-  @Order(36)
+  @Order(37)
   void testCopyAttachmentsUnsuccessfulExistingEntity() throws IOException {
-    System.out.println("Test (36): Copy attachments from one entity to another new entity");
+    System.out.println("Test (37): Copy attachments from one entity to another new entity");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     String editResponse2 =
@@ -2725,6 +2778,1262 @@ class IntegrationTest_MultipleFacet {
       }
     } else {
       fail("Could not edit entities");
+    }
+  }
+
+  @Test
+  @Order(38)
+  void testCreateLinkSuccess() throws IOException {
+    System.out.println("Test (38): Create link in entity");
+    List<String> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample";
+    String linkUrl = "https://www.example.com";
+    for (String facetName : facet) {
+      String createLinkResponse1 =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      String createLinkResponse2 =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName + "1", linkUrl);
+      if (!createLinkResponse1.equals("Link created successfully")
+          || !createLinkResponse2.equals("Link created successfully")) {
+        fail("Could not create links for facet : " + facetName + createLinkResponse1);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      String openAttachmentResponse;
+      for (String attachment : attachments) {
+        openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, createLinkEntity, attachment);
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
+          fail("Could not open created link in facet : " + facetName);
+        }
+      }
+    }
+  }
+
+  @Test
+  @Order(39)
+  void testCreateLinkDifferentEntity() throws IOException {
+    System.out.println("Test (39): Create link with same name in different entity");
+
+    String createLinkDifferentEntity =
+        api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkDifferentEntity.equals("Could not edit entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample";
+    String linkUrl = "https://example.com";
+    for (String facetName : facet) {
+      String createResponse =
+          api.createLink(
+              appUrl, entityName, facetName, createLinkDifferentEntity, linkName, linkUrl);
+      if (!createResponse.equals("Link created successfully")) {
+        fail("Could not create link in different entity with same name");
+      }
+    }
+
+    String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkDifferentEntity);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkDifferentEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(40)
+  void testCreateLinkFailure() throws IOException {
+    System.out.println("Test (40): Create link fails due to invalid URL and name");
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (editEntityResponse.equals("Could not edit entity")) {
+      fail("Could not edit entity");
+    }
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "example.com";
+      try {
+        String response =
+            api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+        fail("Create link did not throw an error for invalid url");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("400018", errorCode);
+        assertTrue(
+            errorMessage.equals("Enter a value that is within the expected pattern.")
+                || errorMessage.equals("Enter a value that matches the expected pattern."),
+            "Unexpected error message: " + errorMessage);
+      }
+      try {
+        api.createLink(
+            appUrl, entityName, facetName, createLinkEntity, linkName + "//", "https://" + linkUrl);
+        fail("Create link did not throw an error for invalid name");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        String expected =
+            "Link could not be created. The following name(s) contain unsupported characters (/, \\).\n\n"
+                + " • sample//\n\n"
+                + "Rename the link and try again.";
+        assertEquals("500", errorCode);
+        assertEquals(
+            expected.replaceAll("\\s+", " ").trim(), errorMessage.replaceAll("\\s+", " ").trim());
+      }
+      try {
+        api.createLink(appUrl, entityName, facetName, createLinkEntity, "", "");
+        fail("Create link did not throw an error for empty name and url");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        String expected = "Provide the missing value.";
+        assertEquals("409008", errorCode);
+        assertEquals(expected, errorMessage);
+      }
+      try {
+        api.createLink(
+            appUrl, entityName, facetName, createLinkEntity, linkName, "https://" + linkUrl);
+        fail("Create link did not throw an error for duplicate name");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        assertEquals("sample already exists.", errorMessage);
+      }
+      try {
+        for (int i = 2; i < 6; i++) {
+          api.createLink(
+              appUrl, entityName, facetName, createLinkEntity, linkName + i, "https://" + linkUrl);
+        }
+        System.out.println("Created 5 links in facet: " + facetName);
+        if (!facetName.equals("footnotes")) {
+          fail("More than 5 links were created in the same entity");
+        }
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        if (facetName.equals("references")) {
+          assertEquals("Maximum number of attachments reached in English", errorMessage);
+        } else if (facetName.equals("attachments")) {
+          assertEquals("Maximum number of attachments reached in English", errorMessage);
+        }
+      }
+    }
+
+    String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(41)
+  void testCreateLinkNoSDMRoles() throws IOException {
+    System.out.println("Test (41): Create link fails due to no SDM roles assigned");
+
+    String createLinkEntityNoSDMRoles =
+        apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntityNoSDMRoles.equals("Could not edit entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample27";
+      String linkUrl = "https://example.com";
+      try {
+        apiNoRoles.createLink(
+            appUrl, entityName, facetName, createLinkEntityNoSDMRoles, linkName, linkUrl);
+        fail("Link got created without SDM roles");
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("500", errorCode);
+        assertEquals(
+            "You do not have the required permissions to upload attachments. Please contact your administrator for access.",
+            errorMessage);
+      }
+    }
+
+    String response =
+        apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntityNoSDMRoles);
+    if (!response.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    response = api.deleteEntity(appUrl, entityName, createLinkEntityNoSDMRoles);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(42)
+  void testDeleteLink() throws IOException {
+    System.out.println("Test (42): Delete link in entity");
+    List<List<String>> attachments = new ArrayList<>();
+
+    String createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet : " + facetName);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      String deleteLinkResponse =
+          api.deleteAttachment(
+              appUrl, entityName, facetName, createLinkEntity, attachments.get(index).get(0));
+      System.out.println("Delete response for facet " + facetName + ": " + deleteLinkResponse);
+      if (!deleteLinkResponse.equals("Deleted")) {
+        fail("Could not delete created link");
+      }
+      index += 1;
+    }
+
+    saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    index = 0;
+    attachments.clear();
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+      System.out.println(
+          "Attachments after deletion in facet " + facetName + ": " + attachments.get(index));
+      if (attachments.get(index).size() != 0) {
+        fail("Link wasn't deleted");
+      }
+      index += 1;
+    }
+
+    String response = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!response.equals("Entity Deleted")) {
+      fail("Could not delete entity");
+    }
+  }
+
+  @Test
+  @Order(43)
+  void testRenameLinkSuccess() throws IOException {
+    System.out.println("Test (43): Rename link in entity");
+    List<List<String>> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      successfullyRenamedAttachments.add(attachments.get(index).get(0));
+      String renameLinkResponse =
+          api.renameAttachment(
+              appUrl,
+              entityName,
+              facetName,
+              createLinkEntity,
+              attachments.get(index).get(0),
+              "sampleRenamed");
+      if (!renameLinkResponse.equals("Renamed")) {
+        fail("Could not Renamed created link");
+      }
+      index += 1;
+    }
+
+    saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+  }
+
+  @Test
+  @Order(44)
+  void testRenameLinkDuplicate() throws IOException {
+    System.out.println("Test (44): Rename link in entity fails due to duplicate error");
+    List<String> attachments = new ArrayList<>();
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (saveResponse.equals("Could not save entity")) {
+      fail("Could not save entity");
+    }
+
+    index = 0;
+    List<String> facetAttachments;
+    for (String facetName : facet) {
+      int lambdaIndex = index;
+      facetAttachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .filter(
+                  item ->
+                      !successfullyRenamedAttachments
+                          .get(lambdaIndex)
+                          .equals(item.get("ID"))) // skip unwanted filename
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      index += 1;
+      attachments.add(facetAttachments.get(0));
+    }
+
+    System.out.println("Attachments to be renamed: " + attachments);
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!response.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    index = 0;
+    for (String facetName : facet) {
+      api.renameAttachment(
+          appUrl, entityName, facetName, createLinkEntity, attachments.get(index), "sampleRenamed");
+      index += 1;
+    }
+
+    String saveError = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    String expectedWarning =
+        "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}]}}";
+    ObjectMapper mapper = new ObjectMapper();
+    assertEquals(mapper.readTree(expectedWarning), mapper.readTree(saveError));
+
+    String deleteEntityResponse = api.deleteEntityDraft(appUrl, entityName, createLinkEntity);
+    if (!deleteEntityResponse.equals("Entity Draft Deleted")) {
+      fail("Entity draft not deleted");
+    }
+  }
+
+  @Test
+  @Order(45)
+  void testRenameLinkUnsupportedCharacters() throws IOException {
+    System.out.println(
+        "Test (45): Rename link in entity fails due to unsupported characters in name");
+    List<List<String>> attachments = new ArrayList<>();
+
+    createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (createLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    String linkName = "sample2";
+    String linkUrl = "https://www.example.com";
+
+    for (String facetName : facet) {
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, createLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link");
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    for (String facetName : facet) {
+      attachments.add(
+          api.fetchEntityMetadata(appUrl, entityName, facetName, createLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList()));
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      api.renameAttachment(
+          appUrl,
+          entityName,
+          facetName,
+          createLinkEntity,
+          attachments.get(index).get(0),
+          "sampleRenamed//");
+      index += 1;
+    }
+
+    String warning =
+        saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
+    String expectedWarning =
+        "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
+            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+    ObjectMapper mapper = new ObjectMapper();
+    assertEquals(mapper.readTree(expectedWarning), mapper.readTree(warning));
+
+    String deleteEntityResponse = api.deleteEntity(appUrl, entityName, createLinkEntity);
+    if (!deleteEntityResponse.equals("Entity Deleted")) {
+      fail("Entity draft not deleted");
+    }
+  }
+
+  @Test
+  @Order(46)
+  void testEditLinkSuccess() throws IOException {
+    System.out.println("Test (46): Edit existing link in entity");
+    List<List<String>> attachmentsPerFacet = new ArrayList<>();
+
+    editLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (editLinkEntity.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sample";
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, editLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facetName);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      List<String> attachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, editLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      if (attachments.isEmpty()) {
+        fail("Could not find link in facet: " + facetName);
+      }
+      attachmentsPerFacet.add(attachments);
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      String linkId = attachmentsPerFacet.get(index).get(0);
+      String updatedUrl = "https://editedexample.com";
+      String editLinkResponse =
+          api.editLink(appUrl, entityName, facetName, editLinkEntity, linkId, updatedUrl);
+      if (!editLinkResponse.equals("Link edited successfully")) {
+        fail("Could not edit link in facet: " + facetName);
+      }
+      index++;
+    }
+    api.saveEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+
+    int verificationIndex = 0;
+    for (String facetName : facet) {
+      List<String> attachmentsInFacet = attachmentsPerFacet.get(verificationIndex);
+      for (String attachmentId : attachmentsInFacet) {
+        String openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, editLinkEntity, attachmentId);
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
+          fail("Could not open edited link " + attachmentId + " in facet: " + facetName);
+        }
+      }
+      verificationIndex++;
+    }
+  }
+
+  @Test
+  @Order(47)
+  void testEditLinkFailureInvalidURL() throws IOException {
+    System.out.println("Test (47): Edit existing link with invalid url");
+    List<List<String>> attachmentsPerFacet = new ArrayList<>();
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      List<String> attachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, editLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      if (attachments.isEmpty()) {
+        fail("Could not edit link in facet: " + facetName);
+      }
+      attachmentsPerFacet.add(attachments);
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      try {
+        String linkId = attachmentsPerFacet.get(index).get(0);
+        String updatedUrl = "https://editedexample";
+        index++;
+        String editLinkResponse =
+            api.editLink(appUrl, entityName, facetName, editLinkEntity, linkId, updatedUrl);
+        System.out.println("response " + editLinkResponse);
+        fail("Edit link did not throw an error for invalid url in facet: " + facetName);
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        assertEquals("400018", errorCode);
+        assertTrue(
+            errorMessage.equals("Enter a value that is within the expected pattern.")
+                || errorMessage.equals("Enter a value that matches the expected pattern."),
+            "Unexpected error message: " + errorMessage);
+      }
+    }
+    api.saveEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+  }
+
+  @Test
+  @Order(48)
+  void testEditLinkFailureEmptyURL() throws IOException {
+    System.out.println("Test (48): Edit existing link with an empty url");
+    List<List<String>> attachmentsPerFacet = new ArrayList<>();
+
+    String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      List<String> attachments =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, editLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      if (attachments.isEmpty()) {
+        fail("Could not edit link in facet: " + facetName);
+      }
+      attachmentsPerFacet.add(attachments);
+    }
+
+    int index = 0;
+    for (String facetName : facet) {
+      try {
+        String linkId = attachmentsPerFacet.get(index).get(0);
+        String updatedUrl = "";
+        index++;
+
+        api.editLink(appUrl, entityName, facetName, editLinkEntity, linkId, updatedUrl);
+        fail("Edit link did not throw an error for empty url in facet: " + facetName);
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+        String expected = "Provide the missing value.";
+        assertEquals("409008", errorCode);
+        assertEquals(expected, errorMessage);
+      }
+    }
+    api.deleteEntity(appUrl, entityName, editLinkEntity);
+  }
+
+  @Test
+  @Order(49)
+  void testEditLinkNoSDMRoles() throws IOException {
+    System.out.println("Test (49): Edit link fails due to no SDM roles assigned");
+
+    Boolean testStatus = false;
+
+    editLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (editLinkEntity.equals("Could not create entity")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      String linkName = "sampleNoRole_" + facetName;
+      String linkUrl = "https://www.example.com";
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facetName, editLinkEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link in facet: " + facetName);
+      }
+    }
+
+    String saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!saveEntityResponse.equals("Saved")) {
+      fail("Could not save entity");
+    }
+
+    String editEntityResponse =
+        apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, editLinkEntity);
+    if (!editEntityResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entity");
+    }
+
+    for (String facetName : facet) {
+      List<String> attachments =
+          apiNoRoles.fetchEntityMetadata(appUrl, entityName, facetName, editLinkEntity).stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      if (attachments.isEmpty()) {
+        fail("Could not find link in facet: " + facetName);
+      }
+
+      String linkId = attachments.get(0);
+      String updatedUrl = "https://www.editedexample.com";
+
+      try {
+        apiNoRoles.editLink(appUrl, entityName, facetName, editLinkEntity, linkId, updatedUrl);
+        fail("Link got edited without SDM roles in facet: " + facetName);
+      } catch (IOException e) {
+        String message = e.getMessage();
+        int jsonStart = message.indexOf("{");
+        String jsonPart = message.substring(jsonStart);
+        JSONObject json = new JSONObject(jsonPart);
+        String errorCode = json.getJSONObject("error").getString("code");
+        String errorMessage = json.getJSONObject("error").getString("message");
+
+        assertEquals("500", errorCode);
+        assertEquals(
+            "You do not have the required permissions to update attachments. Kindly contact the admin",
+            errorMessage);
+
+        testStatus = true;
+      }
+    }
+    api.deleteEntity(appUrl, entityName, editLinkEntity);
+    if (!testStatus) {
+      fail("Link got edited without SDM roles");
+    }
+  }
+
+  @Test
+  @Order(50)
+  void testCopyLinkSuccessNewEntity() throws IOException {
+    System.out.println("Test (50): Copy link from one entity to another new entity");
+    List<List<String>> attachmentsByFacet = new ArrayList<>();
+    String linkUrl = "https://www.example.com";
+    for (int i = 0; i < facet.length; i++) {
+      attachmentsByFacet.add(new ArrayList<>());
+    }
+
+    copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+
+    if (copyLinkSourceEntity.equals("Could not create entity")
+        || copyLinkTargetEntity.equals("Could not create entity")) {
+      fail("Could not create source or target entities");
+    }
+
+    for (int i = 0; i < facet.length; i++) {
+      String linkName = "sample" + i;
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facet[i], copyLinkSourceEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facet[i]);
+      }
+    }
+
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+
+    sourceObjectIds.clear();
+    for (int i = 0; i < facet.length; i++) {
+      List<String> objectIds =
+          api.fetchEntityMetadata(appUrl, entityName, facet[i], copyLinkSourceEntity).stream()
+              .map(item -> (String) item.get("objectId"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      sourceObjectIds.addAll(objectIds);
+    }
+
+    if (sourceObjectIds.size() != facet.length) {
+      fail(
+          "Could not fetch object Ids for all attachments. Expected: "
+              + facet.length
+              + ", Found: "
+              + sourceObjectIds.size());
+    }
+
+    int objectIdIndex = 0;
+    for (String facetName : facet) {
+      String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!editResponse.equals("Entity in draft mode")) {
+        fail("Could not edit target entity draft for facet: " + facetName);
+      }
+
+      List<String> subListToCopy = sourceObjectIds.subList(objectIdIndex, objectIdIndex + 1);
+      String copyResponse =
+          api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, subListToCopy);
+
+      if (!copyResponse.equals("Attachments copied successfully")) {
+        fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
+      }
+
+      String saveEntityResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!saveEntityResponse.equals("Saved")) {
+        fail("Could not save entity after copying attachments for facet " + facetName);
+      }
+
+      List<Map<String, Object>> attachmentsMetadata =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
+
+      Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
+      String receivedType = (String) copiedAttachment.get("type");
+      String receivedUrl = (String) copiedAttachment.get("linkUrl");
+
+      String expectedType = "sap-icon://internet-browser";
+      assertTrue(
+          expectedType.equalsIgnoreCase(receivedType),
+          "Attachment type mismatch in facet " + facetName);
+
+      assertEquals(linkUrl, receivedUrl, "Attachment URL mismatch in facet " + facetName);
+      System.out.println("Attachment type and URL validated for facet " + facetName);
+
+      List<String> attachments =
+          attachmentsMetadata.stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      for (String attachment : attachments) {
+        String openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, attachment);
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
+          fail("Could not open copied link in facet: " + facetName);
+        }
+      }
+
+      objectIdIndex++;
+    }
+
+    String deleteTargetResponse = api.deleteEntity(appUrl, entityName, copyLinkTargetEntity);
+    if (!deleteTargetResponse.equals("Entity Deleted")) {
+      fail("Could not delete target entity");
+    }
+  }
+
+  @Test
+  @Order(51)
+  void testCopyLinkUnsuccessfulNewEntity() throws IOException {
+    System.out.println(
+        "Test (51): Copy invalid type of link from one entity to another new entity");
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+    copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+
+    if (!editResponse.equals("Entity in draft mode")
+        || copyLinkTargetEntity.equals("Could not create entity")) {
+      fail("Could not edit source entity or create target entity");
+    }
+
+    sourceObjectIds.add("incorrectObjectId");
+
+    for (String facetName : facet) {
+      try {
+        api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, sourceObjectIds);
+        fail("Copy attachments did not throw an error for facet: " + facetName);
+      } catch (IOException e) {
+        System.out.println("Successfully caught expected error for facet: " + facetName);
+      }
+    }
+    api.deleteEntity(appUrl, entityName, copyLinkSourceEntity);
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+  }
+
+  @Test
+  @Order(52)
+  void testCopyLinkFromNewEntityToExistingEntity() throws IOException {
+    System.out.println("Test (52): Copy link from a new entity to an existing target entity");
+
+    List<List<String>> attachmentsByFacet = new ArrayList<>();
+    String linkUrl = "https://www.example.com";
+    for (int i = 0; i < facet.length; i++) {
+      attachmentsByFacet.add(new ArrayList<>());
+    }
+
+    copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (copyLinkSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    for (int i = 0; i < facet.length; i++) {
+      String linkName = "newsample" + i;
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facet[i], copyLinkSourceEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facet[i]);
+      }
+    }
+
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+
+    sourceObjectIds.clear();
+    for (String facetName : facet) {
+      List<String> objectIds =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkSourceEntity).stream()
+              .map(item -> (String) item.get("objectId"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      sourceObjectIds.addAll(objectIds);
+    }
+
+    if (sourceObjectIds.isEmpty()) {
+      fail("Could not fetch object Ids for any attachments");
+    }
+
+    int objectIdIndex = 0;
+    for (String facetName : facet) {
+      String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!editResponse.equals("Entity in draft mode")) {
+        fail("Could not edit target entity draft for facet: " + facetName);
+      }
+
+      List<String> subListToCopy = sourceObjectIds.subList(objectIdIndex, objectIdIndex + 1);
+      String copyResponse =
+          api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, subListToCopy);
+
+      if (!copyResponse.equals("Attachments copied successfully")) {
+        fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
+      }
+
+      String saveEntityResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!saveEntityResponse.equals("Saved")) {
+        fail("Could not save entity after copying attachments for facet " + facetName);
+      }
+
+      List<Map<String, Object>> attachmentsMetadata =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
+
+      Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
+      String receivedType = (String) copiedAttachment.get("type");
+      String receivedUrl = (String) copiedAttachment.get("linkUrl");
+
+      String expectedType = "sap-icon://internet-browser";
+      assertTrue(
+          expectedType.equalsIgnoreCase(receivedType),
+          "Attachment type mismatch in facet " + facetName);
+
+      assertEquals(linkUrl, receivedUrl, "Attachment URL mismatch in facet " + facetName);
+      System.out.println("Attachment type and URL validated for facet " + facetName);
+
+      List<String> attachments =
+          attachmentsMetadata.stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      for (String attachment : attachments) {
+        String openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, attachment);
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
+          fail("Could not open copied link in facet: " + facetName);
+        }
+      }
+
+      objectIdIndex++;
+    }
+
+    api.deleteEntity(appUrl, entityName, copyLinkSourceEntity);
+  }
+
+  @Test
+  @Order(53)
+  void testCopyInvalidLinkFromNewEntityToExistingEntity() throws IOException {
+    System.out.println(
+        "Test (53): Copy invalid type of link from new entity to existing target entity");
+    String linkUrl = "https://www.example.com";
+
+    copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (copyLinkSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    for (int i = 0; i < facet.length; i++) {
+      String linkName = "newsample" + i;
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facet[i], copyLinkSourceEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facet[i]);
+      }
+    }
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+    if (!editResponse.equals("Entity in draft mode")) {
+      fail("Could not edit entities");
+    }
+    for (String facetName : facet) {
+      List<String> sourceObjectIds = new ArrayList<>();
+      sourceObjectIds.add("incorrectObjectId");
+      try {
+        api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, sourceObjectIds);
+        fail("Copy attachments did not throw an error for facet: " + facetName);
+      } catch (IOException e) {
+      }
+    }
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+    api.deleteEntity(appUrl, entityName, copyLinkTargetEntity);
+    api.deleteEntity(appUrl, entityName, copyLinkSourceEntity);
+  }
+
+  @Test
+  @Order(54)
+  void testCopyLinkSuccessNewEntityDraft() throws IOException {
+    System.out.println("Test (54): Copy link from one entity to another new entity draft mode");
+    List<List<String>> attachmentsByFacet = new ArrayList<>();
+    String linkUrl = "https://www.example.com";
+    for (int i = 0; i < facet.length; i++) {
+      attachmentsByFacet.add(new ArrayList<>());
+    }
+
+    copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+
+    if (copyLinkSourceEntity.equals("Could not create entity")
+        || copyLinkTargetEntity.equals("Could not create entity")) {
+      fail("Could not create source or target entities");
+    }
+
+    for (int i = 0; i < facet.length; i++) {
+      String linkName = "sample" + i;
+      String createLinkResponse =
+          api.createLink(appUrl, entityName, facet[i], copyLinkSourceEntity, linkName, linkUrl);
+      if (!createLinkResponse.equals("Link created successfully")) {
+        fail("Could not create link for facet: " + facet[i]);
+      }
+    }
+
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+
+    sourceObjectIds.clear();
+    for (int i = 0; i < facet.length; i++) {
+      List<String> objectIds =
+          api.fetchEntityMetadataDraft(appUrl, entityName, facet[i], copyLinkSourceEntity).stream()
+              .map(item -> (String) item.get("objectId"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      sourceObjectIds.addAll(objectIds);
+    }
+
+    if (sourceObjectIds.size() != facet.length) {
+      fail(
+          "Could not fetch object Ids for all attachments. Expected: "
+              + facet.length
+              + ", Found: "
+              + sourceObjectIds.size());
+    }
+
+    int objectIdIndex = 0;
+    for (String facetName : facet) {
+      String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!editResponse.equals("Entity in draft mode")) {
+        fail("Could not edit target entity draft for facet: " + facetName);
+      }
+
+      List<String> subListToCopy = sourceObjectIds.subList(objectIdIndex, objectIdIndex + 1);
+      String copyResponse =
+          api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, subListToCopy);
+
+      if (!copyResponse.equals("Attachments copied successfully")) {
+        fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
+      }
+
+      String saveEntityResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
+      if (!saveEntityResponse.equals("Saved")) {
+        fail("Could not save entity after copying attachments for facet " + facetName);
+      }
+
+      List<Map<String, Object>> attachmentsMetadata =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, copyLinkTargetEntity);
+
+      Map<String, Object> copiedAttachment = attachmentsMetadata.get(0);
+      String receivedType = (String) copiedAttachment.get("type");
+      String receivedUrl = (String) copiedAttachment.get("linkUrl");
+
+      String expectedType = "sap-icon://internet-browser";
+      assertTrue(
+          expectedType.equalsIgnoreCase(receivedType),
+          "Attachment type mismatch in facet " + facetName);
+
+      assertEquals(linkUrl, receivedUrl, "Attachment URL mismatch in facet " + facetName);
+      System.out.println("Attachment type and URL validated for facet " + facetName);
+
+      List<String> attachments =
+          attachmentsMetadata.stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      for (String attachment : attachments) {
+        String openAttachmentResponse =
+            api.openAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, attachment);
+        if (!openAttachmentResponse.equals("Attachment opened successfully")) {
+          fail("Could not open copied link in facet: " + facetName);
+        }
+      }
+
+      objectIdIndex++;
+    }
+
+    api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyLinkSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyLinkTargetEntity);
+  }
+
+  @Test
+  @Order(55)
+  void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
+    System.out.println(
+        "Test (55): Copy attachments from one entity to another new entity draft mode");
+    List<List<String>> attachments = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      attachments.add(new ArrayList<>());
+    }
+    copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (!copyAttachmentSourceEntity.equals("Could not create entity")
+        && !copyAttachmentTargetEntity.equals("Could not create entity")) {
+      ClassLoader classLoader = getClass().getClassLoader();
+      List<File> files = new ArrayList<>();
+      files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+      files.add(new File(classLoader.getResource("sample1.pdf").getFile()));
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", entityID7);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      sourceObjectIds.clear();
+
+      for (int i = 0; i < facet.length; i++) {
+        for (File file : files) {
+          List<String> createResponse =
+              api.createAttachment(
+                  appUrl,
+                  entityName,
+                  facet[i],
+                  copyAttachmentSourceEntity,
+                  srvpath,
+                  postData,
+                  file);
+          if (createResponse.get(0).equals("Attachment created")) {
+            attachments.get(i).add(createResponse.get(1));
+          } else {
+            fail("Could not create attachment");
+          }
+        }
+      }
+      List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
+      Map<String, Object> fetchAttachmentMetadataResponse;
+      for (int i = 0; i < attachments.size(); i++) {
+        for (String attachment : attachments.get(i)) {
+          try {
+            fetchAttachmentMetadataResponse =
+                api.fetchMetadataDraft(
+                    appUrl, entityName, facet[i], copyAttachmentSourceEntity, attachment);
+            attachmentsMetadata.add(fetchAttachmentMetadataResponse);
+          } catch (IOException e) {
+            fail("Could not fetch attachment metadata: " + e.getMessage());
+          }
+        }
+      }
+      for (Map<String, Object> metadata : attachmentsMetadata) {
+        if (metadata.containsKey("objectId")) {
+          sourceObjectIds.add(metadata.get("objectId").toString());
+        } else {
+          fail("Attachment metadata does not contain objectId");
+        }
+      }
+
+      if (sourceObjectIds.size() == 6) {
+        String copyResponse;
+        int i = 0;
+        for (String facetName : facet) {
+          if (i != 0) {
+            String editResponse =
+                api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+            if (!editResponse.equals("Entity in draft mode")) {
+              fail("Could not edit target entity draft");
+            }
+          }
+          copyResponse =
+              api.copyAttachment(
+                  appUrl,
+                  entityName,
+                  facetName,
+                  copyAttachmentTargetEntity,
+                  sourceObjectIds.subList(i, Math.min(i + 2, sourceObjectIds.size())));
+          i += 2;
+          if (copyResponse.equals("Attachments copied successfully")) {
+            String saveEntityResponse =
+                api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
+            if (saveEntityResponse.equals("Saved")) {
+              List<Map<String, Object>> fetchEntityMetadataResponse;
+              fetchEntityMetadataResponse =
+                  api.fetchEntityMetadataDraft(
+                      appUrl, entityName, facetName, copyAttachmentTargetEntity);
+              targetAttachmentIds =
+                  fetchEntityMetadataResponse.stream()
+                      .map(item -> (String) item.get("ID"))
+                      .filter(Objects::nonNull)
+                      .collect(Collectors.toList());
+              String readResponse;
+              for (String targetAttachmentId : targetAttachmentIds) {
+                readResponse =
+                    api.readAttachment(
+                        appUrl,
+                        entityName,
+                        facetName,
+                        copyAttachmentTargetEntity,
+                        targetAttachmentId);
+                if (!readResponse.equals("OK")) {
+                  fail("Could not read copied attachment");
+                }
+              }
+            } else {
+              fail("Could not save entity after copying attachments: " + saveEntityResponse);
+            }
+          } else {
+            fail("Could not copy attachments: " + copyResponse);
+          }
+        }
+      } else {
+        fail("Could not fetch objects Ids for all attachments");
+      }
+    } else {
+      fail("Could not create entities");
     }
   }
 }

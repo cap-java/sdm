@@ -3,6 +3,7 @@ package com.sap.cds.sdm.service;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -27,11 +28,9 @@ public interface SDMService {
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
-  public String checkRepositoryType(String repositoryId, String tenant) throws IOException;
+  public RepoValue checkRepositoryType(String repositoryId, String tenant) throws IOException;
 
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) throws IOException;
-
-  public Boolean isRepositoryVersioned(JSONObject repoInfo, String repositoryId) throws IOException;
 
   public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 
@@ -61,6 +60,10 @@ public interface SDMService {
       throws IOException;
 
   public List<String> copyAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
+
+  public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 

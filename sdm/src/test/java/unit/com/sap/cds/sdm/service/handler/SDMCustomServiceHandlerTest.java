@@ -12,13 +12,18 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
+import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +38,13 @@ public class SDMCustomServiceHandlerTest {
   @Mock private AttachmentCopyEventContext mockContext;
 
   @Mock private SDMService sdmService;
+  @Mock private PersistenceService persistenceService;
 
   @Mock private TokenHandler tokenHandler;
 
   @Mock private DraftService draftService;
+
+  @Mock private DBQuery dbQuery;
 
   private SDMCustomServiceHandler sdmCustomServiceHandler;
 
@@ -44,6 +52,8 @@ public class SDMCustomServiceHandlerTest {
   private static final String FOLDER_ID = "mockFolderId";
   private static final String UP_ID = "mockUpId";
   private static final String FACET = "mockFacet";
+  @Mock private CdsRuntime cdsRuntime;
+  @Mock ParameterInfo parameterInfo;
 
   @BeforeEach
   void setUp() {
@@ -51,7 +61,8 @@ public class SDMCustomServiceHandlerTest {
     when(draftService.getName()).thenReturn(FACET);
     // Pass a non-null list of DraftService mocks
     sdmCustomServiceHandler =
-        new SDMCustomServiceHandler(sdmService, List.of(draftService), tokenHandler);
+        new SDMCustomServiceHandler(
+            sdmService, List.of(draftService), tokenHandler, dbQuery, persistenceService);
   }
 
   @Test
@@ -67,7 +78,11 @@ public class SDMCustomServiceHandlerTest {
 
     // Mock attachment copy
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
-        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+        .thenReturn(List.of("fileName.url", "application/internet-shortcut", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -84,18 +99,35 @@ public class SDMCustomServiceHandlerTest {
   }
 
   @Test
-  void testCopyAttachments_InvalidFacetFormat_ThrowsException() throws IOException {
-    AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
-    when(context.getFacet()).thenReturn("invalid.facet"); // Only 2 parts
-    // Other mocks not needed as exception is thrown before they're used
+  void testCopyAttachments_HappyPathNonLink() throws IOException {
+    // Mock SDMCredentials
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-    ServiceException ex =
-        assertThrows(
-            ServiceException.class,
-            () -> {
-              sdmCustomServiceHandler.copyAttachments(context);
-            });
-    assertTrue(ex.getMessage().contains("Invalid facet format"));
+    // Mock folder id retrieval
+    when(sdmService.getFolderIdByPath(
+            any(String.class), any(String.class), any(SDMCredentials.class), any(Boolean.class)))
+        .thenReturn(FOLDER_ID);
+
+    // Mock attachment copy
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
+        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://document");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+
+    // Mock context
+    AttachmentCopyEventContext context = createMockContext();
+    context.setObjectIds(List.of(OBJECT_ID));
+
+    // Act
+    sdmCustomServiceHandler.copyAttachments(context);
+
+    // Assert
+    verify(sdmService, times(1))
+        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class));
+    verify(draftService, times(1)).newDraft(any());
+    verify(context, times(1)).setCompleted();
   }
 
   @Test
@@ -117,6 +149,10 @@ public class SDMCustomServiceHandlerTest {
     // Mock attachment copy
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -149,17 +185,32 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID))
         .thenThrow(new ServiceException("Copy failed"));
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
-    context.setObjectIds(List.of(OBJECT_ID, "mockObjectId2"));
+    // Override the getObjectIds mock to return multiple objects for this test
+    when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID, "mockObjectId2"));
+
+    // Mock UserInfo for cleanup operations
+    UserInfo userInfo = mock(UserInfo.class);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getName()).thenReturn("testUser");
 
     // Act & Assert
-    try {
-      sdmCustomServiceHandler.copyAttachments(context);
-    } catch (ServiceException e) {
-      verify(sdmService, times(1)).deleteDocument(any(String.class), any(String.class), any());
-    }
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmCustomServiceHandler.copyAttachments(context);
+            });
+
+    // Verify that deleteDocument was called for cleanup of the first successful attachment
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), eq("testUser"));
+    assertTrue(exception.getMessage().contains("Copy failed"));
   }
 
   @Test
@@ -181,6 +232,11 @@ public class SDMCustomServiceHandlerTest {
     UserInfo userInfo = mock(UserInfo.class);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn("testUser");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+
     ServiceException ex =
         assertThrows(
             ServiceException.class,
@@ -212,6 +268,11 @@ public class SDMCustomServiceHandlerTest {
     UserInfo userInfo = mock(UserInfo.class);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getName()).thenReturn("testUser");
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://internet-browser");
+    cmisDocument.setUrl("https://example.com");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+
     ServiceException ex =
         assertThrows(
             ServiceException.class,
@@ -230,19 +291,36 @@ public class SDMCustomServiceHandlerTest {
     CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
     CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
 
-    when(context.getFacet()).thenReturn("prefix.someIdentifier." + FACET);
+    when(context.getParentEntity()).thenReturn("prefix.someIdentifier." + FACET);
+    when(context.getCompositionName()).thenReturn(FACET);
     when(context.getUpId()).thenReturn(UP_ID);
     when(context.getSystemUser()).thenReturn(true);
     when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
 
     // Mock CdsModel and relevant entities and associations
     CdsModel model = mock(CdsModel.class);
-    CdsEntity entity = mock(CdsEntity.class);
+    CdsEntity parentEntity = mock(CdsEntity.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
 
-    // Setup expected behavior
+    // Mock composition element and its type
+    CdsElement compositionElement = mock(CdsElement.class);
+    CdsAssociationType compositionType = mock(CdsAssociationType.class);
+
+    // Setup expected behavior for model and parent entity
     when(context.getModel()).thenReturn(model);
-    when(model.findEntity(any(String.class))).thenReturn(Optional.of(entity));
-    when(entity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(model.findEntity("prefix.someIdentifier." + FACET)).thenReturn(Optional.of(parentEntity));
+    when(model.findEntity(endsWith("_drafts"))).thenReturn(Optional.of(draftEntity));
+
+    // Mock the composition element in parent entity
+    when(parentEntity.findElement(FACET)).thenReturn(Optional.of(compositionElement));
+    when(compositionElement.getType()).thenReturn(compositionType);
+    when(compositionType.isAssociation()).thenReturn(true);
+    when(compositionType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("target.entity.name");
+
+    // Mock the draft entity's up_ association
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
