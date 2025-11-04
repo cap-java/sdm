@@ -1,7 +1,5 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -10,6 +8,7 @@ import static org.mockito.Mockito.*;
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
@@ -17,7 +16,6 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
-import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
 import com.sap.cds.services.cds.CdsCreateEventContext;
@@ -122,18 +120,31 @@ public class SDMCreateAttachmentsHandlerTest {
       CdsEntity targetEntity = mock(CdsEntity.class);
       when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
       when(context.getTarget()).thenReturn(targetEntity);
-
+      // Make validateFileName execute its real implementation, and stub helper methods
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+          .thenCallRealMethod();
+      sdmUtilsMockedStatic
+          .when(
+              () ->
+                  SDMUtils.isFileNameContainsRestrictedCharaters(
+                      anyList(), anyString(), anyString()))
+          .thenReturn(Collections.emptyList());
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
           .thenReturn(duplicateFilenames);
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+          .thenCallRealMethod();
 
       // Act
       handler.updateName(context, data, "compositionDefinition", "compositionName");
 
-      // Assert
+      // Assert: validateFileName should have logged an error for duplicate filenames
       verify(messages, times(1))
           .error(
-              "The file(s) file1.txt, file2.txt have been added multiple times. Please rename and try again.");
+              org.mockito.ArgumentMatchers.contains(
+                  "Objects with the following names already exist"));
     }
   }
 
@@ -495,16 +506,91 @@ public class SDMCreateAttachmentsHandlerTest {
                 attachmentDraftEntity, persistenceService, "test-id", secondaryTypeProperties))
             .thenReturn(updatedSecondaryProperties);
 
-        // Act & Assert
-        ServiceException exception =
-            assertThrows(
-                ServiceException.class,
-                () ->
-                    handler.updateName(context, data, "compositionDefinition", "compositionName"));
+        // Make validateFileName execute its real implementation so it logs the error
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .thenCallRealMethod();
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .thenReturn(new HashSet<>());
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+            .thenCallRealMethod();
 
-        // Assert that the correct exception message is returned
-        assertEquals("Filename cannot be empty", exception.getMessage());
+        // Act
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+        // Assert: since validation logs an error instead of throwing, ensure the message was logged
+        verify(messages, times(1)).error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
       } // Close AttachmentsHandlerUtils mock
+    }
+  }
+
+  @Test
+  public void testUpdateNameWithRestrictedCharacters() throws IOException {
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
+
+      // Arrange
+      List<CdsData> data = new ArrayList<>();
+      Map<String, Object> entity = new HashMap<>();
+      List<Map<String, Object>> attachments = new ArrayList<>();
+
+      Map<String, Object> attachment = new HashMap<>();
+      attachment.put("ID", "test-id");
+      attachment.put("fileName", "file/1.txt"); // Restricted character
+      attachment.put("objectId", "test-object-id");
+      attachments.add(attachment);
+
+      entity.put("composition", attachments);
+
+      CdsData cdsDataEntity = CdsData.create(entity);
+      data.add(cdsDataEntity);
+
+      when(context.getMessages()).thenReturn(messages);
+
+      // Mock attachment entity and model
+      CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+      when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
+      when(context.getTarget()).thenReturn(attachmentDraftEntity);
+      when(context.getModel()).thenReturn(model);
+      when(model.findEntity("compositionDefinition"))
+          .thenReturn(Optional.of(attachmentDraftEntity));
+
+      // Stub the validation helper methods so validateFileName runs and detects the restricted char
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+          .thenReturn(Collections.emptySet());
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+          .thenReturn(Collections.emptySet());
+      sdmUtilsMockedStatic
+          .when(
+              () ->
+                  SDMUtils.isFileNameContainsRestrictedCharaters(
+                      data, "compositionName", "some.qualified.Name"))
+          .thenReturn(Arrays.asList("file/1.txt"));
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+          .thenCallRealMethod();
+
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentsHandlerUtilsMocked
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.fetchAttachments(
+                        "some.qualified.Name", entity, "compositionName"))
+            .thenReturn(attachments);
+
+        // Act
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+        // Assert: proper restricted-character error was logged
+        verify(messages, times(1))
+            .error(SDMConstants.nameConstraintMessage(Arrays.asList("file/1.txt")));
+      }
     }
   }
 
