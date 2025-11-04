@@ -34,7 +34,7 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static Boolean validateFileName(
+  public static Boolean validateFileNames(
       EventContext context, List<CdsData> data, String composition) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
@@ -111,7 +111,7 @@ public class SDMUtils {
 
   public static List<String> isFileNameContainsRestrictedCharaters(
       List<CdsData> data, String composition, String targetEntity) {
-    List<String> restrictedFilenames = new ArrayList();
+    List<String> restrictedFilenames = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments =
           AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
@@ -120,7 +120,7 @@ public class SDMUtils {
         while (iterator.hasNext()) {
           Map<String, Object> attachment = iterator.next();
           String filenameInRequest = (String) attachment.get("fileName");
-          if (isRestrictedCharactersInName(filenameInRequest)) {
+          if (hasRestrictedCharactersInName(filenameInRequest)) {
             restrictedFilenames.add(filenameInRequest);
           }
         }
@@ -129,7 +129,7 @@ public class SDMUtils {
     return restrictedFilenames;
   }
 
-  public static boolean isRestrictedCharactersInName(String cmisName) {
+  public static boolean hasRestrictedCharactersInName(String cmisName) {
     if (cmisName == null || cmisName.isEmpty()) {
       return false;
     }

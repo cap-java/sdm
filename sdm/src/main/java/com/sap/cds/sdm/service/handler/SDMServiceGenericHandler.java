@@ -285,7 +285,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (filename == null || filename.isBlank()) {
       throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
     }
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
           SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }

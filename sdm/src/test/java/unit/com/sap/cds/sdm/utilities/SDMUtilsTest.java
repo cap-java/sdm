@@ -141,12 +141,12 @@ public class SDMUtilsTest {
 
   @Test
   public void testIsRestrictedCharactersInName() {
-    assertTrue(SDMUtils.isRestrictedCharactersInName("file/abc.txt"));
-    assertTrue(SDMUtils.isRestrictedCharactersInName("file\\abc.txt"));
-    assertFalse(SDMUtils.isRestrictedCharactersInName("file-abc.txt"));
-    assertFalse(SDMUtils.isRestrictedCharactersInName("file_abc.txt"));
-    assertFalse(SDMUtils.isRestrictedCharactersInName(""));
-    assertFalse(SDMUtils.isRestrictedCharactersInName(null));
+    assertTrue(SDMUtils.hasRestrictedCharactersInName("file/abc.txt"));
+    assertTrue(SDMUtils.hasRestrictedCharactersInName("file\\abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName("file-abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName("file_abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName(""));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName(null));
   }
 
   @Test

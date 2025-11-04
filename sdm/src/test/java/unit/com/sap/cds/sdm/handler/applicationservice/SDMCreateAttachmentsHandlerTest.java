@@ -134,7 +134,7 @@ public class SDMCreateAttachmentsHandlerTest {
           .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
           .thenReturn(duplicateFilenames);
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+          .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
           .thenCallRealMethod();
 
       // Act
@@ -495,7 +495,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
         // Mock restricted character
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isRestrictedCharactersInName("fileNameInRequest"))
+            .when(() -> SDMUtils.hasRestrictedCharactersInName("fileNameInRequest"))
             .thenReturn(false);
 
         when(dbQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
@@ -514,7 +514,7 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+            .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
             .thenCallRealMethod();
 
         // Act
@@ -572,7 +572,7 @@ public class SDMCreateAttachmentsHandlerTest {
                       data, "compositionName", "some.qualified.Name"))
           .thenReturn(Arrays.asList("file/1.txt"));
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileName(any(), anyList(), anyString()))
+          .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
           .thenCallRealMethod();
 
       try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =

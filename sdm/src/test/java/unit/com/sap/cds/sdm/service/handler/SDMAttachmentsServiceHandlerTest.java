@@ -439,7 +439,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
       // Mock SDMUtils.isRestrictedCharactersInName
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false); // Return false to indicate no restricted characters
 
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
@@ -696,7 +696,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("10__null");
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileName(any(), any(), any()))
+          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
           .thenReturn(false);
 
       // Assert that a ServiceException is thrown and verify its message
@@ -780,10 +780,10 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileName(any(), any(), any()))
+          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
           .thenReturn(true);
 
       // Assert that a ServiceException is thrown and verify its message
@@ -868,10 +868,10 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileName(any(), any(), any()))
+          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
           .thenReturn(true);
 
       // Assert that a ServiceException is thrown and verify its message
@@ -1207,7 +1207,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("0__null");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(true);
 
       // Use assertThrows to expect a ServiceException and validate the message

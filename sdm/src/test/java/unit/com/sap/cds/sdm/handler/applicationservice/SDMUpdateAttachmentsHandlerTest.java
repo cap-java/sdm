@@ -343,7 +343,7 @@ public class SDMUpdateAttachmentsHandlerTest {
             .thenReturn(secondaryProperties);
 
         sdmUtilsMock
-            .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+            .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
             .thenReturn(false);
 
         // Call the method
