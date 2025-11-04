@@ -11,6 +11,7 @@ extend entity Books with {
 
 extend entity Notebooks with {
     attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
+}
 
 extend entity Chapters with { 
   attachments: Composition of many Attachments;
@@ -164,13 +165,3 @@ entity WDIRSCodeList : CodeList {
 };
 
 type WDIRS_CodeList_TYPE : Association to one WDIRSCodeList;
-
-annotate Books.attachments with {
-    status @(
-        Common.Text: {
-            $value: ![statusText.text],
-            ![@UI.TextArrangement]: #TextOnly
-        },
-        ValueList: {entity:'Statuses'}
-    );
-}
