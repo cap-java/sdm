@@ -1,4 +1,4 @@
-using {sap.capire.bookshop.Books, sap.capire.bookshop.Notebooks, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages} from '../db/schema';
+using {sap.capire.bookshop.Books, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages, sap.capire.bookshop.Notebooks} from '../db/schema';
 using {sap.attachments.Attachments, sap.attachments.StatusCode} from 'com.sap.cds/sdm';
 using {sap,managed,sap.common.CodeList} from '@sap/cds/common';
 
