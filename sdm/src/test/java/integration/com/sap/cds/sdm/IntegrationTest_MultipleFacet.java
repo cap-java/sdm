@@ -237,7 +237,7 @@ class IntegrationTest_MultipleFacet {
       return false;
     } else {
       String expectedJson =
-          "{\"error\":{\"code\":\"500\",\"message\":\"sample.pdf already exists.\"}}";
+          "{\"error\":{\"code\":\"500\",\"message\":\"An object named \\\"sample.pdf\\\" already exists. Rename the object and try again.\"}}";
       ObjectMapper objectMapper = new ObjectMapper();
       JsonNode actualJsonNode = objectMapper.readTree(creationCheck);
       JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -572,13 +572,13 @@ class IntegrationTest_MultipleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
 
     String expected =
-        "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported "
-            + "characters (/, \\\\). \\n\\n\\t\\u2022 a/\\bc.pdf\\n\\nRename the files and try again.\",\"numericSeverity"
-            + "\":3},{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters "
-            + "(/, \\\\). \\n\\n\\t\\u2022 a/\\bc.pdf\\n\\nRename the files and try again.\",\"numericSeverity\":3},{\"code\":\"<none>\","
-            + "\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 "
-            + "a/\\bc.pdf\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}]}}";
     if (response.equals(expected)) {
+      for (int i = 0; i < facet.length; i++) {
+        response =
+            api.renameAttachment(appUrl, entityName, facet[i], entityID, ID4[i], "sample.pdf");
+      }
+      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
       testStatus = true;
     }
 
@@ -604,10 +604,13 @@ class IntegrationTest_MultipleFacet {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 reference1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 sample/1234\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-                + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t\\u2022 footnote1/234\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"reference1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sample/1234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"footnote1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}]}}";
         if (response.equals(expected)) {
+          for (int i = 0; i < facet.length; i++) {
+            response =
+                api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i], "sample.pdf");
+          }
+          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
           testStatus = true;
         }
       } else {
@@ -668,11 +671,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
             String.format(
-                "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\","
-                    + "\"details\":["
-                    + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},"
-                    + "{\"code\":\"<none>\",\"message\":\"The file(s) %s have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}"
-                    + "]}}",
+                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}",
                 name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
@@ -719,10 +718,14 @@ class IntegrationTest_MultipleFacet {
       if (successCount >= 2) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters"
-                + " (/, \\\\). \\n\\n\\t\\u2022 note/invalid\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"note/invalid\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
         if (response.equals(expected)) {
-          testStatus = true;
+          response =
+              api.renameAttachment(appUrl, entityName, facet[2], entityID, ID3[2], "note_valid");
+          if (response.equals("Renamed")) {
+            response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+            if (response.equals("Saved")) testStatus = true;
+          }
         }
       } else {
         api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
@@ -2900,9 +2903,7 @@ class IntegrationTest_MultipleFacet {
         String errorCode = json.getJSONObject("error").getString("code");
         String errorMessage = json.getJSONObject("error").getString("message");
         String expected =
-            "Link could not be created. The following name(s) contain unsupported characters (/, \\).\n\n"
-                + " • sample//\n\n"
-                + "Rename the link and try again.";
+            "\"sample//\" contains unsupported characters (‘/’ or ‘\\’). Rename and try again.";
         assertEquals("500", errorCode);
         assertEquals(
             expected.replaceAll("\\s+", " ").trim(), errorMessage.replaceAll("\\s+", " ").trim());
@@ -2933,7 +2934,9 @@ class IntegrationTest_MultipleFacet {
         String errorCode = json.getJSONObject("error").getString("code");
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
-        assertEquals("sample already exists.", errorMessage);
+        assertEquals(
+            "An object named \"sample\" already exists. Rename the object and try again.",
+            errorMessage);
       }
       try {
         for (int i = 2; i < 6; i++) {
@@ -3215,7 +3218,7 @@ class IntegrationTest_MultipleFacet {
 
     String saveError = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     String expectedWarning =
-        "{\"error\":{\"code\":\"400\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"The file(s) sampleRenamed have been added multiple times. Please rename and try again.\",\"@Common.numericSeverity\":4}]}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}";
     ObjectMapper mapper = new ObjectMapper();
     assertEquals(mapper.readTree(expectedWarning), mapper.readTree(saveError));
 
@@ -3278,14 +3281,16 @@ class IntegrationTest_MultipleFacet {
       index += 1;
     }
 
-    String warning =
+    String error =
         saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
-    String expectedWarning =
-        "[{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3},"
-            + "{\"code\":\"<none>\",\"message\":\"Rename unsuccessful. The following filename(s) contain unsupported characters (/, \\\\). \\n\\n\\t• sampleRenamed//\\n\\nRename the files and try again.\",\"numericSeverity\":3}]";
+    String expectedError =
+        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\","
+            + "\"details\":["
+            + "{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},"
+            + "{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}"
+            + "]}}";
     ObjectMapper mapper = new ObjectMapper();
-    assertEquals(mapper.readTree(expectedWarning), mapper.readTree(warning));
+    assertEquals(mapper.readTree(expectedError), mapper.readTree(error));
 
     String deleteEntityResponse = api.deleteEntity(appUrl, entityName, createLinkEntity);
     if (!deleteEntityResponse.equals("Entity Deleted")) {
