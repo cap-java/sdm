@@ -83,6 +83,16 @@
           "pattern": "Books({key}/author({key2}):?query:",
           "name": "AuthorsDetails",
           "target": "AuthorsDetails"
+        },
+        {
+          "pattern": "Books({key})/chapters({key2}):?query:",
+          "name": "chaptersObjectPage",
+          "target": "ChaptersObjectPage"
+        },
+        {
+          "pattern": "Books({key})/pages({key2}):?query:",
+          "name": "pagesObjectPage",
+          "target": "PagesObjectPage"
         }
       ],
       "targets": {
@@ -112,9 +122,14 @@
             "settings": {
               "entitySet": "Books",
               "navigation": {
-                "Authors": {
+                "Chapters": {
                   "detail": {
-                    "route": "AuthorsDetails"
+                    "route": "ChaptersObjectPage"
+                  }
+                },
+                "Pages": {
+                  "detail": {
+                    "route": "PagesObjectPage"
                   }
                 }
               },
@@ -144,6 +159,87 @@
             }
           }
         },
+        "ChaptersObjectPage": {
+          "type": "Component",
+          "id": "ChaptersObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Chapters",
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "references/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "PagesObjectPage": {
+          "type": "Component",
+          "id": "PagesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Pages",
+                  "navigation": {},
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "references/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    },
+                    "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Auto",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "SectionsObjectPage": {
+          "type": "Component",
+          "id": "SectionsObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Sections",
+                  "navigation": {}
+              }
+          }
+        },
         "AuthorsDetails": {
           "type": "Component",
           "id": "AuthorsDetailsList",
@@ -161,7 +257,13 @@
         "sap.ui.controllerExtensions": {
           "sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList": {
               "controllerName": "books.controller.custom"
-          }       
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::ChaptersObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::PagesObjectPage": {
+              "controllerName": "books.controller.custom"
+          }
         }
       }
     },
