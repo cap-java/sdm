@@ -118,17 +118,14 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
       String attachmentCompositionDefinition = entry.getKey();
-      String attachmentCompositionName = entry.getValue();
-      revertLinksForComposition(
-          context, parentKeys, attachmentCompositionDefinition, attachmentCompositionName);
+      revertLinksForComposition(context, parentKeys, attachmentCompositionDefinition);
     }
   }
 
   private void revertLinksForComposition(
       DraftCancelEventContext context,
       Map<String, Object> parentKeys,
-      String attachmentCompositionDefinition,
-      String attachmentCompositionName)
+      String attachmentCompositionDefinition)
       throws IOException {
 
     CdsModel model = context.getModel();
@@ -216,7 +213,6 @@ public class SDMServiceGenericHandler implements EventHandler {
     cmisDocToRevert.setUrl(originalUrl);
     cmisDocToRevert.setRepositoryId(SDMConstants.REPOSITORY_ID);
     sdmService.editLink(cmisDocToRevert, sdmCredentials, isSystemUser);
-
   }
 
   @On(event = "openAttachment")
