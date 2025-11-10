@@ -5,8 +5,10 @@ import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_M
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
+import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -16,6 +18,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
@@ -24,8 +27,10 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.draft.DraftCancelEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -93,6 +98,125 @@ public class SDMServiceGenericHandler implements EventHandler {
   public void edit(EventContext context) throws IOException {
     logger.info("Handling event " + context.getEvent());
     editLink(context);
+  }
+
+  @Before(event = DraftService.EVENT_DRAFT_CANCEL)
+  public void handleDraftDiscardForLinks(DraftCancelEventContext context) throws IOException {
+    CdsEntity parentDraftEntity = context.getTarget();
+    CqnAnalyzer analyzer = CqnAnalyzer.create(context.getModel());
+    Map<String, Object> parentKeys = analyzer.analyze(context.getCqn()).rootKeys();
+    String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
+
+    Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
+    Map<String, String> compositionPathMapping =
+        parentActiveEntityOpt
+            .map(
+                cdsEntity ->
+                    AttachmentsHandlerUtils.getAttachmentPathMapping(
+                        context.getModel(), cdsEntity, persistenceService))
+            .orElse(new HashMap<>());
+
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      String attachmentCompositionName = entry.getValue();
+      revertLinksForComposition(
+          context, parentKeys, attachmentCompositionDefinition, attachmentCompositionName);
+    }
+  }
+
+  private void revertLinksForComposition(
+      DraftCancelEventContext context,
+      Map<String, Object> parentKeys,
+      String attachmentCompositionDefinition,
+      String attachmentCompositionName)
+      throws IOException {
+
+    CdsModel model = context.getModel();
+    String draftEntityName = attachmentCompositionDefinition + "_drafts";
+    CdsEntity draftEntity = model.findEntity(draftEntityName).get();
+    CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
+
+    String upIdKey = getUpIdKey(draftEntity);
+    String parentKeyName = upIdKey.replaceFirst("^up__", "");
+    Object parentId = parentKeys.get(parentKeyName);
+
+    CqnSelect selectDraftLinks =
+        Select.from(draftEntity)
+            .where(
+                a ->
+                    a.get(upIdKey)
+                        .eq(parentId)
+                        .and(a.get("mimeType").eq("application/internet-shortcut"))
+                        .and(a.get("IsActiveEntity").eq(false)));
+
+    Result draftLinks = persistenceService.run(selectDraftLinks);
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    Boolean isSystemUser = context.getUserInfo().isSystemUser();
+
+    for (Map<String, Object> draftLink :
+        draftLinks.listOf(Map.class).stream()
+            .map(
+                m -> {
+                  @SuppressWarnings("unchecked")
+                  Map<String, Object> typedMap = (Map<String, Object>) m;
+                  return typedMap;
+                })
+            .toList()) {
+      String attachmentId = (String) draftLink.get("ID");
+      String draftLinkUrl = (String) draftLink.get("linkUrl");
+      String objectId = (String) draftLink.get("objectId");
+      String filename = (String) draftLink.get("fileName");
+
+      String originalUrl =
+          getOriginalUrlFromActiveTable(activeEntity, attachmentId, parentId, upIdKey);
+
+      if (originalUrl != null && !originalUrl.equals(draftLinkUrl)) {
+        revertLinkInSDM(objectId, filename, originalUrl, sdmCredentials, isSystemUser);
+      }
+    }
+  }
+
+  private String getOriginalUrlFromActiveTable(
+      CdsEntity activeEntity, String attachmentId, Object parentId, String upIdKey) {
+    CqnSelect selectActiveLink =
+        Select.from(activeEntity)
+            .columns("linkUrl")
+            .where(
+                a ->
+                    a.get("ID")
+                        .eq(attachmentId)
+                        .and(a.get(upIdKey).eq(parentId))
+                        .and(a.get("IsActiveEntity").eq(true))
+                        .and(a.get("mimeType").eq("application/internet-shortcut")));
+
+    Result activeResult = persistenceService.run(selectActiveLink);
+
+    if (activeResult.rowCount() > 0) {
+      Row activeRow = activeResult.single();
+      String originalUrl =
+          activeRow.get("linkUrl") != null ? activeRow.get("linkUrl").toString() : null;
+      return originalUrl;
+    } else {
+      return null;
+    }
+  }
+
+  private void revertLinkInSDM(
+      String objectId,
+      String filename,
+      String originalUrl,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser)
+      throws IOException {
+
+    CmisDocument cmisDocToRevert = new CmisDocument();
+    cmisDocToRevert.setObjectId(objectId);
+    cmisDocToRevert.setFileName(filename);
+
+    cmisDocToRevert.setUrl(originalUrl);
+    cmisDocToRevert.setRepositoryId(SDMConstants.REPOSITORY_ID);
+    sdmService.editLink(cmisDocToRevert, sdmCredentials, isSystemUser);
+
   }
 
   @On(event = "openAttachment")
