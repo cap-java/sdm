@@ -8,6 +8,15 @@ on:
         required: true
         default: 'developcap'
 
+      deploy_branch:
+          description: 'Specify the branch to deploy'
+          required: false
+
+      cds_services_version:
+        description: 'Optional override for <cds.services.version> (e.g. 4.3.1). Leave blank to use existing value.'
+        required: false
+        default: ''
+
 permissions:
   pull-requests: read
   packages: read  # Added permission to read packages
@@ -20,6 +29,9 @@ jobs:
 
       - name: Checkout this repository 📁
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.deploy_branch }}
+
 
       - name: Set up JDK 21 ☕
         uses: actions/setup-java@v3
@@ -49,6 +61,24 @@ jobs:
             echo "🔄 Cloning repository..."
             git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
             echo "✅ Repository cloned!"
+      
+      - name: Override cds.services.version (runtime only)
+        if: ${{ github.event.inputs.cds_services_version != '' }}
+        env:
+          TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
+        run: |
+          echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "Updating files:"; echo "$FILES" | sed 's/^/  - /'
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+          echo "Post-update values:"; grep -R "<cds.services.version>" $FILES || true
+          echo "(Not committing these changes)"
+        shell: bash
 
       - name: Change directory to cloud-cap-samples-java 📂
         working-directory: cloud-cap-samples-java
@@ -82,7 +112,7 @@ jobs:
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${ secrets.CF_API } -u ${ secrets.CF_USER } -p ${ secrets.CF_PASSWORD } -o ${ secrets.CF_ORG } -s -s ${{ steps.determine_space.outputs.space }}
+            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
             echo "✅ Logged in successfully!"
 
             # Deploy the application

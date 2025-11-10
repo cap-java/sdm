@@ -1,10 +1,13 @@
 name: Check Release Branch Names
 
 on:
-  workflow_dispatch: # Allows manual triggering of the workflow
-
+  workflow_run:
+    workflows: ["Single Tenant Deploy and Integration Test"]
+    types: [completed]
+  workflow_dispatch:
 jobs:
   check_release_branches:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -13,13 +16,4 @@ jobs:
 
     - name: List Release branches
       run: |
-        # Fetch all branches
-        branches=$(git branch -r | grep 'origin/Release')
-        
-        # Check if any branches were found
-        if [ -n "$branches" ]; then
-          echo "Branches starting with 'Release':"
-          echo "$branches"
-        else
-          echo "No branches starting with 'Release' found."
-        fi
+        echo "Downstream job completed successfully"

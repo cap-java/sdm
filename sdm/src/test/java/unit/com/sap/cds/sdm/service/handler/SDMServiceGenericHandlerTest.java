@@ -18,10 +18,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
-import com.sap.cds.sdm.model.AttachmentReadContext;
-import com.sap.cds.sdm.model.CmisDocument;
-import com.sap.cds.sdm.model.CopyAttachmentInput;
-import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.RegisterService;
@@ -32,7 +29,9 @@ import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Stream;
@@ -54,6 +53,7 @@ public class SDMServiceGenericHandlerTest {
   @Mock private CqnSelect cqnSelect;
   @Mock private CdsEntity cdsEntity;
   @Mock private CdsEntity draftEntity;
+  @Mock private CdsRuntime cdsRuntime;
 
   private CmisDocument cmisDocument;
   private SDMCredentials sdmCredentials;
@@ -62,6 +62,7 @@ public class SDMServiceGenericHandlerTest {
 
   private MockedStatic<CqnAnalyzer> cqnAnalyzerMock;
   private MockedStatic<SDMUtils> sdmUtilsMock;
+  @Mock ParameterInfo parameterInfo;
 
   @BeforeEach
   void setUp() {
@@ -156,9 +157,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -186,8 +191,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -220,9 +227,14 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getModel()).thenReturn(cdsModel);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
-
-    when(sdmService.checkRepositoryType(anyString(), anyString()))
-        .thenReturn(SDMConstants.REPOSITORY_VERSIONED);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(true);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -244,14 +256,22 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn("Maximum two links allowed");
     when(userInfo.isSystemUser()).thenReturn(false);
 
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
@@ -260,7 +280,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -276,14 +297,14 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__Maximum two links allowed");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals("Maximum two links allowed", ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -300,9 +321,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -316,7 +341,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -332,14 +358,14 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, 2), ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -356,9 +382,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/URL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -372,7 +402,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
 
-    // when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    //
+    when(cdsModel.findEntity("MyService.MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
@@ -388,16 +419,16 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
-
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
         SDMConstants.linkNameConstraintMessage(Collections.singletonList("test/URL"), "created"),
         ex.getMessage());
-
-    // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString());
   }
 
   @Test
@@ -414,9 +445,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -449,8 +484,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -472,9 +509,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -503,8 +544,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -537,9 +580,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -568,8 +615,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -603,9 +652,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -634,8 +687,10 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -668,9 +723,13 @@ public class SDMServiceGenericHandlerTest {
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -699,13 +758,19 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
-
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn("NON_VERSIONED");
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("http://test-url");
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
 
     JSONObject createResult = new JSONObject();
     createResult.put("status", "unauthorized");
@@ -893,6 +958,10 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
     UserInfo userInfo = Mockito.mock(UserInfo.class);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.FAILED_TO_EDIT_LINK_MSG);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     AnalysisResult analysisResult = mock(AnalysisResult.class);
@@ -906,12 +975,374 @@ public class SDMServiceGenericHandlerTest {
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
         .thenReturn(cmisDocument);
     when(mockContext.get("url")).thenReturn("http://badlink.com");
+
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     JSONObject failureResponse = new JSONObject();
     failureResponse.put("status", "error");
     when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
         .thenReturn(failureResponse);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));
+    verify(persistenceService, never()).run(any(Update.class));
+    verify(mockContext, never()).setCompleted();
+  }
+
+  @Test
+  void testOpenAttachment_WithLinkFile() throws Exception {
+    // Arrange
+    AttachmentReadContext context = mock(AttachmentReadContext.class);
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(context.get("cqn")).thenReturn(cqnSelect);
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    CmisDocument linkDocument = new CmisDocument();
+    linkDocument.setFileName("test.url");
+    linkDocument.setMimeType("application/internet-shortcut");
+    linkDocument.setUrl("http://test.com");
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(linkDocument);
+
+    // Act
+    sdmServiceGenericHandler.openAttachment(context);
+
+    // Assert
+    verify(context).setResult("http://test.com");
+  }
+
+  @Test
+  void testOpenAttachment_WithRegularFile() throws Exception {
+    // Arrange
+    AttachmentReadContext context = mock(AttachmentReadContext.class);
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(context.get("cqn")).thenReturn(cqnSelect);
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    CmisDocument regularDocument = new CmisDocument();
+    regularDocument.setFileName("test.pdf");
+    regularDocument.setMimeType("application/pdf");
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(regularDocument);
+
+    // Act
+    sdmServiceGenericHandler.openAttachment(context);
+
+    // Assert
+    verify(context).setResult("None");
+  }
+
+  @Test
+  void testOpenAttachment_FallbackToNonDraftEntity() throws Exception {
+    // Arrange
+    AttachmentReadContext context = mock(AttachmentReadContext.class);
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(context.get("cqn")).thenReturn(cqnSelect);
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyEntity")).thenReturn(Optional.of(cdsEntity));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    // First call returns document with empty filename (triggers fallback)
+    CmisDocument emptyDocument = new CmisDocument();
+    emptyDocument.setFileName("");
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(emptyDocument);
+
+    // Second call returns proper document
+    CmisDocument properDocument = new CmisDocument();
+    properDocument.setFileName("test.url");
+    properDocument.setMimeType("application/internet-shortcut");
+    properDocument.setUrl("http://fallback.com");
+    when(dbQuery.getObjectIdForAttachmentID(eq(cdsEntity), eq(persistenceService), eq("123")))
+        .thenReturn(properDocument);
+
+    // Act
+    sdmServiceGenericHandler.openAttachment(context);
+
+    // Assert
+    verify(context).setResult("http://fallback.com");
+    verify(dbQuery).getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123"));
+    verify(dbQuery).getObjectIdForAttachmentID(eq(cdsEntity), eq(persistenceService), eq("123"));
+  }
+
+  @Test
+  void testCreateLink_RepositoryValidationFails() throws IOException {
+    // Arrange
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVersionEnabled(true); // This will trigger validation failure
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+  }
+
+  @Test
+  void testCreateLink_LocalizedRepositoryValidationMessage() throws IOException {
+    // Arrange
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn("Custom localized message for versioned repository");
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVersionEnabled(true);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+    assertEquals("Custom localized message for versioned repository", exception.getMessage());
+  }
+
+  @Test
+  void testCreateLink_AttachmentCountConstraintExceeded() throws IOException {
+    // Arrange
+    Result mockResult = mock(Result.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getTarget()).thenReturn(draftEntity);
+    when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+    when(mockContext.getEvent()).thenReturn("createLink");
+    CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.get("name")).thenReturn("testURL");
+    when(mockContext.get("url")).thenReturn("http://test-url");
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+
+    when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
+        .thenReturn(mockResult);
+    when(mockResult.rowCount()).thenReturn(5L); // Exceeds limit
+    when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
+
+    sdmUtilsMock
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("3__Maximum attachments exceeded"); // Max 3, current 5
+    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+  }
+
+  @Test
+  void testCreateLink_RestrictedCharactersInName() throws IOException {
+    // Arrange
+    Result mockResult = mock(Result.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getTarget()).thenReturn(draftEntity);
+    when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+    when(mockContext.getEvent()).thenReturn("createLink");
+    CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.get("name")).thenReturn("test/invalid\\name");
+    when(mockContext.get("url")).thenReturn("http://test-url");
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+
+    when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
+        .thenReturn(mockResult);
+    when(mockResult.rowCount()).thenReturn(0L);
+    when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
+
+    sdmUtilsMock
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
+    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+  }
+
+  @Test
+  void testCreateLink_UnauthorizedError() throws IOException {
+    // Arrange
+    Result mockResult = mock(Result.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getTarget()).thenReturn(draftEntity);
+    when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+    when(mockContext.getEvent()).thenReturn("createLink");
+    CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.get("name")).thenReturn("testURL");
+    when(mockContext.get("url")).thenReturn("http://test-url");
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+
+    when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
+        .thenReturn(mockResult);
+    when(mockResult.rowCount()).thenReturn(0L);
+    when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
+
+    sdmUtilsMock
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
+    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    JSONObject createResult = new JSONObject();
+    createResult.put("status", "unauthorized");
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean()))
+        .thenReturn(createResult);
+
+    // Act & Assert
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+  }
+
+  @Test
+  void testEditLink_UnauthorizedError() throws IOException {
+    // Arrange
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
+    when(cdsModel.findEntity("MyEntity_drafts")).thenReturn(Optional.of(draftEntity));
+    UserInfo userInfo = Mockito.mock(UserInfo.class);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+    when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
+
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
+        .thenReturn(cmisDocument);
+    when(mockContext.get("url")).thenReturn("http://newlink.com");
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    JSONObject unauthorizedResponse = new JSONObject();
+    unauthorizedResponse.put("status", "unauthorized");
+    when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
+        .thenReturn(unauthorizedResponse);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));

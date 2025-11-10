@@ -1,0 +1,14 @@
+package com.sap.cds.sdm.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class RepoValue {
+  private Boolean virusScanEnabled;
+  private Boolean versionEnabled;
+  private Boolean disableVirusScannerForLargeFile;
+}
