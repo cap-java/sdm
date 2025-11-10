@@ -33,7 +33,7 @@ public class SDMUtils {
     // Doesn't do anything
   }
 
-  public static Set<String> isFileNameContainsWhitespace(
+  public static Set<String> FileNameContainsWhitespace(
       List<CdsData> data, String composition, String targetEntity) {
     Set<String> filenamesWithWhitespace = new HashSet<>();
     for (Map<String, Object> entity : data) {
@@ -53,7 +53,7 @@ public class SDMUtils {
     return filenamesWithWhitespace;
   }
 
-  public static Set<String> isFileNameDuplicateInDrafts(
+  public static Set<String> FileNameDuplicateInDrafts(
       List<CdsData> data, String composition, String targetEntity) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
@@ -78,7 +78,7 @@ public class SDMUtils {
     return duplicateFilenames;
   }
 
-  public static List<String> isFileNameContainsRestrictedCharaters(
+  public static List<String> FileNameContainsRestrictedCharaters(
       List<CdsData> data, String composition, String targetEntity) {
     List<String> restrictedFilenames = new ArrayList<>();
     for (Map<String, Object> entity : data) {

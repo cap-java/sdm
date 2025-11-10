@@ -743,7 +743,7 @@ class IntegrationTest_MultipleFacet {
     System.out.println("Test (14) : Rename attachments to validate names");
     String[] generatedIDs = new String[3];
     String[] duplicateIDs = new String[1];
-    Boolean testStatus = false, allRenamedSuccessfully = true;
+    boolean testStatus = false, allRenamedSuccessfully = true;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
       entityID3 = response;

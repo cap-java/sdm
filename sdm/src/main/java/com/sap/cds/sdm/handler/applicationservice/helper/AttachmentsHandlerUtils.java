@@ -391,11 +391,11 @@ public class AttachmentsHandlerUtils {
 
     // Validation for file names
     Set<String> whitespaceFilenames =
-        SDMUtils.isFileNameContainsWhitespace(data, composition, targetEntity);
+        SDMUtils.FileNameContainsWhitespace(data, composition, targetEntity);
     List<String> restrictedFileNames =
-        SDMUtils.isFileNameContainsRestrictedCharaters(data, composition, targetEntity);
+        SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
     Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, composition, targetEntity);
+        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {

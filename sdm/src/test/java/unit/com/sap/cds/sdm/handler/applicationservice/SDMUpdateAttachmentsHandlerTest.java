@@ -155,18 +155,18 @@ public class SDMUpdateAttachmentsHandlerTest {
       // Mock SDMUtils helper methods to ensure validation works correctly
       try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
         sdmUtilsMockedStatic
             .when(
                 () ->
-                    SDMUtils.isFileNameContainsRestrictedCharaters(
+                    SDMUtils.FileNameContainsRestrictedCharaters(
                         anyList(), anyString(), anyString()))
             .thenReturn(new ArrayList<>());
         Set<String> duplicateFiles = new HashSet<>();
         duplicateFiles.add("file1.txt");
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
             .thenReturn(duplicateFiles);
 
         // Call the method under test; validateFileNames will detect duplicates and call
@@ -333,7 +333,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         sdmUtilsMock
             .when(
                 () ->
-                    SDMUtils.isFileNameDuplicateInDrafts(
+                    SDMUtils.FileNameDuplicateInDrafts(
                         any(List.class), eq("compositionName"), anyString()))
             .thenReturn(Collections.emptySet());
 

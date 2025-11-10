@@ -173,7 +173,7 @@ public class SDMConstants {
   }
 
   // Duplicate file names error message
-  public static String duplicateFilenameFormat(Set<String> duplicateFileNames) {
+  public static String duplicateFilenameFormat(Collection<String> duplicateFileNames) {
     // if only 1 duplicate file, so different error will throw
     if (duplicateFileNames.size() == 1) {
       return String.format(SINGLE_DUPLICATE_FILENAME, duplicateFileNames.iterator().next());

@@ -77,6 +77,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Boolean isError = false;
     isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
     if (!isError) {
+      List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
+      List<String> duplicateFileNameList = new ArrayList<>();
       List<String> filesNotFound = new ArrayList<>();
       List<String> filesWithUnsupportedProperties = new ArrayList<>();
       Map<String, String> badRequest = new HashMap<>();
@@ -101,6 +103,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         processEntity(
             context,
             entity,
+            fileNameWithRestrictedCharacters,
+            duplicateFileNameList,
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
@@ -111,6 +115,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachmentCompositionName);
         handleWarnings(
             context,
+            fileNameWithRestrictedCharacters,
+            duplicateFileNameList,
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
@@ -123,6 +129,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private void processEntity(
       CdsCreateEventContext context,
       Map<String, Object> entity,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
@@ -140,6 +148,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         processAttachment(
             context,
             attachment,
+            fileNameWithRestrictedCharacters,
+            duplicateFileNameList,
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
@@ -158,6 +168,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private void processAttachment(
       CdsCreateEventContext context,
       Map<String, Object> attachment,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
@@ -206,7 +218,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-
+    if (SDMUtils.hasRestrictedCharactersInName(filenameInRequest)) {
+      fileNameWithRestrictedCharacters.add(filenameInRequest);
+    }
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
@@ -286,11 +300,23 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
   private void handleWarnings(
       CdsCreateEventContext context,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> duplicateFileNameList,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
       List<String> noSDMRoles) {
+    if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      context
+          .getMessages()
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
+    }
+    if (!duplicateFileNameList.isEmpty()) {
+      context
+          .getMessages()
+          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
+    }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
     }

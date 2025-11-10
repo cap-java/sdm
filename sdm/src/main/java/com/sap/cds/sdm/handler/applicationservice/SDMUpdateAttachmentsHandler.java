@@ -86,7 +86,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionDefinition,
       String attachmentCompositionName)
       throws IOException {
+    List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
+    List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
@@ -115,6 +117,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             context,
             attachments,
+            duplicateFileNameList,
+            fileNameWithRestrictedCharacters,
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
@@ -124,6 +128,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     handleWarnings(
         context,
+        duplicateFileNameList,
+        fileNameWithRestrictedCharacters,
         filesNotFound,
         filesWithUnsupportedProperties,
         badRequest,
@@ -135,6 +141,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity,
       CdsUpdateEventContext context,
       List<Map<String, Object>> attachments,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
@@ -148,6 +156,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           attachmentEntity,
           context,
           attachment,
+          duplicateFileNameList,
+          fileNameWithRestrictedCharacters,
           filesNotFound,
           filesWithUnsupportedProperties,
           badRequest,
@@ -166,6 +176,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity,
       CdsUpdateEventContext context,
       Map<String, Object> attachment,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
@@ -205,6 +217,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String filenameInRequest = (String) attachment.get("fileName");
 
     String objectId = (String) attachment.get("objectId");
+    if (Boolean.TRUE.equals(
+        SDMUtils.hasRestrictedCharactersInName(
+            filenameInRequest))) { // Check if the filename contains restricted characters and stop
+      // further processing if it does (Request not sent to SDM)
+      fileNameWithRestrictedCharacters.add(filenameInRequest);
+      replacePropertiesInAttachment(
+          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+      return;
+    }
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
@@ -234,6 +255,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           case 403:
             // SDM Roles for user are missing
             noSDMRoles.add(fileNameInDB);
+            replacePropertiesInAttachment(
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+            break;
+          case 409:
+            duplicateFileNameList.add(filenameInRequest);
             replacePropertiesInAttachment(
                 attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
             break;
@@ -295,11 +321,23 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
   private void handleWarnings(
       CdsUpdateEventContext context,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
       List<String> filesNotFound,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
       List<String> noSDMRoles) {
+    if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      context
+          .getMessages()
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
+    }
+    if (!duplicateFileNameList.isEmpty()) {
+      context
+          .getMessages()
+          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
+    }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
     }

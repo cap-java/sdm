@@ -90,7 +90,7 @@ public class SDMUtilsTest {
     data.add(CdsData.create(entity));
 
     Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
+        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }
@@ -114,7 +114,7 @@ public class SDMUtilsTest {
           .thenReturn(attachments);
 
       List<String> result =
-          SDMUtils.isFileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.contains("file/1.txt"));
     }
   }
@@ -134,7 +134,7 @@ public class SDMUtilsTest {
           .thenReturn(Collections.emptyList());
 
       List<String> result =
-          SDMUtils.isFileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.isEmpty());
     }
   }

@@ -122,16 +122,15 @@ public class SDMCreateAttachmentsHandlerTest {
       when(context.getTarget()).thenReturn(targetEntity);
       // Make validateFileName execute its real implementation, and stub helper methods
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+          .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
           .thenCallRealMethod();
       sdmUtilsMockedStatic
           .when(
               () ->
-                  SDMUtils.isFileNameContainsRestrictedCharaters(
-                      anyList(), anyString(), anyString()))
+                  SDMUtils.FileNameContainsRestrictedCharaters(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptyList());
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
+          .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
           .thenReturn(duplicateFilenames);
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
@@ -156,7 +155,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Arrange
     List<CdsData> data = new ArrayList<>();
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "entity"))
+        .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity"))
         .thenReturn(Collections.emptySet());
 
     // Act
@@ -187,7 +186,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
       // Mock utility methods
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "entity"))
+          .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity"))
           .thenReturn(Collections.emptySet());
 
       // Act
@@ -440,7 +439,7 @@ public class SDMCreateAttachmentsHandlerTest {
       sdmUtilsMockedStatic
           .when(
               () ->
-                  SDMUtils.isFileNameDuplicateInDrafts(
+                  SDMUtils.FileNameDuplicateInDrafts(
                       data, "compositionName", "some.qualified.Name"))
           .thenReturn(new HashSet<>());
 
@@ -514,10 +513,10 @@ public class SDMCreateAttachmentsHandlerTest {
 
         // Make validateFileName execute its real implementation so it logs the error
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
             .thenCallRealMethod();
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
 
         // Act
@@ -564,15 +563,15 @@ public class SDMCreateAttachmentsHandlerTest {
 
       // Stub the validation helper methods so validateFileName runs and detects the restricted char
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+          .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptySet());
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+          .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptySet());
       sdmUtilsMockedStatic
           .when(
               () ->
-                  SDMUtils.isFileNameContainsRestrictedCharaters(
+                  SDMUtils.FileNameContainsRestrictedCharaters(
                       data, "compositionName", "some.qualified.Name"))
           .thenReturn(Arrays.asList("file/1.txt"));
 
