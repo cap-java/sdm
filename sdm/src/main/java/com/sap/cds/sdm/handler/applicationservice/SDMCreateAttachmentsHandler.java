@@ -75,7 +75,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
     String targetEntity = context.getTarget().getQualifiedName();
     Boolean isError = false;
-    isError = SDMUtils.validateFileNames(context, data, attachmentCompositionName);
+    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
     if (!isError) {
       List<String> filesNotFound = new ArrayList<>();
       List<String> filesWithUnsupportedProperties = new ArrayList<>();

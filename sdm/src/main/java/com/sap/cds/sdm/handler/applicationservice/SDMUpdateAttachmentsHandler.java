@@ -66,7 +66,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionName)
       throws IOException {
     Boolean isError = false;
-    isError = SDMUtils.validateFileNames(context, data, attachmentCompositionName);
+    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
     if (!isError) {
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);

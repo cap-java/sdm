@@ -8,7 +8,6 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.AttachmentInfo;
-import com.sap.cds.services.EventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,36 +31,6 @@ public class SDMUtils {
 
   private SDMUtils() {
     // Doesn't do anything
-  }
-
-  public static Boolean validateFileNames(
-      EventContext context, List<CdsData> data, String composition) {
-    Boolean isError = false;
-    String targetEntity = context.getTarget().getQualifiedName();
-
-    // Validation for file names
-    Set<String> whitespaceFilenames = isFileNameContainsWhitespace(data, composition, targetEntity);
-    List<String> restrictedFileNames =
-        isFileNameContainsRestrictedCharaters(data, composition, targetEntity);
-    Set<String> duplicateFilenames = isFileNameDuplicateInDrafts(data, composition, targetEntity);
-
-    // Collecting all the errors
-    if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
-      isError = true;
-    }
-    if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
-      context.getMessages().error(SDMConstants.nameConstraintMessage(restrictedFileNames));
-      isError = true;
-    }
-    if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
-      String formattedMessage =
-          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames));
-      context.getMessages().error(formattedMessage);
-      isError = true;
-    }
-    // returning the error message
-    return isError;
   }
 
   public static Set<String> isFileNameContainsWhitespace(

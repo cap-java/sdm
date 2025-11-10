@@ -133,18 +133,21 @@ public class SDMCreateAttachmentsHandlerTest {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
           .thenReturn(duplicateFilenames);
-      sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
-          .thenCallRealMethod();
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentUtilsMockedStatic
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .thenCallRealMethod();
 
-      // Act
-      handler.updateName(context, data, "compositionDefinition", "compositionName");
+        // Act
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
 
-      // Assert: validateFileName should have logged an error for duplicate filenames
-      verify(messages, times(1))
-          .error(
-              org.mockito.ArgumentMatchers.contains(
-                  "Objects with the following names already exist"));
+        // Assert: validateFileName should have logged an error for duplicate filenames
+        verify(messages, times(1))
+            .error(
+                org.mockito.ArgumentMatchers.contains(
+                    "Objects with the following names already exist"));
+      }
     }
   }
 
@@ -450,6 +453,9 @@ public class SDMCreateAttachmentsHandlerTest {
                     AttachmentsHandlerUtils.fetchAttachments(
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
+        attachmentsHandlerUtilsMocked
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .thenCallRealMethod();
 
         // Mock attachment entity
         CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
@@ -513,17 +519,15 @@ public class SDMCreateAttachmentsHandlerTest {
         sdmUtilsMockedStatic
             .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
-        sdmUtilsMockedStatic
-            .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
-            .thenCallRealMethod();
 
         // Act
         handler.updateName(context, data, "compositionDefinition", "compositionName");
 
-        // Assert: since validation logs an error instead of throwing, ensure the message was logged
+        // Assert: since validation logs an error instead of throwing, ensure the message was
+        // logged
         verify(messages, times(1)).error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
       } // Close AttachmentsHandlerUtils mock
-    }
+    } // Close SDMUtils mock
   }
 
   @Test
@@ -571,9 +575,6 @@ public class SDMCreateAttachmentsHandlerTest {
                   SDMUtils.isFileNameContainsRestrictedCharaters(
                       data, "compositionName", "some.qualified.Name"))
           .thenReturn(Arrays.asList("file/1.txt"));
-      sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileNames(any(), anyList(), anyString()))
-          .thenCallRealMethod();
 
       try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =
           mockStatic(AttachmentsHandlerUtils.class)) {
@@ -583,6 +584,9 @@ public class SDMCreateAttachmentsHandlerTest {
                     AttachmentsHandlerUtils.fetchAttachments(
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
+        attachmentsHandlerUtilsMocked
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .thenCallRealMethod();
 
         // Act
         handler.updateName(context, data, "compositionDefinition", "compositionName");

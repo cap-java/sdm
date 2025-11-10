@@ -148,14 +148,35 @@ public class SDMUpdateAttachmentsHandlerTest {
                   AttachmentsHandlerUtils.fetchAttachments(
                       anyString(), any(Map.class), eq("compositionName")))
           .thenReturn(attachments);
+      attachmentsMockedStatic
+          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+          .thenCallRealMethod();
 
-      // Call the method under test; SDMUtils.validateFileName will detect duplicates and call
-      // context.getMessages().error(...)
-      handler.updateName(context, data, "compositionDefinition", "compositionName");
+      // Mock SDMUtils helper methods to ensure validation works correctly
+      try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.isFileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .thenReturn(new HashSet<>());
+        sdmUtilsMockedStatic
+            .when(
+                () ->
+                    SDMUtils.isFileNameContainsRestrictedCharaters(
+                        anyList(), anyString(), anyString()))
+            .thenReturn(new ArrayList<>());
+        Set<String> duplicateFiles = new HashSet<>();
+        duplicateFiles.add("file1.txt");
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .thenReturn(duplicateFiles);
 
-      Set<String> expected = new HashSet<>();
-      expected.add("file1.txt");
-      verify(messages, times(1)).error(SDMConstants.duplicateFilenameFormat(expected));
+        // Call the method under test; validateFileNames will detect duplicates and call
+        // context.getMessages().error(...)
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
+
+        Set<String> expected = new HashSet<>();
+        expected.add("file1.txt");
+        verify(messages, times(1)).error(SDMConstants.duplicateFilenameFormat(expected));
+      }
     }
   }
 

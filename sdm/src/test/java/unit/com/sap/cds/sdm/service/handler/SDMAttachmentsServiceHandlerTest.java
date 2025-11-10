@@ -28,6 +28,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -691,13 +692,15 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+            mockStatic(AttachmentsHandlerUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("10__null");
-      sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
-          .thenReturn(false);
+      attachmentUtilsMockedStatic
+          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+          .thenCallRealMethod();
 
       // Assert that a ServiceException is thrown and verify its message
       ServiceException thrown =
@@ -782,18 +785,21 @@ public class SDMAttachmentsServiceHandlerTest {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
-      sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
-          .thenReturn(true);
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentUtilsMockedStatic
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+            .thenCallRealMethod();
 
-      // Assert that a ServiceException is thrown and verify its message
-      ServiceException thrown =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                handlerSpy.createAttachment(mockContext);
-              });
-      assertEquals("Unauthorised error german", thrown.getMessage());
+        // Assert that a ServiceException is thrown and verify its message
+        ServiceException thrown =
+            assertThrows(
+                ServiceException.class,
+                () -> {
+                  handlerSpy.createAttachment(mockContext);
+                });
+        assertEquals("Unauthorised error german", thrown.getMessage());
+      }
     }
   }
 
@@ -870,18 +876,21 @@ public class SDMAttachmentsServiceHandlerTest {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
-      sdmUtilsMockedStatic
-          .when(() -> SDMUtils.validateFileNames(any(), any(), any()))
-          .thenReturn(true);
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentUtilsMockedStatic
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+            .thenCallRealMethod();
 
-      // Assert that a ServiceException is thrown and verify its message
-      ServiceException thrown =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                handlerSpy.createAttachment(mockContext);
-              });
-      assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+        // Assert that a ServiceException is thrown and verify its message
+        ServiceException thrown =
+            assertThrows(
+                ServiceException.class,
+                () -> {
+                  handlerSpy.createAttachment(mockContext);
+                });
+        assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+      }
     }
   }
 
