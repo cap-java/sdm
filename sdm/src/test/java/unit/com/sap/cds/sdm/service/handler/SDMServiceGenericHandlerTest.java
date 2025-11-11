@@ -100,6 +100,262 @@ public class SDMServiceGenericHandlerTest {
   }
 
   @Test
+  void testChangelogSuccess() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "test-id-123");
+
+    JSONObject mockChangeLogResult = new JSONObject();
+    mockChangeLogResult.put("changes", "change data");
+    mockChangeLogResult.put("version", "1.0");
+
+    cmisDocument.setFileName("test-document.pdf");
+    cmisDocument.setObjectId("object-123");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog("object-123", sdmCredentials, false))
+        .thenReturn(mockChangeLogResult);
+
+    // Act
+    sdmServiceGenericHandler.changelog(mockLogContext);
+
+    // Assert
+    verify(mockLogContext)
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "test-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("changes")
+                      && jsonResult.has("version");
+                }));
+
+    verify(dbQuery).getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123");
+    verify(tokenHandler).getSDMCredentials();
+    verify(sdmService).getChangeLog("object-123", sdmCredentials, false);
+  }
+
+  @Test
+  void testChangelogWithSystemUser() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "system-id-456");
+
+    JSONObject mockChangeLogResult = new JSONObject();
+    mockChangeLogResult.put("systemChanges", "system change data");
+
+    cmisDocument.setFileName("system-document.pdf");
+    cmisDocument.setObjectId("system-object-456");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("SystemService.SystemEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(true);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("SystemService.SystemEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "system-id-456"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
+        .thenReturn(mockChangeLogResult);
+
+    // Act
+    sdmServiceGenericHandler.changelog(mockLogContext);
+
+    // Assert
+    verify(mockLogContext)
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "system-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("systemChanges");
+                }));
+
+    verify(sdmService).getChangeLog("system-object-456", sdmCredentials, true);
+  }
+
+  @Test
+  void testChangelogEntityNotFound() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("NonExistent.Entity.attachments");
+
+    // Mock entity not found
+    when(cdsModel.findEntity("NonExistent.Entity.attachments_drafts")).thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
+  }
+
+  @Test
+  void testChangelogServiceException() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "error-id-789");
+
+    cmisDocument.setFileName("error-document.pdf");
+    cmisDocument.setObjectId("error-object-789");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("ErrorService.ErrorEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("ErrorService.ErrorEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "error-id-789"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service to throw ServiceException (runtime exception)
+    when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
+        .thenThrow(new ServiceException("Network error"));
+
+    // Act & Assert
+    assertThrows(
+        ServiceException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
+
+    verify(sdmService).getChangeLog("error-object-789", sdmCredentials, false);
+  }
+
+  @Test
+  void testChangelogWithNullObjectId() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "null-object-id");
+
+    CmisDocument nullObjectIdDocument = new CmisDocument();
+    nullObjectIdDocument.setFileName("null-object-document.pdf");
+    nullObjectIdDocument.setObjectId(null);
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("NullService.NullEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("NullService.NullEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query to return document with null objectId
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "null-object-id"))
+        .thenReturn(nullObjectIdDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog(null, sdmCredentials, false))
+        .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
+
+    // Act & Assert
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
+  }
+
+  @Test
   void testCopyAttachments_shouldCopyAttachment() throws IOException {
     when(mockContext.get("up__ID")).thenReturn("123");
     when(mockContext.get("objectIds")).thenReturn("abc, xyz");

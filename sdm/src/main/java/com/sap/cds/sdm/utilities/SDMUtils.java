@@ -82,10 +82,13 @@ public class SDMUtils {
   }
 
   public static void prepareSecondaryProperties(
-      Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
+      Map<String, String> requestBody,
+      Map<String, String> secondaryProperties,
+      String fileName,
+      boolean isSecondaryPropertiesUpdated) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
-    int index = 1;
+    int index = isSecondaryPropertiesUpdated ? 1 : 0;
     while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
       if ("filename".equals(entry.getKey())) {

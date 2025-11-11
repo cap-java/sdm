@@ -1594,6 +1594,362 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testGetRepositoryId_Success() {
+    String jsonString =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"other-repo\",\n"
+            + "        \"id\": \"other-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    // Use reflection to call the private method
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertEquals("internal-repo-123", result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_NotFound() {
+    String jsonString =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertNull(result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_EmptyArray() {
+    String jsonString = "{\n" + "  \"repoAndConnectionInfos\": []\n" + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertNull(result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_InvalidJson() {
+    String invalidJsonString = "invalid json";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+
+      java.lang.reflect.InvocationTargetException exception =
+          assertThrows(
+              java.lang.reflect.InvocationTargetException.class,
+              () -> {
+                method.invoke(sdmServiceImpl, invalidJsonString);
+              });
+
+      assertTrue(exception.getCause() instanceof ServiceException);
+      ServiceException serviceException = (ServiceException) exception.getCause();
+      assertTrue(serviceException.getMessage().contains("Unrecognized token"));
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_Success() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    String changeLogResponse =
+        "{\n"
+            + "  \"changeLogs\": [\n"
+            + "    {\n"
+            + "      \"changeType\": \"created\",\n"
+            + "      \"changeTime\": \"2023-01-01T00:00:00Z\",\n"
+            + "      \"user\": \"test-user\"\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    // Mock first call (repository info)
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+
+      assertNotNull(result);
+      assertTrue(result.has("changeLogs"));
+      JSONArray changeLogs = result.getJSONArray("changeLogs");
+      assertEquals(1, changeLogs.length());
+      assertEquals("created", changeLogs.getJSONObject(0).getString("changeType"));
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_RepositoryNotFound() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    String changeLogResponse = "{\n" + "  \"changeLogs\": []\n" + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
+
+      assertNotNull(result);
+      assertTrue(result.has("changeLogs"));
+      JSONArray changeLogs = result.getJSONArray("changeLogs");
+      assertEquals(0, changeLogs.length());
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_ChangeLogRequestFails() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(404);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+
+      assertNull(result);
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_RepositoryIOException() throws IOException {
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
+            });
+
+    assertEquals("Error in offboarding ", exception.getMessage());
+  }
+
+  @Test
+  public void testGetChangeLog_ChangeLogIOException() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenThrow(new IOException("Network error on changelog"));
+
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
+
+      assertEquals(SDMConstants.ATTACHMENT_NOT_FOUND, exception.getMessage());
+    }
+  }
+
+  @Test
   public void testEditLink_technicalUserFlow() throws IOException {
     String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
 

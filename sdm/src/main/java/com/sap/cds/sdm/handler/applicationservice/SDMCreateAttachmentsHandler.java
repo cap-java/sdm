@@ -186,12 +186,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
-    String fileNameInDB;
-    fileNameInDB =
-        dbQuery.getAttachmentForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id); // Fetching the name of the file from DB
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
@@ -238,68 +232,61 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
       cmisDocument.setObjectId(objectId);
-      if (fileNameInDB
-          == null) { // If the file name in DB is null, it means that the file is being created for
-        // the first time
-        if (filenameInRequest != null) {
-          updatedSecondaryProperties.put("filename", filenameInRequest);
-        } else {
-          throw new ServiceException("Filename cannot be empty");
-        }
-      } else {
-        if (filenameInRequest == null) {
-          throw new ServiceException("Filename cannot be empty");
-        } else if (!fileNameInDB.equals(
-            filenameInRequest)) { // If the file name in DB is not equal to the file name in
-          // request, it means that the file name has been modified
-          updatedSecondaryProperties.put("filename", filenameInRequest);
-        }
+
+      if (filenameInRequest == null) {
+        throw new ServiceException("Filename cannot be empty");
+      } else if (!filenameInRequest.equals(
+          fileNameInSDM)) { // If the file name in DB is not equal to the file name in
+        // request, it means that the file name has been modified
+        updatedSecondaryProperties.put("filename", filenameInRequest);
       }
-      try {
-        int responseCode =
-            sdmService.updateAttachments(
-                sdmCredentials,
-                cmisDocument,
-                updatedSecondaryProperties,
-                secondaryPropertiesWithInvalidDefinitions,
-                context.getUserInfo().isSystemUser());
-        switch (responseCode) {
-          case 403:
-            // SDM Roles for user are missing
-            noSDMRoles.add(fileNameInSDM);
+      if (!updatedSecondaryProperties.isEmpty()) {
+        try {
+          int responseCode =
+              sdmService.updateAttachments(
+                  sdmCredentials,
+                  cmisDocument,
+                  updatedSecondaryProperties,
+                  secondaryPropertiesWithInvalidDefinitions,
+                  context.getUserInfo().isSystemUser());
+          switch (responseCode) {
+            case 403:
+              // SDM Roles for user are missing
+              noSDMRoles.add(fileNameInSDM);
+              replacePropertiesInAttachment(
+                  attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+              break;
+            case 409:
+              duplicateFileNameList.add(filenameInRequest);
+              replacePropertiesInAttachment(
+                  attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+              break;
+            case 404:
+              filesNotFound.add(filenameInRequest);
+              replacePropertiesInAttachment(
+                  attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
+              break;
+            case 200:
+            case 201:
+              // Success cases, do nothing
+              break;
+
+            default:
+              throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
+          }
+        } catch (ServiceException e) {
+          // This exception is thrown when there are unsupported properties in the request
+          if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
+            String unsupportedDetails =
+                e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
+            filesWithUnsupportedProperties.add(unsupportedDetails);
             replacePropertiesInAttachment(
                 attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 409:
-            duplicateFileNameList.add(filenameInRequest);
-            replacePropertiesInAttachment(
-                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 404:
-            filesNotFound.add(filenameInRequest);
+          } else {
+            badRequest.put(filenameInRequest, e.getMessage());
             replacePropertiesInAttachment(
                 attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 200:
-          case 201:
-            // Success cases, do nothing
-            break;
-
-          default:
-            throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-        }
-      } catch (ServiceException e) {
-        // This exception is thrown when there are unsupported properties in the request
-        if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
-          String unsupportedDetails =
-              e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
-          filesWithUnsupportedProperties.add(unsupportedDetails);
-          replacePropertiesInAttachment(
-              attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-        } else {
-          badRequest.put(filenameInRequest, e.getMessage());
-          replacePropertiesInAttachment(
-              attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
+          }
         }
       }
     }

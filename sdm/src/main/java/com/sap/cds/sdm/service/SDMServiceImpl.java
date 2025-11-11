@@ -3,6 +3,8 @@ package com.sap.cds.sdm.service;
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.*;
@@ -274,17 +276,23 @@ public class SDMServiceImpl implements SDMService {
     // Prepare the request body parts
     Map<String, String> updateRequestBody = new HashMap<>();
     updateRequestBody.put("cmisaction", "update");
-    updateRequestBody.put(
-        "propertyId[0]",
-        "cmis:secondaryObjectTypeIds"); // Creating request body for update properties
 
-    for (int index = 0; index < secondaryTypes.size(); index++) {
+    boolean isFilenameUpdated = secondaryProperties.containsKey("filename");
+    boolean isSecondaryPropertiesUpdated = secondaryProperties.size() > (isFilenameUpdated ? 1 : 0);
+    if (isSecondaryPropertiesUpdated) {
       updateRequestBody.put(
-          "propertyValue[0][" + index + "]",
-          secondaryTypes.get(index)); // Adding Secondary Types to the request body
+          "propertyId[0]",
+          "cmis:secondaryObjectTypeIds"); // Creating request body for update properties
+
+      for (int index = 0; index < secondaryTypes.size(); index++) {
+        updateRequestBody.put(
+            "propertyValue[0][" + index + "]",
+            secondaryTypes.get(index)); // Adding Secondary Types to the request body
+      }
     }
 
-    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    SDMUtils.prepareSecondaryProperties(
+        updateRequestBody, secondaryProperties, fileName, isSecondaryPropertiesUpdated);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
@@ -700,6 +708,61 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
+    }
+  }
+
+  private String getRepositoryId(String jsonString) {
+    ObjectMapper objectMapper = new ObjectMapper();
+    try {
+      JsonNode rootNode = objectMapper.readTree(jsonString);
+      JsonNode repoInfos = rootNode.path("repoAndConnectionInfos");
+
+      // Iterate through the array to find the correct externalId and retrieve the id
+      for (JsonNode repoInfo : repoInfos) {
+        JsonNode repository = repoInfo.path("repository");
+        if (repository.path("externalId") != null
+            && repository.path("externalId").asText().equals(SDMConstants.REPOSITORY_ID)) {
+          return repository.path("id").asText();
+        }
+      }
+    } catch (Exception e) {
+      throw new ServiceException(String.format(e.getMessage()));
+    }
+    return null;
+  }
+
+  @Override
+  public JSONObject getChangeLog(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("This is a :" + grantType + " flow");
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+    String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/";
+    HttpGet getRepos = new HttpGet(sdmUrl);
+    String repoId = "";
+    try (var response = (CloseableHttpResponse) httpClient.execute(getRepos)) {
+      repoId = getRepositoryId(EntityUtils.toString(response.getEntity()));
+    } catch (IOException e) {
+      logger.error("Error in offboarding repository : " + e.getMessage());
+      throw new ServiceException("Error in offboarding ", e.getMessage());
+    }
+    sdmUrl =
+        sdmUrl
+            + (repoId == null ? SDMConstants.REPOSITORY_ID : repoId)
+            + "/objects/"
+            + objectId
+            + "/changeLogs?includeAll=true";
+
+    HttpGet getChangeLogRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getChangeLogRequest)) {
+      if (response.getStatusLine().getStatusCode() != 200) {
+        return null;
+      }
+      String responseString = EntityUtils.toString(response.getEntity());
+      return new JSONObject(responseString);
+
+    } catch (IOException e) {
+      throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
   }
 }
