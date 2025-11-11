@@ -1737,7 +1737,6 @@ public class SDMServiceImplTest {
     CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
     HttpEntity repositoryEntity = mock(HttpEntity.class);
     HttpEntity changeLogEntity = mock(HttpEntity.class);
-    StatusLine repositoryStatusLine = mock(StatusLine.class);
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))

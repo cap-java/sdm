@@ -84,7 +84,6 @@ public class SDMUtils {
   public static void prepareSecondaryProperties(
       Map<String, String> requestBody,
       Map<String, String> secondaryProperties,
-      String fileName,
       boolean isSecondaryPropertiesUpdated) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 

@@ -292,7 +292,7 @@ public class SDMServiceImpl implements SDMService {
     }
 
     SDMUtils.prepareSecondaryProperties(
-        updateRequestBody, secondaryProperties, fileName, isSecondaryPropertiesUpdated);
+        updateRequestBody, secondaryProperties, isSecondaryPropertiesUpdated);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
