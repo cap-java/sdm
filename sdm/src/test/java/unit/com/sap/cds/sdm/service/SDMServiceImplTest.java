@@ -1498,7 +1498,7 @@ public class SDMServiceImplTest {
     // Prepare mock response JSON
     String responseBody =
         "{\"succinctProperties\":{"
-            + "\"cmis:contentStreamFileName\":\"file1.pdf\","
+            + "\"cmis:name\":\"file1.pdf\","
             + "\"cmis:contentStreamMimeType\":\"application/pdf\","
             + "\"cmis:objectId\":\"obj123\"}}";
 
