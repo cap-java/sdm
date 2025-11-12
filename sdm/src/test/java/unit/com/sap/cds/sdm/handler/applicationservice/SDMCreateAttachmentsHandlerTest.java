@@ -569,7 +569,10 @@ public class SDMCreateAttachmentsHandlerTest {
 
         // Assert: since validation logs an error instead of throwing, ensure the message was
         // logged
-        verify(messages, times(1)).error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+        verify(messages, times(1))
+            .error(
+                SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE
+                    + "\n\nTable: compositionName\nPage: TestTitle");
       } // Close AttachmentsHandlerUtils mock
     } // Close SDMUtils mock
   }
@@ -646,7 +649,9 @@ public class SDMCreateAttachmentsHandlerTest {
 
         // Assert: proper restricted-character error was logged
         verify(messages, times(1))
-            .error(SDMConstants.nameConstraintMessage(Arrays.asList("file/1.txt")));
+            .error(
+                SDMConstants.nameConstraintMessage(Arrays.asList("file/1.txt"))
+                    + "\n\nTable: compositionName\nPage: TestTitle");
       }
     }
   }

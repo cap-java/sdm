@@ -198,7 +198,10 @@ public class SDMUpdateAttachmentsHandlerTest {
 
         Set<String> expected = new HashSet<>();
         expected.add("file1.txt");
-        verify(messages, times(1)).error(SDMConstants.duplicateFilenameFormat(expected));
+        verify(messages, times(1))
+            .error(
+                SDMConstants.duplicateFilenameFormat(expected)
+                    + "\n\nTable: compositionName\nPage: TestTitle");
       }
     }
   }
