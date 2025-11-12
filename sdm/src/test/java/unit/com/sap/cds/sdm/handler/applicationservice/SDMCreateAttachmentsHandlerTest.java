@@ -154,7 +154,13 @@ public class SDMCreateAttachmentsHandlerTest {
             .thenCallRealMethod();
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: validateFileName should have logged an error for duplicate filenames
         verify(messages, times(1))
@@ -547,7 +553,13 @@ public class SDMCreateAttachmentsHandlerTest {
             .thenReturn(new HashSet<>());
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: since validation logs an error instead of throwing, ensure the message was
         // logged
@@ -615,7 +627,13 @@ public class SDMCreateAttachmentsHandlerTest {
             .thenCallRealMethod();
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: proper restricted-character error was logged
         verify(messages, times(1))

@@ -1,5 +1,6 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -184,7 +185,13 @@ public class SDMUpdateAttachmentsHandlerTest {
 
         // Call the method under test; validateFileNames will detect duplicates and call
         // context.getMessages().error(...)
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         Set<String> expected = new HashSet<>();
         expected.add("file1.txt");
