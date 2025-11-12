@@ -19,6 +19,7 @@ import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -71,7 +72,6 @@ public class SDMUtilsTest {
   @Test
   public void testIsFileNameDuplicateInDrafts() {
     List<CdsData> data = new ArrayList<>();
-    CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
     List<Map<String, Object>> attachments = new ArrayList<>();
     Map<String, Object> attachment1 = new HashMap<>();
@@ -82,11 +82,15 @@ public class SDMUtilsTest {
     attachment2.put("repositoryId", "repo1");
     attachments.add(attachment1);
     attachments.add(attachment2);
-    entity.put("attachments", attachments);
-    when(mockCdsData.get("attachments")).thenReturn(attachments); // Correctly mock get method
-    data.add(mockCdsData);
 
-    Set<String> duplicateFilenames = SDMUtils.isFileNameDuplicateInDrafts(data, "attachments");
+    // Create the nested structure that fetchAttachments expects
+    Map<String, Object> entityData = new HashMap<>();
+    entityData.put("attachmentCompositionName", attachments);
+    entity.put("entity", entityData);
+    data.add(CdsData.create(entity));
+
+    Set<String> duplicateFilenames =
+        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }
@@ -94,49 +98,55 @@ public class SDMUtilsTest {
   @Test
   public void testIsFileNameContainsRestrictedCharaters() {
     List<CdsData> data = new ArrayList<>();
-    CdsData mockCdsData = mock(CdsData.class);
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("fileName", "file/1.txt"); // restricted char
+    attachments.add(attachment);
+    entity.put("composition", attachments);
+    data.add(CdsData.create(entity));
 
-    when(mockCdsData.get("attachments")).thenReturn(null); // Correctly mock get method
-    data.add(mockCdsData);
+    try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
+      mocked
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+          .thenReturn(attachments);
 
-    List<String> restrictedFilenames = SDMUtils.isFileNameContainsRestrictedCharaters(data);
-
-    assertEquals(0, restrictedFilenames.size());
+      List<String> result =
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      assertTrue(result.contains("file/1.txt"));
+    }
   }
 
   @Test
   public void testIsFileNameContainsRestrictedCharatersNoData() {
     List<CdsData> data = new ArrayList<>();
-    CdsData mockCdsData = mock(CdsData.class);
     Map<String, Object> entity = new HashMap<>();
-    List<Map<String, Object>> attachments = new ArrayList<>();
+    entity.put("composition", new ArrayList<>());
+    data.add(CdsData.create(entity));
 
-    Map<String, Object> attachment1 = new HashMap<>();
-    attachment1.put("fileName", "file1.txt");
-    Map<String, Object> attachment2 = new HashMap<>();
-    attachment2.put("fileName", "file2/abc.txt");
-    Map<String, Object> attachment3 = new HashMap<>();
-    attachment3.put("fileName", "file3\\abc.txt");
-    attachments.add(attachment1);
-    attachments.add(attachment2);
-    attachments.add(attachment3);
-    entity.put("attachments", attachments);
-    when(mockCdsData.get("attachments")).thenReturn(attachments); // Correctly mock get method
-    data.add(mockCdsData);
+    try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
+      mocked
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+          .thenReturn(Collections.emptyList());
 
-    List<String> restrictedFilenames = SDMUtils.isFileNameContainsRestrictedCharaters(data);
-
-    assertEquals(2, restrictedFilenames.size());
-    assertTrue(restrictedFilenames.contains("file2/abc.txt"));
-    assertTrue(restrictedFilenames.contains("file3\\abc.txt"));
+      List<String> result =
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      assertTrue(result.isEmpty());
+    }
   }
 
   @Test
   public void testIsRestrictedCharactersInName() {
-    assertTrue(SDMUtils.isRestrictedCharactersInName("file/abc.txt"));
-    assertTrue(SDMUtils.isRestrictedCharactersInName("file\\abc.txt"));
-    assertFalse(SDMUtils.isRestrictedCharactersInName("file-abc.txt"));
-    assertFalse(SDMUtils.isRestrictedCharactersInName("file_abc.txt"));
+    assertTrue(SDMUtils.hasRestrictedCharactersInName("file/abc.txt"));
+    assertTrue(SDMUtils.hasRestrictedCharactersInName("file\\abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName("file-abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName("file_abc.txt"));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName(""));
+    assertFalse(SDMUtils.hasRestrictedCharactersInName(null));
   }
 
   @Test
@@ -640,7 +650,6 @@ public class SDMUtilsTest {
   void testElementWithAnnotation() {
     CdsEntity entity = mock(CdsEntity.class);
     CdsElement element = mock(CdsElement.class);
-    @SuppressWarnings("unchecked")
     CdsAnnotation<Object> annotation = mock(CdsAnnotation.class);
     when(annotation.getValue()).thenReturn("name");
 

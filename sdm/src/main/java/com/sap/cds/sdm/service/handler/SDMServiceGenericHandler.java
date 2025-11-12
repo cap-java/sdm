@@ -1,5 +1,9 @@
 package com.sap.cds.sdm.service.handler;
 
+import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
@@ -70,8 +74,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upID = context.get("up__ID").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
-    var copyEventInput =
-        new CopyAttachmentInput(upID, context.getTarget().getQualifiedName(), objectIds);
+
+    // Use the full target qualified name as the facet
+    String facet = context.getTarget().getQualifiedName();
+
+    var copyEventInput = new CopyAttachmentInput(upID, facet, objectIds);
+
     attachmentService.copyAttachments(copyEventInput, context.getUserInfo().isSystemUser());
     context.setCompleted();
   }
@@ -119,7 +127,16 @@ public class SDMServiceGenericHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Repository.versionedRepoError",
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.VERSIONED_REPO_ERROR_MSG))
+        throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      throw new ServiceException(errorMessage);
     }
   }
 
@@ -133,9 +150,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-    String id = upIdKey.replaceFirst("^up__", "");
-    String upID = cqnAnalyzer.analyze(select).rootKeys().get(id).toString();
+    String upID = fetchUPIDFromCQN(select);
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -197,9 +212,25 @@ public class SDMServiceGenericHandler implements EventHandler {
       logger.info("Successfully edited link");
     } else {
       if (status.equals("unauthorized")) {
-        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Authorization.userNotAuthorizedError",
+                    null,
+                    context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG))
+          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+        throw new ServiceException(errorMessage);
       } else {
-        throw new ServiceException("Failed to edit link");
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Link.failedToEditLinkError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.FAILED_TO_EDIT_LINK_MSG))
+          throw new ServiceException(SDMConstants.FAILED_TO_EDIT_LINK);
+        throw new ServiceException(errorMessage);
       }
     }
     context.setCompleted();
@@ -211,9 +242,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
       // get association type
-      CdsAssociationType assocType = association.getType();
+      CdsAssociationType associationType = association.getType();
       // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
+      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
     return upIdKey;
@@ -238,16 +269,26 @@ public class SDMServiceGenericHandler implements EventHandler {
     String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
       if (message != null && !"null".equalsIgnoreCase(message)) {
-        throw new ServiceException(message);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Attachments.maxCountError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+        throw new ServiceException(errorMessage);
       }
       throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
     }
   }
 
   private void validateLinkName(String filename, Result result) throws ServiceException {
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+    }
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
       throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
@@ -280,7 +321,16 @@ public class SDMServiceGenericHandler implements EventHandler {
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Authorization.userNotAuthorizedLinkError",
+                    null,
+                    context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG))
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        throw new ServiceException(errorMessage);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         cmisDocument.setParentId(upID);
@@ -305,14 +355,45 @@ public class SDMServiceGenericHandler implements EventHandler {
                 + ":"
                 + context.getTarget());
 
-        var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
-        for (DraftService draftS : draftService) {
-          // Process each draftService object
-          if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
-            draftS.newDraft(insert);
+        try {
+          var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
+          for (DraftService draftS : draftService) {
+            if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
+              draftS.newDraft(insert);
+            }
           }
+        } catch (Exception e) {
+          logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
+    }
+  }
+
+  private String fetchUPIDFromCQN(CqnSelect select) {
+    try {
+      String upID = null;
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode root = mapper.readTree(select.toString());
+      JsonNode refArray = root.path("SELECT").path("from").path("ref");
+      JsonNode secondLast = refArray.get(refArray.size() - 2);
+      JsonNode whereArray = secondLast.path("where");
+      for (int i = 0; i < whereArray.size(); i++) {
+        JsonNode node = whereArray.get(i);
+        if (node.has("ref")
+            && node.get("ref").isArray()
+            && node.get("ref").get(0).asText().equals("ID")) {
+          JsonNode valNode = whereArray.get(i + 2);
+          upID = valNode.path("val").asText();
+          break;
+        }
+      }
+      if (upID == null) {
+        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+      }
+      return upID;
+    } catch (Exception e) {
+      logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
   }
 }

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.Repository;
 import com.sap.cds.sdm.model.RepositoryParams;
@@ -211,18 +212,20 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockDeleteEntity = mock(HttpEntity.class);
 
     String json =
-        """
+        String.format(
+            """
 {
   "repoAndConnectionInfos": [
     {
       "repository": {
-        "externalId": "repoid",
+        "externalId": "%s",
         "id": "123"
       }
     }
   ]
 }
-""";
+""",
+            SDMConstants.REPOSITORY_ID);
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
     InputStream deleteInputStream =
@@ -297,7 +300,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository with ID repoid not found.", result);
+    assertEquals("Repository with ID " + SDMConstants.REPOSITORY_ID + " not found.", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -351,7 +354,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository with ID repoid not found.", result);
+    assertEquals("Repository with ID " + SDMConstants.REPOSITORY_ID + " not found.", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -393,18 +396,20 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockGetEntity = mock(HttpEntity.class);
 
     String json =
-        """
+        String.format(
+            """
         {
           "repoAndConnectionInfos": [
             {
               "repository": {
-                "externalId": "repoid",
+                "externalId": "%s",
                 "id": "123"
               }
             }
           ]
         }
-        """;
+        """,
+            SDMConstants.REPOSITORY_ID);
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
 
@@ -421,12 +426,12 @@ public class SDMAdminServiceImplTest {
 
     Exception exception =
         assertThrows(
-            RuntimeException.class,
+            ServiceException.class,
             () -> {
               sdmAdminService.offboardRepository(subdomain);
             });
 
-    assertTrue(exception.getMessage().contains("Error while offboarding repository."));
+    assertTrue(exception.getMessage().contains("Error while offboarding repository"));
   }
 
   @Test

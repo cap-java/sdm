@@ -47,11 +47,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       sdmCredentials = tokenHandler.getSDMCredentials();
       if (sdmCredentials == null || sdmCredentials.getUrl() == null) {
         logger.error("SDM credentials are missing or invalid.");
-        throw new ServiceException("SDM credentials are missing or invalid.");
+        throw new ServiceException(SDMConstants.SDM_CREDENTIALS_MISSING_OR_INVALID);
       }
     } catch (Exception e) {
       logger.error("Failed to retrieve SDM credentials: " + e.getMessage());
-      throw new ServiceException("Failed to retrieve SDM credentials.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_RETRIEVE_SDM_CREDENTIALS, e);
     }
 
     HttpClient httpClient = null;
@@ -61,11 +61,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
               null, null, repository.getSubdomain(), "TECHNICAL_CREDENTIALS_FLOW");
       if (httpClient == null) {
         logger.error("Failed to create HTTP client.");
-        throw new ServiceException("Failed to create HTTP client.");
+        throw new ServiceException(SDMConstants.FAILED_TO_CREATE_HTTP_CLIENT);
       }
     } catch (Exception e) {
       logger.error("Error while creating HTTP client: " + e.getMessage());
-      throw new ServiceException("Error while creating HTTP client.", e);
+      throw new ServiceException(SDMConstants.ERROR_WHILE_CREATING_HTTP_CLIENT, e);
     }
 
     String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES;
@@ -78,7 +78,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       onboardRepository.setRepository(repository);
     } catch (Exception e) {
       logger.error("Failed to set repository details: " + e.getMessage());
-      throw new ServiceException("Failed to set repository details.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_SET_REPOSITORY_DETAILS, e);
     }
 
     String json;
@@ -86,7 +86,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       json = objectMapper.writeValueAsString(onboardRepository);
     } catch (JsonProcessingException e) {
       logger.error("Failed to serialize repository object to JSON: " + e.getMessage());
-      throw new ServiceException("Failed to serialize repository object to JSON.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_SERIALIZE_REPOSITORY_OBJECT_TO_JSON, e);
     }
 
     StringEntity entity;
@@ -94,7 +94,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       entity = new StringEntity(json);
     } catch (UnsupportedEncodingException e) {
       logger.error("Failed to create StringEntity: " + e.getMessage());
-      throw new ServiceException("Failed to create StringEntity.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_CREATE_STRING_ENTITY, e);
     }
 
     onboardingReq.setEntity(entity);
@@ -146,11 +146,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
           || sdmCredentials.getUrl() == null
           || sdmCredentials.getBaseTokenUrl() == null) {
         logger.error("SDM credentials are missing or invalid.");
-        throw new ServiceException("SDM credentials are missing or invalid.");
+        throw new ServiceException(SDMConstants.SDM_CREDENTIALS_MISSING_OR_INVALID);
       }
     } catch (Exception e) {
       logger.error("Failed to retrieve SDM credentials: " + e.getMessage());
-      throw new ServiceException("Failed to retrieve SDM credentials.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_RETRIEVE_SDM_CREDENTIALS, e);
     }
 
     ClientCredentials clientCredentials;
@@ -159,11 +159,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
           new ClientCredentials(sdmCredentials.getClientId(), sdmCredentials.getClientSecret());
       if (clientCredentials.getId() == null || clientCredentials.getSecret() == null) {
         logger.error("Client credentials are missing or invalid.");
-        throw new ServiceException("Client credentials are missing or invalid.");
+        throw new ServiceException(SDMConstants.CLIENT_CREDENTIALS_MISSING_OR_INVALID);
       }
     } catch (Exception e) {
       logger.error("Failed to create client credentials: " + e.getMessage());
-      throw new ServiceException("Failed to create client credentials.", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_CREATE_CLIENT_CREDENTIALS, e);
     }
 
     String baseTokenUrl = sdmCredentials.getBaseTokenUrl();
@@ -174,7 +174,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
         baseTokenUrl = baseTokenUrl.replace(providersubdomain, subdomain);
       } catch (Exception e) {
         logger.error("Failed to replace subdomain in base token URL: " + e.getMessage());
-        throw new ServiceException("Failed to replace subdomain in base token URL.", e);
+        throw new ServiceException(SDMConstants.FAILED_TO_REPLACE_SUBDOMAIN_IN_BASE_TOKEN_URL, e);
       }
     }
 
@@ -196,11 +196,11 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       httpClient = factory.createHttpClient(destination);
       if (httpClient == null) {
         logger.error("Failed to create HTTP client.");
-        throw new ServiceException("Failed to create HTTP client.");
+        throw new ServiceException(SDMConstants.FAILED_TO_CREATE_HTTP_CLIENT);
       }
     } catch (Exception e) {
       logger.error("Error while creating HTTP client: " + e.getMessage());
-      throw new ServiceException("Error while creating HTTP client.", e);
+      throw new ServiceException(SDMConstants.ERROR_WHILE_CREATING_HTTP_CLIENT, e);
     }
 
     String sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/";
@@ -215,10 +215,10 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       }
     } catch (IOException e) {
       logger.error("Error while fetching repository ID: " + e.getMessage());
-      throw new ServiceException("Error while fetching repository ID.", e);
+      throw new ServiceException(SDMConstants.ERROR_WHILE_FETCHING_REPOSITORY_ID, e);
     } catch (Exception e) {
       logger.error("Unexpected error while fetching repository ID: " + e.getMessage());
-      throw new ServiceException("Unexpected error while fetching repository ID.", e);
+      throw new ServiceException(SDMConstants.UNEXPECTED_ERROR_WHILE_FETCHING_REPOSITORY_ID, e);
     }
 
     sdmUrl = sdmCredentials.getUrl() + SDMConstants.REST_V2_REPOSITORIES + "/" + repoId;
@@ -234,17 +234,17 @@ public class SDMAdminServiceImpl implements SDMAdminService {
           return "Repository with ID " + SDMConstants.REPOSITORY_ID + " not found.";
         }
         logger.error("Failed to offboard repository : " + responseString);
-        throw new ServiceException("Failed to offboard repository.", responseString);
+        throw new ServiceException(SDMConstants.FAILED_TO_OFFBOARD_REPOSITORY, responseString);
       }
 
       logger.info("Repository " + repoId + " Offboarded");
       return "Repository " + repoId + " Offboarded";
     } catch (IOException e) {
       logger.error("Error while offboarding repository: " + e.getMessage());
-      throw new ServiceException("Error while offboarding repository.", e);
+      throw new ServiceException(SDMConstants.ERROR_WHILE_OFFBOARDING_REPOSITORY, e);
     } catch (Exception e) {
       logger.error("Unexpected error while offboarding repository: " + e.getMessage());
-      throw new ServiceException("Unexpected error while offboarding repository.", e);
+      throw new ServiceException(SDMConstants.UNEXPECTED_ERROR_WHILE_OFFBOARDING_REPOSITORY, e);
     }
   }
 
@@ -268,7 +268,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
         }
       }
     } catch (Exception e) {
-      throw new ServiceException("Failed to parse repository response", e);
+      throw new ServiceException(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, e);
     }
     return null;
   }

@@ -504,7 +504,7 @@ public class ApiMT implements ApiInterface {
             .build();
 
     try (Response renameResponse = httpClient.newCall(request).execute()) {
-      if (renameResponse.code() != 200) {
+      if (!renameResponse.isSuccessful()) {
         throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
