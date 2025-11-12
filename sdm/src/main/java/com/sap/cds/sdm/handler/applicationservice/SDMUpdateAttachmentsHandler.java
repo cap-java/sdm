@@ -65,17 +65,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionDefinition,
       String attachmentCompositionName)
       throws IOException {
-    String targetEntity = context.getTarget().getQualifiedName();
-    Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
-    if (!duplicateFilenames.isEmpty()) {
-      context
-          .getMessages()
-          .error(
-              String.format(
-                  SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                  String.join(", ", duplicateFilenames)));
-    } else {
+    Boolean isError = false;
+    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+    if (!isError) {
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);
       renameDocument(
@@ -226,7 +218,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(
-        SDMUtils.isRestrictedCharactersInName(
+        SDMUtils.hasRestrictedCharactersInName(
             filenameInRequest))) { // Check if the filename contains restricted characters and stop
       // further processing if it does (Request not sent to SDM)
       fileNameWithRestrictedCharacters.add(filenameInRequest);
@@ -339,15 +331,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(
-              String.format(
-                  SDMConstants.FILES_RENAME_WARNING_MESSAGE,
-                  String.join(", ", duplicateFileNameList)));
+          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
