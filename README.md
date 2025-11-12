@@ -267,7 +267,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          properties:
             timeout: 3600000  
    ```
-**Note**: approuter version should be >= 16.8.2 and the timeout: 3600000   should be added to approuter module which is provided as destination group.
+**Note**: approuter version should be >= 16.8.2
 
 6. Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the following [example](https://github.com/cap-java/sdm/blob/16c1b17d521a141ef1b1adfbed1e06c5bf7a980f/cap-notebook/demoapp/app/admin-books/fiori-service.cds#L24) from a sample Bookshop app.
 
