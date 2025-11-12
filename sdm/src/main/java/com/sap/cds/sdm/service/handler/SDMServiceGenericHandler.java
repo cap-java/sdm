@@ -282,9 +282,12 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void validateLinkName(String filename, Result result) throws ServiceException {
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+    }
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
       throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
