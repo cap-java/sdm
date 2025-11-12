@@ -68,30 +68,24 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<CdsData> data,
       Map<String, Map<String, String>> attachmentCompositionDetails)
       throws IOException {
-
-    for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+        for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
       String attachmentCompositionDefinition = entry.getKey();
       String attachmentCompositionName = entry.getValue().get("name");
       String parentTitle = entry.getValue().get("parentTitle");
-
-      String targetEntity = context.getTarget().getQualifiedName();
-      Set<String> duplicateFilenames =
-          SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
-      if (!duplicateFilenames.isEmpty()) {
-        handleDuplicateFilenames(
-            context, duplicateFilenames, attachmentCompositionName, parentTitle);
-      } else {
-        Optional<CdsEntity> attachmentEntity =
-            context.getModel().findEntity(attachmentCompositionDefinition);
-        renameDocument(
-            attachmentEntity,
-            context,
-            data,
-            attachmentCompositionDefinition,
-            attachmentCompositionName,
+    Boolean isError = false;
+    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+    if (!isError) {
+      Optional<CdsEntity> attachmentEntity =
+          context.getModel().findEntity(attachmentCompositionDefinition);
+      renameDocument(
+          attachmentEntity,
+          context,
+          data,
+          attachmentCompositionDefinition,
+          attachmentCompositionName,
             parentTitle);
-      }
     }
+  }
   }
 
   private void renameDocument(
@@ -236,7 +230,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(
-        SDMUtils.isRestrictedCharactersInName(
+        SDMUtils.hasRestrictedCharactersInName(
             filenameInRequest))) { // Check if the filename contains restricted characters and stop
       // further processing if it does (Request not sent to SDM)
       fileNameWithRestrictedCharacters.add(filenameInRequest);
@@ -365,18 +359,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(
-              SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename")
-                  + contextInfo);
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(
-              String.format(
-                      SDMConstants.FILES_RENAME_WARNING_MESSAGE,
-                      String.join(", ", duplicateFileNameList))
-                  + contextInfo);
+          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList) + contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
@@ -408,33 +396,5 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           .getMessages()
           .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update") + contextInfo);
     }
-  }
-
-  private void handleDuplicateFilenames(
-      CdsUpdateEventContext context,
-      Set<String> duplicateFilenames,
-      String attachmentCompositionName,
-      String parentTitle) {
-
-    // Extract composition name (last part after the final ".")
-    String compositionName = attachmentCompositionName;
-    if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
-      String[] parts = attachmentCompositionName.split("\\.");
-      compositionName = parts[parts.length - 1];
-    }
-
-    String contextInfo =
-        "\n\nTable: "
-            + compositionName
-            + "\nPage: "
-            + (parentTitle != null ? parentTitle : "Unknown");
-
-    context
-        .getMessages()
-        .error(
-            String.format(
-                    SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                    String.join(", ", duplicateFilenames))
-                + contextInfo);
   }
 }

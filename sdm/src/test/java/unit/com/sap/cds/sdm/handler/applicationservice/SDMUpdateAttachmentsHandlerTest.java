@@ -1,6 +1,6 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -162,31 +162,34 @@ public class SDMUpdateAttachmentsHandlerTest {
                   AttachmentsHandlerUtils.fetchAttachments(
                       anyString(), any(Map.class), eq("compositionName")))
           .thenReturn(attachments);
+      attachmentsMockedStatic
+          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+          .thenCallRealMethod();
 
       // Mock SDMUtils helper methods to ensure validation works correctly
       try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
-        // FileNameContainsWhitespace method doesn't exist - removing this mock
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameContainsRestrictedCharaters(anyList()))
+            .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .thenReturn(new HashSet<>());
+        sdmUtilsMockedStatic
+            .when(
+                () ->
+                    SDMUtils.FileNameContainsRestrictedCharaters(
+                        anyList(), anyString(), anyString()))
             .thenReturn(new ArrayList<>());
         Set<String> duplicateFiles = new HashSet<>();
         duplicateFiles.add("file1.txt");
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.isFileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
             .thenReturn(duplicateFiles);
 
         // Call the method under test; validateFileNames will detect duplicates and call
         // context.getMessages().error(...)
-        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
-        Map<String, String> compositionInfo = new HashMap<>();
-        compositionInfo.put("name", "compositionName");
-        compositionInfo.put("parentTitle", "TestTitle");
-        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
-        handler.updateName(context, data, attachmentCompositionDetails);
+        handler.updateName(context, data, "compositionDefinition", "compositionName");
 
-        // Assert: duplicate filename error was logged with context
-        verify(messages, times(1))
-            .error(contains("The file(s) file1.txt have been added multiple times"));
+        Set<String> expected = new HashSet<>();
+        expected.add("file1.txt");
+        verify(messages, times(1)).error(SDMConstants.duplicateFilenameFormat(expected));
       }
     }
   }
@@ -344,7 +347,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         sdmUtilsMock
             .when(
                 () ->
-                    SDMUtils.isFileNameDuplicateInDrafts(
+                    SDMUtils.FileNameDuplicateInDrafts(
                         any(List.class), eq("compositionName"), anyString()))
             .thenReturn(Collections.emptySet());
 
@@ -374,7 +377,9 @@ public class SDMUpdateAttachmentsHandlerTest {
                         any(Map.class)))
             .thenReturn(secondaryProperties);
 
-        // hasRestrictedCharactersInName method doesn't exist - removing this mock
+        sdmUtilsMock
+            .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
+            .thenReturn(false);
 
         // Call the method
         Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();

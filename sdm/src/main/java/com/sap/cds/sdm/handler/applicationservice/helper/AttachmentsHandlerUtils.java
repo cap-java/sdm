@@ -1,11 +1,14 @@
 package com.sap.cds.sdm.handler.applicationservice.helper;
 
+import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
+import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 import org.slf4j.Logger;
@@ -528,5 +531,54 @@ public class AttachmentsHandlerUtils {
     }
 
     return null;
+  }
+
+  /**
+   * Validates file names in the provided data for various constraints including whitespace,
+   * restricted characters, and duplicates.
+   *
+   * <p>This method performs comprehensive validation of file names by checking for:
+   *
+   * <ul>
+   *   <li>Whitespace-only or null file names
+   *   <li>Restricted characters (such as / and \)
+   *   <li>Duplicate file names within the same repository
+   * </ul>
+   *
+   * @param context the event context containing messages for error reporting
+   * @param data the list of CDS data containing potential file attachments
+   * @param composition the composition name used to locate attachments in the data structure
+   * @return true if any validation errors are found, false otherwise
+   */
+  public static Boolean validateFileNames(
+      EventContext context, List<CdsData> data, String composition) {
+    Boolean isError = false;
+    String targetEntity = context.getTarget().getQualifiedName();
+
+    // Validation for file names
+    Set<String> whitespaceFilenames =
+        SDMUtils.FileNameContainsWhitespace(data, composition, targetEntity);
+    List<String> restrictedFileNames =
+        SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
+    Set<String> duplicateFilenames =
+        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
+
+    // Collecting all the errors
+    if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
+      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      isError = true;
+    }
+    if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
+      context.getMessages().error(SDMConstants.nameConstraintMessage(restrictedFileNames));
+      isError = true;
+    }
+    if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
+      String formattedMessage =
+          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames));
+      context.getMessages().error(formattedMessage);
+      isError = true;
+    }
+    // returning the error message
+    return isError;
   }
 }
