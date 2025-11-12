@@ -68,24 +68,24 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<CdsData> data,
       Map<String, Map<String, String>> attachmentCompositionDetails)
       throws IOException {
-        for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+    for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
       String attachmentCompositionDefinition = entry.getKey();
       String attachmentCompositionName = entry.getValue().get("name");
       String parentTitle = entry.getValue().get("parentTitle");
-    Boolean isError = false;
-    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
-    if (!isError) {
-      Optional<CdsEntity> attachmentEntity =
-          context.getModel().findEntity(attachmentCompositionDefinition);
-      renameDocument(
-          attachmentEntity,
-          context,
-          data,
-          attachmentCompositionDefinition,
-          attachmentCompositionName,
+      Boolean isError = false;
+      isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+      if (!isError) {
+        Optional<CdsEntity> attachmentEntity =
+            context.getModel().findEntity(attachmentCompositionDefinition);
+        renameDocument(
+            attachmentEntity,
+            context,
+            data,
+            attachmentCompositionDefinition,
+            attachmentCompositionName,
             parentTitle);
+      }
     }
-  }
   }
 
   private void renameDocument(
@@ -364,7 +364,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList) + contextInfo));
+          .warn(
+              String.format(
+                  SDMConstants.duplicateFilenameFormat(duplicateFileNameList) + contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
