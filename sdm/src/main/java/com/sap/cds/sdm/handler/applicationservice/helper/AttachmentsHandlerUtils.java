@@ -551,7 +551,7 @@ public class AttachmentsHandlerUtils {
    * @return true if any validation errors are found, false otherwise
    */
   public static Boolean validateFileNames(
-      EventContext context, List<CdsData> data, String composition) {
+      EventContext context, List<CdsData> data, String composition, String contextInfo) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
 
@@ -565,16 +565,18 @@ public class AttachmentsHandlerUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE + contextInfo);
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
-      context.getMessages().error(SDMConstants.nameConstraintMessage(restrictedFileNames));
+      context
+          .getMessages()
+          .error(SDMConstants.nameConstraintMessage(restrictedFileNames) + contextInfo);
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
-          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames));
+          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames) + contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }

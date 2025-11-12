@@ -163,7 +163,10 @@ public class SDMUpdateAttachmentsHandlerTest {
                       anyString(), any(Map.class), eq("compositionName")))
           .thenReturn(attachments);
       attachmentsMockedStatic
-          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.validateFileNames(
+                      any(), anyList(), anyString(), anyString()))
           .thenCallRealMethod();
 
       // Mock SDMUtils helper methods to ensure validation works correctly

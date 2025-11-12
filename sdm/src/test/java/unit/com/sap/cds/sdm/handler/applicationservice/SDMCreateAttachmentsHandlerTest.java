@@ -150,7 +150,10 @@ public class SDMCreateAttachmentsHandlerTest {
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Act
@@ -486,7 +489,10 @@ public class SDMCreateAttachmentsHandlerTest {
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
         attachmentsHandlerUtilsMocked
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Mock attachment entity
@@ -623,7 +629,10 @@ public class SDMCreateAttachmentsHandlerTest {
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
         attachmentsHandlerUtilsMocked
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Act

@@ -73,7 +73,22 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionName = entry.getValue().get("name");
       String parentTitle = entry.getValue().get("parentTitle");
       Boolean isError = false;
-      isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+
+      // Extract composition name (last part after the final ".")
+      String compositionName = attachmentCompositionName;
+      if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
+        String[] parts = attachmentCompositionName.split("\\.");
+        compositionName = parts[parts.length - 1];
+      }
+      String contextInfo =
+          "\n\nTable: "
+              + compositionName
+              + "\nPage: "
+              + (parentTitle != null ? parentTitle : "Unknown");
+
+      isError =
+          AttachmentsHandlerUtils.validateFileNames(
+              context, data, attachmentCompositionName, contextInfo);
       if (!isError) {
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
@@ -83,7 +98,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             data,
             attachmentCompositionDefinition,
             attachmentCompositionName,
-            parentTitle);
+            parentTitle,
+            contextInfo);
       }
     }
   }
@@ -94,7 +110,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<CdsData> data,
       String attachmentCompositionDefinition,
       String attachmentCompositionName,
-      String parentTitle)
+      String parentTitle,
+      String contextInfo)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
@@ -145,8 +162,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         badRequest,
         propertyTitles,
         noSDMRoles,
-        attachmentCompositionName,
-        parentTitle);
+        contextInfo);
   }
 
   private void processAttachments(
@@ -340,22 +356,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
       List<String> noSDMRoles,
-      String attachmentCompositionName,
-      String parentTitle) {
-
-    // Extract composition name (last part after the final ".")
-    String compositionName = attachmentCompositionName;
-    if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
-      String[] parts = attachmentCompositionName.split("\\.");
-      compositionName = parts[parts.length - 1];
-    }
-
-    String contextInfo =
-        "\n\nTable: "
-            + compositionName
-            + "\nPage: "
-            + (parentTitle != null ? parentTitle : "Unknown");
-
+      String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()

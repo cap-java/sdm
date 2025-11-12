@@ -81,7 +81,22 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
       String targetEntity = context.getTarget().getQualifiedName();
       Boolean isError = false;
-      isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+
+      // Extract composition name (last part after the final ".")
+      String compositionName = attachmentCompositionName;
+      if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
+        String[] parts = attachmentCompositionName.split("\\.");
+        compositionName = parts[parts.length - 1];
+      }
+      String contextInfo =
+          "\n\nTable: "
+              + compositionName
+              + "\nPage: "
+              + (parentTitle != null ? parentTitle : "Unknown");
+
+      isError =
+          AttachmentsHandlerUtils.validateFileNames(
+              context, data, attachmentCompositionName, contextInfo);
       if (!isError) {
         List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
         List<String> duplicateFileNameList = new ArrayList<>();
@@ -128,8 +143,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               badRequest,
               propertyTitles,
               noSDMRoles,
-              attachmentCompositionName,
-              parentTitle);
+              contextInfo);
         }
       }
     }
@@ -316,22 +330,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
       List<String> noSDMRoles,
-      String attachmentCompositionName,
-      String parentTitle) {
-
-    // Extract composition name (last part after the final ".")
-    String compositionName = attachmentCompositionName;
-    if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
-      String[] parts = attachmentCompositionName.split("\\.");
-      compositionName = parts[parts.length - 1];
-    }
-
-    String contextInfo =
-        "\n\nTable: "
-            + compositionName
-            + "\nPage: "
-            + (parentTitle != null ? parentTitle : "Unknown");
-
+      String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()

@@ -699,7 +699,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("10__null");
       attachmentUtilsMockedStatic
-          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
           .thenCallRealMethod();
 
       // Assert that a ServiceException is thrown and verify its message
@@ -788,7 +788,7 @@ public class SDMAttachmentsServiceHandlerTest {
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
             .thenCallRealMethod();
 
         // Assert that a ServiceException is thrown and verify its message
@@ -879,7 +879,7 @@ public class SDMAttachmentsServiceHandlerTest {
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any()))
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
             .thenCallRealMethod();
 
         // Assert that a ServiceException is thrown and verify its message
