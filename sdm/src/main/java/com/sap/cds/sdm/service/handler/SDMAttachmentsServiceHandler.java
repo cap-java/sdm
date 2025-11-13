@@ -252,9 +252,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private void validateFileName(String filename, Result result, Map<String, Object> attachmentIds)
       throws ServiceException {
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+    }
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.nameConstraintMessage(Collections.singletonList(filename), "Upload"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     String fileid = (String) attachmentIds.get("ID");
     if (duplicateCheck(filename, fileid, result)) {

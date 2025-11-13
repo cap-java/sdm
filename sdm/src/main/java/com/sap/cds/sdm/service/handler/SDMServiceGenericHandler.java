@@ -28,6 +28,7 @@ import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftCancelEventContext;
+import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
@@ -45,7 +46,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName({"*"})
+@ServiceName(value = "*", type = ApplicationService.class)
 public class SDMServiceGenericHandler implements EventHandler {
   private final RegisterService attachmentService;
   private final PersistenceService persistenceService;
@@ -431,9 +432,12 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void validateLinkName(String filename, Result result) throws ServiceException {
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+    }
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
       throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
