@@ -362,10 +362,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
-        .getMessages()
-        .warn(
-          String.format(
-            SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
+          .getMessages()
+          .warn(
+              String.format(
+                  SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
