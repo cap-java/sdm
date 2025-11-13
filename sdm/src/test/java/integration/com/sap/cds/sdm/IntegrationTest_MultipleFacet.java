@@ -572,7 +572,7 @@ class IntegrationTest_MultipleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
 
     String expected =
-        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}]}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
     if (response.equals(expected)) {
       for (int i = 0; i < facet.length; i++) {
         response =
@@ -604,7 +604,7 @@ class IntegrationTest_MultipleFacet {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"reference1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sample/1234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"footnote1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}]}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"reference1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sample/1234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"footnote1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
             response =
@@ -671,7 +671,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
             String.format(
-                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}",
+                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}",
                 name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
@@ -718,7 +718,7 @@ class IntegrationTest_MultipleFacet {
       if (successCount >= 2) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"note/invalid\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"note/invalid\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\"}}";
         if (response.equals(expected)) {
           response =
               api.renameAttachment(appUrl, entityName, facet[2], entityID, ID3[2], "note_valid");
@@ -782,7 +782,7 @@ class IntegrationTest_MultipleFacet {
       if (allRenamedSuccessfully && "Renamed".equals(response2)) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"The object name cannot be empty or consist entirely of space characters. Enter a value.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"Restricted/Character\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"duplicateName.pdf\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"The object name cannot be empty or consist entirely of space characters. Enter a value.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"Restricted/Character\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"duplicateName.pdf\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
         if (response.equals(expected)) {
           response = api.deleteEntityDraft(appUrl, entityName, entityID3);
           if (response.equals("Entity Draft Deleted")) testStatus = true;
@@ -814,31 +814,7 @@ class IntegrationTest_MultipleFacet {
         if (testStatus) {
           apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
           String expected =
-              "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
-                  + //
-                  "\\n"
-                  + //
-                  "\\t\\u2022 reference123\\n"
-                  + //
-                  "\\n"
-                  + //
-                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
-                  + //
-                  "\\n"
-                  + //
-                  "\\t\\u2022 sample123\\n"
-                  + //
-                  "\\n"
-                  + //
-                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n"
-                  + //
-                  "\\n"
-                  + //
-                  "\\t\\u2022 footnote123\\n"
-                  + //
-                  "\\n"
-                  + //
-                  "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+              "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
           if (!apiResponse.equals(expected)) {
             testStatus = false;
           }
@@ -1226,7 +1202,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
               + //
               "\\n"
               + //
@@ -1234,7 +1210,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
               + //
               "\\n"
               + //
@@ -1242,7 +1218,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
       if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
@@ -1329,7 +1305,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
               + //
               "\\n"
               + //
@@ -1337,7 +1313,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
               + //
               "\\n"
               + //
@@ -1345,7 +1321,7 @@ class IntegrationTest_MultipleFacet {
               + //
               "\\n"
               + //
-              "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+              "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
       if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
         testStatus = true;
@@ -1874,7 +1850,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
                 + //
                 "\\n"
                 + //
@@ -1882,7 +1858,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
                 + //
                 "\\n"
                 + //
@@ -1890,7 +1866,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
@@ -2075,7 +2051,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
                 + //
                 "\\n"
                 + //
@@ -2083,7 +2059,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"The following secondary properties are not supported.\\n"
                 + //
                 "\\n"
                 + //
@@ -2091,7 +2067,7 @@ class IntegrationTest_MultipleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
@@ -3276,7 +3252,7 @@ class IntegrationTest_MultipleFacet {
 
     String saveError = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     String expectedWarning =
-        "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
     ObjectMapper mapper = new ObjectMapper();
     assertEquals(mapper.readTree(expectedWarning), mapper.readTree(saveError));
 
@@ -3342,11 +3318,7 @@ class IntegrationTest_MultipleFacet {
     String error =
         saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     String expectedError =
-        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\","
-            + "\"details\":["
-            + "{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},"
-            + "{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4}"
-            + "]}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
     ObjectMapper mapper = new ObjectMapper();
     assertEquals(mapper.readTree(expectedError), mapper.readTree(error));
 
