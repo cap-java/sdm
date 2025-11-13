@@ -576,7 +576,7 @@ public class AttachmentsHandlerUtils {
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
-          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
+          String.format(SDMConstants.duplicateFilenameFormat(duplicateFilenames) + contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }
