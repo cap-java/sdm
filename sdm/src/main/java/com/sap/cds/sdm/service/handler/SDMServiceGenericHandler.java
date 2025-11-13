@@ -537,6 +537,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       }
       return upID;
     } catch (Exception e) {
+      // Log and rethrow as ServiceException
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
