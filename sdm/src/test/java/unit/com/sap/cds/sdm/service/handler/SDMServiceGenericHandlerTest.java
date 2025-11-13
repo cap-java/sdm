@@ -10,6 +10,7 @@ import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.AnalysisResult;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
+import com.sap.cds.ql.cqn.CqnDelete;
 import com.sap.cds.ql.cqn.CqnElementRef;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsAssociationType;
@@ -27,6 +28,7 @@ import com.sap.cds.sdm.service.handler.SDMServiceGenericHandler;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.draft.DraftCancelEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.ParameterInfo;
@@ -1348,5 +1350,163 @@ public class SDMServiceGenericHandlerTest {
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));
     verify(persistenceService, never()).run(any(Update.class));
     verify(mockContext, never()).setCompleted();
+  }
+
+  @Test
+  void testHandleDraftDiscardForLinks_CallsRevertNestedEntityLinks() throws IOException {
+
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
+
+      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
+
+      sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
+
+      verify(cdsModel).findEntity("AdminService.Chapters_drafts");
+      verify(cdsModel).findEntity("AdminService.Pages_drafts");
+    }
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_WithNullParentId() throws IOException {
+
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    // Create map with null value using HashMap since Map.of() doesn't allow null values
+    Map<String, Object> rootKeys = new HashMap<>();
+    rootKeys.put("ID", null);
+    when(analysisResult.rootKeys()).thenReturn(rootKeys);
+
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
+
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+      verify(cdsModel, never()).findEntity("AdminService.Chapters_drafts");
+      verify(cdsModel, never()).findEntity("AdminService.Pages_drafts");
+    }
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_VerifyEntityTypesProcessed() throws IOException {
+
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "validBookId"));
+
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
+
+      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
+
+      sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
+
+      verify(cdsModel).findEntity("AdminService.Chapters_drafts");
+      verify(cdsModel).findEntity("AdminService.Pages_drafts");
+    }
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_ExceptionHandling() throws IOException {
+
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
+
+      when(cdsModel.findEntity("AdminService.Chapters_drafts"))
+          .thenThrow(new RuntimeException("Database error"));
+
+      assertThrows(
+          RuntimeException.class,
+          () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext),
+          "Database error");
+    }
   }
 }

@@ -120,6 +120,35 @@ public class SDMServiceGenericHandler implements EventHandler {
       String attachmentCompositionDefinition = entry.getKey();
       revertLinksForComposition(context, parentKeys, attachmentCompositionDefinition);
     }
+    revertNestedEntityLinks(context, parentKeys.get("ID"));
+  }
+
+  private void revertNestedEntityLinks(DraftCancelEventContext context, Object parentId)
+      throws IOException {
+    if (parentId == null) return;
+    String[] nestedEntityTypes = {"Chapters", "Pages"};
+
+    for (String entityType : nestedEntityTypes) {
+      String entityName = "AdminService." + entityType + "_drafts";
+      Optional<CdsEntity> nestedEntity = context.getModel().findEntity(entityName);
+
+      if (nestedEntity.isPresent()) {
+        Result nestedRecords =
+            persistenceService.run(
+                Select.from(nestedEntity.get())
+                    .columns("ID")
+                    .where(
+                        e -> e.get("book_ID").eq(parentId).and(e.get("IsActiveEntity").eq(false))));
+
+        for (Row nestedRecord : nestedRecords) {
+          Object nestedEntityId = nestedRecord.get("ID");
+          Map<String, Object> nestedEntityKeys = new HashMap<>();
+          nestedEntityKeys.put("ID", nestedEntityId);
+          String attachmentPath = "AdminService." + entityType + ".attachments";
+          revertLinksForComposition(context, nestedEntityKeys, attachmentPath);
+        }
+      }
+    }
   }
 
   private void revertLinksForComposition(
