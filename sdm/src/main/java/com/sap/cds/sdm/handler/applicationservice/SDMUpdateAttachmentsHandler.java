@@ -98,7 +98,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             data,
             attachmentCompositionDefinition,
             attachmentCompositionName,
-            parentTitle,
             contextInfo);
       }
     }
@@ -110,7 +109,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<CdsData> data,
       String attachmentCompositionDefinition,
       String attachmentCompositionName,
-      String parentTitle,
       String contextInfo)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
