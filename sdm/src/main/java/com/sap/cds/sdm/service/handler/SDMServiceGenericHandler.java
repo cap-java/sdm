@@ -27,8 +27,8 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.draft.DraftCancelEventContext;
 import com.sap.cds.services.cds.ApplicationService;
+import com.sap.cds.services.draft.DraftCancelEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
@@ -541,7 +541,6 @@ public class SDMServiceGenericHandler implements EventHandler {
       }
       return upID;
     } catch (Exception e) {
-      // Log and rethrow as ServiceException
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
