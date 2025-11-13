@@ -192,7 +192,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -298,7 +298,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__Maximum two links allowed");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -359,7 +359,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("2__");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -420,7 +420,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -429,8 +429,7 @@ public class SDMServiceGenericHandlerTest {
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
-        SDMConstants.linkNameConstraintMessage(Collections.singletonList("test/URL"), "created"),
-        ex.getMessage());
+        SDMConstants.nameConstraintMessage(Collections.singletonList("test/URL")), ex.getMessage());
   }
 
   @Test
@@ -485,7 +484,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -545,7 +544,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -616,7 +615,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -688,7 +687,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -759,7 +758,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
@@ -1177,7 +1176,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("3__Maximum attachments exceeded"); // Max 3, current 5
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -1231,7 +1230,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(true);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -1289,7 +1288,7 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn("10__null");
-    sdmUtilsMock.when(() -> SDMUtils.isRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);

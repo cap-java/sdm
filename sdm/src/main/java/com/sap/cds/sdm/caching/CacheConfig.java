@@ -35,65 +35,155 @@ public class CacheConfig {
   public static void initializeCache() {
     // Expiring the cache after 11 hours
     logger.info("Cache for user token and access token initialized");
-    cacheManager.init();
 
-    userTokenCache =
-        cacheManager.createCache(
-            "userToken",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    CacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(
-                    Expirations.timeToLiveExpiration(
-                        new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
-    clientCredentialsTokenCache =
-        cacheManager.createCache(
-            "clientCredentialsToken",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    CacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(
-                    Expirations.timeToLiveExpiration(
-                        new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
-    repoCache =
-        cacheManager.createCache(
-            "versionedRepo",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    RepoKey.class, RepoValue.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(
-                    Expirations.timeToLiveExpiration(
-                        new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    try {
+      cacheManager.init();
+    } catch (IllegalStateException e) {
+      // Cache manager already initialized
+      logger.warn("Cache manager already initialized: {}", e.getMessage());
+    }
 
-    userAuthoritiesTokenCache =
-        cacheManager.createCache(
-            "userAuthoritiesToken",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    TokenCacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(
-                    Expirations.timeToLiveExpiration(
-                        new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    // Initialize caches with defensive error handling
+    try {
+      userTokenCache =
+          cacheManager.createCache(
+              "userToken",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      CacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(
+                      Expirations.timeToLiveExpiration(
+                          new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    } catch (Exception e) {
+      logger.warn("userTokenCache already exists or failed to create: {}", e.getMessage());
+      // Try to get existing cache
+      try {
+        userTokenCache = cacheManager.getCache("userToken", CacheKey.class, String.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing userTokenCache: {}", ex.getMessage());
+      }
+    }
 
-    secondaryTypesCache =
-        cacheManager.createCache(
-            "secondaryTypes",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    SecondaryTypesKey.class,
-                    (Class<List<String>>) (Class<?>) List.class,
-                    ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(Expirations.noExpiration()));
+    try {
+      clientCredentialsTokenCache =
+          cacheManager.createCache(
+              "clientCredentialsToken",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      CacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(
+                      Expirations.timeToLiveExpiration(
+                          new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    } catch (Exception e) {
+      logger.warn(
+          "clientCredentialsTokenCache already exists or failed to create: {}", e.getMessage());
+      try {
+        clientCredentialsTokenCache =
+            cacheManager.getCache("clientCredentialsToken", CacheKey.class, String.class);
+      } catch (Exception ex) {
+        logger.error(
+            "Failed to retrieve existing clientCredentialsTokenCache: {}", ex.getMessage());
+      }
+    }
 
-    maxAllowedAttachmentsCache =
-        cacheManager.createCache(
-            "maxAllowedAttachmentsCache",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(Expirations.noExpiration()));
-    secondaryPropertiesCache =
-        cacheManager.createCache(
-            "secondaryProperties",
-            CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                    SecondaryPropertiesKey.class,
-                    (Class<List<String>>) (Class<?>) List.class,
-                    ResourcePoolsBuilder.heap(HEAP_SIZE))
-                .withExpiry(Expirations.noExpiration()));
+    try {
+      repoCache =
+          cacheManager.createCache(
+              "versionedRepo",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      RepoKey.class, RepoValue.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(
+                      Expirations.timeToLiveExpiration(
+                          new Duration(ACCESS_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    } catch (Exception e) {
+      logger.warn("repoCache already exists or failed to create: {}", e.getMessage());
+      try {
+        repoCache = cacheManager.getCache("versionedRepo", RepoKey.class, RepoValue.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing repoCache: {}", ex.getMessage());
+      }
+    }
+
+    try {
+      userAuthoritiesTokenCache =
+          cacheManager.createCache(
+              "userAuthoritiesToken",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      TokenCacheKey.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(
+                      Expirations.timeToLiveExpiration(
+                          new Duration(USER_TOKEN_EXPIRY, TimeUnit.MINUTES))));
+    } catch (Exception e) {
+      logger.warn(
+          "userAuthoritiesTokenCache already exists or failed to create: {}", e.getMessage());
+      try {
+        userAuthoritiesTokenCache =
+            cacheManager.getCache("userAuthoritiesToken", TokenCacheKey.class, String.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing userAuthoritiesTokenCache: {}", ex.getMessage());
+      }
+    }
+
+    try {
+      secondaryTypesCache =
+          cacheManager.createCache(
+              "secondaryTypes",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      SecondaryTypesKey.class,
+                      (Class<List<String>>) (Class<?>) List.class,
+                      ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(Expirations.noExpiration()));
+    } catch (Exception e) {
+      logger.warn("secondaryTypesCache already exists or failed to create: {}", e.getMessage());
+      try {
+        secondaryTypesCache =
+            cacheManager.getCache(
+                "secondaryTypes",
+                SecondaryTypesKey.class,
+                (Class<List<String>>) (Class<?>) List.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing secondaryTypesCache: {}", ex.getMessage());
+      }
+    }
+
+    try {
+      maxAllowedAttachmentsCache =
+          cacheManager.createCache(
+              "maxAllowedAttachmentsCache",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(Expirations.noExpiration()));
+    } catch (Exception e) {
+      logger.warn(
+          "maxAllowedAttachmentsCache already exists or failed to create: {}", e.getMessage());
+      try {
+        maxAllowedAttachmentsCache =
+            cacheManager.getCache("maxAllowedAttachmentsCache", String.class, String.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing maxAllowedAttachmentsCache: {}", ex.getMessage());
+      }
+    }
+
+    try {
+      secondaryPropertiesCache =
+          cacheManager.createCache(
+              "secondaryProperties",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      SecondaryPropertiesKey.class,
+                      (Class<List<String>>) (Class<?>) List.class,
+                      ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(Expirations.noExpiration()));
+    } catch (Exception e) {
+      logger.warn(
+          "secondaryPropertiesCache already exists or failed to create: {}", e.getMessage());
+      try {
+        secondaryPropertiesCache =
+            cacheManager.getCache(
+                "secondaryProperties",
+                SecondaryPropertiesKey.class,
+                (Class<List<String>>) (Class<?>) List.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing secondaryPropertiesCache: {}", ex.getMessage());
+      }
+    }
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {

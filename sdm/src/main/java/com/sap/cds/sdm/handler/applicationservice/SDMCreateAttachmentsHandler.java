@@ -74,11 +74,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Map<String, String> propertyTitles = new HashMap<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
     String targetEntity = context.getTarget().getQualifiedName();
-    Set<String> duplicateFilenames =
-        SDMUtils.isFileNameDuplicateInDrafts(data, attachmentCompositionName, targetEntity);
-    if (!duplicateFilenames.isEmpty()) {
-      handleDuplicateFilenames(context, duplicateFilenames);
-    } else {
+    Boolean isError = false;
+    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
+    if (!isError) {
       List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
       List<String> duplicateFileNameList = new ArrayList<>();
       List<String> filesNotFound = new ArrayList<>();
@@ -89,14 +87,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         List<Map<String, Object>> attachments =
             AttachmentsHandlerUtils.fetchAttachments(
                 targetEntity, entity, attachmentCompositionName);
+        if (attachments == null || attachments.isEmpty()) {
+          logger.info(
+              "No attachments found for composition [{}] in entity [{}]. Skipping processing.",
+              attachmentCompositionName,
+              targetEntity);
+          continue;
+        }
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
-        if (attachments != null && !attachments.isEmpty()) {
-          propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
-          secondaryPropertiesWithInvalidDefinitions =
-              SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
-                  attachmentEntity, attachments.get(0));
-        }
+        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+        secondaryPropertiesWithInvalidDefinitions =
+            SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                attachmentEntity, attachments.get(0));
         processEntity(
             context,
             entity,
@@ -121,16 +124,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             noSDMRoles);
       }
     }
-  }
-
-  private void handleDuplicateFilenames(
-      CdsCreateEventContext context, Set<String> duplicateFilenames) {
-    context
-        .getMessages()
-        .error(
-            String.format(
-                SDMConstants.DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE,
-                String.join(", ", duplicateFilenames)));
   }
 
   private void processEntity(
@@ -225,82 +218,56 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-
-    if (Boolean.TRUE.equals(SDMUtils.isRestrictedCharactersInName(filenameInRequest))) {
+    if (SDMUtils.hasRestrictedCharactersInName(filenameInRequest)) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
-      replacePropertiesInAttachment(
-          attachment,
-          fileNameInSDM,
-          propertiesInDB,
-          secondaryTypeProperties); // In this case we immediately stop the processing (Request
-      // isn't sent to SDM)
-    } else {
-      CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setFileName(filenameInRequest);
-      cmisDocument.setObjectId(objectId);
-      if (fileNameInDB
-          == null) { // If the file name in DB is null, it means that the file is being created for
-        // the first time
-        if (filenameInRequest != null) {
-          updatedSecondaryProperties.put("filename", filenameInRequest);
-        } else {
-          throw new ServiceException("Filename cannot be empty");
-        }
-      } else {
-        if (filenameInRequest == null) {
-          throw new ServiceException("Filename cannot be empty");
-        } else if (!fileNameInDB.equals(
-            filenameInRequest)) { // If the file name in DB is not equal to the file name in
-          // request, it means that the file name has been modified
-          updatedSecondaryProperties.put("filename", filenameInRequest);
-        }
-      }
-      try {
-        int responseCode =
-            sdmService.updateAttachments(
-                sdmCredentials,
-                cmisDocument,
-                updatedSecondaryProperties,
-                secondaryPropertiesWithInvalidDefinitions,
-                context.getUserInfo().isSystemUser());
-        switch (responseCode) {
-          case 403:
-            // SDM Roles for user are missing
-            noSDMRoles.add(fileNameInSDM);
-            replacePropertiesInAttachment(
-                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 409:
-            duplicateFileNameList.add(filenameInRequest);
-            replacePropertiesInAttachment(
-                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 404:
-            filesNotFound.add(filenameInRequest);
-            replacePropertiesInAttachment(
-                attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
-            break;
-          case 200:
-          case 201:
-            // Success cases, do nothing
-            break;
+    }
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setFileName(filenameInRequest);
+    cmisDocument.setObjectId(objectId);
+    if (fileNameInDB == null || !fileNameInDB.equals(filenameInRequest)) {
+      updatedSecondaryProperties.put("filename", filenameInRequest);
+    }
 
-          default:
-            throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-        }
-      } catch (ServiceException e) {
-        // This exception is thrown when there are unsupported properties in the request
-        if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
-          String unsupportedDetails =
-              e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
-          filesWithUnsupportedProperties.add(unsupportedDetails);
+    try {
+      int responseCode =
+          sdmService.updateAttachments(
+              sdmCredentials,
+              cmisDocument,
+              updatedSecondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions,
+              context.getUserInfo().isSystemUser());
+      switch (responseCode) {
+        case 403:
+          // SDM Roles for user are missing
+          noSDMRoles.add(fileNameInSDM);
           replacePropertiesInAttachment(
               attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-        } else {
-          badRequest.put(filenameInRequest, e.getMessage());
+          break;
+        case 404:
+          filesNotFound.add(filenameInRequest);
           replacePropertiesInAttachment(
               attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
-        }
+          break;
+        case 200:
+        case 201:
+          // Success cases, do nothing
+          break;
+
+        default:
+          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
+      }
+    } catch (ServiceException e) {
+      // This exception is thrown when there are unsupported properties in the request
+      if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
+        String unsupportedDetails =
+            e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
+        filesWithUnsupportedProperties.add(unsupportedDetails);
+        replacePropertiesInAttachment(
+            attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+      } else {
+        badRequest.put(filenameInRequest, e.getMessage());
+        replacePropertiesInAttachment(
+            attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
       }
     }
   }
@@ -343,15 +310,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters, "Rename"));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(
-              String.format(
-                  SDMConstants.FILES_RENAME_WARNING_MESSAGE,
-                  String.join(", ", duplicateFileNameList)));
+          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
