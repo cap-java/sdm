@@ -140,7 +140,7 @@ public class SDMServiceGenericHandler implements EventHandler {
               composition -> {
                 try {
                   processNestedEntityComposition(
-                      context, parentId, composition, parentActiveEntity);
+                      context, composition);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
@@ -150,9 +150,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private void processNestedEntityComposition(
       DraftCancelEventContext context,
-      Object parentId,
-      CdsElement composition,
-      CdsEntity parentEntity)
+      CdsElement composition)
       throws IOException {
 
     CdsAssociationType associationType = (CdsAssociationType) composition.getType();
