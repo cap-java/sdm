@@ -121,10 +121,10 @@ public class SDMServiceGenericHandler implements EventHandler {
       String attachmentCompositionDefinition = entry.getKey();
       revertLinksForComposition(context, parentKeys, attachmentCompositionDefinition);
     }
-    revertNestedEntityLinks(context, parentKeys.get("ID"));
+    revertNestedEntityLinks(context);
   }
 
-  private void revertNestedEntityLinks(DraftCancelEventContext context, Object parentId)
+  private void revertNestedEntityLinks(DraftCancelEventContext context)
       throws IOException {
 
     CdsEntity parentDraftEntity = context.getTarget();
