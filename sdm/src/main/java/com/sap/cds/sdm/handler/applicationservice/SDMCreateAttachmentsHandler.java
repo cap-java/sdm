@@ -186,6 +186,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
+    String descriptionInDB = null; // Initialize to null
     String fileNameInDB;
     fileNameInDB =
         dbQuery.getAttachmentForID(
@@ -194,15 +195,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             id); // Fetching the name of the file from DB
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
+    String descriptionInRequest =
+        (String) attachment.get("note"); // Fetching the description of the file from request
     String objectId = (String) attachment.get("objectId");
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    List<String> sdmAttachmentData = new ArrayList<>();
     String fileNameInSDM =
-        sdmService.getObject(
-            objectId,
-            sdmCredentials,
-            context
-                .getUserInfo()
-                .isSystemUser()); // Fetch original filename from SDM since it's null in attachments
+        sdmService
+            .getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser())
+            .get(0); // Fetch original filename from SDM since it's null in attachments
+    // table until save; needed to revert UI-modified names on error.
+    String descriptionInSDM =
+        sdmService
+            .getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser())
+            .get(1); // Fetch original filename from SDM since it's null in attachments
     // table until save; needed to revert UI-modified names on error.
 
     Map<String, String> secondaryTypeProperties =
@@ -232,11 +238,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           attachment,
           fileNameInSDM,
           propertiesInDB,
-          secondaryTypeProperties); // In this case we immediately stop the processing (Request
+          secondaryTypeProperties,
+          descriptionInSDM); // In this case we immediately stop the processing (Request
       // isn't sent to SDM)
     } else {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setFileName(filenameInRequest);
+      cmisDocument.setDescription(descriptionInRequest);
       cmisDocument.setObjectId(objectId);
       if (fileNameInDB
           == null) { // If the file name in DB is null, it means that the file is being created for
@@ -255,6 +263,16 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           updatedSecondaryProperties.put("filename", filenameInRequest);
         }
       }
+
+      if (descriptionInDB == null) {
+        if (descriptionInRequest != null) {
+          updatedSecondaryProperties.put("description", descriptionInRequest);
+        }
+      } else {
+        if (descriptionInRequest != null && !descriptionInDB.equals(descriptionInRequest)) {
+          updatedSecondaryProperties.put("description", "");
+        }
+      }
       try {
         int responseCode =
             sdmService.updateAttachments(
@@ -268,17 +286,29 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             // SDM Roles for user are missing
             noSDMRoles.add(fileNameInSDM);
             replacePropertiesInAttachment(
-                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+                attachment,
+                fileNameInSDM,
+                propertiesInDB,
+                secondaryTypeProperties,
+                descriptionInSDM);
             break;
           case 409:
             duplicateFileNameList.add(filenameInRequest);
             replacePropertiesInAttachment(
-                attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+                attachment,
+                fileNameInSDM,
+                propertiesInDB,
+                secondaryTypeProperties,
+                descriptionInSDM);
             break;
           case 404:
             filesNotFound.add(filenameInRequest);
             replacePropertiesInAttachment(
-                attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
+                attachment,
+                filenameInRequest,
+                propertiesInDB,
+                secondaryTypeProperties,
+                descriptionInSDM);
             break;
           case 200:
           case 201:
@@ -295,11 +325,15 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
           replacePropertiesInAttachment(
-              attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
+              attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         } else {
           badRequest.put(filenameInRequest, e.getMessage());
           replacePropertiesInAttachment(
-              attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
+              attachment,
+              filenameInRequest,
+              propertiesInDB,
+              secondaryTypeProperties,
+              descriptionInSDM);
         }
       }
     }
@@ -309,7 +343,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, Object> attachment,
       String fileName,
       Map<String, String> propertiesInDB,
-      Map<String, String> secondaryTypeProperties) {
+      Map<String, String> secondaryTypeProperties,
+      String descriptionInSDM) {
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
         String dbKey = entry.getKey();
@@ -329,6 +364,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       }
     }
     attachment.replace("fileName", fileName);
+    attachment.replace("note", descriptionInSDM);
   }
 
   private void handleWarnings(

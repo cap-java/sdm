@@ -193,19 +193,29 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
+    String descriptionInDB = null; // Initialize to null
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
     fileNameInDB = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String descriptionInRequest =
+        (String) attachment.get("note"); // Fetching the description of the file from request
+    String objectId = (String) attachment.get("objectId");
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     if (fileNameInDB
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
-      String objectId = (String) attachment.get("objectId");
-      SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       fileNameInDB =
-          sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+          sdmService
+              .getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser())
+              .get(0);
+      descriptionInDB =
+          sdmService
+              .getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser())
+              .get(1); // Fetch original description from SDM since it's null in attachments
+      // table until save; needed to revert UI-modified names on error.
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
@@ -214,6 +224,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             persistenceService,
             id,
             secondaryTypeProperties); // Fetching the values of the properties from the DB
+
+    // Extract note (description) from DB if it exists
+    if (propertiesInDB != null && propertiesInDB.containsKey("note")) {
+      descriptionInDB = propertiesInDB.get("note");
+    }
 
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -224,18 +239,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             propertiesInDB);
     String filenameInRequest = (String) attachment.get("fileName");
 
-    String objectId = (String) attachment.get("objectId");
     if (Boolean.TRUE.equals(
         SDMUtils.isRestrictedCharactersInName(
             filenameInRequest))) { // Check if the filename contains restricted characters and stop
       // further processing if it does (Request not sent to SDM)
       fileNameWithRestrictedCharacters.add(filenameInRequest);
       replacePropertiesInAttachment(
-          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
       return;
     }
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
+    cmisDocument.setDescription(descriptionInRequest);
     cmisDocument.setObjectId(objectId);
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
@@ -248,6 +263,16 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Filename cannot be empty");
       } else if (!fileNameInDB.equals(filenameInRequest)) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
+      }
+    }
+
+    if (descriptionInDB == null) {
+      if (descriptionInRequest != null) {
+        updatedSecondaryProperties.put("description", descriptionInRequest);
+      }
+    } else {
+      if (descriptionInRequest != null && !descriptionInDB.equals(descriptionInRequest)) {
+        updatedSecondaryProperties.put("description", descriptionInRequest);
       }
     }
     if (!updatedSecondaryProperties.isEmpty()) {
@@ -264,17 +289,17 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             // SDM Roles for user are missing
             noSDMRoles.add(fileNameInDB);
             replacePropertiesInAttachment(
-                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
             break;
           case 409:
             duplicateFileNameList.add(filenameInRequest);
             replacePropertiesInAttachment(
-                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
             break;
           case 404:
             filesNotFound.add(fileNameInDB);
             replacePropertiesInAttachment(
-                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+                attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
             break;
           case 200:
           case 201:
@@ -291,11 +316,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
           filesWithUnsupportedProperties.add(unsupportedDetails);
           replacePropertiesInAttachment(
-              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
         } else {
           badRequest.put(fileNameInDB, e.getMessage());
           replacePropertiesInAttachment(
-              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
+              attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
         }
       }
     }
@@ -305,7 +330,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, Object> attachment,
       String fileName,
       Map<String, String> propertiesInDB,
-      Map<String, String> secondaryTypeProperties) {
+      Map<String, String> secondaryTypeProperties,
+      String descriptionInDB) {
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
         String dbKey = entry.getKey();
@@ -325,6 +351,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
     }
     attachment.replace("fileName", fileName);
+    attachment.replace("note", descriptionInDB);
   }
 
   private void handleWarnings(

@@ -197,6 +197,7 @@ public class SDMServiceImpl implements SDMService {
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
     String fileName = cmisDocument.getFileName();
+    String description = cmisDocument.getDescription();
     List<String> secondaryTypes;
     try {
       secondaryTypes =
@@ -243,7 +244,11 @@ public class SDMServiceImpl implements SDMService {
 
     Set<String> keysToRemove =
         secondaryProperties.keySet().stream()
-            .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
+            .filter(
+                key ->
+                    !key.equals("filename")
+                        && !key.equals("description")
+                        && !validSecondaryProperties.contains(key))
             .collect(
                 Collectors
                     .toSet()); // Adding the properties which are unsupported to a list so that
@@ -284,7 +289,8 @@ public class SDMServiceImpl implements SDMService {
           secondaryTypes.get(index)); // Adding Secondary Types to the request body
     }
 
-    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    SDMUtils.prepareSecondaryProperties(
+        updateRequestBody, secondaryProperties, fileName, description);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
@@ -306,8 +312,8 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
-      throws IOException {
+  public List<String> getObject(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -328,7 +334,9 @@ public class SDMServiceImpl implements SDMService {
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonObject = new JSONObject(responseString);
       JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
-      return succinctProperties.getString("cmis:name");
+      String cmisName = succinctProperties.optString("cmis:name", "");
+      String cmisDescription = succinctProperties.optString("cmis:description", "");
+      return List.of(cmisName, cmisDescription);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
@@ -686,11 +694,18 @@ public class SDMServiceImpl implements SDMService {
         // Process successful response
 
         JSONObject jsonObject = new JSONObject(responseBody);
-        JSONObject props = jsonObject.getJSONObject("succinctProperties");
-        String fileName = props.optString("cmis:name");
-        String mimeType = props.optString("cmis:contentStreamMimeType");
-        String objectId = props.optString("cmis:objectId");
-        return List.of(fileName, mimeType, objectId);
+
+        // Enumerate succinctProperties fields if present
+        JSONObject props = jsonObject.optJSONObject("succinctProperties");
+
+        String cmisName =
+            props != null ? props.optString("cmis:name") : jsonObject.optString("cmis:name");
+        String cmisDescription =
+            props != null
+                ? props.optString("cmis:description")
+                : jsonObject.optString("cmis:description");
+
+        return List.of(cmisName, cmisDescription);
       }
 
       // On error, throw exception with error information

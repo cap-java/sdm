@@ -46,8 +46,8 @@ public interface SDMService {
       boolean isSystemUser)
       throws ServiceException;
 
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
-      throws IOException;
+  public List<String> getObject(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public List<String> getSecondaryTypes(
       String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;

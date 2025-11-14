@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.json.JSONObject;
 
 @ServiceName(value = "*", type = RegisterService.class)
@@ -72,6 +73,33 @@ public class SDMCustomServiceHandler {
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
+    Optional<CdsEntity> entity =
+        context.getModel().findEntity(parentEntity + "." + compositionName);
+
+    Map<String, String> customPropertyDefinitions = new HashMap<>();
+    if (entity.isPresent()) {
+      CdsEntity cdsEntity = entity.get();
+
+      // Get columns with @SDM.Attachments.AdditionalProperty annotation and their name values
+      customPropertyDefinitions =
+          cdsEntity
+              .elements()
+              .filter(
+                  element ->
+                      element
+                          .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
+                          .isPresent())
+              .collect(
+                  Collectors.toMap(
+                      CdsElement::getName,
+                      element ->
+                          element
+                              .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
+                              .get()
+                              .getValue()
+                              .toString()));
+    }
+
     String upID = context.getUpId();
     String folderName = upID + "__" + compositionName;
     String repositoryId = SDMConstants.REPOSITORY_ID;
@@ -102,6 +130,25 @@ public class SDMCustomServiceHandler {
     List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
 
+    Map<String, String> customPropertyValues = new HashMap<>();
+    for (Map.Entry<String, String> customProperty : customPropertyDefinitions.entrySet()) {
+      String columnName = customProperty.getKey(); // e.g., "c"
+      String propertyName = customProperty.getValue(); // e.g., "d"
+
+      // Search for the property in attachmentsMetadata
+      for (List<String> attachmentData : attachmentsMetadata) {
+        for (String metadataEntry : attachmentData) {
+          if (metadataEntry.contains("=")) {
+            String[] keyValue = metadataEntry.split("=", 2);
+            if (keyValue.length == 2 && keyValue[0].equals(propertyName)) {
+              customPropertyValues.put(columnName, keyValue[1]);
+              break;
+            }
+          }
+        }
+      }
+    }
+
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
     CreateDraftEntriesRequest draftRequest =
@@ -114,6 +161,7 @@ public class SDMCustomServiceHandler {
             .upIdKey(upIdKey)
             .repositoryId(repositoryId)
             .folderId(folderId)
+            .customPropertyValues(customPropertyValues)
             .build();
 
     createDraftEntries(draftRequest);
@@ -156,9 +204,11 @@ public class SDMCustomServiceHandler {
       populatedDocuments.add(populatedDocument);
 
       try {
-        attachmentsMetadata.add(
+        List<String> attachmentData =
             sdmService.copyAttachment(
-                cmisDocument, request.getSdmCredentials(), request.getIsSystemUser()));
+                cmisDocument, request.getSdmCredentials(), request.getIsSystemUser());
+
+        attachmentsMetadata.add(attachmentData);
       } catch (ServiceException e) {
         handleCopyFailure(
             request.getContext(),
@@ -255,6 +305,13 @@ public class SDMCustomServiceHandler {
               + ":"
               + mimeType);
       updatedFields.put(request.getUpIdKey(), request.getUpID());
+
+      // Insert entries from customPropertyValues into the database
+      if (request.getCustomPropertyValues() != null) {
+        for (Map.Entry<String, String> entry : request.getCustomPropertyValues().entrySet()) {
+          updatedFields.put(entry.getKey(), entry.getValue());
+        }
+      }
 
       String baseKeyField =
           request.getUpIdKey() != null ? request.getUpIdKey().replace("up__", "") : "ID";

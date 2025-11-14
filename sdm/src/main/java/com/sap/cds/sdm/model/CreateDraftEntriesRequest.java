@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.model;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parameter object for createDraftEntries method to reduce parameter count and improve code
@@ -15,6 +16,7 @@ public class CreateDraftEntriesRequest {
   private final String upIdKey;
   private final String repositoryId;
   private final String folderId;
+  private final Map<String, String> customPropertyValues;
 
   private CreateDraftEntriesRequest(Builder builder) {
     this.attachmentsMetadata = builder.attachmentsMetadata;
@@ -25,6 +27,7 @@ public class CreateDraftEntriesRequest {
     this.upIdKey = builder.upIdKey;
     this.repositoryId = builder.repositoryId;
     this.folderId = builder.folderId;
+    this.customPropertyValues = builder.customPropertyValues;
   }
 
   // Getters
@@ -60,6 +63,10 @@ public class CreateDraftEntriesRequest {
     return folderId;
   }
 
+  public Map<String, String> getCustomPropertyValues() {
+    return customPropertyValues;
+  }
+
   public static Builder builder() {
     return new Builder();
   }
@@ -73,6 +80,7 @@ public class CreateDraftEntriesRequest {
     private String upIdKey;
     private String repositoryId;
     private String folderId;
+    private Map<String, String> customPropertyValues;
 
     public Builder attachmentsMetadata(List<List<String>> attachmentsMetadata) {
       this.attachmentsMetadata = attachmentsMetadata;
@@ -111,6 +119,11 @@ public class CreateDraftEntriesRequest {
 
     public Builder folderId(String folderId) {
       this.folderId = folderId;
+      return this;
+    }
+
+    public Builder customPropertyValues(Map<String, String> customPropertyValues) {
+      this.customPropertyValues = customPropertyValues;
       return this;
     }
 
