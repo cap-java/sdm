@@ -126,26 +126,65 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private void revertNestedEntityLinks(DraftCancelEventContext context, Object parentId)
       throws IOException {
-    if (parentId == null) return;
-    String[] nestedEntityTypes = {"Chapters", "Pages"};
 
-    for (String entityType : nestedEntityTypes) {
-      String entityName = "AdminService." + entityType + "_drafts";
-      Optional<CdsEntity> nestedEntity = context.getModel().findEntity(entityName);
+    CdsEntity parentDraftEntity = context.getTarget();
+    String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
+    Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
 
-      if (nestedEntity.isPresent()) {
-        Result nestedRecords =
-            persistenceService.run(
-                Select.from(nestedEntity.get())
-                    .columns("ID")
-                    .where(
-                        e -> e.get("book_ID").eq(parentId).and(e.get("IsActiveEntity").eq(false))));
+    if (parentActiveEntityOpt.isPresent()) {
+      CdsEntity parentActiveEntity = parentActiveEntityOpt.get();
 
-        for (Row nestedRecord : nestedRecords) {
-          Object nestedEntityId = nestedRecord.get("ID");
-          Map<String, Object> nestedEntityKeys = new HashMap<>();
-          nestedEntityKeys.put("ID", nestedEntityId);
-          String attachmentPath = "AdminService." + entityType + ".attachments";
+      parentActiveEntity
+          .compositions()
+          .forEach(
+              composition -> {
+                try {
+                  processNestedEntityComposition(
+                      context, parentId, composition, parentActiveEntity);
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              });
+    }
+  }
+
+  private void processNestedEntityComposition(
+      DraftCancelEventContext context,
+      Object parentId,
+      CdsElement composition,
+      CdsEntity parentEntity)
+      throws IOException {
+
+    CdsAssociationType associationType = (CdsAssociationType) composition.getType();
+    String targetEntityName = associationType.getTarget().getQualifiedName();
+    String draftTargetEntityName = targetEntityName + "_drafts";
+
+    Optional<CdsEntity> nestedDraftEntity = context.getModel().findEntity(draftTargetEntityName);
+
+    if (nestedDraftEntity.isPresent()) {
+      Map<String, String> nestedAttachmentMapping =
+          AttachmentsHandlerUtils.getAttachmentPathMapping(
+              context.getModel(), associationType.getTarget(), persistenceService);
+
+      if (nestedAttachmentMapping.isEmpty()) {
+        return;
+      }
+
+      Result nestedRecords =
+          persistenceService.run(
+              Select.from(nestedDraftEntity.get())
+                  .columns("ID")
+                  .where(e -> e.get("IsActiveEntity").eq(false)));
+
+      for (Row nestedRecord : nestedRecords) {
+        Object nestedEntityId = nestedRecord.get("ID");
+
+        Map<String, Object> nestedEntityKeys = new HashMap<>();
+        nestedEntityKeys.put("ID", nestedEntityId);
+        nestedEntityKeys.put("IsActiveEntity", false);
+
+        for (Map.Entry<String, String> entry : nestedAttachmentMapping.entrySet()) {
+          String attachmentPath = entry.getKey();
           revertLinksForComposition(context, nestedEntityKeys, attachmentPath);
         }
       }
@@ -180,15 +219,12 @@ public class SDMServiceGenericHandler implements EventHandler {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
 
-    for (Map<String, Object> draftLink :
-        draftLinks.listOf(Map.class).stream()
-            .map(
-                m -> {
-                  @SuppressWarnings("unchecked")
-                  Map<String, Object> typedMap = (Map<String, Object>) m;
-                  return typedMap;
-                })
-            .toList()) {
+    for (Row draftLinkRow : draftLinks) {
+      Map<String, Object> draftLink = new HashMap<>();
+      draftLink.put("ID", draftLinkRow.get("ID"));
+      draftLink.put("linkUrl", draftLinkRow.get("linkUrl"));
+      draftLink.put("objectId", draftLinkRow.get("objectId"));
+      draftLink.put("fileName", draftLinkRow.get("fileName"));
       String attachmentId = (String) draftLink.get("ID");
       String draftLinkUrl = (String) draftLink.get("linkUrl");
       String objectId = (String) draftLink.get("objectId");

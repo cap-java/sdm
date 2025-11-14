@@ -1359,6 +1359,7 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1368,7 +1369,8 @@ public class SDMServiceGenericHandlerTest {
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -1380,13 +1382,10 @@ public class SDMServiceGenericHandlerTest {
                       .getAttachmentPathMapping(any(), any(), any()))
           .thenReturn(new HashMap<>());
 
-      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
-      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
-
       sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
 
-      verify(cdsModel).findEntity("AdminService.Chapters_drafts");
-      verify(cdsModel).findEntity("AdminService.Pages_drafts");
+      verify(cdsModel, times(2)).findEntity("AdminService.Books");
+      verify(parentActiveEntity).compositions();
     }
   }
 
@@ -1437,6 +1436,7 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1447,7 +1447,8 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "validBookId"));
 
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -1459,13 +1460,10 @@ public class SDMServiceGenericHandlerTest {
                       .getAttachmentPathMapping(any(), any(), any()))
           .thenReturn(new HashMap<>());
 
-      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
-      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
-
       sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
 
-      verify(cdsModel).findEntity("AdminService.Chapters_drafts");
-      verify(cdsModel).findEntity("AdminService.Pages_drafts");
+      verify(cdsModel, times(2)).findEntity("AdminService.Books");
+      verify(parentActiveEntity).compositions();
     }
   }
 
@@ -1477,6 +1475,10 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1487,7 +1489,11 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
 
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.of(composition));
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
 
     try (var attachmentUtilsMock =
         mockStatic(
