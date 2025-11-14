@@ -206,7 +206,7 @@ public class SDMServiceGenericHandler implements EventHandler {
                 a ->
                     a.get(upIdKey)
                         .eq(parentId)
-                        .and(a.get("mimeType").eq("application/internet-shortcut"))
+                        .and(a.get("mimeType").eq(SDMConstants.MIMETYPE_INTERNET_SHORTCUT))
                         .and(a.get("IsActiveEntity").eq(false)));
 
     Result draftLinks = persistenceService.run(selectDraftLinks);
@@ -244,7 +244,7 @@ public class SDMServiceGenericHandler implements EventHandler {
                         .eq(attachmentId)
                         .and(a.get(upIdKey).eq(parentId))
                         .and(a.get("IsActiveEntity").eq(true))
-                        .and(a.get("mimeType").eq("application/internet-shortcut")));
+                        .and(a.get("mimeType").eq(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)));
 
     Result activeResult = persistenceService.run(selectActiveLink);
 
@@ -294,7 +294,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
-    if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+    if (cmisDocument.getMimeType().equalsIgnoreCase(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)) {
       context.setResult(cmisDocument.getUrl());
     } else {
       context.setResult("None");
@@ -348,7 +348,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFolderId(folderId);
     cmisDocument.setFileName(filenameInRequest);
-    cmisDocument.setMimeType("application/internet-shortcut");
+    cmisDocument.setMimeType(SDMConstants.MIMETYPE_INTERNET_SHORTCUT);
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setUrl(context.get("url").toString());
 

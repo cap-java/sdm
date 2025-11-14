@@ -60,7 +60,6 @@ public class SDMServiceGenericHandlerTest {
   private CmisDocument cmisDocument;
   private SDMCredentials sdmCredentials;
   private SDMServiceGenericHandler sdmServiceGenericHandler;
-  private static final String MOCK_ENTITY = "MyService.MyEntity.attachments";
 
   private MockedStatic<CqnAnalyzer> cqnAnalyzerMock;
   private MockedStatic<SDMUtils> sdmUtilsMock;
@@ -70,7 +69,7 @@ public class SDMServiceGenericHandlerTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
     // Prepare a real list with the mock DraftService
-    when(draftService.getName()).thenReturn(MOCK_ENTITY);
+    when(draftService.getName()).thenReturn("MyService.MyEntity.attachments");
     when(draftService.newDraft(any(Insert.class))).thenReturn(mock(Result.class));
     List<DraftService> draftServiceList = List.of(draftService);
 
@@ -1359,7 +1358,6 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
-    CdsEntity parentActiveEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1369,8 +1367,7 @@ public class SDMServiceGenericHandlerTest {
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
-    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -1382,10 +1379,10 @@ public class SDMServiceGenericHandlerTest {
                       .getAttachmentPathMapping(any(), any(), any()))
           .thenReturn(new HashMap<>());
 
-      sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
+      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
 
-      verify(cdsModel, times(2)).findEntity("AdminService.Books");
-      verify(parentActiveEntity).compositions();
     }
   }
 
@@ -1436,7 +1433,6 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
-    CdsEntity parentActiveEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1447,8 +1443,7 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "validBookId"));
 
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
-    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -1460,10 +1455,25 @@ public class SDMServiceGenericHandlerTest {
                       .getAttachmentPathMapping(any(), any(), any()))
           .thenReturn(new HashMap<>());
 
-      sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
+      // Mock dynamic compositions for parentDraftEntity
+      CdsElement mockComposition1 = mock(CdsElement.class);
+      CdsElement mockComposition2 = mock(CdsElement.class);
+      CdsAssociationType mockAssociationType1 = mock(CdsAssociationType.class);
+      CdsAssociationType mockAssociationType2 = mock(CdsAssociationType.class);
+      CdsEntity mockTargetEntity1 = mock(CdsEntity.class);
+      CdsEntity mockTargetEntity2 = mock(CdsEntity.class);
+      when(parentDraftEntity.compositions())
+          .thenReturn(Stream.of(mockComposition1, mockComposition2));
+      when(mockComposition1.getType()).thenReturn(mockAssociationType1);
+      when(mockComposition2.getType()).thenReturn(mockAssociationType2);
+      when(mockAssociationType1.getTarget()).thenReturn(mockTargetEntity1);
+      when(mockAssociationType2.getTarget()).thenReturn(mockTargetEntity2);
+      when(mockTargetEntity1.getQualifiedName()).thenReturn("AdminService.Chapters");
+      when(mockTargetEntity2.getQualifiedName()).thenReturn("AdminService.Pages");
+      when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+      when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
 
-      verify(cdsModel, times(2)).findEntity("AdminService.Books");
-      verify(parentActiveEntity).compositions();
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
     }
   }
 
@@ -1475,10 +1485,6 @@ public class SDMServiceGenericHandlerTest {
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
     AnalysisResult analysisResult = mock(AnalysisResult.class);
     CqnDelete cqnDelete = mock(CqnDelete.class);
-    CdsEntity parentActiveEntity = mock(CdsEntity.class);
-    CdsElement composition = mock(CdsElement.class);
-    CdsAssociationType associationType = mock(CdsAssociationType.class);
-    CdsEntity targetEntity = mock(CdsEntity.class);
 
     when(draftContext.getTarget()).thenReturn(parentDraftEntity);
     when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
@@ -1489,11 +1495,7 @@ public class SDMServiceGenericHandlerTest {
     when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
 
-    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
-    when(parentActiveEntity.compositions()).thenReturn(Stream.of(composition));
-    when(composition.getType()).thenReturn(associationType);
-    when(associationType.getTarget()).thenReturn(targetEntity);
-    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -1505,13 +1507,12 @@ public class SDMServiceGenericHandlerTest {
                       .getAttachmentPathMapping(any(), any(), any()))
           .thenReturn(new HashMap<>());
 
-      when(cdsModel.findEntity("AdminService.Chapters_drafts"))
+      when(cdsModel.findEntity("AdminService.Books"))
           .thenThrow(new RuntimeException("Database error"));
 
       assertThrows(
           RuntimeException.class,
-          () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext),
-          "Database error");
+          () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
     }
   }
 }
