@@ -139,8 +139,7 @@ public class SDMServiceGenericHandler implements EventHandler {
           .forEach(
               composition -> {
                 try {
-                  processNestedEntityComposition(
-                      context, composition);
+                  processNestedEntityComposition(context, composition);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
@@ -149,9 +148,7 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void processNestedEntityComposition(
-      DraftCancelEventContext context,
-      CdsElement composition)
-      throws IOException {
+      DraftCancelEventContext context, CdsElement composition) throws IOException {
 
     CdsAssociationType associationType = (CdsAssociationType) composition.getType();
     String targetEntityName = associationType.getTarget().getQualifiedName();
