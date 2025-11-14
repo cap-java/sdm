@@ -124,8 +124,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     revertNestedEntityLinks(context);
   }
 
-  private void revertNestedEntityLinks(DraftCancelEventContext context)
-      throws IOException {
+  private void revertNestedEntityLinks(DraftCancelEventContext context) throws IOException {
 
     CdsEntity parentDraftEntity = context.getTarget();
     String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
