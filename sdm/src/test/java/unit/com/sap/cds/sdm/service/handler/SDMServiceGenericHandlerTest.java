@@ -1382,7 +1382,6 @@ public class SDMServiceGenericHandlerTest {
       when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
       when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
       assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
-
     }
   }
 
