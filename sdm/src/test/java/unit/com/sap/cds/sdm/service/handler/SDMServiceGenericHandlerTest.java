@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
+import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Update;
@@ -19,6 +20,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
@@ -35,6 +37,7 @@ import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Stream;
 import org.json.JSONObject;
@@ -1512,6 +1515,1539 @@ public class SDMServiceGenericHandlerTest {
       assertThrows(
           RuntimeException.class,
           () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+    }
+  }
+
+  @Test
+  void testRevertLinksForComposition() throws Exception {
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    Map<String, Object> parentKeys = new HashMap<>();
+    parentKeys.put("ID", "parent123");
+    String attachmentCompositionDefinition = "AdminService.Attachments";
+
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity activeEntity = mock(CdsEntity.class);
+
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
+    when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
+
+    CdsElement upElement = mock(CdsElement.class);
+    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
+    when(upElement.getName()).thenReturn("up__ID");
+
+    Result draftLinksResult = mock(Result.class);
+    Row draftLinkRow = mock(Row.class);
+    when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(draftLinksResult);
+
+    when(draftLinkRow.get("ID")).thenReturn("attachment123");
+    when(draftLinkRow.get("linkUrl")).thenReturn("http://draft-url.com");
+    when(draftLinkRow.get("objectId")).thenReturn("object123");
+    when(draftLinkRow.get("fileName")).thenReturn("test.url");
+
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+    when(activeResult.iterator()).thenReturn(Arrays.asList(activeRow).iterator());
+    when(activeRow.get("linkUrl")).thenReturn("http://original-url.com");
+
+    when(persistenceService.run(any(CqnSelect.class)))
+        .thenReturn(draftLinksResult)
+        .thenReturn(activeResult);
+
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+    method.setAccessible(true);
+
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    verify(persistenceService, atLeast(1)).run(any(CqnSelect.class));
+    verify(tokenHandler, times(1)).getSDMCredentials();
+    verify(context, times(1)).getUserInfo();
+  }
+
+  @Test
+  void testRevertLinksForComposition_NoLinksToRevert() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    Map<String, Object> parentKeys = new HashMap<>();
+    parentKeys.put("ID", "parent123");
+    String attachmentCompositionDefinition = "AdminService.Attachments";
+
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity activeEntity = mock(CdsEntity.class);
+
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
+    when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
+
+    CdsElement upElement = mock(CdsElement.class);
+    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
+    when(upElement.getName()).thenReturn("up__ID");
+
+    Result emptyResult = mock(Result.class);
+    when(emptyResult.iterator()).thenReturn(Collections.emptyIterator());
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
+
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(true);
+
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+    method.setAccessible(true);
+
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+    verify(tokenHandler, times(1)).getSDMCredentials();
+    verify(context, times(1)).getUserInfo();
+  }
+
+  @Test
+  void testRevertLinksForComposition_SameUrls() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    Map<String, Object> parentKeys = new HashMap<>();
+    parentKeys.put("ID", "parent123");
+    String attachmentCompositionDefinition = "AdminService.Attachments";
+
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity activeEntity = mock(CdsEntity.class);
+
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
+    when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
+
+    CdsElement upElement = mock(CdsElement.class);
+    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
+    when(upElement.getName()).thenReturn("up__ID");
+
+    Result draftLinksResult = mock(Result.class);
+    Row draftLinkRow = mock(Row.class);
+    when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
+
+    when(draftLinkRow.get("ID")).thenReturn("attachment123");
+    when(draftLinkRow.get("linkUrl")).thenReturn("http://same-url.com");
+    when(draftLinkRow.get("objectId")).thenReturn("object123");
+    when(draftLinkRow.get("fileName")).thenReturn("test.url");
+
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+    when(activeResult.iterator()).thenReturn(Arrays.asList(activeRow).iterator());
+    when(activeRow.get("linkUrl")).thenReturn("http://same-url.com");
+
+    when(persistenceService.run(any(CqnSelect.class)))
+        .thenReturn(draftLinksResult)
+        .thenReturn(activeResult);
+
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+    method.setAccessible(true);
+
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    verify(persistenceService, times(2)).run(any(CqnSelect.class));
+    verify(tokenHandler, times(1)).getSDMCredentials();
+    verify(context, times(1)).getUserInfo();
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_MainFlow() throws Exception {
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsElement composition1 = mock(CdsElement.class);
+    CdsElement composition2 = mock(CdsElement.class);
+
+    when(context.getTarget()).thenReturn(parentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(model.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+
+    when(parentActiveEntity.compositions()).thenReturn(Stream.of(composition1, composition2));
+
+    CdsAssociationType associationType1 = mock(CdsAssociationType.class);
+    CdsAssociationType associationType2 = mock(CdsAssociationType.class);
+    CdsEntity targetEntity1 = mock(CdsEntity.class);
+    CdsEntity targetEntity2 = mock(CdsEntity.class);
+
+    when(composition1.getType()).thenReturn(associationType1);
+    when(composition2.getType()).thenReturn(associationType2);
+    when(associationType1.getTarget()).thenReturn(targetEntity1);
+    when(associationType2.getTarget()).thenReturn(targetEntity2);
+    when(targetEntity1.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(targetEntity2.getQualifiedName()).thenReturn("AdminService.Reviews");
+
+    CdsEntity nestedDraftEntity1 = mock(CdsEntity.class);
+    CdsEntity nestedDraftEntity2 = mock(CdsEntity.class);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity1));
+    when(model.findEntity("AdminService.Reviews_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity2));
+
+    Result emptyResult1 = mock(Result.class);
+    Result emptyResult2 = mock(Result.class);
+    when(emptyResult1.iterator()).thenReturn(Collections.emptyIterator());
+    when(emptyResult2.iterator()).thenReturn(Collections.emptyIterator());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity1), eq(persistenceService)))
+          .thenReturn(new HashMap<>());
+
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity2), eq(persistenceService)))
+          .thenReturn(new HashMap<>());
+
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "revertNestedEntityLinks", DraftCancelEventContext.class);
+      method.setAccessible(true);
+
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      verify(parentDraftEntity).getQualifiedName();
+      verify(model).findEntity("AdminService.Books");
+      verify(parentActiveEntity).compositions();
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity1), eq(persistenceService)),
+          times(1));
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity2), eq(persistenceService)),
+          times(1));
+    }
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_MissingActiveEntity() throws Exception {
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+
+    when(context.getTarget()).thenReturn(parentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(model.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
+    method.setAccessible(true);
+
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    verify(parentDraftEntity).getQualifiedName();
+    verify(model).findEntity("AdminService.Books");
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_EmptyCompositions() throws Exception {
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+
+    when(context.getTarget()).thenReturn(parentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(model.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
+
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
+    method.setAccessible(true);
+
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    verify(parentDraftEntity).getQualifiedName();
+    verify(model).findEntity("AdminService.Books");
+    verify(parentActiveEntity).compositions();
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_ComplexAttachments() throws Exception {
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsElement composition = mock(CdsElement.class);
+
+    when(context.getTarget()).thenReturn(parentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(model.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.of(composition));
+
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+
+    CdsEntity nestedDraftEntity = mock(CdsEntity.class);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity));
+
+    Result nestedRecordsResult = mock(Result.class);
+    Row nestedRecord = mock(Row.class);
+    when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
+    when(nestedRecord.get("ID")).thenReturn("chapter1");
+
+    Map<String, String> attachmentMapping = new HashMap<>();
+    attachmentMapping.put("AdminService.Attachments", "path1");
+
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity = mock(CdsEntity.class);
+
+    when(model.findEntity("AdminService.Attachments_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(model.findEntity("AdminService.Attachments"))
+        .thenReturn(Optional.of(attachmentActiveEntity));
+
+    CdsElement upElement = mock(CdsElement.class);
+    when(attachmentDraftEntity.elements()).thenReturn(Stream.of(upElement));
+    when(upElement.getName()).thenReturn("up__ID");
+
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Result emptyDraftLinksResult = mock(Result.class);
+    when(emptyDraftLinksResult.iterator()).thenReturn(Collections.emptyIterator());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
+
+      when(persistenceService.run(any(CqnSelect.class)))
+          .thenReturn(nestedRecordsResult)
+          .thenReturn(emptyDraftLinksResult);
+
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "revertNestedEntityLinks", DraftCancelEventContext.class);
+      method.setAccessible(true);
+
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      // Verify interactions
+      verify(parentDraftEntity).getQualifiedName();
+      verify(model).findEntity("AdminService.Books");
+      verify(parentActiveEntity).compositions();
+      verify(persistenceService, times(2)).run(any(CqnSelect.class));
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
+    }
+  }
+
+  @Test
+  void testRevertNestedEntityLinks_ExceptionInProcessing() throws Exception {
+    // Mock context and entities
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsElement composition = mock(CdsElement.class);
+
+    when(context.getTarget()).thenReturn(parentDraftEntity);
+    when(context.getModel()).thenReturn(model);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(model.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+
+    // Mock composition that throws exception
+    when(parentActiveEntity.compositions()).thenReturn(Stream.of(composition));
+    when(composition.getType()).thenThrow(new RuntimeException("Processing error"));
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
+    method.setAccessible(true);
+
+    // Execute the test and expect RuntimeException to be thrown
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+  }
+
+  @Test
+  void testRevertLinkInSDM() throws Exception {
+    // Mock parameters
+    String objectId = "test-object-id";
+    String filename = "test-document.lnk";
+    String originalUrl = "https://original-url.com";
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    Boolean isSystemUser = false;
+
+    // Mock the SDM service call
+    JSONObject successResponse = new JSONObject();
+    successResponse.put("status", "success");
+    when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
+        .thenReturn(successResponse);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify interactions
+    ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
+    verify(sdmService, times(1))
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+
+    // Verify the CmisDocument properties
+    CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
+    assertEquals(objectId, capturedDoc.getObjectId());
+    assertEquals(filename, capturedDoc.getFileName());
+    assertEquals(originalUrl, capturedDoc.getUrl());
+    assertEquals(SDMConstants.REPOSITORY_ID, capturedDoc.getRepositoryId());
+  }
+
+  @Test
+  void testRevertLinkInSDM_WithNullUrl() throws Exception {
+    // Mock parameters with null URL
+    String objectId = "test-object-id";
+    String filename = "test-document.lnk";
+    String originalUrl = null;
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    Boolean isSystemUser = true;
+
+    // Mock the SDM service call
+    JSONObject successResponse = new JSONObject();
+    successResponse.put("status", "success");
+    when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
+        .thenReturn(successResponse);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify interactions
+    ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
+    verify(sdmService, times(1))
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+
+    // Verify the CmisDocument properties
+    CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
+    assertEquals(objectId, capturedDoc.getObjectId());
+    assertEquals(filename, capturedDoc.getFileName());
+    assertNull(capturedDoc.getUrl());
+    assertEquals(SDMConstants.REPOSITORY_ID, capturedDoc.getRepositoryId());
+  }
+
+  @Test
+  void testRevertLinkInSDM_WithEmptyFilename() throws Exception {
+    // Mock parameters with empty filename
+    String objectId = "test-object-id";
+    String filename = "";
+    String originalUrl = "https://example.com";
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    Boolean isSystemUser = false;
+
+    // Mock the SDM service call
+    JSONObject successResponse = new JSONObject();
+    successResponse.put("status", "success");
+    when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
+        .thenReturn(successResponse);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify interactions
+    ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
+    verify(sdmService, times(1))
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+
+    // Verify the CmisDocument properties
+    CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
+    assertEquals(objectId, capturedDoc.getObjectId());
+    assertEquals(filename, capturedDoc.getFileName());
+    assertEquals(originalUrl, capturedDoc.getUrl());
+    assertEquals(SDMConstants.REPOSITORY_ID, capturedDoc.getRepositoryId());
+  }
+
+  @Test
+  void testRevertLinkInSDM_ServiceException() throws Exception {
+    // Mock parameters
+    String objectId = "test-object-id";
+    String filename = "test-document.lnk";
+    String originalUrl = "https://original-url.com";
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    Boolean isSystemUser = false;
+
+    // Mock the SDM service to throw an exception
+    when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
+        .thenThrow(new IOException("Service unavailable"));
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
+    method.setAccessible(true);
+
+    // Execute the test and expect IOException to be thrown
+    assertThrows(
+        IOException.class,
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof IOException) {
+              throw (IOException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify the service was called
+    verify(sdmService, times(1))
+        .editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser));
+  }
+
+  @Test
+  void testRevertLinkInSDM_SystemUserTrue() throws Exception {
+    // Mock parameters with system user = true
+    String objectId = "system-object-id";
+    String filename = "system-document.lnk";
+    String originalUrl = "https://system-url.com";
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    Boolean isSystemUser = true;
+
+    // Mock the SDM service call
+    JSONObject successResponse = new JSONObject();
+    successResponse.put("status", "success");
+    when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
+        .thenReturn(successResponse);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify interactions with system user flag
+    ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
+    verify(sdmService, times(1))
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(true));
+
+    // Verify the CmisDocument properties
+    CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
+    assertEquals(objectId, capturedDoc.getObjectId());
+    assertEquals(filename, capturedDoc.getFileName());
+    assertEquals(originalUrl, capturedDoc.getUrl());
+    assertEquals(SDMConstants.REPOSITORY_ID, capturedDoc.getRepositoryId());
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable() throws Exception {
+    // Mock parameters
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-123";
+    Object parentId = "parent-456";
+    String upIdKey = "up__ID";
+
+    // Mock result with a single row
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+
+    when(activeResult.rowCount()).thenReturn(1L);
+    when(activeResult.single()).thenReturn(activeRow);
+    when(activeRow.get("linkUrl")).thenReturn("https://example.com/original-link");
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://example.com/original-link", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify persistence service was called
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+    verify(activeResult, times(1)).rowCount();
+    verify(activeResult, times(1)).single();
+    verify(activeRow, times(2)).get("linkUrl"); // Called twice: null check and toString()
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable_NoRows() throws Exception {
+    // Mock parameters
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-123";
+    Object parentId = "parent-456";
+    String upIdKey = "up__ID";
+
+    // Mock empty result
+    Result activeResult = mock(Result.class);
+    when(activeResult.rowCount()).thenReturn(0L);
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertNull(url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify persistence service was called
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+    verify(activeResult, times(1)).rowCount();
+    verify(activeResult, never()).single(); // Should not call single() when no rows
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable_NullLinkUrl() throws Exception {
+    // Mock parameters
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-123";
+    Object parentId = "parent-456";
+    String upIdKey = "up__ID";
+
+    // Mock result with a single row that has null linkUrl
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+
+    when(activeResult.rowCount()).thenReturn(1L);
+    when(activeResult.single()).thenReturn(activeRow);
+    when(activeRow.get("linkUrl")).thenReturn(null);
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertNull(url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify interactions
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+    verify(activeResult, times(1)).rowCount();
+    verify(activeResult, times(1)).single();
+    verify(activeRow, times(1)).get("linkUrl");
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable_DifferentUpIdKey() throws Exception {
+    // Mock parameters with different upIdKey
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-789";
+    Object parentId = "parent-012";
+    String upIdKey = "up__parentEntityID";
+
+    // Mock result with a single row
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+
+    when(activeResult.rowCount()).thenReturn(1L);
+    when(activeResult.single()).thenReturn(activeRow);
+    when(activeRow.get("linkUrl")).thenReturn("https://different-url.com");
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://different-url.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify persistence service was called
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable_NumericParentId() throws Exception {
+    // Mock parameters with numeric parent ID
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-456";
+    Object parentId = 12345L; // Numeric parent ID
+    String upIdKey = "up__ID";
+
+    // Mock result with a single row
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+
+    when(activeResult.rowCount()).thenReturn(1L);
+    when(activeResult.single()).thenReturn(activeRow);
+    when(activeRow.get("linkUrl")).thenReturn("https://numeric-parent.com");
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://numeric-parent.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify persistence service was called
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+  }
+
+  @Test
+  void testGetOriginalUrlFromActiveTable_MultipleRowsReturnsFirst() throws Exception {
+    // Mock parameters
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    String attachmentId = "attachment-789";
+    Object parentId = "parent-abc";
+    String upIdKey = "up__ID";
+
+    // Mock result with multiple rows (edge case)
+    Result activeResult = mock(Result.class);
+    Row activeRow = mock(Row.class);
+
+    when(activeResult.rowCount()).thenReturn(3L); // Multiple rows
+    when(activeResult.single()).thenReturn(activeRow);
+    when(activeRow.get("linkUrl")).thenReturn("https://first-result.com");
+
+    // Mock persistence service
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(activeResult);
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://first-result.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify persistence service was called
+    verify(persistenceService, times(1)).run(any(CqnSelect.class));
+    verify(activeResult, times(1)).rowCount();
+    verify(activeResult, times(1)).single();
+  }
+
+  @Test
+  void testProcessNestedEntityComposition() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsEntity nestedDraftEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity));
+
+    // Mock nested records
+    Result nestedRecordsResult = mock(Result.class);
+    Row nestedRecord1 = mock(Row.class);
+    Row nestedRecord2 = mock(Row.class);
+    when(nestedRecordsResult.iterator())
+        .thenReturn(Arrays.asList(nestedRecord1, nestedRecord2).iterator());
+    when(nestedRecord1.get("ID")).thenReturn("chapter1");
+    when(nestedRecord2.get("ID")).thenReturn("chapter2");
+
+    // Mock attachment path mapping
+    Map<String, String> attachmentMapping = new HashMap<>();
+    attachmentMapping.put("AdminService.Attachments1", "path1");
+    attachmentMapping.put("AdminService.Attachments2", "path2");
+
+    // Mock entities for revertLinksForComposition calls
+    CdsEntity attachmentDraftEntity1 = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity1 = mock(CdsEntity.class);
+    CdsEntity attachmentDraftEntity2 = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity2 = mock(CdsEntity.class);
+
+    when(model.findEntity("AdminService.Attachments1_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity1));
+    when(model.findEntity("AdminService.Attachments1"))
+        .thenReturn(Optional.of(attachmentActiveEntity1));
+    when(model.findEntity("AdminService.Attachments2_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity2));
+    when(model.findEntity("AdminService.Attachments2"))
+        .thenReturn(Optional.of(attachmentActiveEntity2));
+
+    // Mock upId key extraction for attachment entities
+    CdsElement upElement1 = mock(CdsElement.class);
+    CdsElement upElement2 = mock(CdsElement.class);
+    when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
+    when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
+    when(upElement1.getName()).thenReturn("up__ID");
+    when(upElement2.getName()).thenReturn("up__ID");
+
+    // Mock SDM credentials and user info for revertLinksForComposition
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the static method call
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
+
+      // Mock draft links result for revertLinksForComposition calls
+      Result emptyDraftLinksResult1 = mock(Result.class);
+      Result emptyDraftLinksResult2 = mock(Result.class);
+      Result emptyDraftLinksResult3 = mock(Result.class);
+      Result emptyDraftLinksResult4 = mock(Result.class);
+      when(emptyDraftLinksResult1.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult2.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult3.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult4.iterator()).thenReturn(Collections.emptyIterator());
+
+      // Mock persistence service calls
+      when(persistenceService.run(any(CqnSelect.class)))
+          .thenReturn(nestedRecordsResult) // First call for nested records
+          .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
+          .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
+          .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
+          .thenReturn(emptyDraftLinksResult4); // revertLinksForComposition call 4
+
+      // Use reflection to invoke the private method
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+      method.setAccessible(true);
+
+      // Execute the test
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      // Verify interactions
+      verify(persistenceService, atLeast(1)).run(any(CqnSelect.class));
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
+    }
+  }
+
+  @Test
+  void testProcessNestedEntityComposition_NoDraftEntity() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+    method.setAccessible(true);
+
+    // Execute the test
+    assertDoesNotThrow(
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context, composition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+
+    // Verify no persistence calls were made since no draft entity exists
+    verify(persistenceService, never()).run(any(CqnSelect.class));
+  }
+
+  @Test
+  void testProcessNestedEntityComposition_EmptyAttachmentMapping() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsEntity nestedDraftEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity));
+
+    // Mock empty attachment path mapping
+    Map<String, String> emptyAttachmentMapping = new HashMap<>();
+
+    // Mock the static method call
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(emptyAttachmentMapping);
+
+      // Use reflection to invoke the private method
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+      method.setAccessible(true);
+
+      // Execute the test
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      // Verify interactions
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
+      // No persistence calls for nested records since mapping is empty
+      verify(persistenceService, never()).run(any(CqnSelect.class));
+    }
+  }
+
+  @Test
+  void testProcessNestedEntityComposition_NoNestedRecords() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsEntity nestedDraftEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity));
+
+    // Mock empty nested records result
+    Result emptyResult = mock(Result.class);
+    when(emptyResult.iterator()).thenReturn(Collections.emptyIterator());
+
+    // Mock attachment path mapping
+    Map<String, String> attachmentMapping = new HashMap<>();
+    attachmentMapping.put("AdminService.Attachments", "path1");
+
+    // Mock the static method call
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
+
+      when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
+
+      // Use reflection to invoke the private method
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+      method.setAccessible(true);
+
+      // Execute the test
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      // Verify interactions
+      verify(persistenceService, times(1))
+          .run(any(CqnSelect.class)); // Only one call for nested records
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
+    }
+  }
+
+  @Test
+  void testProcessNestedEntityComposition_ExceptionHandling() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenThrow(new RuntimeException("Database error"));
+
+    // Use reflection to invoke the private method
+    Method method =
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+    method.setAccessible(true);
+
+    // Execute the test and expect exception
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context, composition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
+  }
+
+  @Test
+  void testProcessNestedEntityComposition_MultipleAttachmentPaths() throws Exception {
+    // Setup test data
+    DraftCancelEventContext context = mock(DraftCancelEventContext.class);
+    CdsElement composition = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsEntity nestedDraftEntity = mock(CdsEntity.class);
+    CdsModel model = mock(CdsModel.class);
+
+    // Mock composition setup
+    when(composition.getType()).thenReturn(associationType);
+    when(associationType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("AdminService.Chapters_drafts"))
+        .thenReturn(Optional.of(nestedDraftEntity));
+
+    // Mock nested records with single record
+    Result nestedRecordsResult = mock(Result.class);
+    Row nestedRecord = mock(Row.class);
+    when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
+    when(nestedRecord.get("ID")).thenReturn("chapter1");
+
+    // Mock multiple attachment paths
+    Map<String, String> attachmentMapping = new HashMap<>();
+    attachmentMapping.put("AdminService.ChapterAttachments", "path1");
+    attachmentMapping.put("AdminService.ChapterDocuments", "path2");
+    attachmentMapping.put("AdminService.ChapterImages", "path3");
+
+    // Mock entities for revertLinksForComposition calls
+    CdsEntity attachmentDraftEntity1 = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity1 = mock(CdsEntity.class);
+    CdsEntity attachmentDraftEntity2 = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity2 = mock(CdsEntity.class);
+    CdsEntity attachmentDraftEntity3 = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity3 = mock(CdsEntity.class);
+
+    when(model.findEntity("AdminService.ChapterAttachments_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity1));
+    when(model.findEntity("AdminService.ChapterAttachments"))
+        .thenReturn(Optional.of(attachmentActiveEntity1));
+    when(model.findEntity("AdminService.ChapterDocuments_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity2));
+    when(model.findEntity("AdminService.ChapterDocuments"))
+        .thenReturn(Optional.of(attachmentActiveEntity2));
+    when(model.findEntity("AdminService.ChapterImages_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity3));
+    when(model.findEntity("AdminService.ChapterImages"))
+        .thenReturn(Optional.of(attachmentActiveEntity3));
+
+    // Mock upId key extraction for attachment entities
+    CdsElement upElement1 = mock(CdsElement.class);
+    CdsElement upElement2 = mock(CdsElement.class);
+    CdsElement upElement3 = mock(CdsElement.class);
+    when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
+    when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
+    when(attachmentDraftEntity3.elements()).thenReturn(Stream.of(upElement3));
+    when(upElement1.getName()).thenReturn("up__ID");
+    when(upElement2.getName()).thenReturn("up__ID");
+    when(upElement3.getName()).thenReturn("up__ID");
+
+    // Mock SDM credentials and user info for revertLinksForComposition
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the static method call
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
+
+      // Mock draft links result for revertLinksForComposition calls
+      Result emptyDraftLinksResult1 = mock(Result.class);
+      Result emptyDraftLinksResult2 = mock(Result.class);
+      Result emptyDraftLinksResult3 = mock(Result.class);
+      Result emptyDraftLinksResult4 = mock(Result.class);
+      Result emptyDraftLinksResult5 = mock(Result.class);
+      Result emptyDraftLinksResult6 = mock(Result.class);
+      when(emptyDraftLinksResult1.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult2.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult3.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult4.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult5.iterator()).thenReturn(Collections.emptyIterator());
+      when(emptyDraftLinksResult6.iterator()).thenReturn(Collections.emptyIterator());
+
+      // Mock persistence service calls - first for nested records, then for each
+      // revertLinksForComposition call
+      when(persistenceService.run(any(CqnSelect.class)))
+          .thenReturn(nestedRecordsResult) // First call for nested records
+          .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
+          .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
+          .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
+          .thenReturn(emptyDraftLinksResult4) // revertLinksForComposition call 4
+          .thenReturn(emptyDraftLinksResult5) // revertLinksForComposition call 5
+          .thenReturn(emptyDraftLinksResult6); // revertLinksForComposition call 6
+
+      // Use reflection to invoke the private method
+      Method method =
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+      method.setAccessible(true);
+
+      // Execute the test
+      assertDoesNotThrow(
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
+
+      // Verify interactions
+      verify(persistenceService, atLeast(4))
+          .run(any(CqnSelect.class)); // 1 for nested records + 3 for attachment paths
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
     }
   }
 }
