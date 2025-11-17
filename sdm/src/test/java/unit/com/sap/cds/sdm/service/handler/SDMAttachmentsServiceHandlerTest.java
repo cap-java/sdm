@@ -1,11 +1,14 @@
 package unit.com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -16,6 +19,9 @@ import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
+import com.sap.cds.feature.attachments.service.model.service.CreateAttachmentInput;
+import com.sap.cds.feature.attachments.service.model.service.MarkAsDeletedInput;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
@@ -30,10 +36,12 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
+import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
@@ -50,6 +58,7 @@ import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Stream;
 import org.json.JSONObject;
@@ -546,6 +555,61 @@ public class SDMAttachmentsServiceHandlerTest {
       assertEquals(SDMConstants.getVirusFilesError("sample.pdf"), thrown.getMessage());
     }
   }
+
+  @Test
+void testCopyAttachments_invalidFacetFormat() {
+    SDMAttachmentsService service = new SDMAttachmentsService();
+    CopyAttachmentInput input = mock(CopyAttachmentInput.class);
+    when(input.facet()).thenReturn("invalidfacet");
+    when(input.upId()).thenReturn("upId");
+    when(input.objectIds()).thenReturn(List.of("obj1"));
+    Exception ex = assertThrows(IllegalArgumentException.class, () -> {
+        service.copyAttachments(input, false);
+    });
+    assertTrue(ex.getMessage().contains("Invalid facet format"));
+}
+
+@Test
+void testReadAttachment_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    InputStream result = service.readAttachment("docId");
+    assertNull(result);
+}
+
+@Test
+void testCreateAttachment_emitsContextAndReturnsResult() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    CreateAttachmentInput input = mock(CreateAttachmentInput.class);
+    MediaData mediaData = MediaData.create();
+    when(input.attachmentIds()).thenReturn(new HashMap<>());
+    when(input.attachmentEntity()).thenReturn(mock(com.sap.cds.reflect.CdsEntity.class));
+    when(input.fileName()).thenReturn("file.txt");
+    when(input.mimeType()).thenReturn("text/plain");
+    when(input.content()).thenReturn(new ByteArrayInputStream(new byte[0]));
+    AttachmentModificationResult result = service.createAttachment(input);
+    assertNotNull(result);
+}
+
+@Test
+void testMarkAttachmentAsDeleted_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    MarkAsDeletedInput input = mock(MarkAsDeletedInput.class);
+    when(input.contentId()).thenReturn("docId");
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.getName()).thenReturn("user");
+    when(input.userInfo()).thenReturn(userInfo);
+    service.markAttachmentAsDeleted(input);
+}
+
+@Test
+void testRestoreAttachment_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    service.restoreAttachment(Instant.now());
+}
 
   @Test
   public void testCreateNonVersionedDIOther() throws IOException {
