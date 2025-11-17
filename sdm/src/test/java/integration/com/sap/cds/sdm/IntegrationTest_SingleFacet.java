@@ -510,7 +510,7 @@ class IntegrationTest_SingleFacet {
         if (response.equals("Renamed")) {
           response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
           String expected =
-              "{\"error\":{\"code\":\"400\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
+              "{\"error\":{\"code\":\"400\",\"message\":\"\\\"a/\\bc.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
           if (response.equals(expected)) {
             api.renameAttachment(
                 appUrl, entityName, facetName, entityID, attachmentID6, "sample3.pdf");
@@ -652,7 +652,7 @@ class IntegrationTest_SingleFacet {
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/name\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/name\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
         if (response.equals(expected)) {
           api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, "sample123");
           response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
@@ -707,7 +707,7 @@ class IntegrationTest_SingleFacet {
       if (response.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sample123\\\" already exists. Rename the object and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sample123\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
         if (response.equals(expected)) {
           response =
               api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID3, name2);
@@ -749,7 +749,7 @@ class IntegrationTest_SingleFacet {
       if (renameResponse1.equals("Renamed") && renameResponse2.equals("Renamed")) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/attachment2.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/attachment2.pdf\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
         if (response.equals(expected)) {
           api.renameAttachment(
               appUrl, entityName, facetName, entityID, attachmentID2, "sample1234");
@@ -772,7 +772,7 @@ class IntegrationTest_SingleFacet {
     System.out.println("Test (17) : Rename attachments where user don't have SDM Roles");
     boolean testStatus = false;
     String apiResponse = apiNoRoles.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    String name = "sample123";
+    String name = "sample123"; // Renaming the attachment
     if (apiResponse == "Entity in draft mode") {
       apiResponse =
           apiNoRoles.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, name);
@@ -787,7 +787,7 @@ class IntegrationTest_SingleFacet {
                 + //
                 "\\n"
                 + //
-                "You do not have the required permissions to update attachments. Kindly contact the admin\",\"numericSeverity\":3}]";
+                "You do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (apiResponse.equals(expected)) {
           testStatus = true;
         }
@@ -832,7 +832,7 @@ class IntegrationTest_SingleFacet {
       if (successCount) {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
         String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"The object name cannot be empty or consist entirely of space characters. Enter a value.\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"Restricted/Character\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"duplicateName.pdf\\\" already exists. Rename the object and try again.\",\"@Common.numericSeverity\":4}]}}";
+            "{\"error\":{\"code\":\"400\",\"message\":\"The object name cannot be empty or consist entirely of space characters. Enter a value.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"Restricted/Character\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"duplicateName.pdf\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
         if (response.equals(expected)) {
           response = api.deleteEntityDraft(appUrl, entityName, entityID3);
           if (response.equals("Entity Draft Deleted")) testStatus = true;
@@ -1222,7 +1222,7 @@ class IntegrationTest_SingleFacet {
                   + //
                   "\\n"
                   + //
-                  "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                  "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
           if (response.equals(expectedResponse)) {
             System.out.println("Entity saved");
             testStatus = true;
@@ -1317,7 +1317,7 @@ class IntegrationTest_SingleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
@@ -1861,7 +1861,7 @@ class IntegrationTest_SingleFacet {
                   + //
                   "\\n"
                   + //
-                  "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                  "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
           if (response.equals(expectedResponse)) {
             System.out.println("Entity saved");
             testStatus = true;
@@ -2022,7 +2022,13 @@ class IntegrationTest_SingleFacet {
                 + //
                 "\\n"
                 + //
-                "Please contact your administrator for assistance with any necessary adjustments.\",\"numericSeverity\":3}]";
+                "Please contact your administrator for assistance with any necessary adjustments.\\n"
+                + //
+                "\\n"
+                + //
+                "Table: attachments\\n"
+                + //
+                "Page: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
           testStatus = true;
@@ -2897,7 +2903,7 @@ class IntegrationTest_SingleFacet {
     String saveError =
         saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     String expectedWarning =
-        "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\"}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"sampleRenamed\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
     ObjectMapper mapper = new ObjectMapper();
     assertEquals(mapper.readTree(expectedWarning), mapper.readTree(saveError));
 
@@ -2950,7 +2956,7 @@ class IntegrationTest_SingleFacet {
     String warning =
         saveEntityResponse = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     String expectedWarning =
-        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\"}}";
+        "{\"error\":{\"code\":\"400\",\"message\":\"\\\"sampleRenamed//\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
     ObjectMapper mapper = new ObjectMapper();
     assertEquals(mapper.readTree(expectedWarning), mapper.readTree(warning));
 

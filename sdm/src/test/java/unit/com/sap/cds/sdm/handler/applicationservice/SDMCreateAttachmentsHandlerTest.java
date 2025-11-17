@@ -80,32 +80,47 @@ public class SDMCreateAttachmentsHandlerTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testProcessBefore() throws IOException {
     try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =
-        mockStatic(AttachmentsHandlerUtils.class)) {
+            mockStatic(AttachmentsHandlerUtils.class);
+        MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+      Cache<Object, Object> mockCache = mock(Cache.class);
+      cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       // Arrange the mock compositions scenario
-      Map<String, String> expectedCompositionMapping = new HashMap<>();
-      expectedCompositionMapping.put("Name1", "Name1");
-      expectedCompositionMapping.put("Name2", "Name2");
+      Map<String, Map<String, String>> expectedCompositionMapping = new HashMap<>();
+      Map<String, String> compositionInfo1 = new HashMap<>();
+      compositionInfo1.put("name", "Name1");
+      compositionInfo1.put("parentTitle", "TestTitle");
+      expectedCompositionMapping.put("Name1", compositionInfo1);
 
-      // Mock AttachmentsHandlerUtils.getAttachmentPathMapping to return the expected mapping
+      Map<String, String> compositionInfo2 = new HashMap<>();
+      compositionInfo2.put("name", "Name2");
+      compositionInfo2.put("parentTitle", "TestTitle");
+      expectedCompositionMapping.put("Name2", compositionInfo2);
+
+      // Mock AttachmentsHandlerUtils.getAttachmentCompositionDetails to return the expected mapping
       attachmentsHandlerUtilsMocked
-          .when(() -> AttachmentsHandlerUtils.getAttachmentPathMapping(any(), any(), any()))
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+                      any(), any(), any(), any(), any()))
           .thenReturn(expectedCompositionMapping);
 
       List<CdsData> dataList = new ArrayList<>();
+      CdsData entityData = mock(CdsData.class);
+      dataList.add(entityData);
 
       // Act
       handler.processBefore(context, dataList);
 
       // Assert that updateName was called with the compositions detected
-      for (Map.Entry<String, String> entry : expectedCompositionMapping.entrySet()) {
-        verify(handler).updateName(context, dataList, entry.getKey(), entry.getValue());
-      }
+      verify(handler).updateName(context, dataList, expectedCompositionMapping);
     }
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testUpdateNameWithDuplicateFilenames() throws IOException {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache<Object, Object> mockCache = mock(Cache.class);
@@ -135,11 +150,20 @@ public class SDMCreateAttachmentsHandlerTest {
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: validateFileName should have logged an error for duplicate filenames
         verify(messages, times(1))
@@ -159,7 +183,12 @@ public class SDMCreateAttachmentsHandlerTest {
         .thenReturn(Collections.emptySet());
 
     // Act
-    handler.updateName(context, data, "compositionDefinition", "compositionName");
+    Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+    Map<String, String> compositionInfo = new HashMap<>();
+    compositionInfo.put("name", "compositionName");
+    compositionInfo.put("parentTitle", "TestTitle");
+    attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+    handler.updateName(context, data, attachmentCompositionDetails);
 
     // Assert
     verify(messages, never()).error(anyString());
@@ -167,6 +196,7 @@ public class SDMCreateAttachmentsHandlerTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testUpdateNameWithNoAttachments() throws IOException {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache<Object, Object> mockCache = mock(Cache.class);
@@ -190,7 +220,12 @@ public class SDMCreateAttachmentsHandlerTest {
           .thenReturn(Collections.emptySet());
 
       // Act
-      handler.updateName(context, data, "compositionDefinition", "compositionName");
+      Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+      Map<String, String> compositionInfo = new HashMap<>();
+      compositionInfo.put("name", "compositionName");
+      compositionInfo.put("parentTitle", "TestTitle");
+      attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+      handler.updateName(context, data, attachmentCompositionDetails);
 
       // Assert that no updateAttachments calls were made, as there are no attachments
       verify(sdmService, never()).updateAttachments(any(), any(), any(), any(), anyBoolean());
@@ -414,6 +449,7 @@ public class SDMCreateAttachmentsHandlerTest {
   //     verify(messages, never()).warn(anyString());
   //   }
   @Test
+  @SuppressWarnings("unchecked")
   public void testUpdateNameWithEmptyFilename() throws IOException {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache<Object, Object> mockCache = mock(Cache.class);
@@ -453,7 +489,10 @@ public class SDMCreateAttachmentsHandlerTest {
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
         attachmentsHandlerUtilsMocked
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Mock attachment entity
@@ -520,11 +559,20 @@ public class SDMCreateAttachmentsHandlerTest {
             .thenReturn(new HashSet<>());
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: since validation logs an error instead of throwing, ensure the message was
         // logged
-        verify(messages, times(1)).error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+        verify(messages, times(1))
+            .error(
+                SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE
+                    + "\n\nTable: compositionName\nPage: TestTitle");
       } // Close AttachmentsHandlerUtils mock
     } // Close SDMUtils mock
   }
@@ -584,15 +632,26 @@ public class SDMCreateAttachmentsHandlerTest {
                         "some.qualified.Name", entity, "compositionName"))
             .thenReturn(attachments);
         attachmentsHandlerUtilsMocked
-            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), anyList(), anyString()))
+            .when(
+                () ->
+                    AttachmentsHandlerUtils.validateFileNames(
+                        any(), anyList(), anyString(), anyString()))
             .thenCallRealMethod();
 
         // Act
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Assert: proper restricted-character error was logged
         verify(messages, times(1))
-            .error(SDMConstants.nameConstraintMessage(Arrays.asList("file/1.txt")));
+            .error(
+                SDMConstants.nameConstraintMessage(Arrays.asList("file/1.txt"))
+                    + "\n\nTable: compositionName\nPage: TestTitle");
       }
     }
   }
@@ -706,32 +765,4 @@ public class SDMCreateAttachmentsHandlerTest {
   //     verify(attachment3).replace("fileName", "file3_sdm.txt"); // This one had a conflict
   //   }
 
-  /** Helper method to create a standard test data structure */
-  private List<CdsData> createTestData() {
-    List<CdsData> data = new ArrayList<>();
-
-    // Create a map for the entity
-    Map<String, Object> entity = new HashMap<>();
-
-    // Create attachments
-    List<Map<String, Object>> attachments = new ArrayList<>();
-
-    // Create attachment map
-    Map<String, Object> attachment = mock(Map.class);
-    when(attachment.get("ID")).thenReturn("test-id");
-    when(attachment.get("fileName")).thenReturn("file/1.txt");
-    when(attachment.get("objectId")).thenReturn("test-object-id");
-
-    // Add attachment to the list
-    attachments.add(attachment);
-
-    // Add attachments to the entity
-    entity.put("attachments", attachments);
-
-    // Convert the entity map to a CdsData instance and add it to the data list
-    CdsData cdsDataEntity = CdsData.create(entity);
-    data.add(cdsDataEntity);
-
-    return data;
-  }
 }
