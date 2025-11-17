@@ -557,28 +557,31 @@ public class SDMAttachmentsServiceHandlerTest {
   }
 
   @Test
-void testCopyAttachments_invalidFacetFormat() {
+  void testCopyAttachments_invalidFacetFormat() {
     SDMAttachmentsService service = new SDMAttachmentsService();
     CopyAttachmentInput input = mock(CopyAttachmentInput.class);
     when(input.facet()).thenReturn("invalidfacet");
     when(input.upId()).thenReturn("upId");
     when(input.objectIds()).thenReturn(List.of("obj1"));
-    Exception ex = assertThrows(IllegalArgumentException.class, () -> {
-        service.copyAttachments(input, false);
-    });
+    Exception ex =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              service.copyAttachments(input, false);
+            });
     assertTrue(ex.getMessage().contains("Invalid facet format"));
-}
+  }
 
-@Test
-void testReadAttachment_emitsContext() {
+  @Test
+  void testReadAttachment_emitsContext() {
     SDMAttachmentsService service = spy(new SDMAttachmentsService());
     doNothing().when(service).emit(any());
     InputStream result = service.readAttachment("docId");
     assertNull(result);
-}
+  }
 
-@Test
-void testCreateAttachment_emitsContextAndReturnsResult() {
+  @Test
+  void testCreateAttachment_emitsContextAndReturnsResult() {
     SDMAttachmentsService service = spy(new SDMAttachmentsService());
     doNothing().when(service).emit(any());
     CreateAttachmentInput input = mock(CreateAttachmentInput.class);
@@ -590,10 +593,10 @@ void testCreateAttachment_emitsContextAndReturnsResult() {
     when(input.content()).thenReturn(new ByteArrayInputStream(new byte[0]));
     AttachmentModificationResult result = service.createAttachment(input);
     assertNotNull(result);
-}
+  }
 
-@Test
-void testMarkAttachmentAsDeleted_emitsContext() {
+  @Test
+  void testMarkAttachmentAsDeleted_emitsContext() {
     SDMAttachmentsService service = spy(new SDMAttachmentsService());
     doNothing().when(service).emit(any());
     MarkAsDeletedInput input = mock(MarkAsDeletedInput.class);
@@ -602,14 +605,14 @@ void testMarkAttachmentAsDeleted_emitsContext() {
     when(userInfo.getName()).thenReturn("user");
     when(input.userInfo()).thenReturn(userInfo);
     service.markAttachmentAsDeleted(input);
-}
+  }
 
-@Test
-void testRestoreAttachment_emitsContext() {
+  @Test
+  void testRestoreAttachment_emitsContext() {
     SDMAttachmentsService service = spy(new SDMAttachmentsService());
     doNothing().when(service).emit(any());
     service.restoreAttachment(Instant.now());
-}
+  }
 
   @Test
   public void testCreateNonVersionedDIOther() throws IOException {
