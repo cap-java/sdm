@@ -53,78 +53,98 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    // Get the combined mapping of attachment composition paths and names
-    logger.info("Processing SDM Create Attachments Handler Before Create Event");
-    logger.info("CDS Target Entity: " + context.getTarget().getQualifiedName());
-    logger.info("CDS Data : " + data);
-    Map<String, String> compositionPathMapping =
-        AttachmentsHandlerUtils.getAttachmentPathMapping(
-            context.getModel(), context.getTarget(), persistenceService);
-    logger.info("Attachment compositions present in CDS Model : " + compositionPathMapping);
-    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
-      String attachmentCompositionDefinition = entry.getKey();
-      String attachmentCompositionName = entry.getValue();
-      updateName(context, data, attachmentCompositionDefinition, attachmentCompositionName);
+    // Get comprehensive attachment composition details for each entity
+    for (CdsData entityData : data) {
+      Map<String, Map<String, String>> attachmentCompositionDetails =
+          AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+              context.getModel(),
+              context.getTarget(),
+              persistenceService,
+              context.getTarget().getQualifiedName(),
+              entityData);
+      logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
+
+      updateName(context, data, attachmentCompositionDetails);
     }
   }
 
   public void updateName(
       CdsCreateEventContext context,
       List<CdsData> data,
-      String attachmentCompositionDefinition,
-      String attachmentCompositionName)
+      Map<String, Map<String, String>> attachmentCompositionDetails)
       throws IOException {
-    Map<String, String> propertyTitles = new HashMap<>();
-    Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
-    String targetEntity = context.getTarget().getQualifiedName();
-    Boolean isError = false;
-    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
-    if (!isError) {
-      List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
-      List<String> duplicateFileNameList = new ArrayList<>();
-      List<String> filesNotFound = new ArrayList<>();
-      List<String> filesWithUnsupportedProperties = new ArrayList<>();
-      Map<String, String> badRequest = new HashMap<>();
-      List<String> noSDMRoles = new ArrayList<>();
-      for (Map<String, Object> entity : data) {
-        List<Map<String, Object>> attachments =
-            AttachmentsHandlerUtils.fetchAttachments(
-                targetEntity, entity, attachmentCompositionName);
-        if (attachments == null || attachments.isEmpty()) {
-          logger.info(
-              "No attachments found for composition [{}] in entity [{}]. Skipping processing.",
-              attachmentCompositionName,
-              targetEntity);
-          continue;
+    for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      String attachmentCompositionName = entry.getValue().get("name");
+      String parentTitle = entry.getValue().get("parentTitle");
+      Map<String, String> propertyTitles = new HashMap<>();
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
+      String targetEntity = context.getTarget().getQualifiedName();
+      Boolean isError = false;
+
+      // Extract composition name (last part after the final ".")
+      String compositionName = attachmentCompositionName;
+      if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
+        String[] parts = attachmentCompositionName.split("\\.");
+        compositionName = parts[parts.length - 1];
+      }
+      String contextInfo =
+          "\n\nTable: "
+              + compositionName
+              + "\nPage: "
+              + (parentTitle != null ? parentTitle : "Unknown");
+
+      isError =
+          AttachmentsHandlerUtils.validateFileNames(
+              context, data, attachmentCompositionName, contextInfo);
+      if (!isError) {
+        List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
+        List<String> duplicateFileNameList = new ArrayList<>();
+        List<String> filesNotFound = new ArrayList<>();
+        List<String> filesWithUnsupportedProperties = new ArrayList<>();
+        Map<String, String> badRequest = new HashMap<>();
+        List<String> noSDMRoles = new ArrayList<>();
+        for (Map<String, Object> entity : data) {
+          List<Map<String, Object>> attachments =
+              AttachmentsHandlerUtils.fetchAttachments(
+                  targetEntity, entity, attachmentCompositionName);
+          if (attachments == null || attachments.isEmpty()) {
+            logger.info(
+                "No attachments found for composition [{}] in entity [{}]. Skipping processing.",
+                attachmentCompositionName,
+                targetEntity);
+            continue;
+          }
+          Optional<CdsEntity> attachmentEntity =
+              context.getModel().findEntity(attachmentCompositionDefinition);
+          propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
+          secondaryPropertiesWithInvalidDefinitions =
+              SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                  attachmentEntity, attachments.get(0));
+          processEntity(
+              context,
+              entity,
+              fileNameWithRestrictedCharacters,
+              duplicateFileNameList,
+              filesNotFound,
+              filesWithUnsupportedProperties,
+              badRequest,
+              attachmentCompositionDefinition,
+              attachmentEntity,
+              secondaryPropertiesWithInvalidDefinitions,
+              noSDMRoles,
+              attachmentCompositionName);
+          handleWarnings(
+              context,
+              fileNameWithRestrictedCharacters,
+              duplicateFileNameList,
+              filesNotFound,
+              filesWithUnsupportedProperties,
+              badRequest,
+              propertyTitles,
+              noSDMRoles,
+              contextInfo);
         }
-        Optional<CdsEntity> attachmentEntity =
-            context.getModel().findEntity(attachmentCompositionDefinition);
-        propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
-        secondaryPropertiesWithInvalidDefinitions =
-            SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
-                attachmentEntity, attachments.get(0));
-        processEntity(
-            context,
-            entity,
-            fileNameWithRestrictedCharacters,
-            duplicateFileNameList,
-            filesNotFound,
-            filesWithUnsupportedProperties,
-            badRequest,
-            attachmentCompositionDefinition,
-            attachmentEntity,
-            secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles,
-            attachmentCompositionName);
-        handleWarnings(
-            context,
-            fileNameWithRestrictedCharacters,
-            duplicateFileNameList,
-            filesNotFound,
-            filesWithUnsupportedProperties,
-            badRequest,
-            propertyTitles,
-            noSDMRoles);
       }
     }
   }
@@ -309,19 +329,22 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
-      List<String> noSDMRoles) {
+      List<String> noSDMRoles,
+      String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
+          .warn(
+              String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList))
+                  + contextInfo);
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
+      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       List<String> invalidPropertyNames = new ArrayList<>();
@@ -337,15 +360,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         invalidPropertyNames.add(propertyTitles.get(file));
       }
       if (!invalidPropertyNames.isEmpty()) {
-        context.getMessages().warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames));
+        context
+            .getMessages()
+            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
 
     if (!badRequest.isEmpty()) {
-      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
+      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
-      context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create"));
+      context
+          .getMessages()
+          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create") + contextInfo);
     }
   }
 }
