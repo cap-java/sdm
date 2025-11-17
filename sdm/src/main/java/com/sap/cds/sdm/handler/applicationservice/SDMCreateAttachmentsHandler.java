@@ -54,6 +54,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     // Get the combined mapping of attachment composition paths and names
+    logger.info("Processing SDM Create Attachments Handler Before Create Event");
+    logger.info("CDS Target Entity: " + context.getTarget().getQualifiedName());
+    logger.info("CDS Data : " + data);
     Map<String, String> compositionPathMapping =
         AttachmentsHandlerUtils.getAttachmentPathMapping(
             context.getModel(), context.getTarget(), persistenceService);

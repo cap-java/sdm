@@ -48,6 +48,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
+    logger.info("Processing SDM Update Attachments Handler Before Update Event");
+    logger.info("CDS Target Entity: " + context.getTarget().getQualifiedName());
+    logger.info("CDS Data : " + data);
     Map<String, String> compositionPathMapping =
         AttachmentsHandlerUtils.getAttachmentPathMapping(
             context.getModel(), context.getTarget(), persistenceService);
