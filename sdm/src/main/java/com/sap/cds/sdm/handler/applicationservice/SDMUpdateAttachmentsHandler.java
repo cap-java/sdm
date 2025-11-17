@@ -48,34 +48,58 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
-    Map<String, String> compositionPathMapping =
-        AttachmentsHandlerUtils.getAttachmentPathMapping(
-            context.getModel(), context.getTarget(), persistenceService);
-    logger.info("Attachment compositions present in CDS Model : " + compositionPathMapping);
-    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
-      String attachmentCompositionDefinition = entry.getKey();
-      String attachmentCompositionName = entry.getValue();
-      updateName(context, data, attachmentCompositionDefinition, attachmentCompositionName);
+    // Get comprehensive attachment composition details for each entity
+    for (CdsData entityData : data) {
+      Map<String, Map<String, String>> attachmentCompositionDetails =
+          AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+              context.getModel(),
+              context.getTarget(),
+              persistenceService,
+              context.getTarget().getQualifiedName(),
+              entityData);
+      logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
+
+      updateName(context, data, attachmentCompositionDetails);
     }
   }
 
   public void updateName(
       CdsUpdateEventContext context,
       List<CdsData> data,
-      String attachmentCompositionDefinition,
-      String attachmentCompositionName)
+      Map<String, Map<String, String>> attachmentCompositionDetails)
       throws IOException {
-    Boolean isError = false;
-    isError = AttachmentsHandlerUtils.validateFileNames(context, data, attachmentCompositionName);
-    if (!isError) {
-      Optional<CdsEntity> attachmentEntity =
-          context.getModel().findEntity(attachmentCompositionDefinition);
-      renameDocument(
-          attachmentEntity,
-          context,
-          data,
-          attachmentCompositionDefinition,
-          attachmentCompositionName);
+    for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      String attachmentCompositionName = entry.getValue().get("name");
+      String parentTitle = entry.getValue().get("parentTitle");
+      Boolean isError = false;
+
+      // Extract composition name (last part after the final ".")
+      String compositionName = attachmentCompositionName;
+      if (attachmentCompositionName != null && attachmentCompositionName.contains(".")) {
+        String[] parts = attachmentCompositionName.split("\\.");
+        compositionName = parts[parts.length - 1];
+      }
+      String contextInfo =
+          "\n\nTable: "
+              + compositionName
+              + "\nPage: "
+              + (parentTitle != null ? parentTitle : "Unknown");
+
+      isError =
+          AttachmentsHandlerUtils.validateFileNames(
+              context, data, attachmentCompositionName, contextInfo);
+      if (!isError) {
+        Optional<CdsEntity> attachmentEntity =
+            context.getModel().findEntity(attachmentCompositionDefinition);
+        renameDocument(
+            attachmentEntity,
+            context,
+            data,
+            attachmentCompositionDefinition,
+            attachmentCompositionName,
+            contextInfo);
+      }
     }
   }
 
@@ -84,7 +108,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       CdsUpdateEventContext context,
       List<CdsData> data,
       String attachmentCompositionDefinition,
-      String attachmentCompositionName)
+      String attachmentCompositionName,
+      String contextInfo)
       throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
@@ -134,7 +159,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         filesWithUnsupportedProperties,
         badRequest,
         propertyTitles,
-        noSDMRoles);
+        noSDMRoles,
+        contextInfo);
   }
 
   private void processAttachments(
@@ -274,7 +300,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             break;
 
           default:
-            throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
+            throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, (Object[]) null);
         }
       } catch (ServiceException e) {
         // This exception is thrown when there are unsupported properties in the request
@@ -327,19 +353,22 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
-      List<String> noSDMRoles) {
+      List<String> noSDMRoles,
+      String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters));
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
-          .warn(String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList)));
+          .warn(
+              String.format(
+                  SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound));
+      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       List<String> invalidPropertyNames = new ArrayList<>();
@@ -355,14 +384,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         invalidPropertyNames.add(propertyTitles.get(file));
       }
       if (!invalidPropertyNames.isEmpty()) {
-        context.getMessages().warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames));
+        context
+            .getMessages()
+            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
     if (!badRequest.isEmpty()) {
-      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest));
+      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
-      context.getMessages().warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update"));
+      context
+          .getMessages()
+          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update") + contextInfo);
     }
   }
 }
