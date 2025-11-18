@@ -74,7 +74,7 @@ public class AttachmentsHandlerUtils {
           .compositions()
           .forEach(
               composition -> processDirectAttachmentComposition(entity, pathMapping, composition));
-      
+
       logger.info("Path mapping after direct attachments: " + pathMapping.toString());
 
       // Process nested attachments
