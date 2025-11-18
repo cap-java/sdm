@@ -102,9 +102,7 @@ public class AttachmentsHandlerUtils {
               : null;
 
       if (isDirectAttachmentTargetAspect(targetAspect)) {
-        String serviceName = entity.getQualifiedName().split("\\.")[0];
-        String entityName = entity.getName();
-        String directPath = serviceName + "." + entityName + "." + compositionName;
+        String directPath = entity.getQualifiedName() + "." + compositionName;
         pathMapping.put(directPath, directPath);
       }
     }
@@ -165,7 +163,9 @@ public class AttachmentsHandlerUtils {
       String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
       String actualPath = buildActualPath(entity, compositionName, attachmentPath);
 
-      if (entityPath != null && actualPath != null) {
+      // Only add the mapping if both paths are non-null and the key doesn't already exist
+      // This preserves direct attachment mappings from being overwritten by nested ones
+      if (entityPath != null && actualPath != null && !pathMapping.containsKey(entityPath)) {
         pathMapping.put(entityPath, actualPath);
       }
     }
@@ -219,17 +219,20 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Get the target entity name (without service prefix)
-        String targetEntityName = targetEntity.getName();
-
         // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the entity path: ServiceName.EntityName.attachments
-        return serviceName + "." + targetEntityName + "." + attachmentPart;
+        // For nested compositions, use the full target entity path to ensure uniqueness
+        // For direct attachments on the parent entity, the targetEntity equals parentEntity
+        String entityPath;
+        if (targetEntity.getQualifiedName().equals(parentEntity.getQualifiedName())) {
+          // Direct attachment: use parent entity path
+          entityPath = parentEntity.getQualifiedName() + "." + attachmentPart;
+        } else {
+          // Nested attachment: use target entity path to ensure uniqueness
+          entityPath = targetEntity.getQualifiedName() + "." + attachmentPart;
+        }
+        return entityPath;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
@@ -242,15 +245,15 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Replace the entity name with the composition property name
-        // Keep the attachment part (last part)
+        // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the new path: ServiceName.compositionPropertyName.attachments
-        return serviceName + "." + compositionPropertyName + "." + attachmentPart;
+        // Build the new path using parent entity qualified name + composition property name
+        return parentEntity.getQualifiedName()
+            + "."
+            + compositionPropertyName
+            + "."
+            + attachmentPart;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
