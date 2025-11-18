@@ -92,7 +92,8 @@ public class AttachmentsHandlerUtils {
 
   private static void processDirectAttachmentComposition(
       CdsEntity entity, Map<String, String> pathMapping, Object composition) {
-    logger.info("Processing direct attachment composition for entity: " + entity.getQualifiedName());
+    logger.info(
+        "Processing direct attachment composition for entity: " + entity.getQualifiedName());
     logger.info("Composition details: " + composition.toString());
     logger.info("Current path mapping: " + pathMapping.toString());
     String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
@@ -105,9 +106,7 @@ public class AttachmentsHandlerUtils {
               : null;
 
       if (isDirectAttachmentTargetAspect(targetAspect)) {
-        String serviceName = entity.getQualifiedName().split("\\.")[0];
-        String entityName = entity.getName();
-        String directPath = serviceName + "." + entityName + "." + compositionName;
+        String directPath = entity.getQualifiedName() + "." + compositionName;
         pathMapping.put(directPath, directPath);
       }
     }
@@ -119,7 +118,8 @@ public class AttachmentsHandlerUtils {
       SDMAttachmentsReader reader,
       Map<String, String> pathMapping,
       Object composition) {
-    logger.info("Processing nested attachment composition for entity: " + entity.getQualifiedName());
+    logger.info(
+        "Processing nested attachment composition for entity: " + entity.getQualifiedName());
     logger.info("Composition details: " + composition.toString());
     logger.info("Current path mapping: " + pathMapping.toString());
     String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
@@ -172,7 +172,11 @@ public class AttachmentsHandlerUtils {
       String actualPath = buildActualPath(entity, compositionName, attachmentPath);
 
       if (entityPath != null && actualPath != null) {
-        pathMapping.put(entityPath, actualPath);
+        // Only add the mapping if the key doesn't already exist
+        // This preserves direct attachment mappings from being overwritten by nested ones
+        if (!pathMapping.containsKey(entityPath)) {
+          pathMapping.put(entityPath, actualPath);
+        }
       }
     }
   }
@@ -225,17 +229,11 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Get the target entity name (without service prefix)
-        String targetEntityName = targetEntity.getName();
-
         // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the entity path: ServiceName.EntityName.attachments
-        return serviceName + "." + targetEntityName + "." + attachmentPart;
+        // Build the entity path using the full qualified name of the parent entity
+        return parentEntity.getQualifiedName() + "." + attachmentPart;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
@@ -248,15 +246,15 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Replace the entity name with the composition property name
-        // Keep the attachment part (last part)
+        // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the new path: ServiceName.compositionPropertyName.attachments
-        return serviceName + "." + compositionPropertyName + "." + attachmentPart;
+        // Build the new path using parent entity qualified name + composition property name
+        return parentEntity.getQualifiedName()
+            + "."
+            + compositionPropertyName
+            + "."
+            + attachmentPart;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
