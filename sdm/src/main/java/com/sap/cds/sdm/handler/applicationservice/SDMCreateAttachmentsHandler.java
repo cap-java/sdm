@@ -54,6 +54,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     // Get comprehensive attachment composition details for each entity
+    logger.info("CDS Data : " + data);
+    logger.info("Target Entity : " + context.getTarget().getQualifiedName());
+    logger.info("CDS Model : " + context.getModel());
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
