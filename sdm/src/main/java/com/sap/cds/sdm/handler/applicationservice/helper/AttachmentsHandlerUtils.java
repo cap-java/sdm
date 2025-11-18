@@ -222,8 +222,17 @@ public class AttachmentsHandlerUtils {
         // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the entity path using the full qualified name of the parent entity
-        return parentEntity.getQualifiedName() + "." + attachmentPart;
+        // For nested compositions, use the full target entity path to ensure uniqueness
+        // For direct attachments on the parent entity, the targetEntity equals parentEntity
+        String entityPath;
+        if (targetEntity.getQualifiedName().equals(parentEntity.getQualifiedName())) {
+          // Direct attachment: use parent entity path
+          entityPath = parentEntity.getQualifiedName() + "." + attachmentPart;
+        } else {
+          // Nested attachment: use target entity path to ensure uniqueness
+          entityPath = targetEntity.getQualifiedName() + "." + attachmentPart;
+        }
+        return entityPath;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
