@@ -163,12 +163,10 @@ public class AttachmentsHandlerUtils {
       String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
       String actualPath = buildActualPath(entity, compositionName, attachmentPath);
 
-      if (entityPath != null && actualPath != null) {
-        // Only add the mapping if the key doesn't already exist
-        // This preserves direct attachment mappings from being overwritten by nested ones
-        if (!pathMapping.containsKey(entityPath)) {
-          pathMapping.put(entityPath, actualPath);
-        }
+      // Only add the mapping if both paths are non-null and the key doesn't already exist
+      // This preserves direct attachment mappings from being overwritten by nested ones
+      if (entityPath != null && actualPath != null && !pathMapping.containsKey(entityPath)) {
+        pathMapping.put(entityPath, actualPath);
       }
     }
   }
