@@ -75,8 +75,6 @@ public class AttachmentsHandlerUtils {
           .forEach(
               composition -> processDirectAttachmentComposition(entity, pathMapping, composition));
 
-      logger.info("Path mapping after direct attachments: " + pathMapping.toString());
-
       // Process nested attachments
       entity
           .compositions()
@@ -94,10 +92,6 @@ public class AttachmentsHandlerUtils {
 
   private static void processDirectAttachmentComposition(
       CdsEntity entity, Map<String, String> pathMapping, Object composition) {
-    logger.info(
-        "Processing direct attachment composition for entity: " + entity.getQualifiedName());
-    logger.info("Composition details: " + composition.toString());
-    logger.info("Current path mapping: " + pathMapping.toString());
     String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
     if (((com.sap.cds.reflect.CdsElement) composition).getType().isAssociation()) {
       CdsAssociationType associationType =
@@ -120,10 +114,6 @@ public class AttachmentsHandlerUtils {
       SDMAttachmentsReader reader,
       Map<String, String> pathMapping,
       Object composition) {
-    logger.info(
-        "Processing nested attachment composition for entity: " + entity.getQualifiedName());
-    logger.info("Composition details: " + composition.toString());
-    logger.info("Current path mapping: " + pathMapping.toString());
     String compositionName = ((com.sap.cds.reflect.CdsElement) composition).getName();
     String compositionTargetEntityName = "";
 
