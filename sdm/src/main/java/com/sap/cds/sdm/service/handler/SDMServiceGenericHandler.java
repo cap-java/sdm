@@ -71,21 +71,38 @@ public class SDMServiceGenericHandler implements EventHandler {
   @On(event = "changelog")
   public void changelog(AttachmentLogContext context) throws IOException {
     CdsModel cdsModel = context.getModel();
+    System.out.println("cdsModel: " + cdsModel);
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-    Optional<CdsEntity> attachmentDraftEntity =
+    System.out.println("cqnAnalyzer: " + cqnAnalyzer);
+    Optional<CdsEntity> attachmentEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    System.out.println("attachmentDraftEntity: " + attachmentEntity);
+
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    System.out.println("targetKeys: " + targetKeys);
     // get the objectId against the Id
-    String ID = targetKeys.get("ID").toString();
+    String id = targetKeys.get("ID").toString();
+    System.out.println("ID: " + id);
     CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
+      System.out.println("Filename is null or empty in draft entity");
+      // open attachment is triggered on non-draft entity
+      attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
+      cmisDocument =
+          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    }
+    System.out.println("cmisDocument: " + cmisDocument);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    System.out.println("sdmCredentials: " + sdmCredentials);
 
     JSONObject jsonObject =
         sdmService.getChangeLog(
             cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+    System.out.println("jsonObject: " + jsonObject);
     jsonObject.put("filename", cmisDocument.getFileName());
+    System.out.println("jsonObject after adding filename: " + jsonObject);
     context.setResult(jsonObject);
   }
 
