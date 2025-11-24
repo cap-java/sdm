@@ -22,9 +22,11 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
 
@@ -38,16 +40,16 @@ public class SDMCustomServiceHandler {
 
   // Result class for copyAttachmentsToSDM method
   private static class CopyAttachmentsResult {
-    private final List<List<String>> attachmentsMetadata;
+    private final List<Map<String, String>> attachmentsMetadata;
     private final List<CmisDocument> populatedDocuments;
 
     public CopyAttachmentsResult(
-        List<List<String>> attachmentsMetadata, List<CmisDocument> populatedDocuments) {
+        List<Map<String, String>> attachmentsMetadata, List<CmisDocument> populatedDocuments) {
       this.attachmentsMetadata = attachmentsMetadata;
       this.populatedDocuments = populatedDocuments;
     }
 
-    public List<List<String>> getAttachmentsMetadata() {
+    public List<Map<String, String>> getAttachmentsMetadata() {
       return attachmentsMetadata;
     }
 
@@ -81,14 +83,16 @@ public class SDMCustomServiceHandler {
       CdsEntity cdsEntity = entity.get();
 
       // Get columns with @SDM.Attachments.AdditionalProperty annotation and their name values
+      // Filter out associations - only include actual database columns
       customPropertyDefinitions =
           cdsEntity
               .elements()
               .filter(
                   element ->
                       element
-                          .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
-                          .isPresent())
+                              .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
+                              .isPresent()
+                          && !element.getType().isAssociation())
               .collect(
                   Collectors.toMap(
                       CdsElement::getName,
@@ -100,6 +104,7 @@ public class SDMCustomServiceHandler {
                               .toString()));
     }
 
+    Set<String> customPropertiesInSDM = new HashSet<>(customPropertyDefinitions.values());
     String upID = context.getUpId();
     String folderName = upID + "__" + compositionName;
     String repositoryId = SDMConstants.REPOSITORY_ID;
@@ -125,29 +130,10 @@ public class SDMCustomServiceHandler {
             .folderExists(folderExists)
             .build();
 
-    CopyAttachmentsResult copyResult = copyAttachmentsToSDM(request);
+    CopyAttachmentsResult copyResult = copyAttachmentsToSDM(request, customPropertiesInSDM);
 
-    List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
+    List<Map<String, String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
-
-    Map<String, String> customPropertyValues = new HashMap<>();
-    for (Map.Entry<String, String> customProperty : customPropertyDefinitions.entrySet()) {
-      String columnName = customProperty.getKey(); // e.g., "c"
-      String propertyName = customProperty.getValue(); // e.g., "d"
-
-      // Search for the property in attachmentsMetadata
-      for (List<String> attachmentData : attachmentsMetadata) {
-        for (String metadataEntry : attachmentData) {
-          if (metadataEntry.contains("=")) {
-            String[] keyValue = metadataEntry.split("=", 2);
-            if (keyValue.length == 2 && keyValue[0].equals(propertyName)) {
-              customPropertyValues.put(columnName, keyValue[1]);
-              break;
-            }
-          }
-        }
-      }
-    }
 
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
@@ -161,10 +147,10 @@ public class SDMCustomServiceHandler {
             .upIdKey(upIdKey)
             .repositoryId(repositoryId)
             .folderId(folderId)
-            .customPropertyValues(customPropertyValues)
+            .customPropertyValues(null)
             .build();
 
-    createDraftEntries(draftRequest);
+    createDraftEntries(draftRequest, customPropertyDefinitions);
 
     context.setCompleted();
   }
@@ -185,9 +171,9 @@ public class SDMCustomServiceHandler {
     return folderId;
   }
 
-  private CopyAttachmentsResult copyAttachmentsToSDM(CopyAttachmentsRequest request)
-      throws IOException {
-    List<List<String>> attachmentsMetadata = new ArrayList<>();
+  private CopyAttachmentsResult copyAttachmentsToSDM(
+      CopyAttachmentsRequest request, Set<String> customPropertiesInSDM) throws IOException {
+    List<Map<String, String>> attachmentsMetadata = new ArrayList<>();
     List<CmisDocument> populatedDocuments = new ArrayList<>();
 
     for (String objectId : request.getObjectIds()) {
@@ -204,9 +190,12 @@ public class SDMCustomServiceHandler {
       populatedDocuments.add(populatedDocument);
 
       try {
-        List<String> attachmentData =
+        Map<String, String> attachmentData =
             sdmService.copyAttachment(
-                cmisDocument, request.getSdmCredentials(), request.getIsSystemUser());
+                cmisDocument,
+                request.getSdmCredentials(),
+                request.getIsSystemUser(),
+                customPropertiesInSDM);
 
         attachmentsMetadata.add(attachmentData);
       } catch (ServiceException e) {
@@ -226,15 +215,15 @@ public class SDMCustomServiceHandler {
       AttachmentCopyEventContext context,
       String folderId,
       boolean folderExists,
-      List<List<String>> attachmentsMetadata,
+      List<Map<String, String>> attachmentsMetadata,
       ServiceException e)
       throws IOException {
     if (!folderExists) {
       sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
     } else {
-      for (List<String> attachmentMetadata : attachmentsMetadata) {
+      for (Map<String, String> attachmentMetadata : attachmentsMetadata) {
         sdmService.deleteDocument(
-            "delete", attachmentMetadata.get(2), context.getUserInfo().getName());
+            "delete", attachmentMetadata.get("cmis:objectId"), context.getUserInfo().getName());
       }
     }
     throw new ServiceException(e.getMessage());
@@ -272,16 +261,18 @@ public class SDMCustomServiceHandler {
     return null;
   }
 
-  private void createDraftEntries(CreateDraftEntriesRequest request) {
+  private void createDraftEntries(
+      CreateDraftEntriesRequest request, Map<String, String> customPropertyDefinitions) {
 
     for (int i = 0; i < request.getAttachmentsMetadata().size(); i++) {
-      List<String> attachmentMetadata = request.getAttachmentsMetadata().get(i);
+      Map<String, String> attachmentMetadata = request.getAttachmentsMetadata().get(i);
       CmisDocument cmisDocument = request.getPopulatedDocuments().get(i);
       Map<String, Object> updatedFields = new HashMap<>();
 
-      String fileName = attachmentMetadata.get(0);
-      String mimeType = attachmentMetadata.get(1);
-      String newObjectId = attachmentMetadata.get(2);
+      String fileName = attachmentMetadata.get("cmis:name");
+      String mimeType = attachmentMetadata.get("cmis:contentStreamMimeType");
+      String description = attachmentMetadata.get("cmis:description");
+      String newObjectId = attachmentMetadata.get("cmis:objectId");
 
       updatedFields.put("objectId", newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
@@ -290,6 +281,7 @@ public class SDMCustomServiceHandler {
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
+      updatedFields.put("note", description); // Map cmis:description to note field
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
       updatedFields.put("linkUrl", cmisDocument.getUrl()); // Individual linkUrl for each attachment
@@ -306,10 +298,16 @@ public class SDMCustomServiceHandler {
               + mimeType);
       updatedFields.put(request.getUpIdKey(), request.getUpID());
 
-      // Insert entries from customPropertyValues into the database
-      if (request.getCustomPropertyValues() != null) {
-        for (Map.Entry<String, String> entry : request.getCustomPropertyValues().entrySet()) {
-          updatedFields.put(entry.getKey(), entry.getValue());
+      // Extract custom properties from the attachmentMetadata using customPropertyDefinitions
+      if (customPropertyDefinitions != null && !customPropertyDefinitions.isEmpty()) {
+        for (Map.Entry<String, String> customProperty : customPropertyDefinitions.entrySet()) {
+          String columnName = customProperty.getKey(); // CDS column name
+          String sdmPropertyName = customProperty.getValue(); // SDM property name
+
+          if (attachmentMetadata.containsKey(sdmPropertyName)) {
+            String value = attachmentMetadata.get(sdmPropertyName);
+            updatedFields.put(columnName, value);
+          }
         }
       }
 

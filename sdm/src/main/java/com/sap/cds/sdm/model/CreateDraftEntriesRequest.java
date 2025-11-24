@@ -8,7 +8,7 @@ import java.util.Map;
  * maintainability.
  */
 public class CreateDraftEntriesRequest {
-  private final List<List<String>> attachmentsMetadata;
+  private final List<Map<String, String>> attachmentsMetadata;
   private final List<CmisDocument> populatedDocuments;
   private final String parentEntity;
   private final String compositionName;
@@ -31,7 +31,7 @@ public class CreateDraftEntriesRequest {
   }
 
   // Getters
-  public List<List<String>> getAttachmentsMetadata() {
+  public List<Map<String, String>> getAttachmentsMetadata() {
     return attachmentsMetadata;
   }
 
@@ -72,7 +72,7 @@ public class CreateDraftEntriesRequest {
   }
 
   public static class Builder {
-    private List<List<String>> attachmentsMetadata;
+    private List<Map<String, String>> attachmentsMetadata;
     private List<CmisDocument> populatedDocuments;
     private String parentEntity;
     private String compositionName;
@@ -82,7 +82,7 @@ public class CreateDraftEntriesRequest {
     private String folderId;
     private Map<String, String> customPropertyValues;
 
-    public Builder attachmentsMetadata(List<List<String>> attachmentsMetadata) {
+    public Builder attachmentsMetadata(List<Map<String, String>> attachmentsMetadata) {
       this.attachmentsMetadata = attachmentsMetadata;
       return this;
     }

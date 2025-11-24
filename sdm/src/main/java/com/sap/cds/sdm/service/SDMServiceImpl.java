@@ -665,8 +665,11 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public List<String> copyAttachment(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public Map<String, String> copyAttachment(
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      Set<String> customPropertiesInSDM)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
@@ -692,6 +695,7 @@ public class SDMServiceImpl implements SDMService {
 
       if (response.getStatusLine().getStatusCode() == 201) {
         // Process successful response
+        Map<String, String> resultMap = new HashMap<>();
 
         JSONObject jsonObject = new JSONObject(responseBody);
 
@@ -700,12 +704,36 @@ public class SDMServiceImpl implements SDMService {
 
         String cmisName =
             props != null ? props.optString("cmis:name") : jsonObject.optString("cmis:name");
+        String cmisMimeType =
+            props != null
+                ? props.optString("cmis:contentStreamMimeType")
+                : jsonObject.optString("cmis:contentStreamMimeType");
         String cmisDescription =
             props != null
                 ? props.optString("cmis:description")
                 : jsonObject.optString("cmis:description");
+        String cmisObjectId =
+            props != null
+                ? props.optString("cmis:objectId")
+                : jsonObject.optString("cmis:objectId");
 
-        return List.of(cmisName, cmisDescription);
+        // Add standard properties
+        resultMap.put("cmis:name", cmisName);
+        resultMap.put("cmis:contentStreamMimeType", cmisMimeType);
+        resultMap.put("cmis:description", cmisDescription);
+        resultMap.put("cmis:objectId", cmisObjectId);
+
+        // Extract custom properties from SDM response
+        if (props != null && customPropertiesInSDM != null && !customPropertiesInSDM.isEmpty()) {
+          for (String customProperty : customPropertiesInSDM) {
+            if (props.has(customProperty)) {
+              Object value = props.get(customProperty);
+              resultMap.put(customProperty, value != null ? value.toString() : "");
+            }
+          }
+        }
+
+        return resultMap;
       }
 
       // On error, throw exception with error information
