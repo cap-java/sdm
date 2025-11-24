@@ -1,0 +1,13 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.sap.cds.openrewrite.SanityCheck
+displayName: Apply all best practices
+description: Comprehensive code quality recipe combining modernization, security, and best practices.
+tags:
+  - static-analysis
+  - cleanup
+recipeList:
+  - org.openrewrite.java.migrate.UpgradeToJava17
+  - org.openrewrite.maven.BestPractices
+  - org.openrewrite.maven.UpdateMavenWrapper
+---

@@ -21,13 +21,13 @@ echo "Running on branch: $GIT_BRANCH"
 ########################################
 echo "Checking Java & Maven installations..."
 java -version || { echo "❌ Java not found!"; exit 1; }
-mvn -v || { echo "❌ Maven not found!"; exit 1; }
+./mvnw -v || { echo "❌ Maven not found!"; exit 1; }
 
 ########################################
 # READ CURRENT VERSION
 ########################################
 echo "Reading current Maven project version..."
-current_version=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+current_version=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=project.version)
 echo "Current version: $current_version"
 updated_version="$current_version"
 
@@ -61,7 +61,7 @@ fi
 ########################################
 if [[ "$updated_version" == *-SNAPSHOT ]]; then
   echo "Deploying ${updated_version} to Artifactory..."
-  mvn -B -ntp -fae \
+  ./mvnw -B -ntp -fae \
     -Dmaven.install.skip=true \
     -Dmaven.test.skip=true \
     -DdeployAtEnd=true \

@@ -1,6 +1,10 @@
-sdm/target/
+sdm/target/**
 .flattened-pom.xml
 node_modules/
+.idea
+/target/rewrite/**
+/sdm-root.iml
+/target/spotless-index
 
 # Compiled class file
 *.class

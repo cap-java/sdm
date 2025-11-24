@@ -31,7 +31,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          mvn clean install -P unit-tests  -DskipIntegrationTests
+          ./mvnw clean install -P unit-tests  -DskipIntegrationTests
         
       - name: Download Synopsys Detect Script
         run: curl --silent -O https://detect.synopsys.com/detect9.sh

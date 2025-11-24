@@ -8,6 +8,17 @@
         <version>${revision}</version>
     </parent>
 
+    <artifactId>sdm</artifactId>
+
+    <packaging>jar</packaging>
+
+    <name>CDS Feature for SAP Document Management Service</name>
+    <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
+
+    <organization>
+        <name>SAP SE</name>
+        <url>https://www.sap.com</url>
+    </organization>
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
@@ -16,16 +27,13 @@
         </license>
     </licenses>
 
-    <organization>
-        <name>SAP SE</name>
-        <url>https://www.sap.com</url>
-    </organization>
-
-    <artifactId>sdm</artifactId>
-    <packaging>jar</packaging>
-
-    <name>CDS Feature for SAP Document Management Service</name>
-    <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>artifactory</id>
+            <name>Artifactory_DMZ-snapshots</name>
+            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <packageName>sdm</packageName>
@@ -35,7 +43,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <attachments_version>1.2.2</attachments_version>
-        <lombok.version>1.18.36</lombok.version>
+        <lombok.version>1.18.42</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
         <ehcache-version>3.10.8</ehcache-version>
         <token-client-version>3.5.7</token-client-version>
@@ -51,83 +59,36 @@
         <rxjava-version>2.2.21</rxjava-version>
     </properties>
 
-    <profiles>
-        <profile>
-            <id>unit-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.2.5</version>
-                        <configuration>
-                            <includes>
-                                <include>**/unit/**/*.java</include>
-                            </includes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>integration-tests</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.3.1</version>
-                        <executions>
-                            <execution>
-                                <id>integration-test</id>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                                <configuration>
-                                    <includes>
-                                        <include>**IntegrationTest_MultipleFacet.java</include>
-                                        <include>**IntegrationTest_SingleFacet.java</include>
-                                    </includes>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
             <version>${httpclient5-version}</version>
         </dependency>
-    <dependency>
-        <groupId>org.apache.httpcomponents.core5</groupId>
-        <artifactId>httpcore5</artifactId>
-        <version>${httpcore5-version}</version>
-    </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.core5</groupId>
+            <artifactId>httpcore5</artifactId>
+            <version>${httpcore5-version}</version>
+        </dependency>
 
-<dependency>
-    <groupId>org.apache.httpcomponents</groupId>
-    <artifactId>httpasyncclient</artifactId>
-    <version>${httpasyncclient-version}</version>
-    <exclusions>
-        <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
-<!-- Log4j dependencies -->
-<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
-<dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-api</artifactId>
-    <version>${log4j-api-version}</version>
-</dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpasyncclient</artifactId>
+            <version>${httpasyncclient-version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Log4j dependencies -->
+        <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j-api-version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -158,12 +119,10 @@
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
             <artifactId>java-access-api</artifactId>
-            <version>0.10.5</version>
         </dependency>
         <dependency>
             <groupId>com.sap.cloud.environment.servicebinding.api</groupId>
             <artifactId>java-core-api</artifactId>
-            <version>0.10.5</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -226,7 +185,7 @@
                     <groupId>com.sap.cloud.security</groupId>
                     <artifactId>java-security</artifactId>
                 </exclusion>
-                 <exclusion>
+                <exclusion>
                     <groupId>org.checkerframework</groupId>
                     <artifactId>checker-qual</artifactId>
                 </exclusion>
@@ -284,35 +243,35 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>com.sap.cds</groupId>
-           <artifactId>cds-feature-attachments</artifactId>
-          <version>${attachments_version}</version>
-          <exclusions>
-            <exclusion>
-                <groupId>jakarta.jms</groupId>
-                <artifactId>jakarta.jms-api</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
-                <artifactId>resilience4j</artifactId>
-            </exclusion>
-            <exclusion>
+            <groupId>com.sap.cds</groupId>
+            <artifactId>cds-feature-attachments</artifactId>
+            <version>${attachments_version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>jakarta.jms</groupId>
+                    <artifactId>jakarta.jms-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+                    <artifactId>resilience4j</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
-            </exclusion>
-            <exclusion>
+                </exclusion>
+                <exclusion>
                     <groupId>org.apache.commons</groupId>
                     <artifactId>commons-lang3</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
-                <artifactId>connectivity-oauth</artifactId>
-            </exclusion>
-            <exclusion>
-                <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
-                <artifactId>cloudplatform-core</artifactId>
-            </exclusion>
-          </exclusions>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+                    <artifactId>connectivity-oauth</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
+                    <artifactId>cloudplatform-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.sap.cloud.sdk.cloudplatform</groupId>
@@ -345,15 +304,15 @@
             <artifactId>guava</artifactId>
             <version>33.4.0-jre</version>
             <exclusions>
-            <exclusion>
-                <groupId>com.google.guava</groupId>
-                <artifactId>listenablefuture</artifactId>
-            </exclusion>
-            <exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>listenablefuture</artifactId>
+                </exclusion>
+                <exclusion>
                     <groupId>org.checkerframework</groupId>
                     <artifactId>checker-qual</artifactId>
                 </exclusion>
-            <exclusion>
+                <exclusion>
                     <groupId>com.google.code.findbugs</groupId>
                     <artifactId>jsr305</artifactId>
                 </exclusion>
@@ -362,7 +321,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${mockito-junit-jupiter-version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -417,17 +375,18 @@
         </dependency>
 
 
-<dependency>
-    <groupId>io.reactivex.rxjava2</groupId>
-    <artifactId>rxjava</artifactId>
-    <version>${rxjava-version}</version>
-</dependency>
+        <dependency>
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>${rxjava-version}</version>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${project.artifactId}</finalName>
         <plugins>
-             <plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <skip>${skipDuringDeploy}</skip>
@@ -646,7 +605,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -660,11 +618,50 @@
     </build>
 
 
-    <distributionManagement>
-        <snapshotRepository>
-            <id>artifactory</id>
-            <name>Artifactory_DMZ-snapshots</name>
-            <url>https://common.repositories.cloud.sap/artifactory/cap-sdm-java</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <profiles>
+        <profile>
+            <id>unit-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <includes>
+                                <include>**/unit/**/*.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**IntegrationTest_MultipleFacet.java</include>
+                                        <include>**IntegrationTest_SingleFacet.java</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

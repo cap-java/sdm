@@ -42,7 +42,7 @@ jobs:
       - name: Build and package 📦
         run: |
             echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
+            ./mvnw clean install -P unit-tests -DskipIntegrationTests
             echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢

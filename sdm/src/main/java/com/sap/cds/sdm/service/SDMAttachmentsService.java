@@ -41,7 +41,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     String[] facetParts = input.facet().split("\\.");
     if (facetParts.length < 3) {
       throw new IllegalArgumentException(
-          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
+          SDMConstants.INVALID_FACET_FORMAT_ERROR.formatted(input.facet()));
     }
 
     String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity

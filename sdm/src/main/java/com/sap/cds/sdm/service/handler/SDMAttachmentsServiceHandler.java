@@ -243,10 +243,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
                     null,
                     eventContext.getParameterInfo().getLocale());
         if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
-          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+          throw new ServiceException(SDMConstants.MAX_COUNT_ERROR_MESSAGE.formatted(maxCount));
         throw new ServiceException(errorMessage);
       }
-      throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+      throw new ServiceException(SDMConstants.MAX_COUNT_ERROR_MESSAGE.formatted(maxCount));
     }
   }
 

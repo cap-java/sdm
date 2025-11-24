@@ -631,9 +631,8 @@ public class SDMServiceImpl implements SDMService {
       while (iterator.hasNext()) {
         String value = iterator.next();
         String sdmUrl =
-            String.format(
-                "%sbrowser/%s?cmisselector=typeDefinition&typeID=%s",
-                sdmCredentials.getUrl(), repositoryId, value);
+            "%sbrowser/%s?cmisselector=typeDefinition&typeID=%s"
+                .formatted(sdmCredentials.getUrl(), repositoryId, value);
         HttpGet getTypesRequest = new HttpGet(sdmUrl);
         try (var response = (CloseableHttpResponse) httpClient.execute(getTypesRequest)) {
           int statusCode = response.getStatusLine().getStatusCode();

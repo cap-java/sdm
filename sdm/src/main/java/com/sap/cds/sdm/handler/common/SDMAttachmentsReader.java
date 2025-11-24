@@ -81,7 +81,7 @@ public class SDMAttachmentsReader {
 
   private boolean isAttachmentEntity(CdsModel model, String entityName) {
     var entityOpt = model.findEntity(entityName);
-    if (!entityOpt.isPresent()) {
+    if (entityOpt.isEmpty()) {
       return false;
     }
 

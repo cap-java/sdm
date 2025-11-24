@@ -79,7 +79,7 @@ public class DBQuery {
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+          SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR.formatted(parentEntity));
     }
 
     // Find the composition element in the parent entity
@@ -87,7 +87,7 @@ public class DBQuery {
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
       throw new ServiceException(
-          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+          SDMConstants.COMPOSITION_NOT_FOUND_ERROR.formatted(compositionName, parentEntity));
     }
 
     // Get the target entity of the composition
@@ -98,7 +98,7 @@ public class DBQuery {
     Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
     if (attachmentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+          SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR.formatted(targetEntityName));
     }
 
     // Search in active entity first

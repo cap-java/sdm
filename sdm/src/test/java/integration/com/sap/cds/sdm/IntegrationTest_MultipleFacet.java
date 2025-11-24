@@ -670,9 +670,8 @@ class IntegrationTest_MultipleFacet {
         counter = -1; // Reset counter for the next check
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
-            String.format(
-                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}",
-                name[1], name[0], name[2]);
+            "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}"
+                .formatted(name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
             // Attempt to rename again with a different name

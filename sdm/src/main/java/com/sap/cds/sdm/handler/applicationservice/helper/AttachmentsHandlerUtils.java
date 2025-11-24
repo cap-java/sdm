@@ -521,15 +521,15 @@ public class AttachmentsHandlerUtils {
 
     for (String field : titleFields) {
       Object value = entityMap.get(field);
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
+      if (value != null && value instanceof String string && !string.trim().isEmpty()) {
+        return string;
       }
     }
 
     // Fallback: find any string value
     for (Object value : entityMap.values()) {
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
+      if (value != null && value instanceof String string && !string.trim().isEmpty()) {
+        return string;
       }
     }
 
@@ -579,8 +579,7 @@ public class AttachmentsHandlerUtils {
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
-          String.format(
-              "%s%s", SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
+          "%s%s".formatted(SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }

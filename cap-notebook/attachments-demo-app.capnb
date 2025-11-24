@@ -36,7 +36,7 @@
     {
         "kind": 1,
         "language": "markdown",
-        "value": "## Add Enhancements for the Datamodel\nThe `books` entity will be enhanced with the `attachments` composition.\n\nTo be able to use the `sdm` datamodel a `pom.xml` needs to be added with the maven dependency for the feature.\nThe version for the dependency is taken from the file `version.txt`. \nThis file will be updated if a new version is created in the repository.\n\nOnce the `pom.xml` is available and the version is set a `mvn clean verify` is executed.\nWith the the `resolve` goal of the `cds-maven-plugin` is executed which copies the `cds`-files from the feature in the `target` folder of the `db` module.\n\nOnce available in the `target` folder it will be found and can be used in the data models.",
+        "value": "## Add Enhancements for the Datamodel\nThe `books` entity will be enhanced with the `attachments` composition.\n\nTo be able to use the `sdm` datamodel a `pom.xml` needs to be added with the maven dependency for the feature.\nThe version for the dependency is taken from the file `version.txt`. \nThis file will be updated if a new version is created in the repository.\n\nOnce the `pom.xml` is available and the version is set a `./mvnw clean verify` is executed.\nWith the the `resolve` goal of the `cds-maven-plugin` is executed which copies the `cds`-files from the feature in the `target` folder of the `db` module.\n\nOnce available in the `target` folder it will be found and can be used in the data models.",
         "outputs": []
     },
     {
@@ -108,7 +108,7 @@
     {
         "kind": 2,
         "language": "shell",
-        "value": "mvn clean compile",
+        "value": "./mvnw clean compile",
         "outputs": [
             {
                 "mime": "text/plain",
@@ -215,13 +215,13 @@
     {
         "kind": 1,
         "language": "markdown",
-        "value": "## Build the Service\n\nRun `mvn clean compile` on the service to compile the models with all changes.",
+        "value": "## Build the Service\n\nRun `./mvnw clean compile` on the service to compile the models with all changes.",
         "outputs": []
     },
     {
         "kind": 2,
         "language": "shell",
-        "value": "cd ../../srv\nmvn clean compile",
+        "value": "cd ../../srv\n./mvnw clean compile",
         "outputs": [
             {
                 "mime": "text/plain",
@@ -232,7 +232,7 @@
     {
         "kind": 1,
         "language": "markdown",
-        "value": "## Start the Service\n\n\nThe service can now be started with the following command in the `srv` module:\n\n```\nmvn cds:watch\n```\n\nAfter the service is startet the UI can be opened with:\n\n[http://localhost:8080](http://localhost:8080)\n\nNavigate to the index.html of the webapp and use user `admin` with password `admin`. \n\nUsing the tile `Manage Books` the attachments can be used in the detail area of the books.\n\nUsing the tile `Browse Books` no attachments are shown.",
+        "value": "## Start the Service\n\n\nThe service can now be started with the following command in the `srv` module:\n\n```\n./mvnw cds:watch\n```\n\nAfter the service is startet the UI can be opened with:\n\n[http://localhost:8080](http://localhost:8080)\n\nNavigate to the index.html of the webapp and use user `admin` with password `admin`. \n\nUsing the tile `Manage Books` the attachments can be used in the detail area of the books.\n\nUsing the tile `Browse Books` no attachments are shown.",
         "outputs": []
     },
     {

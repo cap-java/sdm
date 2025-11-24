@@ -30,7 +30,7 @@ runs:
 
     - name: Build with Maven
       run: |
-        mvn clean install -P unit-tests  -DskipIntegrationTests
+        ./mvnw clean install -P unit-tests  -DskipIntegrationTests
       shell: bash
 
     # - name: Piper Maven build

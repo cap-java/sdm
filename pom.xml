@@ -2,6 +2,22 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>com.sap.cds</groupId>
+
+    <artifactId>sdm-root</artifactId>
+
+    <version>${revision}</version>
+
+    <packaging>pom</packaging>
+
+    <name>CDS Feature for SAP Document Management Service - Root</name>
+    <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
+    <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
+    <organization>
+        <name>SAP SE</name>
+        <url>https://www.sap.com</url>
+    </organization>
+
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
@@ -9,18 +25,34 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
-    <organization>
-        <name>SAP SE</name>
-        <url>https://www.sap.com</url>
-    </organization>
-
     <developers>
         <developer>
             <organization>SAP SE</organization>
             <organizationUrl>https://www.sap.com</organizationUrl>
         </developer>
     </developers>
+    <modules>
+        <module>sdm</module>
+    </modules>
+
+    <scm>
+        <url>https://github.com/Pankraz76/sdm</url>
+        <connection>scm:git:git@github.com:Pankraz76/sdm.git</connection>
+        <developerConnection>scm:git:git@github.com:Pankraz76/sdm.git</developerConnection>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>github-snapshot</id>
+            <name>GitHub Packages Snapshots</name>
+            <url>https://maven.pkg.github.com/cap-java/sdm</url>
+        </snapshotRepository>
+        <repository>
+            <id>central</id>
+            <name>MavenCentral</name>
+            <url>https://central.sonatype.com</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <revision>1.6.1-SNAPSHOT</revision>
@@ -40,19 +72,6 @@
         <assertj-core-version>3.27.3</assertj-core-version>
         <mockito-core-version>5.15.2</mockito-core-version>
     </properties>
-
-    <groupId>com.sap.cds</groupId>
-    <artifactId>sdm-root</artifactId>
-    <version>${revision}</version>
-    <packaging>pom</packaging>
-
-    <name>CDS Feature for SAP Document Management Service - Root</name>
-    <description>This artifact is a is cds-plugin that provides an easy CAP-level integration with SAP Document Management Service. This package supports handling of attachments(documents) by using an aspect Attachments in SAP Document Management Service.</description>
-    <url>https://cap.cloud.sap/docs/plugins/#attachments</url>
-
-    <modules>
-        <module>sdm</module>
-    </modules>
 
     <dependencyManagement>
         <dependencies>
@@ -84,17 +103,16 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        <dependency>
-            <groupId>com.sap.cloud.sdk</groupId>
-            <artifactId>sdk-bom</artifactId>
-            <version>${sdk-bom-version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
+            <dependency>
+                <groupId>com.sap.cloud.sdk</groupId>
+                <artifactId>sdk-bom</artifactId>
+                <version>${sdk-bom-version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
 
     </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>com.sap.cds</groupId>
@@ -137,7 +155,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito-core-version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.objenesis</groupId>
@@ -157,7 +174,8 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>4.5.14</version> <!-- Use the latest version available -->
+            <version>4.5.14</version>
+            <!-- Use the latest version available -->
             <exclusions>
                 <exclusion>
                     <groupId>commons-codec</groupId>
@@ -169,8 +187,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
-    </dependencies>
-
+    </dependencies>    
     <build>
         <plugins>
 
@@ -203,7 +220,8 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>check</goal>  <!-- Added for applying formatting -->
+                            <goal>check</goal>
+                            <!-- Added for applying formatting -->
                         </goals>
                         <phase>compile</phase>
                     </execution>
@@ -257,7 +275,8 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.2.0</version> <!-- Use the latest version -->
+                <version>3.2.0</version>
+                <!-- Use the latest version -->
                 <executions>
                     <execution>
                         <goals>
@@ -269,11 +288,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+            </plugin>
         </plugins>
              
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>3.2.7</version>
                 </plugin>
@@ -284,46 +308,95 @@
                     <extensions>true</extensions>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>3.5.0</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.0</version>
+                    <version>3.14.1</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
                     <version>3.3.1</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>3.1.4</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <version>3.11.2</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.3</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
                     <version>3.26.0</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>3.5.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.openrewrite.maven</groupId>
+                    <artifactId>rewrite-maven-plugin</artifactId>
+                    <version>6.24.0</version>
+                    <configuration>
+                        <exportDatatables>true</exportDatatables>
+                        <activeRecipes>
+                            <recipe>com.sap.cds.openrewrite.SanityCheck</recipe>
+                        </activeRecipes>
+                        <exclusions>
+                            <exclusion>**.ci-temp**</exclusion>
+                            <exclusion>**.jp*g</exclusion>
+                            <exclusion>**.png</exclusion>
+                            <exclusion>**xdocs-examples**</exclusion>
+                        </exclusions>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.openrewrite.recipe</groupId>
+                            <artifactId>rewrite-migrate-java</artifactId>
+                            <version>3.22.0</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.openrewrite.recipe</groupId>
+                            <artifactId>rewrite-codemods</artifactId>
+                            <version>0.22.0</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.openrewrite.recipe</groupId>
+                            <artifactId>rewrite-static-analysis</artifactId>
+                            <version>2.22.0</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.openrewrite.recipe</groupId>
+                            <artifactId>rewrite-rewrite</artifactId>
+                            <version>0.16.0</version>
+                        </dependency>
+                    </dependencies>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
+         
     <profiles>
         <profile>
             <id>deploy-release</id>
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <executions>
                             <execution>
@@ -346,24 +419,6 @@
                 </plugins>
             </build>
         </profile>
-    </profiles>    
-    <distributionManagement>
-        <snapshotRepository>
-            <id>github-snapshot</id>
-            <name>GitHub Packages Snapshots</name>
-            <url>https://maven.pkg.github.com/cap-java/sdm</url>
-        </snapshotRepository>
-        <repository>
-            <id>central</id>
-            <name>MavenCentral</name>
-            <url>https://central.sonatype.com</url>
-        </repository>
-    </distributionManagement>
-         
-    <scm>
-        <url>https://github.com/cap-java/sdm</url>
-        <connection>scm:git:git@github.com:cap-java/sdm.git</connection>
-        <developerConnection>scm:git:git@github.com:cap-java/sdm.git</developerConnection>
-    </scm>
+    </profiles>
 
 </project>

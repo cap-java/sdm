@@ -105,8 +105,8 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
       if ((responseString.contains(REPOSITORY_ID + " already exists"))
           && response.getStatusLine().getStatusCode() == 409) {
-        return String.format(
-            SDMConstants.REPOSITORY_ALREADY_EXIST, repository.getDisplayName(), REPOSITORY_ID);
+        return SDMConstants.REPOSITORY_ALREADY_EXIST.formatted(
+            repository.getDisplayName(), REPOSITORY_ID);
       }
 
       JsonObject jsonObject;
@@ -117,23 +117,22 @@ public class SDMAdminServiceImpl implements SDMAdminService {
         repositoryId = jsonObject.get("id").getAsString();
       } else {
         logger.error(
-            String.format(SDMConstants.ONBOARD_REPO_ERROR_MESSAGE, repository.getDisplayName())
+            SDMConstants.ONBOARD_REPO_ERROR_MESSAGE.formatted(repository.getDisplayName())
                 + " : "
                 + responseString);
         throw new ServiceException(
-            String.format(SDMConstants.ONBOARD_REPO_ERROR_MESSAGE, repository.getDisplayName()),
+            SDMConstants.ONBOARD_REPO_ERROR_MESSAGE.formatted(repository.getDisplayName()),
             responseString);
       }
 
-      return String.format(
-          SDMConstants.ONBOARD_REPO_MESSAGE, repository.getDisplayName(), repositoryId);
+      return SDMConstants.ONBOARD_REPO_MESSAGE.formatted(repository.getDisplayName(), repositoryId);
     } catch (Exception e) {
       logger.error(
-          String.format(SDMConstants.ONBOARD_REPO_ERROR_MESSAGE, repository.getDisplayName())
+          SDMConstants.ONBOARD_REPO_ERROR_MESSAGE.formatted(repository.getDisplayName())
               + " : "
               + e.getMessage());
       throw new ServiceException(
-          String.format(SDMConstants.ONBOARD_REPO_ERROR_MESSAGE, repository.getDisplayName()), e);
+          SDMConstants.ONBOARD_REPO_ERROR_MESSAGE.formatted(repository.getDisplayName()), e);
     }
   }
 
