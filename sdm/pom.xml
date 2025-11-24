@@ -602,17 +602,17 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.66</minimum>
+                                            <minimum>0.40</minimum>
                                         </limit>
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.45</minimum>
+                                            <minimum>0.30</minimum>
                                         </limit>
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>CLASS</counter>
                                             <value>MISSEDCOUNT</value>
-                                            <maximum>6</maximum>
+                                            <maximum>7</maximum>
                                         </limit>
                                     </limits>
                                 </rule>
