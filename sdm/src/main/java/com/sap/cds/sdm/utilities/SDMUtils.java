@@ -37,8 +37,8 @@ public class SDMUtils {
       List<CdsData> data, String composition, String targetEntity) {
     Set<String> filenamesWithWhitespace = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments =
-          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
+      List<Map<String, Object>> attachments = AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity,
+          composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {
@@ -58,8 +58,8 @@ public class SDMUtils {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments =
-          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
+      List<Map<String, Object>> attachments = AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity,
+          composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {
@@ -82,8 +82,8 @@ public class SDMUtils {
       List<CdsData> data, String composition, String targetEntity) {
     List<String> restrictedFilenames = new ArrayList<>();
     for (Map<String, Object> entity : data) {
-      List<Map<String, Object>> attachments =
-          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, composition);
+      List<Map<String, Object>> attachments = AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity,
+          composition);
       if (attachments != null) {
         Iterator<Map<String, Object>> iterator = attachments.iterator();
         while (iterator.hasNext()) {
@@ -110,9 +110,7 @@ public class SDMUtils {
 
   public static void prepareSecondaryProperties(
       Map<String, String> requestBody,
-      Map<String, String> secondaryProperties,
-      String fileName,
-      String description) {
+      Map<String, String> secondaryProperties) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
     int index = 1;
@@ -155,8 +153,7 @@ public class SDMUtils {
 
     for (String key : propertyDefinitions.keySet()) {
       JSONObject property = propertyDefinitions.optJSONObject(key);
-      JSONObject miscellaneous =
-          (property != null) ? property.optJSONObject("mcm:miscellaneous") : null;
+      JSONObject miscellaneous = (property != null) ? property.optJSONObject("mcm:miscellaneous") : null;
 
       if (miscellaneous != null
           && "true".equals(miscellaneous.optString("isPartOfTable", "false"))) {
@@ -196,7 +193,10 @@ public class SDMUtils {
     }
   }
 
-  /* Create a map of property names to their UI titles for intuitive error messages. */
+  /*
+   * Create a map of property names to their UI titles for intuitive error
+   * messages.
+   */
   public static Map<String, String> getPropertyTitles(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     Map<String, String> titleMap = new HashMap<>();
@@ -221,7 +221,10 @@ public class SDMUtils {
   }
 
   private static String extractPropertyName(CdsElement element) {
-    /* Check both old and new SDM annotations to track titles for properties needing error handling. */
+    /*
+     * Check both old and new SDM annotations to track titles for properties needing
+     * error handling.
+     */
     if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME).isPresent()) {
       return element
           .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
@@ -241,7 +244,10 @@ public class SDMUtils {
         .orElse(element.getName());
   }
 
-  /* Identify incorrectly defined properties in the CDS file to group them with unsupported ones where "MCM" is not true. */
+  /*
+   * Identify incorrectly defined properties in the CDS file to group them with
+   * unsupported ones where "MCM" is not true.
+   */
   public static Map<String, String> getSecondaryPropertiesWithInvalidDefinition(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
@@ -255,17 +261,19 @@ public class SDMUtils {
         CdsElement element = entity.getElement(key);
         if (element != null) {
           // Checking the outdated/old SDM Annotation
-          Optional<CdsAnnotation<Object>> sdmAnnotation =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          Optional<CdsAnnotation<Object>> sdmAnnotation = element
+              .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
           if (sdmAnnotation.isPresent()) {
             Optional<CdsAnnotation<Object>> titleAnnotation = element.findAnnotation("title");
             String title = null;
             if (titleAnnotation.isPresent()) {
               title = titleAnnotation.get().getValue().toString();
             } else {
-              title =
-                  element
-                      .getName(); /* This is in case the user has not specified a title for the column in the cds file (which is optional) */
+              title = element
+                  .getName(); /*
+                               * This is in case the user has not specified a title for the column in the cds
+                               * file (which is optional)
+                               */
             }
             invalidProperties.put(key, title);
           }
@@ -288,18 +296,21 @@ public class SDMUtils {
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
-          // Checking the SDM Annotation, both the old (outdated method) and the correct method.
-          Optional<CdsAnnotation<Object>> annotation =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
-          Optional<CdsAnnotation<Object>> nameAnnotation =
-              element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
+          // Checking the SDM Annotation, both the old (outdated method) and the correct
+          // method.
+          Optional<CdsAnnotation<Object>> annotation = element
+              .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+          Optional<CdsAnnotation<Object>> nameAnnotation = element
+              .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
           if (annotation.isPresent()) {
-            // If the property was defined using the old method, we will use the actual name of the
+            // If the property was defined using the old method, we will use the actual name
+            // of the
             // property
             secondaryTypeProperties.put(element.getName(), element.getName());
           }
           if (nameAnnotation.isPresent()) {
-            // If the property was defined using the new method, we will use the name specified in
+            // If the property was defined using the new method, we will use the name
+            // specified in
             // the annotation
             secondaryTypeProperties.put(
                 element.getName(), nameAnnotation.get().getValue().toString());
@@ -345,8 +356,7 @@ public class SDMUtils {
 
   public static String getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
-    String maxCount =
-        CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
+    String maxCount = CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
 
     if (maxCount == null) {
       AttachmentInfo attachmentInfo = new AttachmentInfo();
@@ -388,14 +398,12 @@ public class SDMUtils {
 
   private static void retrieveAnnotations(CdsElement cdsElement, AttachmentInfo attachmentInfo) {
 
-    Optional<CdsAnnotation<Object>> maxcountAnnotation =
-        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
+    Optional<CdsAnnotation<Object>> maxcountAnnotation = cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
     maxcountAnnotation.ifPresent(
-        annotation ->
-            attachmentInfo.setAttachmentCount(Long.parseLong(annotation.getValue().toString())));
+        annotation -> attachmentInfo.setAttachmentCount(Long.parseLong(annotation.getValue().toString())));
 
-    Optional<CdsAnnotation<Object>> errormsgAnnotation =
-        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+    Optional<CdsAnnotation<Object>> errormsgAnnotation = cdsElement
+        .findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
     errormsgAnnotation.ifPresent(
         annotation -> attachmentInfo.setErrorMessage(annotation.getValue().toString()));
   }

@@ -48,16 +48,25 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class SDMUtilsTest {
 
-  @Mock private PersistenceService mockPersistenceService;
-  @Mock private MockedStatic<DBQuery> mockedDbQuery;
-  @Mock private CdsEntity mockEntity;
-  @Mock private CdsElement mockElement;
-  @Mock private CdsAnnotation<Object> mockAnnotation;
-  @Mock private HttpEntity responseEntity;
-  @Mock private CdsEntity attachmentEntity;
-  @Mock private CdsAnnotation<Object> maxcountAnnotation;
+  @Mock
+  private PersistenceService mockPersistenceService;
+  @Mock
+  private MockedStatic<DBQuery> mockedDbQuery;
+  @Mock
+  private CdsEntity mockEntity;
+  @Mock
+  private CdsElement mockElement;
+  @Mock
+  private CdsAnnotation<Object> mockAnnotation;
+  @Mock
+  private HttpEntity responseEntity;
+  @Mock
+  private CdsEntity attachmentEntity;
+  @Mock
+  private CdsAnnotation<Object> maxcountAnnotation;
 
-  @Mock private CdsAnnotation<Object> errormsgAnnotation;
+  @Mock
+  private CdsAnnotation<Object> errormsgAnnotation;
   private List<CdsEntity> entities;
 
   private void setUp() {
@@ -89,8 +98,7 @@ public class SDMUtilsTest {
     entity.put("entity", entityData);
     data.add(CdsData.create(entity));
 
-    Set<String> duplicateFilenames =
-        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
+    Set<String> duplicateFilenames = SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }
@@ -109,12 +117,10 @@ public class SDMUtilsTest {
     try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
       mocked
           .when(
-              () ->
-                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+              () -> AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
           .thenReturn(attachments);
 
-      List<String> result =
-          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      List<String> result = SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.contains("file/1.txt"));
     }
   }
@@ -129,12 +135,10 @@ public class SDMUtilsTest {
     try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
       mocked
           .when(
-              () ->
-                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+              () -> AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
           .thenReturn(Collections.emptyList());
 
-      List<String> result =
-          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      List<String> result = SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.isEmpty());
     }
   }
@@ -155,7 +159,7 @@ public class SDMUtilsTest {
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "myfile.txt");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, "myfile.txt", null);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
 
     assertEquals("cmis:name", requestBody.get("propertyId[1]"));
     assertEquals("myfile.txt", requestBody.get("propertyValue[1]"));
@@ -168,7 +172,7 @@ public class SDMUtilsTest {
     secondaryProperties.put("author", "test user");
     secondaryProperties.put("subject", "JUnit Testing");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, "testfile.txt", null);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
 
     assertEquals("author", requestBody.get("propertyId[1]"));
     assertEquals("test user", requestBody.get("propertyValue[1]"));
@@ -181,7 +185,7 @@ public class SDMUtilsTest {
     Map<String, String> requestBody = new HashMap<>();
     Map<String, String> secondaryProperties = new HashMap<>();
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, "emptyfile.txt", null);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
 
     assertTrue(requestBody.isEmpty());
   }
@@ -189,11 +193,10 @@ public class SDMUtilsTest {
   @Test
   public void testCheckMCM_withValidResponse() throws IOException {
     // Create a mock response entity with a valid JSON string
-    String jsonResponse =
-        "{\"propertyDefinitions\": {"
-            + "\"property1\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}},"
-            + "\"property2\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
-            + "}}";
+    String jsonResponse = "{\"propertyDefinitions\": {"
+        + "\"property1\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}},"
+        + "\"property2\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
+        + "}}";
 
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
@@ -238,27 +241,29 @@ public class SDMUtilsTest {
 
   // @Test
   // public void testCheckMCM_withPropertyDefinitionNull() throws IOException {
-  //   // Create a mock response entity with valid propertyDefinitions but not part of the table
-  //   String jsonResponse = "{\"propertyDefinitions\": null}";
-  //   HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
+  // // Create a mock response entity with valid propertyDefinitions but not part
+  // of the table
+  // String jsonResponse = "{\"propertyDefinitions\": null}";
+  // HttpEntity responseEntity = new StringEntity(jsonResponse,
+  // StandardCharsets.UTF_8);
 
-  //   List<String> secondaryPropertyIds = new ArrayList<>();
+  // List<String> secondaryPropertyIds = new ArrayList<>();
 
-  //   // Call the method to test
-  //   Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
+  // // Call the method to test
+  // Boolean result = SDMUtils.checkMCM(responseEntity, secondaryPropertyIds);
 
-  //   // Assertions
-  //   assertFalse(result);
-  //   assertTrue(secondaryPropertyIds.isEmpty());
+  // // Assertions
+  // assertFalse(result);
+  // assertTrue(secondaryPropertyIds.isEmpty());
   // }
 
   @Test
   public void testCheckMCM_withPropertyDefinitionsNotPartOfTable() throws IOException {
-    // Create a mock response entity with valid propertyDefinitions but not part of the table
-    String jsonResponse =
-        "{\"propertyDefinitions\": {"
-            + "\"propertyA\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
-            + "}}";
+    // Create a mock response entity with valid propertyDefinitions but not part of
+    // the table
+    String jsonResponse = "{\"propertyDefinitions\": {"
+        + "\"propertyA\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
+        + "}}";
 
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
@@ -274,11 +279,11 @@ public class SDMUtilsTest {
 
   @Test
   public void testCheckMCM_withMCMMiscellanousNotPartOfTable() throws IOException {
-    // Create a mock response entity with valid propertyDefinitions but not part of the table
-    String jsonResponse =
-        "{\"propertyDefinitions\": {"
-            + "\"propertyA\": {\"mcm:miscellaneous\": {\"isQueryableInUi\": \"false\"}}"
-            + "}}";
+    // Create a mock response entity with valid propertyDefinitions but not part of
+    // the table
+    String jsonResponse = "{\"propertyDefinitions\": {"
+        + "\"propertyA\": {\"mcm:miscellaneous\": {\"isQueryableInUi\": \"false\"}}"
+        + "}}";
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
     List<String> secondaryPropertyIds = new ArrayList<>();
@@ -372,164 +377,168 @@ public class SDMUtilsTest {
 
   // @Test
   // public void testGetUpdatedSecondaryProperties_withModifiedValues() {
-  //   // Mock the necessary components
-  //   CdsEntity mockEntity = mock(CdsEntity.class);
-  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // // Mock the necessary components
+  // CdsEntity mockEntity = mock(CdsEntity.class);
+  // PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-  //   // Prepare attachment and secondaryTypeProperties
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "123");
-  //   attachment.put("property1", "newValue1");
-  //   attachment.put("property2", "newValue2");
+  // // Prepare attachment and secondaryTypeProperties
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "123");
+  // attachment.put("property1", "newValue1");
+  // attachment.put("property2", "newValue2");
 
-  //   List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+  // List<String> secondaryTypeProperties = Arrays.asList("property1",
+  // "property2");
 
-  //   // Mock DBQuery class behavior
-  //   List<String> propertiesInDB = Arrays.asList("oldValue1", "newValue2");
-  //   mockedDbQuery
-  //       .when(
-  //           () ->
-  //               DBQuery.getpropertiesForID(
-  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-  //       .thenReturn(propertiesInDB);
+  // // Mock DBQuery class behavior
+  // List<String> propertiesInDB = Arrays.asList("oldValue1", "newValue2");
+  // mockedDbQuery
+  // .when(
+  // () ->
+  // DBQuery.getpropertiesForID(
+  // mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  // .thenReturn(propertiesInDB);
 
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // Optional.of(mockEntity), attachment, mockPersistenceService,
   // secondaryTypeProperties);
 
-  //   assertEquals(1, result.size());
-  //   assertEquals("newValue1", result.get("property1"));
-  //   assertNull(result.get("property2"));
+  // assertEquals(1, result.size());
+  // assertEquals("newValue1", result.get("property1"));
+  // assertNull(result.get("property2"));
   // }
 
   // @Test
-  // public void testGetUpdatedSecondaryProperties_withSecondaryTypePropertiesNull() {
-  //   // Mock the necessary components
-  //   CdsEntity mockEntity = mock(CdsEntity.class);
-  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // public void
+  // testGetUpdatedSecondaryProperties_withSecondaryTypePropertiesNull() {
+  // // Mock the necessary components
+  // CdsEntity mockEntity = mock(CdsEntity.class);
+  // PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-  //   // Prepare attachment and secondaryTypeProperties
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "123");
-  //   attachment.put("property1", "newValue1");
-  //   attachment.put("property2", "newValue2");
+  // // Prepare attachment and secondaryTypeProperties
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "123");
+  // attachment.put("property1", "newValue1");
+  // attachment.put("property2", "newValue2");
 
-  //   List<String> secondaryTypeProperties = new ArrayList<>();
+  // List<String> secondaryTypeProperties = new ArrayList<>();
 
-  //   // Mock DBQuery class behavior
-  //   List<String> propertiesInDB = new ArrayList<>();
-  //   mockedDbQuery
-  //       .when(
-  //           () ->
-  //               DBQuery.getpropertiesForID(
-  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-  //       .thenReturn(propertiesInDB);
+  // // Mock DBQuery class behavior
+  // List<String> propertiesInDB = new ArrayList<>();
+  // mockedDbQuery
+  // .when(
+  // () ->
+  // DBQuery.getpropertiesForID(
+  // mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  // .thenReturn(propertiesInDB);
 
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // Optional.of(mockEntity), attachment, mockPersistenceService,
   // secondaryTypeProperties);
 
-  //   assertEquals(0, result.size());
-  //   assertEquals(null, result.get("property1"));
-  //   assertEquals(null, result.get("property2"));
+  // assertEquals(0, result.size());
+  // assertEquals(null, result.get("property1"));
+  // assertEquals(null, result.get("property2"));
   // }
 
   // @Test
   // public void testGetUpdatedSecondaryProperties_withPropertiesMapNull() {
-  //   // Mock the necessary components
-  //   CdsEntity mockEntity = mock(CdsEntity.class);
-  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // // Mock the necessary components
+  // CdsEntity mockEntity = mock(CdsEntity.class);
+  // PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-  //   // Prepare attachment and secondaryTypeProperties
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "123");
+  // // Prepare attachment and secondaryTypeProperties
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "123");
 
-  //   List<String> secondaryTypeProperties = new ArrayList<>();
+  // List<String> secondaryTypeProperties = new ArrayList<>();
 
-  //   // Mock DBQuery class behavior
-  //   List<String> propertiesInDB = new ArrayList<>();
-  //   mockedDbQuery
-  //       .when(
-  //           () ->
-  //               DBQuery.getpropertiesForID(
-  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-  //       .thenReturn(propertiesInDB);
+  // // Mock DBQuery class behavior
+  // List<String> propertiesInDB = new ArrayList<>();
+  // mockedDbQuery
+  // .when(
+  // () ->
+  // DBQuery.getpropertiesForID(
+  // mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  // .thenReturn(propertiesInDB);
 
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // Optional.of(mockEntity), attachment, mockPersistenceService,
   // secondaryTypeProperties);
 
-  //   assertEquals(0, result.size());
-  //   assertEquals(null, result.get("property1"));
-  //   assertEquals(null, result.get("property2"));
+  // assertEquals(0, result.size());
+  // assertEquals(null, result.get("property1"));
+  // assertEquals(null, result.get("property2"));
   // }
 
   // @Test
   // public void testGetUpdatedSecondaryProperties_DBPropertiesNull() {
-  //   // Mock the necessary components
-  //   CdsEntity mockEntity = mock(CdsEntity.class);
-  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // // Mock the necessary components
+  // CdsEntity mockEntity = mock(CdsEntity.class);
+  // PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-  //   // Prepare attachment and secondaryTypeProperties
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "123");
-  //   attachment.put("property1", "newValue1");
-  //   attachment.put("property2", "newValue2");
+  // // Prepare attachment and secondaryTypeProperties
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "123");
+  // attachment.put("property1", "newValue1");
+  // attachment.put("property2", "newValue2");
 
-  //   List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+  // List<String> secondaryTypeProperties = Arrays.asList("property1",
+  // "property2");
 
-  //   // Mock DBQuery class behavior
-  //   List<String> propertiesInDB = null;
-  //   mockedDbQuery
-  //       .when(
-  //           () ->
-  //               DBQuery.getpropertiesForID(
-  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-  //       .thenReturn(propertiesInDB);
+  // // Mock DBQuery class behavior
+  // List<String> propertiesInDB = null;
+  // mockedDbQuery
+  // .when(
+  // () ->
+  // DBQuery.getpropertiesForID(
+  // mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  // .thenReturn(propertiesInDB);
 
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // Optional.of(mockEntity), attachment, mockPersistenceService,
   // secondaryTypeProperties);
 
-  //   assertEquals(2, result.size());
-  //   assertEquals("newValue1", result.get("property1"));
-  //   assertEquals("newValue2", result.get("property2"));
+  // assertEquals(2, result.size());
+  // assertEquals("newValue1", result.get("property1"));
+  // assertEquals("newValue2", result.get("property2"));
   // }
 
   // @Test
   // public void testGetUpdatedSecondaryProperties_withNoChanges() {
-  //   // Mock the necessary components
-  //   PersistenceService mockPersistenceService = mock(PersistenceService.class);
+  // // Mock the necessary components
+  // PersistenceService mockPersistenceService = mock(PersistenceService.class);
 
-  //   // Prepare attachment and secondaryTypeProperties
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "123");
-  //   attachment.put("property1", "sameValue1");
-  //   attachment.put("property2", "sameValue2");
+  // // Prepare attachment and secondaryTypeProperties
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "123");
+  // attachment.put("property1", "sameValue1");
+  // attachment.put("property2", "sameValue2");
 
-  //   List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+  // List<String> secondaryTypeProperties = Arrays.asList("property1",
+  // "property2");
 
-  //   // Mock DBQuery static method behavior using try-with-resources
-  //   List<String> propertiesInDB = Arrays.asList("sameValue1", "sameValue2");
-  //   mockedDbQuery
-  //       .when(
-  //           () ->
-  //               DBQuery.getpropertiesForID(
-  //                   mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
-  //       .thenReturn(propertiesInDB);
+  // // Mock DBQuery static method behavior using try-with-resources
+  // List<String> propertiesInDB = Arrays.asList("sameValue1", "sameValue2");
+  // mockedDbQuery
+  // .when(
+  // () ->
+  // DBQuery.getpropertiesForID(
+  // mockEntity, mockPersistenceService, "123", secondaryTypeProperties))
+  // .thenReturn(propertiesInDB);
 
-  //   // Call the method under test
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           Optional.of(mockEntity), attachment, mockPersistenceService,
+  // // Call the method under test
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // Optional.of(mockEntity), attachment, mockPersistenceService,
   // secondaryTypeProperties);
 
-  //   // Validate results
-  //   assertTrue(result.isEmpty());
+  // // Validate results
+  // assertTrue(result.isEmpty());
   // }
 
   @Test
@@ -558,7 +567,8 @@ public class SDMUtilsTest {
     HttpEntity mockResponseEntity = mock(HttpEntity.class);
     List<String> secondaryPropertyIds = new ArrayList<>();
 
-    // Simulate response string with "propertyDefinitions" but no "mcm:miscellaneous"
+    // Simulate response string with "propertyDefinitions" but no
+    // "mcm:miscellaneous"
     String responseString = "{\"propertyDefinitions\": {\"key1\": {}}}";
     when(mockResponseEntity.getContent())
         .thenReturn(new java.io.ByteArrayInputStream(responseString.getBytes()));
@@ -573,44 +583,47 @@ public class SDMUtilsTest {
 
   // @Test
   // public void testPropertyValueIsNullInMapAndNotNullInDB() {
-  //   // Arrange
-  //   Map<String, Object> attachment = new HashMap<>();
-  //   attachment.put("ID", "12345"); // Sample ID
+  // // Arrange
+  // Map<String, Object> attachment = new HashMap<>();
+  // attachment.put("ID", "12345"); // Sample ID
 
-  //   // Simulating that "property1" has a null value in attachment map
-  //   attachment.put("property1", null);
+  // // Simulating that "property1" has a null value in attachment map
+  // attachment.put("property1", null);
 
-  //   // Secondary type properties to check
-  //   List<String> secondaryTypeProperties = Arrays.asList("property1", "property2");
+  // // Secondary type properties to check
+  // List<String> secondaryTypeProperties = Arrays.asList("property1",
+  // "property2");
 
-  //   // Simulate the database response where "property1" has a value in the DB
-  //   List<String> propertiesInDB = Arrays.asList("DBValueForProperty1", "DBValueForProperty2");
+  // // Simulate the database response where "property1" has a value in the DB
+  // List<String> propertiesInDB = Arrays.asList("DBValueForProperty1",
+  // "DBValueForProperty2");
 
-  //   // Mocking the DBQuery call to return propertiesInDB for "property1"
-  //   when(DBQuery.getpropertiesForID(
-  //           any(), eq(mockPersistenceService), eq("12345"), eq(secondaryTypeProperties)))
-  //       .thenReturn(propertiesInDB);
+  // // Mocking the DBQuery call to return propertiesInDB for "property1"
+  // when(DBQuery.getpropertiesForID(
+  // any(), eq(mockPersistenceService), eq("12345"), eq(secondaryTypeProperties)))
+  // .thenReturn(propertiesInDB);
 
-  //   Optional<CdsEntity> attachmentEntity = Optional.of(mock(CdsEntity.class));
+  // Optional<CdsEntity> attachmentEntity = Optional.of(mock(CdsEntity.class));
 
-  //   // Act
-  //   Map<String, String> result =
-  //       SDMUtils.getUpdatedSecondaryProperties(
-  //           attachmentEntity, attachment, mockPersistenceService, secondaryTypeProperties);
+  // // Act
+  // Map<String, String> result =
+  // SDMUtils.getUpdatedSecondaryProperties(
+  // attachmentEntity, attachment, mockPersistenceService,
+  // secondaryTypeProperties);
 
-  //   // Assert
-  //   assertTrue(result.containsKey("property1"));
-  //   assertNull(
-  //       result.get(
-  //           "property1")); // Since property1 is null in attachment and non-null in DB, it should
+  // // Assert
+  // assertTrue(result.containsKey("property1"));
+  // assertNull(
+  // result.get(
+  // "property1")); // Since property1 is null in attachment and non-null in DB,
+  // it should
   // be
-  //   // set to null
+  // // set to null
   // }
 
   @Test
   void testAttachmentEntityNotPresent() {
-    Map<String, String> result =
-        SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
+    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
@@ -619,17 +632,15 @@ public class SDMUtilsTest {
     CdsEntity entity = mock(CdsEntity.class);
     when(entity.getElement(anyString())).thenReturn(null);
 
-    Map<String, String> result =
-        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
   @Test
   void testDraftReadonlyContextSkipped() {
     CdsEntity entity = mock(CdsEntity.class);
-    Map<String, String> result =
-        SDMUtils.getSecondaryTypeProperties(
-            Optional.of(entity), Map.of(SDMConstants.DRAFT_READONLY_CONTEXT, "value"));
+    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(
+        Optional.of(entity), Map.of(SDMConstants.DRAFT_READONLY_CONTEXT, "value"));
     assertEquals(Collections.emptyMap(), result);
     verify(entity, never()).getElement(anyString());
   }
@@ -641,8 +652,7 @@ public class SDMUtilsTest {
     when(entity.getElement("key1")).thenReturn(element);
     when(element.findAnnotation(anyString())).thenReturn(Optional.empty());
 
-    Map<String, String> result =
-        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
@@ -660,8 +670,7 @@ public class SDMUtilsTest {
         .thenReturn(Optional.of(annotation));
     when(element.getName()).thenReturn("key1");
 
-    Map<String, String> result =
-        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Map.of("key1", "name"), result);
   }
 
@@ -719,136 +728,135 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity =
-          new CdsEntity() {
-            @Override
-            public Stream<CdsAnnotation<?>> annotations() {
-              return null;
-            }
+      CdsEntity mainEntity = new CdsEntity() {
+        @Override
+        public Stream<CdsAnnotation<?>> annotations() {
+          return null;
+        }
 
-            @Override
-            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public boolean isAbstract() {
-              return false;
-            }
+        @Override
+        public boolean isAbstract() {
+          return false;
+        }
 
-            @Override
-            public boolean isView() {
-              return false;
-            }
+        @Override
+        public boolean isView() {
+          return false;
+        }
 
-            @Override
-            public boolean isProjection() {
-              return false;
-            }
+        @Override
+        public boolean isProjection() {
+          return false;
+        }
 
-            @Override
-            public Optional<CqnSelect> query() {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CqnSelect> query() {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsParameter> params() {
-              return null;
-            }
+        @Override
+        public Stream<CdsParameter> params() {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsAction> actions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsAction> actions() {
+          return null;
+        }
 
-            @Override
-            public CdsAction getAction(String s) {
-              return null;
-            }
+        @Override
+        public CdsAction getAction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsAction> findAction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsAction> findAction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsFunction> functions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsFunction> functions() {
+          return null;
+        }
 
-            @Override
-            public CdsFunction getFunction(String s) {
-              return null;
-            }
+        @Override
+        public CdsFunction getFunction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsFunction> findFunction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsFunction> findFunction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getElement(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getElement(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findElement(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findElement(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getAssociation(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getAssociation(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findAssociation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findAssociation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public <S extends CdsStructuredType> S getTargetOf(String s) {
-              return null;
-            }
+        @Override
+        public <S extends CdsStructuredType> S getTargetOf(String s) {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsElement> elements() {
-              return null;
-            }
+        @Override
+        public Stream<CdsElement> elements() {
+          return null;
+        }
 
-            @Override
-            public String getQualifiedName() {
-              return "com.sap.demo.EntityOne";
-            }
+        @Override
+        public String getQualifiedName() {
+          return "com.sap.demo.EntityOne";
+        }
 
-            @Override
-            public String getName() {
-              return null;
-            }
+        @Override
+        public String getName() {
+          return null;
+        }
 
-            @Override
-            public String getQualifier() {
-              return null;
-            }
+        @Override
+        public String getQualifier() {
+          return null;
+        }
 
-            public Stream<CdsElement> compositions() {
-              CdsElement element1 = mock(CdsElement.class);
-              CdsElement element2 = mock(CdsElement.class);
-              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
-                  .thenReturn(Optional.of(maxcountAnnotation));
-              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
-                  .thenReturn(Optional.of(errormsgAnnotation));
-              when(maxcountAnnotation.getValue()).thenReturn("1");
-              when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
+        public Stream<CdsElement> compositions() {
+          CdsElement element1 = mock(CdsElement.class);
+          CdsElement element2 = mock(CdsElement.class);
+          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
+              .thenReturn(Optional.of(maxcountAnnotation));
+          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
+              .thenReturn(Optional.of(errormsgAnnotation));
+          when(maxcountAnnotation.getValue()).thenReturn("1");
+          when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
 
-              List<CdsElement> compositions = List.of(element1, element2);
+          List<CdsElement> compositions = List.of(element1, element2);
 
-              // Create a Stream from the List of CdsElements
-              return compositions.stream();
-            }
-          };
+          // Create a Stream from the List of CdsElements
+          return compositions.stream();
+        }
+      };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       // when(cds)
@@ -867,132 +875,131 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity =
-          new CdsEntity() {
-            @Override
-            public Stream<CdsAnnotation<?>> annotations() {
-              return null;
-            }
+      CdsEntity mainEntity = new CdsEntity() {
+        @Override
+        public Stream<CdsAnnotation<?>> annotations() {
+          return null;
+        }
 
-            @Override
-            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public boolean isAbstract() {
-              return false;
-            }
+        @Override
+        public boolean isAbstract() {
+          return false;
+        }
 
-            @Override
-            public boolean isView() {
-              return false;
-            }
+        @Override
+        public boolean isView() {
+          return false;
+        }
 
-            @Override
-            public boolean isProjection() {
-              return false;
-            }
+        @Override
+        public boolean isProjection() {
+          return false;
+        }
 
-            @Override
-            public Optional<CqnSelect> query() {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CqnSelect> query() {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsParameter> params() {
-              return null;
-            }
+        @Override
+        public Stream<CdsParameter> params() {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsAction> actions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsAction> actions() {
+          return null;
+        }
 
-            @Override
-            public CdsAction getAction(String s) {
-              return null;
-            }
+        @Override
+        public CdsAction getAction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsAction> findAction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsAction> findAction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsFunction> functions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsFunction> functions() {
+          return null;
+        }
 
-            @Override
-            public CdsFunction getFunction(String s) {
-              return null;
-            }
+        @Override
+        public CdsFunction getFunction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsFunction> findFunction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsFunction> findFunction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getElement(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getElement(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findElement(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findElement(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getAssociation(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getAssociation(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findAssociation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findAssociation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public <S extends CdsStructuredType> S getTargetOf(String s) {
-              return null;
-            }
+        @Override
+        public <S extends CdsStructuredType> S getTargetOf(String s) {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsElement> elements() {
-              return null;
-            }
+        @Override
+        public Stream<CdsElement> elements() {
+          return null;
+        }
 
-            @Override
-            public String getQualifiedName() {
-              return "com.sap.demo.EntityOne";
-            }
+        @Override
+        public String getQualifiedName() {
+          return "com.sap.demo.EntityOne";
+        }
 
-            @Override
-            public String getName() {
-              return null;
-            }
+        @Override
+        public String getName() {
+          return null;
+        }
 
-            @Override
-            public String getQualifier() {
-              return null;
-            }
+        @Override
+        public String getQualifier() {
+          return null;
+        }
 
-            public Stream<CdsElement> compositions() {
-              CdsElement element1 = mock(CdsElement.class);
-              CdsElement element2 = mock(CdsElement.class);
-              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
-                  .thenReturn(Optional.of(maxcountAnnotation));
+        public Stream<CdsElement> compositions() {
+          CdsElement element1 = mock(CdsElement.class);
+          CdsElement element2 = mock(CdsElement.class);
+          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
+              .thenReturn(Optional.of(maxcountAnnotation));
 
-              when(maxcountAnnotation.getValue()).thenReturn("1");
+          when(maxcountAnnotation.getValue()).thenReturn("1");
 
-              List<CdsElement> compositions = List.of(element1, element2);
-              return compositions.stream();
-            }
-          };
+          List<CdsElement> compositions = List.of(element1, element2);
+          return compositions.stream();
+        }
+      };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       // when(cds)
@@ -1011,127 +1018,126 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity =
-          new CdsEntity() {
-            @Override
-            public Stream<CdsAnnotation<?>> annotations() {
-              return null;
-            }
+      CdsEntity mainEntity = new CdsEntity() {
+        @Override
+        public Stream<CdsAnnotation<?>> annotations() {
+          return null;
+        }
 
-            @Override
-            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public boolean isAbstract() {
-              return false;
-            }
+        @Override
+        public boolean isAbstract() {
+          return false;
+        }
 
-            @Override
-            public boolean isView() {
-              return false;
-            }
+        @Override
+        public boolean isView() {
+          return false;
+        }
 
-            @Override
-            public boolean isProjection() {
-              return false;
-            }
+        @Override
+        public boolean isProjection() {
+          return false;
+        }
 
-            @Override
-            public Optional<CqnSelect> query() {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CqnSelect> query() {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsParameter> params() {
-              return null;
-            }
+        @Override
+        public Stream<CdsParameter> params() {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsAction> actions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsAction> actions() {
+          return null;
+        }
 
-            @Override
-            public CdsAction getAction(String s) {
-              return null;
-            }
+        @Override
+        public CdsAction getAction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsAction> findAction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsAction> findAction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public Stream<CdsFunction> functions() {
-              return null;
-            }
+        @Override
+        public Stream<CdsFunction> functions() {
+          return null;
+        }
 
-            @Override
-            public CdsFunction getFunction(String s) {
-              return null;
-            }
+        @Override
+        public CdsFunction getFunction(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsFunction> findFunction(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsFunction> findFunction(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getElement(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getElement(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findElement(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findElement(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public CdsElement getAssociation(String s) {
-              return null;
-            }
+        @Override
+        public CdsElement getAssociation(String s) {
+          return null;
+        }
 
-            @Override
-            public Optional<CdsElement> findAssociation(String s) {
-              return Optional.empty();
-            }
+        @Override
+        public Optional<CdsElement> findAssociation(String s) {
+          return Optional.empty();
+        }
 
-            @Override
-            public <S extends CdsStructuredType> S getTargetOf(String s) {
-              return null;
-            }
+        @Override
+        public <S extends CdsStructuredType> S getTargetOf(String s) {
+          return null;
+        }
 
-            @Override
-            public Stream<CdsElement> elements() {
-              return null;
-            }
+        @Override
+        public Stream<CdsElement> elements() {
+          return null;
+        }
 
-            @Override
-            public String getQualifiedName() {
-              return "com.sap.demo.EntityOne";
-            }
+        @Override
+        public String getQualifiedName() {
+          return "com.sap.demo.EntityOne";
+        }
 
-            @Override
-            public String getName() {
-              return null;
-            }
+        @Override
+        public String getName() {
+          return null;
+        }
 
-            @Override
-            public String getQualifier() {
-              return null;
-            }
+        @Override
+        public String getQualifier() {
+          return null;
+        }
 
-            public Stream<CdsElement> compositions() {
-              CdsElement element1 = mock(CdsElement.class);
-              CdsElement element2 = mock(CdsElement.class);
-              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-              List<CdsElement> compositions = List.of(element1, element2);
-              return compositions.stream();
-            }
-          };
+        public Stream<CdsElement> compositions() {
+          CdsElement element1 = mock(CdsElement.class);
+          CdsElement element2 = mock(CdsElement.class);
+          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+          List<CdsElement> compositions = List.of(element1, element2);
+          return compositions.stream();
+        }
+      };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       String result = getAttachmentCountAndMessage(entities, attachmentEntity);
