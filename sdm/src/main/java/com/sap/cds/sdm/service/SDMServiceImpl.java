@@ -196,8 +196,6 @@ public class SDMServiceImpl implements SDMService {
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
-    String fileName = cmisDocument.getFileName();
-    String description = cmisDocument.getDescription();
     List<String> secondaryTypes;
     try {
       secondaryTypes =
