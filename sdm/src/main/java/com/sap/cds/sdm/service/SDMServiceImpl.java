@@ -694,46 +694,7 @@ public class SDMServiceImpl implements SDMService {
           entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
 
       if (response.getStatusLine().getStatusCode() == 201) {
-        // Process successful response
-        Map<String, String> resultMap = new HashMap<>();
-
-        JSONObject jsonObject = new JSONObject(responseBody);
-
-        // Enumerate succinctProperties fields if present
-        JSONObject props = jsonObject.optJSONObject("succinctProperties");
-
-        String cmisName =
-            props != null ? props.optString("cmis:name") : jsonObject.optString("cmis:name");
-        String cmisMimeType =
-            props != null
-                ? props.optString("cmis:contentStreamMimeType")
-                : jsonObject.optString("cmis:contentStreamMimeType");
-        String cmisDescription =
-            props != null
-                ? props.optString("cmis:description")
-                : jsonObject.optString("cmis:description");
-        String cmisObjectId =
-            props != null
-                ? props.optString("cmis:objectId")
-                : jsonObject.optString("cmis:objectId");
-
-        // Add standard properties
-        resultMap.put("cmis:name", cmisName);
-        resultMap.put("cmis:contentStreamMimeType", cmisMimeType);
-        resultMap.put("cmis:description", cmisDescription);
-        resultMap.put("cmis:objectId", cmisObjectId);
-
-        // Extract custom properties from SDM response
-        if (props != null && customPropertiesInSDM != null && !customPropertiesInSDM.isEmpty()) {
-          for (String customProperty : customPropertiesInSDM) {
-            if (props.has(customProperty)) {
-              Object value = props.get(customProperty);
-              resultMap.put(customProperty, value != null ? value.toString() : "");
-            }
-          }
-        }
-
-        return resultMap;
+        return processCopyAttachmentResponse(responseBody, customPropertiesInSDM);
       }
 
       // On error, throw exception with error information
@@ -743,6 +704,42 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
+    }
+  }
+
+  private Map<String, String> processCopyAttachmentResponse(
+      String responseBody, Set<String> customPropertiesInSDM) {
+    Map<String, String> resultMap = new HashMap<>();
+    JSONObject jsonObject = new JSONObject(responseBody);
+    JSONObject props = jsonObject.optJSONObject("succinctProperties");
+
+    // Extract standard CMIS properties
+    resultMap.put("cmis:name", extractProperty(props, jsonObject, "cmis:name"));
+    resultMap.put(
+        "cmis:contentStreamMimeType",
+        extractProperty(props, jsonObject, "cmis:contentStreamMimeType"));
+    resultMap.put("cmis:description", extractProperty(props, jsonObject, "cmis:description"));
+    resultMap.put("cmis:objectId", extractProperty(props, jsonObject, "cmis:objectId"));
+
+    // Extract custom properties from SDM response
+    extractCustomProperties(props, customPropertiesInSDM, resultMap);
+
+    return resultMap;
+  }
+
+  private String extractProperty(JSONObject props, JSONObject jsonObject, String propertyName) {
+    return props != null ? props.optString(propertyName) : jsonObject.optString(propertyName);
+  }
+
+  private void extractCustomProperties(
+      JSONObject props, Set<String> customPropertiesInSDM, Map<String, String> resultMap) {
+    if (props != null && customPropertiesInSDM != null && !customPropertiesInSDM.isEmpty()) {
+      for (String customProperty : customPropertiesInSDM) {
+        if (props.has(customProperty)) {
+          Object value = props.get(customProperty);
+          resultMap.put(customProperty, value != null ? value.toString() : "");
+        }
+      }
     }
   }
 }
