@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Incorrect filename shown after copying attachment
 - Defensive EhCache initialization
 - Improved filename validation
-- Removed harcoded ServiceName type 
+- Removed hardcoded ServiceName type 
 - Improved error handling for nested entities
 - Link doesn't get reverted in SDM when changes are discarded on the UI 
 - Support for entities defined with namespace  
