@@ -48,25 +48,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class SDMUtilsTest {
 
-  @Mock
-  private PersistenceService mockPersistenceService;
-  @Mock
-  private MockedStatic<DBQuery> mockedDbQuery;
-  @Mock
-  private CdsEntity mockEntity;
-  @Mock
-  private CdsElement mockElement;
-  @Mock
-  private CdsAnnotation<Object> mockAnnotation;
-  @Mock
-  private HttpEntity responseEntity;
-  @Mock
-  private CdsEntity attachmentEntity;
-  @Mock
-  private CdsAnnotation<Object> maxcountAnnotation;
+  @Mock private PersistenceService mockPersistenceService;
+  @Mock private MockedStatic<DBQuery> mockedDbQuery;
+  @Mock private CdsEntity mockEntity;
+  @Mock private CdsElement mockElement;
+  @Mock private CdsAnnotation<Object> mockAnnotation;
+  @Mock private HttpEntity responseEntity;
+  @Mock private CdsEntity attachmentEntity;
+  @Mock private CdsAnnotation<Object> maxcountAnnotation;
 
-  @Mock
-  private CdsAnnotation<Object> errormsgAnnotation;
+  @Mock private CdsAnnotation<Object> errormsgAnnotation;
   private List<CdsEntity> entities;
 
   private void setUp() {
@@ -98,7 +89,8 @@ public class SDMUtilsTest {
     entity.put("entity", entityData);
     data.add(CdsData.create(entity));
 
-    Set<String> duplicateFilenames = SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
+    Set<String> duplicateFilenames =
+        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }
@@ -117,10 +109,12 @@ public class SDMUtilsTest {
     try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
       mocked
           .when(
-              () -> AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
           .thenReturn(attachments);
 
-      List<String> result = SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      List<String> result =
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.contains("file/1.txt"));
     }
   }
@@ -135,10 +129,12 @@ public class SDMUtilsTest {
     try (MockedStatic<AttachmentsHandlerUtils> mocked = mockStatic(AttachmentsHandlerUtils.class)) {
       mocked
           .when(
-              () -> AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments("TestEntity", entity, "compositionName"))
           .thenReturn(Collections.emptyList());
 
-      List<String> result = SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
+      List<String> result =
+          SDMUtils.FileNameContainsRestrictedCharaters(data, "compositionName", "TestEntity");
       assertTrue(result.isEmpty());
     }
   }
@@ -193,10 +189,11 @@ public class SDMUtilsTest {
   @Test
   public void testCheckMCM_withValidResponse() throws IOException {
     // Create a mock response entity with a valid JSON string
-    String jsonResponse = "{\"propertyDefinitions\": {"
-        + "\"property1\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}},"
-        + "\"property2\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
-        + "}}";
+    String jsonResponse =
+        "{\"propertyDefinitions\": {"
+            + "\"property1\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}},"
+            + "\"property2\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
+            + "}}";
 
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
@@ -261,9 +258,10 @@ public class SDMUtilsTest {
   public void testCheckMCM_withPropertyDefinitionsNotPartOfTable() throws IOException {
     // Create a mock response entity with valid propertyDefinitions but not part of
     // the table
-    String jsonResponse = "{\"propertyDefinitions\": {"
-        + "\"propertyA\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
-        + "}}";
+    String jsonResponse =
+        "{\"propertyDefinitions\": {"
+            + "\"propertyA\": {\"mcm:miscellaneous\": {\"isPartOfTable\": \"false\"}}"
+            + "}}";
 
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
@@ -281,9 +279,10 @@ public class SDMUtilsTest {
   public void testCheckMCM_withMCMMiscellanousNotPartOfTable() throws IOException {
     // Create a mock response entity with valid propertyDefinitions but not part of
     // the table
-    String jsonResponse = "{\"propertyDefinitions\": {"
-        + "\"propertyA\": {\"mcm:miscellaneous\": {\"isQueryableInUi\": \"false\"}}"
-        + "}}";
+    String jsonResponse =
+        "{\"propertyDefinitions\": {"
+            + "\"propertyA\": {\"mcm:miscellaneous\": {\"isQueryableInUi\": \"false\"}}"
+            + "}}";
     HttpEntity responseEntity = new StringEntity(jsonResponse, StandardCharsets.UTF_8);
 
     List<String> secondaryPropertyIds = new ArrayList<>();
@@ -623,7 +622,8 @@ public class SDMUtilsTest {
 
   @Test
   void testAttachmentEntityNotPresent() {
-    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
+    Map<String, String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.empty(), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
@@ -632,15 +632,17 @@ public class SDMUtilsTest {
     CdsEntity entity = mock(CdsEntity.class);
     when(entity.getElement(anyString())).thenReturn(null);
 
-    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
   @Test
   void testDraftReadonlyContextSkipped() {
     CdsEntity entity = mock(CdsEntity.class);
-    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(
-        Optional.of(entity), Map.of(SDMConstants.DRAFT_READONLY_CONTEXT, "value"));
+    Map<String, String> result =
+        SDMUtils.getSecondaryTypeProperties(
+            Optional.of(entity), Map.of(SDMConstants.DRAFT_READONLY_CONTEXT, "value"));
     assertEquals(Collections.emptyMap(), result);
     verify(entity, never()).getElement(anyString());
   }
@@ -652,7 +654,8 @@ public class SDMUtilsTest {
     when(entity.getElement("key1")).thenReturn(element);
     when(element.findAnnotation(anyString())).thenReturn(Optional.empty());
 
-    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Collections.emptyMap(), result);
   }
 
@@ -670,7 +673,8 @@ public class SDMUtilsTest {
         .thenReturn(Optional.of(annotation));
     when(element.getName()).thenReturn("key1");
 
-    Map<String, String> result = SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
+    Map<String, String> result =
+        SDMUtils.getSecondaryTypeProperties(Optional.of(entity), Map.of("key1", "value1"));
     assertEquals(Map.of("key1", "name"), result);
   }
 
@@ -728,135 +732,136 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity = new CdsEntity() {
-        @Override
-        public Stream<CdsAnnotation<?>> annotations() {
-          return null;
-        }
+      CdsEntity mainEntity =
+          new CdsEntity() {
+            @Override
+            public Stream<CdsAnnotation<?>> annotations() {
+              return null;
+            }
 
-        @Override
-        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public boolean isAbstract() {
-          return false;
-        }
+            @Override
+            public boolean isAbstract() {
+              return false;
+            }
 
-        @Override
-        public boolean isView() {
-          return false;
-        }
+            @Override
+            public boolean isView() {
+              return false;
+            }
 
-        @Override
-        public boolean isProjection() {
-          return false;
-        }
+            @Override
+            public boolean isProjection() {
+              return false;
+            }
 
-        @Override
-        public Optional<CqnSelect> query() {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CqnSelect> query() {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsParameter> params() {
-          return null;
-        }
+            @Override
+            public Stream<CdsParameter> params() {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsAction> actions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsAction> actions() {
+              return null;
+            }
 
-        @Override
-        public CdsAction getAction(String s) {
-          return null;
-        }
+            @Override
+            public CdsAction getAction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsAction> findAction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsAction> findAction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsFunction> functions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsFunction> functions() {
+              return null;
+            }
 
-        @Override
-        public CdsFunction getFunction(String s) {
-          return null;
-        }
+            @Override
+            public CdsFunction getFunction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsFunction> findFunction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsFunction> findFunction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getElement(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getElement(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findElement(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findElement(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getAssociation(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getAssociation(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findAssociation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findAssociation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public <S extends CdsStructuredType> S getTargetOf(String s) {
-          return null;
-        }
+            @Override
+            public <S extends CdsStructuredType> S getTargetOf(String s) {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsElement> elements() {
-          return null;
-        }
+            @Override
+            public Stream<CdsElement> elements() {
+              return null;
+            }
 
-        @Override
-        public String getQualifiedName() {
-          return "com.sap.demo.EntityOne";
-        }
+            @Override
+            public String getQualifiedName() {
+              return "com.sap.demo.EntityOne";
+            }
 
-        @Override
-        public String getName() {
-          return null;
-        }
+            @Override
+            public String getName() {
+              return null;
+            }
 
-        @Override
-        public String getQualifier() {
-          return null;
-        }
+            @Override
+            public String getQualifier() {
+              return null;
+            }
 
-        public Stream<CdsElement> compositions() {
-          CdsElement element1 = mock(CdsElement.class);
-          CdsElement element2 = mock(CdsElement.class);
-          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
-              .thenReturn(Optional.of(maxcountAnnotation));
-          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
-              .thenReturn(Optional.of(errormsgAnnotation));
-          when(maxcountAnnotation.getValue()).thenReturn("1");
-          when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
+            public Stream<CdsElement> compositions() {
+              CdsElement element1 = mock(CdsElement.class);
+              CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
+                  .thenReturn(Optional.of(maxcountAnnotation));
+              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
+                  .thenReturn(Optional.of(errormsgAnnotation));
+              when(maxcountAnnotation.getValue()).thenReturn("1");
+              when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
 
-          List<CdsElement> compositions = List.of(element1, element2);
+              List<CdsElement> compositions = List.of(element1, element2);
 
-          // Create a Stream from the List of CdsElements
-          return compositions.stream();
-        }
-      };
+              // Create a Stream from the List of CdsElements
+              return compositions.stream();
+            }
+          };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       // when(cds)
@@ -875,131 +880,132 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity = new CdsEntity() {
-        @Override
-        public Stream<CdsAnnotation<?>> annotations() {
-          return null;
-        }
+      CdsEntity mainEntity =
+          new CdsEntity() {
+            @Override
+            public Stream<CdsAnnotation<?>> annotations() {
+              return null;
+            }
 
-        @Override
-        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public boolean isAbstract() {
-          return false;
-        }
+            @Override
+            public boolean isAbstract() {
+              return false;
+            }
 
-        @Override
-        public boolean isView() {
-          return false;
-        }
+            @Override
+            public boolean isView() {
+              return false;
+            }
 
-        @Override
-        public boolean isProjection() {
-          return false;
-        }
+            @Override
+            public boolean isProjection() {
+              return false;
+            }
 
-        @Override
-        public Optional<CqnSelect> query() {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CqnSelect> query() {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsParameter> params() {
-          return null;
-        }
+            @Override
+            public Stream<CdsParameter> params() {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsAction> actions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsAction> actions() {
+              return null;
+            }
 
-        @Override
-        public CdsAction getAction(String s) {
-          return null;
-        }
+            @Override
+            public CdsAction getAction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsAction> findAction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsAction> findAction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsFunction> functions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsFunction> functions() {
+              return null;
+            }
 
-        @Override
-        public CdsFunction getFunction(String s) {
-          return null;
-        }
+            @Override
+            public CdsFunction getFunction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsFunction> findFunction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsFunction> findFunction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getElement(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getElement(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findElement(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findElement(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getAssociation(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getAssociation(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findAssociation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findAssociation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public <S extends CdsStructuredType> S getTargetOf(String s) {
-          return null;
-        }
+            @Override
+            public <S extends CdsStructuredType> S getTargetOf(String s) {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsElement> elements() {
-          return null;
-        }
+            @Override
+            public Stream<CdsElement> elements() {
+              return null;
+            }
 
-        @Override
-        public String getQualifiedName() {
-          return "com.sap.demo.EntityOne";
-        }
+            @Override
+            public String getQualifiedName() {
+              return "com.sap.demo.EntityOne";
+            }
 
-        @Override
-        public String getName() {
-          return null;
-        }
+            @Override
+            public String getName() {
+              return null;
+            }
 
-        @Override
-        public String getQualifier() {
-          return null;
-        }
+            @Override
+            public String getQualifier() {
+              return null;
+            }
 
-        public Stream<CdsElement> compositions() {
-          CdsElement element1 = mock(CdsElement.class);
-          CdsElement element2 = mock(CdsElement.class);
-          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-          when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
-              .thenReturn(Optional.of(maxcountAnnotation));
+            public Stream<CdsElement> compositions() {
+              CdsElement element1 = mock(CdsElement.class);
+              CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
+                  .thenReturn(Optional.of(maxcountAnnotation));
 
-          when(maxcountAnnotation.getValue()).thenReturn("1");
+              when(maxcountAnnotation.getValue()).thenReturn("1");
 
-          List<CdsElement> compositions = List.of(element1, element2);
-          return compositions.stream();
-        }
-      };
+              List<CdsElement> compositions = List.of(element1, element2);
+              return compositions.stream();
+            }
+          };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       // when(cds)
@@ -1018,126 +1024,127 @@ public class SDMUtilsTest {
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(null);
-      CdsEntity mainEntity = new CdsEntity() {
-        @Override
-        public Stream<CdsAnnotation<?>> annotations() {
-          return null;
-        }
+      CdsEntity mainEntity =
+          new CdsEntity() {
+            @Override
+            public Stream<CdsAnnotation<?>> annotations() {
+              return null;
+            }
 
-        @Override
-        public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public <T> Optional<CdsAnnotation<T>> findAnnotation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public boolean isAbstract() {
-          return false;
-        }
+            @Override
+            public boolean isAbstract() {
+              return false;
+            }
 
-        @Override
-        public boolean isView() {
-          return false;
-        }
+            @Override
+            public boolean isView() {
+              return false;
+            }
 
-        @Override
-        public boolean isProjection() {
-          return false;
-        }
+            @Override
+            public boolean isProjection() {
+              return false;
+            }
 
-        @Override
-        public Optional<CqnSelect> query() {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CqnSelect> query() {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsParameter> params() {
-          return null;
-        }
+            @Override
+            public Stream<CdsParameter> params() {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsAction> actions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsAction> actions() {
+              return null;
+            }
 
-        @Override
-        public CdsAction getAction(String s) {
-          return null;
-        }
+            @Override
+            public CdsAction getAction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsAction> findAction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsAction> findAction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public Stream<CdsFunction> functions() {
-          return null;
-        }
+            @Override
+            public Stream<CdsFunction> functions() {
+              return null;
+            }
 
-        @Override
-        public CdsFunction getFunction(String s) {
-          return null;
-        }
+            @Override
+            public CdsFunction getFunction(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsFunction> findFunction(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsFunction> findFunction(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getElement(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getElement(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findElement(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findElement(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public CdsElement getAssociation(String s) {
-          return null;
-        }
+            @Override
+            public CdsElement getAssociation(String s) {
+              return null;
+            }
 
-        @Override
-        public Optional<CdsElement> findAssociation(String s) {
-          return Optional.empty();
-        }
+            @Override
+            public Optional<CdsElement> findAssociation(String s) {
+              return Optional.empty();
+            }
 
-        @Override
-        public <S extends CdsStructuredType> S getTargetOf(String s) {
-          return null;
-        }
+            @Override
+            public <S extends CdsStructuredType> S getTargetOf(String s) {
+              return null;
+            }
 
-        @Override
-        public Stream<CdsElement> elements() {
-          return null;
-        }
+            @Override
+            public Stream<CdsElement> elements() {
+              return null;
+            }
 
-        @Override
-        public String getQualifiedName() {
-          return "com.sap.demo.EntityOne";
-        }
+            @Override
+            public String getQualifiedName() {
+              return "com.sap.demo.EntityOne";
+            }
 
-        @Override
-        public String getName() {
-          return null;
-        }
+            @Override
+            public String getName() {
+              return null;
+            }
 
-        @Override
-        public String getQualifier() {
-          return null;
-        }
+            @Override
+            public String getQualifier() {
+              return null;
+            }
 
-        public Stream<CdsElement> compositions() {
-          CdsElement element1 = mock(CdsElement.class);
-          CdsElement element2 = mock(CdsElement.class);
-          when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-          when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
-          List<CdsElement> compositions = List.of(element1, element2);
-          return compositions.stream();
-        }
-      };
+            public Stream<CdsElement> compositions() {
+              CdsElement element1 = mock(CdsElement.class);
+              CdsElement element2 = mock(CdsElement.class);
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
+              List<CdsElement> compositions = List.of(element1, element2);
+              return compositions.stream();
+            }
+          };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
       String result = getAttachmentCountAndMessage(entities, attachmentEntity);
