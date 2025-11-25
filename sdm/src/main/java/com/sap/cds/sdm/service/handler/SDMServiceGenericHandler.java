@@ -2,8 +2,6 @@ package com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -329,7 +327,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    String upID = fetchUPIDFromCQN(select);
+    String upID = fetchUPIDFromCQN(select, cdsModel);
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -548,28 +546,14 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private String fetchUPIDFromCQN(CqnSelect select) {
+  private String fetchUPIDFromCQN(CqnSelect select, CdsModel cdsModel) {
     try {
-      String upID = null;
-      ObjectMapper mapper = new ObjectMapper();
-      JsonNode root = mapper.readTree(select.toString());
-      JsonNode refArray = root.path("SELECT").path("from").path("ref");
-      JsonNode secondLast = refArray.get(refArray.size() - 2);
-      JsonNode whereArray = secondLast.path("where");
-      for (int i = 0; i < whereArray.size(); i++) {
-        JsonNode node = whereArray.get(i);
-        if (node.has("ref")
-            && node.get("ref").isArray()
-            && node.get("ref").get(0).asText().equals("ID")) {
-          JsonNode valNode = whereArray.get(i + 2);
-          upID = valNode.path("val").asText();
-          break;
-        }
-      }
-      if (upID == null) {
+      CqnAnalyzer analyzer = CqnAnalyzer.create(cdsModel);
+      Map<String, Object> rootKeys = analyzer.analyze(select).rootKeys();
+      if (rootKeys.isEmpty()) {
         throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
       }
-      return upID;
+      return rootKeys.values().iterator().next().toString();
     } catch (Exception e) {
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
