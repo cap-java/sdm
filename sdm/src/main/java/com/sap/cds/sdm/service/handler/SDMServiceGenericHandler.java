@@ -550,11 +550,21 @@ public class SDMServiceGenericHandler implements EventHandler {
     try {
       CqnAnalyzer analyzer = CqnAnalyzer.create(cdsModel);
       Map<String, Object> rootKeys = analyzer.analyze(select).rootKeys();
+
+      System.out.println("fetchUPIDFromCQN: Extracted rootKeys = " + rootKeys);
+      System.out.println("fetchUPIDFromCQN: Number of keys found = " + rootKeys.size());
+
       if (rootKeys.isEmpty()) {
+        System.out.println("fetchUPIDFromCQN: ERROR - No root keys found!");
         throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
       }
-      return rootKeys.values().iterator().next().toString();
+
+      String upID = rootKeys.values().iterator().next().toString();
+      System.out.println("fetchUPIDFromCQN: Extracted parent ID = " + upID);
+
+      return upID;
     } catch (Exception e) {
+      System.out.println("fetchUPIDFromCQN: EXCEPTION occurred - " + e.getMessage());
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
