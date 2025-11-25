@@ -340,7 +340,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
-    String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
+    String[] parts = context.getTarget().getQualifiedName().split("\\.");
+    String entityName = parts[parts.length - 1];
     String folderName = upID + "__" + entityName;
 
     String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
