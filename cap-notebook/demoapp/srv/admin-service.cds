@@ -10,6 +10,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -29,6 +30,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -48,6 +50,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -67,6 +70,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -86,6 +90,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -106,6 +111,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -125,6 +131,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -144,6 +151,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -164,6 +172,7 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['']},)
     action moveAttachments(in:many $self, up__ID:String, sourceFolderId:String, objectIds:String);
 
     @(Common.SideEffects : {TargetEntities: ['']},)
