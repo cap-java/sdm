@@ -3,6 +3,7 @@ package com.sap.cds.sdm.persistence;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
+import com.sap.cds.ql.Delete;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -18,10 +19,13 @@ import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DBQuery {
 
   private static DBQuery dbQueryInstance = new DBQuery();
+  private static final Logger logger = LoggerFactory.getLogger(DBQuery.class);
 
   private DBQuery() {
     // Singleton pattern
@@ -324,5 +328,101 @@ public class DBQuery {
       propertyValueMap.put(mapKey, value != null ? value.toString() : null);
     }
     return propertyValueMap;
+  }
+
+  /**
+   * Deletes attachment metadata from the source entity (both draft and non-draft tables) for the
+   * given list of object IDs. This is used to clean up source entity after successful moves.
+   *
+   * @param persistenceService The persistence service to execute the delete
+   * @param objectIds The list of object IDs to delete
+   * @param context The move event context containing source entity information
+   * @return The number of records deleted
+   */
+  public int deleteAttachmentsByObjectIds(
+      PersistenceService persistenceService,
+      List<String> objectIds,
+      AttachmentMoveEventContext context) {
+    if (objectIds == null || objectIds.isEmpty()) {
+      return 0;
+    }
+
+    String sourceParentEntity = context.getSourceParentEntity();
+    String sourceCompositionName = context.getSourceCompositionName();
+
+    // If source entity info is not provided, skip cleanup
+    if (sourceParentEntity == null || sourceCompositionName == null) {
+      logger.warn(
+          "Source entity information not provided. Skipping metadata cleanup for {} attachments.",
+          objectIds.size());
+      return 0;
+    }
+
+    CdsModel model = context.getModel();
+
+    // Find the source parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(sourceParentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      logger.error(
+          "Unable to find source parent entity: {}. Skipping cleanup.", sourceParentEntity);
+      return 0;
+    }
+
+    // Find the composition element in the source parent entity
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(sourceCompositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error(
+          "Unable to find composition '{}' in source entity: {}. Skipping cleanup.",
+          sourceCompositionName,
+          sourceParentEntity);
+      return 0;
+    }
+
+    // Get the target entity of the composition
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    int deletedCount = 0;
+
+    // Try deleting from draft table first
+    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      var deleteQuery =
+          Delete.from(attachmentDraftEntity.get())
+              .where(doc -> doc.get("objectId").in(objectIds.toArray()));
+      Result result = persistenceService.run(deleteQuery);
+      deletedCount += result.rowCount();
+      logger.info(
+          "Deleted {} attachment records from draft table '{}' for objectIds: {}",
+          result.rowCount(),
+          targetEntityName + "_drafts",
+          objectIds);
+    }
+
+    // Try deleting from non-draft table
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isPresent()) {
+      var deleteQuery =
+          Delete.from(attachmentEntity.get())
+              .where(doc -> doc.get("objectId").in(objectIds.toArray()));
+      Result result = persistenceService.run(deleteQuery);
+      deletedCount += result.rowCount();
+      logger.info(
+          "Deleted {} attachment records from table '{}' for objectIds: {}",
+          result.rowCount(),
+          targetEntityName,
+          objectIds);
+    }
+
+    if (deletedCount == 0) {
+      logger.warn(
+          "No attachment metadata found in source entity '{}' for objectIds: {}. This may indicate"
+              + " the records were already cleaned up.",
+          targetEntityName,
+          objectIds);
+    }
+
+    return deletedCount;
   }
 }

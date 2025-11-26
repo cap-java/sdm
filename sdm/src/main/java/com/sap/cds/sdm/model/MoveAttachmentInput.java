@@ -7,10 +7,17 @@ import java.util.List;
  * model supports both regular entities and projection entities by using facet-based navigation.
  *
  * @param sourceFolderId The folder ID in SDM from which attachments should be moved
+ * @param sourceFacet The full facet path of the source entity (e.g., "Service.Entity.composition")
+ *     that will be internally parsed to determine source parent entity and composition name for
+ *     cleanup
  * @param upId The key of the target parent entity instance
  * @param targetFacet The full facet path (e.g., "Service.Entity.composition") that will be
  *     internally parsed to determine target parent entity and composition name
  * @param objectIds The list of attachment object IDs to be moved
  */
 public record MoveAttachmentInput(
-    String sourceFolderId, String upId, String targetFacet, List<String> objectIds) {}
+    String sourceFolderId,
+    String sourceFacet,
+    String upId,
+    String targetFacet,
+    List<String> objectIds) {}

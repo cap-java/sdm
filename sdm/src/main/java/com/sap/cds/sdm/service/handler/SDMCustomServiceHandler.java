@@ -243,6 +243,29 @@ public class SDMCustomServiceHandler {
 
       try {
         createDraftEntries(draftRequest);
+
+        // After successful DB update, clean up source entity metadata
+        // Only clean up successfully moved attachments (not failed ones)
+        List<String> successfullyMovedObjectIds = new ArrayList<>(successfulMovesMap.keySet());
+        if (!successfullyMovedObjectIds.isEmpty()) {
+          try {
+            int deletedCount =
+                dbQuery.deleteAttachmentsByObjectIds(
+                    persistenceService, successfullyMovedObjectIds, context);
+            logger.info(
+                "Cleaned up {} attachment metadata records from source entity for {} successfully"
+                    + " moved attachments",
+                deletedCount,
+                successfullyMovedObjectIds.size());
+          } catch (Exception cleanupException) {
+            // Log cleanup failure but don't fail the entire move operation
+            logger.warn(
+                "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
+                    + " successfully moved to target.",
+                successfullyMovedObjectIds.size(),
+                cleanupException.getMessage());
+          }
+        }
       } catch (ServiceException e) {
         // If DB update fails after retries, rollback the SDM moves
         logger.error(

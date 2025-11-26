@@ -42,6 +42,37 @@ public interface AttachmentMoveEventContext extends AttachmentCreateEventContext
   void setSourceFolderId(String sourceFolderId);
 
   /**
+   * Gets the qualified name of the source parent entity from which attachments are being moved.
+   * This is used to clean up the attachment metadata after successful moves.
+   *
+   * @return The qualified name of the source parent entity or {@code null} if not specified
+   */
+  String getSourceParentEntity();
+
+  /**
+   * Sets the qualified name of the source parent entity from which attachments are being moved.
+   *
+   * @param sourceParentEntity The qualified name of the source parent entity (e.g.,
+   *     "Service.Entity")
+   */
+  void setSourceParentEntity(String sourceParentEntity);
+
+  /**
+   * Gets the name of the composition property in the source entity that links to the attachments.
+   * This is used to clean up the attachment metadata after successful moves.
+   *
+   * @return The name of the source composition property or {@code null} if not specified
+   */
+  String getSourceCompositionName();
+
+  /**
+   * Sets the name of the composition property in the source entity that links to the attachments.
+   *
+   * @param sourceCompositionName The name of the source composition property
+   */
+  void setSourceCompositionName(String sourceCompositionName);
+
+  /**
    * Gets the ID of the target parent entity instance for which attachments are being moved. This
    * represents the key values of the entity that contains the attachment composition.
    *

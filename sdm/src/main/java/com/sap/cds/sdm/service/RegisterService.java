@@ -3,7 +3,7 @@ package com.sap.cds.sdm.service;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.model.MoveAttachmentInput;
 import com.sap.cds.services.Service;
-import java.util.List;
+import java.util.Map;
 
 public interface RegisterService extends Service {
   String SDM_NAME = "SDMAttachmentService$Default";
@@ -28,7 +28,8 @@ public interface RegisterService extends Service {
    * @param input The move attachment input containing source folder ID, target facet, and object
    *     IDs
    * @param isSystemUser Whether to use system user flow
-   * @return A list of object IDs for which the move operation failed (empty if all succeeded)
+   * @return A map containing the result with key "failedObjectIds" containing a list of object IDs
+   *     for which the move operation failed (empty list if all succeeded)
    */
-  public List<String> moveAttachments(MoveAttachmentInput input, boolean isSystemUser);
+  public Map<String, Object> moveAttachments(MoveAttachmentInput input, boolean isSystemUser);
 }
