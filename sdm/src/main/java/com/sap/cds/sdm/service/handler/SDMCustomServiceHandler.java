@@ -242,25 +242,28 @@ public class SDMCustomServiceHandler {
               .build();
 
       try {
+        // Get the source up__ID BEFORE creating draft entries
+        // This is critical when source and target are the same entity type
+        // We must query before createDraftEntries to avoid getting the target up__ID
+        List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
+        String sourceUpId = null;
+        if (!oldObjectIds.isEmpty()) {
+          sourceUpId = dbQuery.getSourceUpIdForObjectIds(persistenceService, oldObjectIds, context);
+          logger.info("DEBUG: Retrieved source up__ID BEFORE createDraftEntries: {}", sourceUpId);
+        }
+
         createDraftEntries(draftRequest);
 
         // After successful DB update, clean up source entity metadata
         // Only clean up successfully moved attachments (not failed ones)
-        // Use the OLD objectIds (before move) to identify source records
-        List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
         logger.info(
             "DEBUG: successfulMovesMap contains {} entries. Keys (OLD IDs): {}, Values (NEW IDs):"
                 + " {}",
             successfulMovesMap.size(),
             oldObjectIds,
             new ArrayList<>(successfulMovesMap.values()));
-        if (!oldObjectIds.isEmpty()) {
+        if (!oldObjectIds.isEmpty() && sourceUpId != null) {
           try {
-            // Get the source up__ID from the database to filter cleanup
-            // This is critical when source and target are the same entity type
-            String sourceUpId =
-                dbQuery.getSourceUpIdForObjectIds(persistenceService, oldObjectIds, context);
-            logger.info("DEBUG: Retrieved source up__ID: {}", sourceUpId);
 
             int deletedCount =
                 dbQuery.deleteAttachmentsByObjectIds(
