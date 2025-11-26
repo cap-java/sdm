@@ -281,13 +281,26 @@ public class SDMServiceGenericHandler implements EventHandler {
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
-    // get the objectId against the Id
-    String id = targetKeys.get("ID").toString();
+
+    System.out.println("openAttachment: Extracted targetKeys = " + targetKeys);
+
+    String id = null;
+    for (Map.Entry<String, Object> entry : targetKeys.entrySet()) {
+      if (!entry.getKey().equals("IsActiveEntity")) {
+        id = entry.getValue().toString();
+        System.out.println("openAttachment: Using key '" + entry.getKey() + "' with value = " + id);
+        break;
+      }
+    }
+
+    if (id == null) {
+      throw new ServiceException("No valid key found in targetKeys");
+    }
+
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
-      // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
@@ -369,7 +382,25 @@ public class SDMServiceGenericHandler implements EventHandler {
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
-    String ID = targetKeys.get("ID").toString();
+
+    System.out.println("editLink: Extracted targetKeys = " + targetKeys);
+
+    String extractedID = null;
+    for (Map.Entry<String, Object> entry : targetKeys.entrySet()) {
+      if (!entry.getKey().equals("IsActiveEntity")) {
+        extractedID = entry.getValue().toString();
+        System.out.println(
+            "editLink: Using key '" + entry.getKey() + "' with value = " + extractedID);
+        break;
+      }
+    }
+
+    if (extractedID == null) {
+      throw new ServiceException("No valid key found in targetKeys");
+    }
+
+    final String ID = extractedID;
+
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
     cmisDocument.setUrl(context.get("url").toString());
@@ -548,6 +579,8 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private String fetchUPIDFromCQN(CqnSelect select, CdsModel cdsModel) {
     try {
+      System.out.println("fetchUPIDFromCQN: Full CQN JSON = " + select.toJson());
+
       CqnAnalyzer analyzer = CqnAnalyzer.create(cdsModel);
       Map<String, Object> rootKeys = analyzer.analyze(select).rootKeys();
 
@@ -559,10 +592,17 @@ public class SDMServiceGenericHandler implements EventHandler {
         throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
       }
 
-      String upID = rootKeys.values().iterator().next().toString();
-      System.out.println("fetchUPIDFromCQN: Extracted parent ID = " + upID);
+      for (Map.Entry<String, Object> entry : rootKeys.entrySet()) {
+        if (!entry.getKey().equals("IsActiveEntity")) {
+          String upID = entry.getValue().toString();
+          System.out.println(
+              "fetchUPIDFromCQN: Found key '" + entry.getKey() + "' with value = " + upID);
+          return upID;
+        }
+      }
 
-      return upID;
+      System.out.println("fetchUPIDFromCQN: ERROR - Only IsActiveEntity found, no actual ID!");
+      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
     } catch (Exception e) {
       System.out.println("fetchUPIDFromCQN: EXCEPTION occurred - " + e.getMessage());
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
