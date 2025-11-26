@@ -248,12 +248,19 @@ public class SDMCustomServiceHandler {
         // Only clean up successfully moved attachments (not failed ones)
         // Use the OLD objectIds (before move) to identify source records
         List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
+        logger.info(
+            "DEBUG: successfulMovesMap contains {} entries. Keys (OLD IDs): {}, Values (NEW IDs):"
+                + " {}",
+            successfulMovesMap.size(),
+            oldObjectIds,
+            new ArrayList<>(successfulMovesMap.values()));
         if (!oldObjectIds.isEmpty()) {
           try {
             // Get the source up__ID from the database to filter cleanup
             // This is critical when source and target are the same entity type
             String sourceUpId =
                 dbQuery.getSourceUpIdForObjectIds(persistenceService, oldObjectIds, context);
+            logger.info("DEBUG: Retrieved source up__ID: {}", sourceUpId);
 
             int deletedCount =
                 dbQuery.deleteAttachmentsByObjectIds(
