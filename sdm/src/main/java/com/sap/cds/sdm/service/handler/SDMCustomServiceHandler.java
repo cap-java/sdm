@@ -222,7 +222,8 @@ public class SDMCustomServiceHandler {
     Map<String, String> successfulMovesMap = moveResult.getSuccessfulMovesMap();
 
     // Set the failed object IDs in the context for the caller
-    context.setFailedObjectIds(failedObjectIds);
+    // Convert to ArrayList to avoid Collections$SynchronizedRandomAccessList serialization issue
+    context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
 
     // Only create draft entries for successfully moved attachments
     if (!movedAttachmentsMetadata.isEmpty()) {
@@ -253,10 +254,13 @@ public class SDMCustomServiceHandler {
             targetFolderId,
             repositoryId,
             sdmCredentials,
-            isSystemUser);
+            isSystemUser,
+            context);
         // Add all successfully moved objects to failed list since we rolled back
         failedObjectIds.addAll(successfulMovesMap.keySet());
-        context.setFailedObjectIds(failedObjectIds);
+        // Convert to ArrayList to avoid Collections$SynchronizedRandomAccessList serialization
+        // issue
+        context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
         // Don't throw exception - return failed IDs to caller as per acceptance criteria
         logger.warn(
             "Move operation completed with failures. Total failed: {}, Rolled back: {}",
@@ -329,49 +333,58 @@ public class SDMCustomServiceHandler {
     Map<String, String> successfulMovesMap =
         new java.util.concurrent.ConcurrentHashMap<>(); // objectId -> newObjectId
 
+    // Capture the current request context to propagate to background threads
+    com.sap.cds.services.runtime.RequestContextRunner contextRunner =
+        request.getContext().getCdsRuntime().requestContext();
+
     // Create parallel tasks for each attachment move
     List<CompletableFuture<Void>> moveFutures =
         request.getObjectIds().stream()
             .map(
                 objectId ->
                     CompletableFuture.runAsync(
-                        () -> {
-                          try {
-                            CmisDocument cmisDocument =
-                                dbQuery.getAttachmentForObjectID(
-                                    persistenceService, objectId, request.getContext());
-                            cmisDocument.setObjectId(objectId);
-                            cmisDocument.setRepositoryId(request.getRepositoryId());
-                            cmisDocument.setSourceFolderId(request.getSourceFolderId());
-                            cmisDocument.setFolderId(request.getTargetFolderId());
+                        () ->
+                            // Run within the captured request context to preserve authentication
+                            contextRunner.run(
+                                ctx -> {
+                                  try {
+                                    CmisDocument cmisDocument =
+                                        dbQuery.getAttachmentForObjectID(
+                                            persistenceService, objectId, request.getContext());
+                                    cmisDocument.setObjectId(objectId);
+                                    cmisDocument.setRepositoryId(request.getRepositoryId());
+                                    cmisDocument.setSourceFolderId(request.getSourceFolderId());
+                                    cmisDocument.setFolderId(request.getTargetFolderId());
 
-                            // Create individual document for each attachment with its own type and
-                            // linkUrl
-                            CmisDocument populatedDocument = new CmisDocument();
-                            populatedDocument.setType(cmisDocument.getType());
-                            populatedDocument.setUrl(cmisDocument.getUrl());
+                                    // Create individual document for each attachment with its own
+                                    // type and linkUrl
+                                    CmisDocument populatedDocument = new CmisDocument();
+                                    populatedDocument.setType(cmisDocument.getType());
+                                    populatedDocument.setUrl(cmisDocument.getUrl());
 
-                            // Perform SDM move operation with retry
-                            List<String> metadata =
-                                sdmService.moveAttachment(
-                                    cmisDocument,
-                                    request.getSdmCredentials(),
-                                    request.getIsSystemUser());
+                                    // Perform SDM move operation with retry
+                                    List<String> metadata =
+                                        sdmService.moveAttachment(
+                                            cmisDocument,
+                                            request.getSdmCredentials(),
+                                            request.getIsSystemUser());
 
-                            // Track successful move for rollback (thread-safe)
-                            String newObjectId = metadata.get(2);
-                            successfulMovesMap.put(objectId, newObjectId);
-                            movedAttachmentsMetadata.add(metadata);
-                            populatedDocuments.add(populatedDocument);
-                          } catch (ServiceException | IOException e) {
-                            // Add to failed list and continue with next attachment (thread-safe)
-                            logger.error(
-                                "Failed to move attachment with objectId {}: {}",
-                                objectId,
-                                e.getMessage());
-                            failedObjectIds.add(objectId);
-                          }
-                        },
+                                    // Track successful move for rollback (thread-safe)
+                                    String newObjectId = metadata.get(2);
+                                    successfulMovesMap.put(objectId, newObjectId);
+                                    movedAttachmentsMetadata.add(metadata);
+                                    populatedDocuments.add(populatedDocument);
+                                  } catch (ServiceException | IOException e) {
+                                    // Add to failed list and continue with next attachment
+                                    // (thread-safe)
+                                    logger.error(
+                                        "Failed to move attachment with objectId {}: {}",
+                                        objectId,
+                                        e.getMessage());
+                                    failedObjectIds.add(objectId);
+                                  }
+                                  return null;
+                                }),
                         executorService))
             .toList();
 
@@ -516,42 +529,51 @@ public class SDMCustomServiceHandler {
       String targetFolderId,
       String repositoryId,
       SDMCredentials sdmCredentials,
-      boolean isSystemUser) {
+      boolean isSystemUser,
+      AttachmentMoveEventContext context) {
     logger.warn(
         "Rolling back {} moved attachments from {} to {}",
         successfulMovesMap.size(),
         targetFolderId,
         sourceFolderId);
 
+    // Capture the current request context to propagate to background threads
+    com.sap.cds.services.runtime.RequestContextRunner contextRunner =
+        context.getCdsRuntime().requestContext();
+
     List<CompletableFuture<Void>> rollbackFutures =
         successfulMovesMap.entrySet().stream()
             .map(
                 entry ->
                     CompletableFuture.runAsync(
-                        () -> {
-                          String originalObjectId = entry.getKey();
-                          String newObjectId = entry.getValue();
-                          try {
-                            // Create CMIS document for rollback move
-                            CmisDocument rollbackDoc = new CmisDocument();
-                            rollbackDoc.setObjectId(newObjectId);
-                            rollbackDoc.setRepositoryId(repositoryId);
-                            rollbackDoc.setSourceFolderId(targetFolderId);
-                            rollbackDoc.setFolderId(sourceFolderId);
+                        () ->
+                            contextRunner.run(
+                                ctx -> {
+                                  String originalObjectId = entry.getKey();
+                                  String newObjectId = entry.getValue();
+                                  try {
+                                    // Create CMIS document for rollback move
+                                    CmisDocument rollbackDoc = new CmisDocument();
+                                    rollbackDoc.setObjectId(newObjectId);
+                                    rollbackDoc.setRepositoryId(repositoryId);
+                                    rollbackDoc.setSourceFolderId(targetFolderId);
+                                    rollbackDoc.setFolderId(sourceFolderId);
 
-                            // Move back to source folder with retry
-                            sdmService.moveAttachment(rollbackDoc, sdmCredentials, isSystemUser);
-                            logger.info(
-                                "Successfully rolled back attachment {} to source folder",
-                                originalObjectId);
-                          } catch (Exception e) {
-                            logger.error(
-                                "Failed to rollback attachment {} during rollback: {}",
-                                originalObjectId,
-                                e.getMessage());
-                            // Continue with other rollbacks even if one fails
-                          }
-                        },
+                                    // Move back to source folder with retry
+                                    sdmService.moveAttachment(
+                                        rollbackDoc, sdmCredentials, isSystemUser);
+                                    logger.info(
+                                        "Successfully rolled back attachment {} to source folder",
+                                        originalObjectId);
+                                  } catch (Exception e) {
+                                    logger.error(
+                                        "Failed to rollback attachment {} during rollback: {}",
+                                        originalObjectId,
+                                        e.getMessage());
+                                    // Continue with other rollbacks even if one fails
+                                  }
+                                  return null;
+                                }),
                         executorService))
             .toList();
 
