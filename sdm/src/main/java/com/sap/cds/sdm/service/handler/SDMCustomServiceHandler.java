@@ -246,23 +246,23 @@ public class SDMCustomServiceHandler {
 
         // After successful DB update, clean up source entity metadata
         // Only clean up successfully moved attachments (not failed ones)
-        List<String> successfullyMovedObjectIds = new ArrayList<>(successfulMovesMap.keySet());
-        if (!successfullyMovedObjectIds.isEmpty()) {
+        // Use the OLD objectIds (before move) to identify source records
+        List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
+        if (!oldObjectIds.isEmpty()) {
           try {
             int deletedCount =
-                dbQuery.deleteAttachmentsByObjectIds(
-                    persistenceService, successfullyMovedObjectIds, context);
+                dbQuery.deleteAttachmentsByObjectIds(persistenceService, oldObjectIds, context);
             logger.info(
                 "Cleaned up {} attachment metadata records from source entity for {} successfully"
                     + " moved attachments",
                 deletedCount,
-                successfullyMovedObjectIds.size());
+                oldObjectIds.size());
           } catch (Exception cleanupException) {
             // Log cleanup failure but don't fail the entire move operation
             logger.warn(
                 "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
                     + " successfully moved to target.",
-                successfullyMovedObjectIds.size(),
+                oldObjectIds.size(),
                 cleanupException.getMessage());
           }
         }

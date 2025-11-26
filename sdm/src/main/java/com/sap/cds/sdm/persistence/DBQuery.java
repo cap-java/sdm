@@ -379,14 +379,15 @@ public class DBQuery {
       return 0;
     }
 
-    // Get the target entity of the composition
+    // Get the target entity of the composition (this is the SOURCE attachment entity)
     CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
-    String targetEntityName = assocType.getTarget().getQualifiedName();
+    String sourceAttachmentEntityName = assocType.getTarget().getQualifiedName();
 
     int deletedCount = 0;
 
     // Try deleting from draft table first
-    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(sourceAttachmentEntityName + "_drafts");
     if (attachmentDraftEntity.isPresent()) {
       var deleteQuery =
           Delete.from(attachmentDraftEntity.get())
@@ -394,14 +395,14 @@ public class DBQuery {
       Result result = persistenceService.run(deleteQuery);
       deletedCount += result.rowCount();
       logger.info(
-          "Deleted {} attachment records from draft table '{}' for objectIds: {}",
+          "Deleted {} attachment records from SOURCE draft table '{}' for objectIds: {}",
           result.rowCount(),
-          targetEntityName + "_drafts",
+          sourceAttachmentEntityName + "_drafts",
           objectIds);
     }
 
     // Try deleting from non-draft table
-    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    Optional<CdsEntity> attachmentEntity = model.findEntity(sourceAttachmentEntityName);
     if (attachmentEntity.isPresent()) {
       var deleteQuery =
           Delete.from(attachmentEntity.get())
@@ -409,9 +410,9 @@ public class DBQuery {
       Result result = persistenceService.run(deleteQuery);
       deletedCount += result.rowCount();
       logger.info(
-          "Deleted {} attachment records from table '{}' for objectIds: {}",
+          "Deleted {} attachment records from SOURCE table '{}' for objectIds: {}",
           result.rowCount(),
-          targetEntityName,
+          sourceAttachmentEntityName,
           objectIds);
     }
 
@@ -419,7 +420,7 @@ public class DBQuery {
       logger.warn(
           "No attachment metadata found in source entity '{}' for objectIds: {}. This may indicate"
               + " the records were already cleaned up.",
-          targetEntityName,
+          sourceAttachmentEntityName,
           objectIds);
     }
 
