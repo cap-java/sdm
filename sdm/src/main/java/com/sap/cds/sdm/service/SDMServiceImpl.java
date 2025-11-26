@@ -702,4 +702,66 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
     }
   }
+
+  @Override
+  public List<String> moveAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+
+    logger.info("Moving attachment - This is a :{} flow", grantType);
+
+    try {
+      // Use RxJava with retry logic for move operation
+      return io.reactivex.Flowable.fromCallable(
+              () -> {
+                var httpClient =
+                    tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+                String sdmUrl =
+                    sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+                HttpPost moveFile = new HttpPost(sdmUrl);
+                MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+                // Add form fields for move operation
+                builder.addTextBody("cmisaction", "move", ContentType.TEXT_PLAIN);
+                builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody(
+                    "sourceFolderId", cmisDocument.getSourceFolderId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody(
+                    "targetFolderId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody("succinct", "true");
+                HttpEntity multipart = builder.build();
+                moveFile.setEntity(multipart);
+
+                try (var response = (CloseableHttpResponse) httpClient.execute(moveFile)) {
+                  // Handle response entity
+                  HttpEntity entity = response.getEntity();
+                  String responseBody =
+                      entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+
+                  if (response.getStatusLine().getStatusCode() == 201
+                      || response.getStatusLine().getStatusCode() == 200) {
+                    // Process successful response
+                    JSONObject jsonObject = new JSONObject(responseBody);
+                    JSONObject props = jsonObject.getJSONObject("succinctProperties");
+                    String fileName = props.optString("cmis:name");
+                    String mimeType = props.optString("cmis:contentStreamMimeType");
+                    String objectId = props.optString("cmis:objectId");
+                    return List.of(fileName, mimeType, objectId);
+                  }
+
+                  // On error, throw exception with error information
+                  JSONObject errorJson = new JSONObject(responseBody);
+                  String exceptionType = errorJson.optString("exception");
+                  String errorMessage = errorJson.optString("message");
+                  throw new ServiceException(exceptionType + " : " + errorMessage);
+                }
+              })
+          .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
+          .blockingFirst();
+    } catch (Exception e) {
+      logger.error("Failed to move attachment after retries: {}", e.getMessage(), e);
+      throw new ServiceException(SDMConstants.FAILED_TO_MOVE_ATTACHMENT, e);
+    }
+  }
 }

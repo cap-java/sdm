@@ -82,7 +82,8 @@ public class SDMCustomServiceHandlerTest {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -114,7 +115,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://document");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -152,7 +154,8 @@ public class SDMCustomServiceHandlerTest {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -188,7 +191,8 @@ public class SDMCustomServiceHandlerTest {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     // Mock context
     AttachmentCopyEventContext context = createMockContext();
@@ -235,7 +239,8 @@ public class SDMCustomServiceHandlerTest {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     ServiceException ex =
         assertThrows(
@@ -271,7 +276,8 @@ public class SDMCustomServiceHandlerTest {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any())).thenReturn(cmisDocument);
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
 
     ServiceException ex =
         assertThrows(

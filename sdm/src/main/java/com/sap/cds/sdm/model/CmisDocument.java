@@ -19,6 +19,7 @@ public class CmisDocument {
   private InputStream content;
   private String parentId;
   private String folderId;
+  private String sourceFolderId;
   private String repositoryId;
   private String status;
   private String mimeType;

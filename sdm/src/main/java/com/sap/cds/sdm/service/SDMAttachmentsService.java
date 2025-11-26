@@ -12,11 +12,14 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRe
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
+import com.sap.cds.sdm.model.MoveAttachmentInput;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
+import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +58,42 @@ public class SDMAttachmentsService extends ServiceDelegator
     copyContext.setSystemUser(isSystemUser);
 
     emit(copyContext);
+  }
+
+  @Override
+  public List<String> moveAttachments(MoveAttachmentInput input, boolean isSystemUser) {
+    logger.info(
+        "Moving attachments from sourceFolderId: {} to upId: {}, targetFacet: {}, objectIds: {},"
+            + " isSystemUser: {}",
+        input.sourceFolderId(),
+        input.upId(),
+        input.targetFacet(),
+        input.objectIds(),
+        isSystemUser);
+
+    // Parse facet to extract parent entity and composition name
+    String[] facetParts = input.targetFacet().split("\\.");
+    if (facetParts.length < 3) {
+      throw new IllegalArgumentException(
+          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.targetFacet()));
+    }
+
+    String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity
+    String compositionName = facetParts[2]; // composition name
+
+    var moveContext = AttachmentMoveEventContext.create();
+    moveContext.setSourceFolderId(input.sourceFolderId());
+    moveContext.setUpId(input.upId());
+    moveContext.setParentEntity(parentEntity);
+    moveContext.setCompositionName(compositionName);
+    moveContext.setObjectIds(input.objectIds());
+    moveContext.setSystemUser(isSystemUser);
+
+    emit(moveContext);
+
+    // Return the list of failed object IDs from context
+    System.out.println("Failed Object IDs: " + moveContext.getFailedObjectIds());
+    return moveContext.getFailedObjectIds();
   }
 
   @Override

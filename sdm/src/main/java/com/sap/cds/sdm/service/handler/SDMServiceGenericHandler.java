@@ -89,6 +89,26 @@ public class SDMServiceGenericHandler implements EventHandler {
     context.setCompleted();
   }
 
+  @On(event = "moveAttachments")
+  public List<String> moveAttachments(EventContext context) throws IOException {
+    String upID = context.get("up__ID").toString();
+    String sourceFolderId = context.get("sourceFolderId").toString();
+    String objectIdsString = context.get("objectIds").toString();
+    List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
+
+    // Use the full target qualified name as the targetFacet
+    String targetFacet = context.getTarget().getQualifiedName();
+
+    var moveEventInput = new MoveAttachmentInput(sourceFolderId, upID, targetFacet, objectIds);
+
+    List<String> failedObjectIds =
+        attachmentService.moveAttachments(moveEventInput, context.getUserInfo().isSystemUser());
+    context.setCompleted();
+
+    System.out.println("Failed Object IDs: " + failedObjectIds);
+    return failedObjectIds;
+  }
+
   @On(event = "createLink")
   public void create(EventContext context) throws IOException {
     validateRepository(context);

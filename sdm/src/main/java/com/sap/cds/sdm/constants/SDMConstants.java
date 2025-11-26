@@ -98,6 +98,10 @@ public class SDMConstants {
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
   public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
   public static final String FAILED_TO_COPY_ATTACHMENT = "Failed to copy attachment";
+  public static final String FAILED_TO_MOVE_ATTACHMENT = "Failed to move attachment";
+  public static final String FAILED_TO_MOVE_ATTACHMENT_MSG = "SDM.Move.failedToMoveAttachmentError";
+  public static final String MOVE_OPERATION_PARTIAL_FAILURE =
+      "Move operation completed with some failures";
   public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
   public static final String FAILED_TO_FETCH_FACET =
       "Invalid facet format, unable to extract required information.";
