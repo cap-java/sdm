@@ -336,12 +336,15 @@ public class DBQuery {
    *
    * @param persistenceService The persistence service to execute the delete
    * @param objectIds The list of object IDs to delete
+   * @param sourceUpId The up__ID of the source entity to filter deletions (critical when source and
+   *     target are same entity type)
    * @param context The move event context containing source entity information
    * @return The number of records deleted
    */
   public int deleteAttachmentsByObjectIds(
       PersistenceService persistenceService,
       List<String> objectIds,
+      String sourceUpId,
       AttachmentMoveEventContext context) {
     if (objectIds == null || objectIds.isEmpty()) {
       return 0;
@@ -385,13 +388,26 @@ public class DBQuery {
 
     int deletedCount = 0;
 
+    // Resolve the up__ID key name
+    String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
+    if (upIdKey == null) {
+      logger.error(
+          "Unable to resolve up__ID key for source entity: {}. Skipping cleanup.",
+          sourceParentEntity);
+      return 0;
+    }
+
     // Try deleting from draft table first
     Optional<CdsEntity> attachmentDraftEntity =
         model.findEntity(sourceAttachmentEntityName + "_drafts");
     if (attachmentDraftEntity.isPresent()) {
       var deleteQuery =
           Delete.from(attachmentDraftEntity.get())
-              .where(doc -> doc.get("objectId").in(objectIds.toArray()));
+              .where(
+                  doc ->
+                      doc.get("objectId")
+                          .in(objectIds.toArray())
+                          .and(doc.get(upIdKey).eq(sourceUpId)));
       Result result = persistenceService.run(deleteQuery);
       deletedCount += result.rowCount();
       logger.info(
@@ -406,7 +422,11 @@ public class DBQuery {
     if (attachmentEntity.isPresent()) {
       var deleteQuery =
           Delete.from(attachmentEntity.get())
-              .where(doc -> doc.get("objectId").in(objectIds.toArray()));
+              .where(
+                  doc ->
+                      doc.get("objectId")
+                          .in(objectIds.toArray())
+                          .and(doc.get(upIdKey).eq(sourceUpId)));
       Result result = persistenceService.run(deleteQuery);
       deletedCount += result.rowCount();
       logger.info(
@@ -425,5 +445,127 @@ public class DBQuery {
     }
 
     return deletedCount;
+  }
+
+  /**
+   * Queries the source entity's up__ID from the database using the given objectIds. This is used to
+   * identify which source entity instance owns the attachments before cleanup.
+   *
+   * @param persistenceService The persistence service to execute the query
+   * @param objectIds The list of object IDs to query
+   * @param context The move event context containing source entity information
+   * @return The up__ID of the source entity, or null if not found
+   */
+  public String getSourceUpIdForObjectIds(
+      PersistenceService persistenceService,
+      List<String> objectIds,
+      AttachmentMoveEventContext context) {
+    if (objectIds == null || objectIds.isEmpty()) {
+      return null;
+    }
+
+    String sourceParentEntity = context.getSourceParentEntity();
+    String sourceCompositionName = context.getSourceCompositionName();
+
+    if (sourceParentEntity == null || sourceCompositionName == null) {
+      return null;
+    }
+
+    CdsModel model = context.getModel();
+
+    // Find the source parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(sourceParentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      return null;
+    }
+
+    // Find the composition element
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(sourceCompositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      return null;
+    }
+
+    // Get the source attachment entity
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String sourceAttachmentEntityName = assocType.getTarget().getQualifiedName();
+
+    // Resolve the up__ID key name
+    String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
+    if (upIdKey == null) {
+      return null;
+    }
+
+    // Query from draft table first (most likely to have the records)
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(sourceAttachmentEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      CqnSelect q =
+          Select.from(attachmentDraftEntity.get())
+              .columns(upIdKey)
+              .where(doc -> doc.get("objectId").eq(objectIds.get(0)));
+      Result result = persistenceService.run(q);
+      Optional<Row> res = result.first();
+      if (res.isPresent()) {
+        Object upIdValue = res.get().get(upIdKey);
+        return upIdValue != null ? upIdValue.toString() : null;
+      }
+    }
+
+    // Try non-draft table
+    Optional<CdsEntity> attachmentEntity = model.findEntity(sourceAttachmentEntityName);
+    if (attachmentEntity.isPresent()) {
+      CqnSelect q =
+          Select.from(attachmentEntity.get())
+              .columns(upIdKey)
+              .where(doc -> doc.get("objectId").eq(objectIds.get(0)));
+      Result result = persistenceService.run(q);
+      Optional<Row> res = result.first();
+      if (res.isPresent()) {
+        Object upIdValue = res.get().get(upIdKey);
+        return upIdValue != null ? upIdValue.toString() : null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolves the up__ID key name for the given entity and composition.
+   *
+   * @param model The CDS model
+   * @param parentEntity The qualified name of the parent entity
+   * @param compositionName The name of the composition
+   * @return The up__ID key name, or null if not found
+   */
+  private String resolveUpIdKey(CdsModel model, String parentEntity, String compositionName) {
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      return null;
+    }
+
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      return null;
+    }
+
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+      if (upAssociation.isPresent()) {
+        CdsElement association = upAssociation.get();
+        CdsAssociationType upAssocType = association.getType();
+        List<String> fkElements = upAssocType.refs().map(ref -> "up__" + ref.path()).toList();
+        if (!fkElements.isEmpty()) {
+          return fkElements.get(0);
+        }
+      }
+    }
+
+    return null;
   }
 }

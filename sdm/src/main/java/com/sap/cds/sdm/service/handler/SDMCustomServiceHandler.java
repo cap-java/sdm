@@ -250,8 +250,14 @@ public class SDMCustomServiceHandler {
         List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
         if (!oldObjectIds.isEmpty()) {
           try {
+            // Get the source up__ID from the database to filter cleanup
+            // This is critical when source and target are the same entity type
+            String sourceUpId =
+                dbQuery.getSourceUpIdForObjectIds(persistenceService, oldObjectIds, context);
+
             int deletedCount =
-                dbQuery.deleteAttachmentsByObjectIds(persistenceService, oldObjectIds, context);
+                dbQuery.deleteAttachmentsByObjectIds(
+                    persistenceService, oldObjectIds, sourceUpId, context);
             logger.info(
                 "Cleaned up {} attachment metadata records from source entity for {} successfully"
                     + " moved attachments",
