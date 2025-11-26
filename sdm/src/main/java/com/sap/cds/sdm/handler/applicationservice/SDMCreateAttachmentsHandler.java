@@ -245,7 +245,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, updatedSecondaryProperties);
-    updateDescriptionForCreate(descriptionInRequest, updatedSecondaryProperties);
+    AttachmentsHandlerUtils.updateDescriptionProperty(
+        descriptionInSDM, descriptionInRequest, updatedSecondaryProperties);
 
     // Send update to SDM and handle response
     try {
@@ -278,13 +279,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           descriptionInSDM,
           filesWithUnsupportedProperties,
           badRequest);
-    }
-  }
-
-  private void updateDescriptionForCreate(
-      String descriptionInRequest, Map<String, String> updatedSecondaryProperties) {
-    if (descriptionInRequest != null) {
-      updatedSecondaryProperties.put("description", descriptionInRequest);
     }
   }
 

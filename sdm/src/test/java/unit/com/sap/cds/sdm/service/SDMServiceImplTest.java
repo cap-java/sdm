@@ -1295,7 +1295,6 @@ public class SDMServiceImplTest {
       Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(any())).thenReturn(null);
 
-      //
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       String grantType = "TOKEN_EXCHANGE";
       when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
@@ -1339,7 +1338,6 @@ public class SDMServiceImplTest {
       Cache<SecondaryPropertiesKey, List<String>> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(any())).thenReturn(secondaryTypesCached);
 
-      //
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryTypesCache).thenReturn(mockCache);
 

@@ -694,10 +694,10 @@ public class AttachmentsHandlerUtils {
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         break;
       case 404:
-        filesNotFound.add(filenameInRequest);
+        filesNotFound.add(fileNameInSDM);
         revertAttachmentProperties(
             attachment,
-            filenameInRequest,
+            fileNameInSDM,
             propertiesInDB,
             secondaryTypeProperties,
             descriptionInSDM);
