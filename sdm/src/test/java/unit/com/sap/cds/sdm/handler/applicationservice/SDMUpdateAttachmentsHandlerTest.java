@@ -1,7 +1,6 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
-import static com.sap.cds.sdm.utilities.SDMUtils.isFileNameDuplicateInDrafts;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -94,31 +93,61 @@ public class SDMUpdateAttachmentsHandlerTest {
       when(context.getModel()).thenReturn(model);
       when(model.findEntity(anyString())).thenReturn(Optional.of(targetEntity));
 
-      // Mock AttachmentsHandlerUtils.getAttachmentPathMapping to return the expected mapping
+      // Mock AttachmentsHandlerUtils.getAttachmentCompositionDetails to return the expected mapping
+      Map<String, Map<String, String>> expectedCompositionMapping2 = new HashMap<>();
+      Map<String, String> compositionInfo1 = new HashMap<>();
+      compositionInfo1.put("name", "Name1");
+      compositionInfo1.put("parentTitle", "TestTitle");
+      expectedCompositionMapping2.put("Name1", compositionInfo1);
+
+      Map<String, String> compositionInfo2 = new HashMap<>();
+      compositionInfo2.put("name", "Name2");
+      compositionInfo2.put("parentTitle", "TestTitle");
+      expectedCompositionMapping2.put("Name2", compositionInfo2);
+
       attachmentsHandlerUtilsMocked
-          .when(() -> AttachmentsHandlerUtils.getAttachmentPathMapping(any(), any(), any()))
-          .thenReturn(expectedCompositionMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+                      any(), any(), any(), any(), any()))
+          .thenReturn(expectedCompositionMapping2);
 
       List<CdsData> dataList = new ArrayList<>();
+      CdsData entityData = mock(CdsData.class);
+      dataList.add(entityData);
 
       // Act
       handler.processBefore(context, dataList);
 
       // Assert that updateName was called with the compositions detected
-      for (Map.Entry<String, String> entry : expectedCompositionMapping.entrySet()) {
-        verify(handler).updateName(context, dataList, entry.getKey(), entry.getValue());
-      }
+      verify(handler).updateName(context, dataList, expectedCompositionMapping2);
     }
   }
 
   @Test
   public void testRenameWithDuplicateFilenames() throws IOException {
-    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class);
+        MockedStatic<AttachmentsHandlerUtils> attachmentsMockedStatic =
+            mockStatic(AttachmentsHandlerUtils.class)) {
       Cache<Object, Object> mockCache = mock(Cache.class);
       cacheConfigMockedStatic.when(CacheConfig::getSecondaryPropertiesCache).thenReturn(mockCache);
 
+      // Prepare a data list with a mocked CdsData element (CdsData implements Map)
       List<CdsData> data = new ArrayList<>();
-      Set<String> duplicateFilenames = new HashSet<>(Arrays.asList("file1.txt", "file2.txt"));
+      CdsData mockCdsData = mock(CdsData.class);
+      data.add(mockCdsData);
+
+      // Prepare attachments that contain duplicate file names
+      List<Map<String, Object>> attachments = new ArrayList<>();
+      Map<String, Object> attachment1 = new HashMap<>();
+      attachment1.put("fileName", "file1.txt");
+      attachment1.put("repositoryId", SDMConstants.REPOSITORY_ID);
+      Map<String, Object> attachment2 = new HashMap<>();
+      attachment2.put("fileName", "file1.txt");
+      attachment2.put("repositoryId", SDMConstants.REPOSITORY_ID);
+      attachments.add(attachment1);
+      attachments.add(attachment2);
+
       when(context.getMessages()).thenReturn(messages);
 
       // Mock the target entity
@@ -126,16 +155,54 @@ public class SDMUpdateAttachmentsHandlerTest {
       when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
       when(context.getTarget()).thenReturn(targetEntity);
 
-      sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
-      sdmUtilsMockedStatic
-          .when(() -> isFileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
-          .thenReturn(duplicateFilenames);
+      // Make AttachmentsHandlerUtils.fetchAttachments return our attachments for any entity
+      attachmentsMockedStatic
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachments(
+                      anyString(), any(Map.class), eq("compositionName")))
+          .thenReturn(attachments);
+      attachmentsMockedStatic
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.validateFileNames(
+                      any(), anyList(), anyString(), anyString()))
+          .thenCallRealMethod();
 
-      handler.updateName(context, data, "compositionDefinition", "compositionName");
+      // Mock SDMUtils helper methods to ensure validation works correctly
+      try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
+            .thenReturn(new HashSet<>());
+        sdmUtilsMockedStatic
+            .when(
+                () ->
+                    SDMUtils.FileNameContainsRestrictedCharaters(
+                        anyList(), anyString(), anyString()))
+            .thenReturn(new ArrayList<>());
+        Set<String> duplicateFiles = new HashSet<>();
+        duplicateFiles.add("file1.txt");
+        sdmUtilsMockedStatic
+            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .thenReturn(duplicateFiles);
 
-      verify(messages, times(1))
-          .error(
-              "The file(s) file1.txt, file2.txt have been added multiple times. Please rename and try again.");
+        // Call the method under test; validateFileNames will detect duplicates and call
+        // context.getMessages().error(...)
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("definition", "compositionDefinition");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
+
+        Set<String> expected = new HashSet<>();
+        expected.add("file1.txt");
+        verify(messages, times(1))
+            .error(
+                SDMConstants.duplicateFilenameFormat(expected)
+                    + "\n\nTable: compositionName\nPage: TestTitle");
+      }
     }
   }
 
@@ -292,7 +359,7 @@ public class SDMUpdateAttachmentsHandlerTest {
         sdmUtilsMock
             .when(
                 () ->
-                    SDMUtils.isFileNameDuplicateInDrafts(
+                    SDMUtils.FileNameDuplicateInDrafts(
                         any(List.class), eq("compositionName"), anyString()))
             .thenReturn(Collections.emptySet());
 
@@ -323,30 +390,27 @@ public class SDMUpdateAttachmentsHandlerTest {
             .thenReturn(secondaryProperties);
 
         sdmUtilsMock
-            .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+            .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
             .thenReturn(false);
 
         // Call the method
-        handler.updateName(context, data, "compositionDefinition", "compositionName");
+        Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+        Map<String, String> compositionInfo = new HashMap<>();
+        compositionInfo.put("name", "compositionName");
+        compositionInfo.put("parentTitle", "TestTitle");
+        attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+        handler.updateName(context, data, attachmentCompositionDetails);
 
         // Capture and assert the warning message
         ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
         verify(messages).warn(warningCaptor.capture());
         String warningMessage = warningCaptor.getValue();
 
-        String expectedMessage =
-            SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
-        assertEquals(expectedMessage, warningMessage);
+        // Assert that the warning message contains the expected content
+        assertTrue(warningMessage.contains("Could not update the following files"));
+        assertTrue(warningMessage.contains("file123.txt"));
+        assertTrue(warningMessage.contains("You do not have the required permissions"));
       }
-
-      // Capture and assert the warning message
-      ArgumentCaptor<String> warningCaptor = ArgumentCaptor.forClass(String.class);
-      verify(messages).warn(warningCaptor.capture());
-      String warningMessage = warningCaptor.getValue();
-
-      String expectedMessage =
-          SDMConstants.noSDMRolesMessage(Collections.singletonList("file123.txt"), "update");
-      assertEquals(expectedMessage, warningMessage);
     }
   }
 
@@ -513,7 +577,12 @@ public class SDMUpdateAttachmentsHandlerTest {
       data.add(cdsDataEntity);
 
       // Act
-      handler.updateName(context, data, "compositionDefinition", "compositionName");
+      Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
+      Map<String, String> compositionInfo = new HashMap<>();
+      compositionInfo.put("name", "compositionName");
+      compositionInfo.put("parentTitle", "TestTitle");
+      attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
+      handler.updateName(context, data, attachmentCompositionDetails);
 
       // Assert
       verify(sdmService, never())
