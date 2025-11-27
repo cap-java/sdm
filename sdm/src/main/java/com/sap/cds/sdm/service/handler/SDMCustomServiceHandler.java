@@ -22,7 +22,6 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -104,13 +103,25 @@ public class SDMCustomServiceHandler {
                               .toString()));
     }
 
-    Set<String> customPropertiesInSDM = new HashSet<>(customPropertyDefinitions.values());
-    String upID = context.getUpId();
-    String folderName = upID + "__" + compositionName;
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
-
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    // Fetch secondary types and valid secondary properties from SDM
+    List<String> secondaryTypes =
+        sdmService.getSecondaryTypes(repositoryId, sdmCredentials, isSystemUser);
+    List<String> validSecondaryProperties =
+        sdmService.getValidSecondaryProperties(
+            secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+
+    // Filter custom properties to only include those that are valid in SDM
+    Set<String> customPropertiesInSDM =
+        customPropertyDefinitions.values().stream()
+            .filter(validSecondaryProperties::contains)
+            .collect(Collectors.toSet());
+
+    String upID = context.getUpId();
+    String folderName = upID + "__" + compositionName;
     // Check if folder exists before trying to create it
     boolean folderExists =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser)
