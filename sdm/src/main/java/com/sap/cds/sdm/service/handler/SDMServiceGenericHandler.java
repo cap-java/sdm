@@ -164,17 +164,21 @@ public class SDMServiceGenericHandler implements EventHandler {
         return;
       }
 
+      // Get the actual key field names from the entity instead of hardcoding "ID"
+      List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
+
       Result nestedRecords =
           persistenceService.run(
               Select.from(nestedDraftEntity.get())
-                  .columns("ID")
                   .where(e -> e.get("IsActiveEntity").eq(false)));
 
       for (Row nestedRecord : nestedRecords) {
-        Object nestedEntityId = nestedRecord.get("ID");
-
         Map<String, Object> nestedEntityKeys = new HashMap<>();
-        nestedEntityKeys.put("ID", nestedEntityId);
+        
+        // Populate the key map with all actual key field names and values
+        for (String keyName : keyElementNames) {
+          nestedEntityKeys.put(keyName, nestedRecord.get(keyName));
+        }
         nestedEntityKeys.put("IsActiveEntity", false);
 
         for (Map.Entry<String, String> entry : nestedAttachmentMapping.entrySet()) {
@@ -427,6 +431,21 @@ public class SDMServiceGenericHandler implements EventHandler {
       upIdKey = fkElements.get(0);
     }
     return upIdKey;
+  }
+
+  /**
+   * Retrieves the key element names from a CdsEntity.
+   * This method extracts the names of all key fields defined in the entity,
+   * allowing for dynamic key field handling instead of hardcoding "ID".
+   *
+   * @param entity the CdsEntity to extract key element names from
+   * @return a list of key element names
+   */
+  private List<String> getKeyElementNames(CdsEntity entity) {
+    return entity.elements()
+        .filter(CdsElement::isKey)
+        .map(CdsElement::getName)
+        .toList();
   }
 
   private void checkAttachmentConstraints(
