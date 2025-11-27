@@ -169,12 +169,11 @@ public class SDMServiceGenericHandler implements EventHandler {
 
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get())
-                  .where(e -> e.get("IsActiveEntity").eq(false)));
+              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
 
       for (Row nestedRecord : nestedRecords) {
         Map<String, Object> nestedEntityKeys = new HashMap<>();
-        
+
         // Populate the key map with all actual key field names and values
         for (String keyName : keyElementNames) {
           nestedEntityKeys.put(keyName, nestedRecord.get(keyName));
@@ -434,18 +433,15 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   /**
-   * Retrieves the key element names from a CdsEntity.
-   * This method extracts the names of all key fields defined in the entity,
-   * allowing for dynamic key field handling instead of hardcoding "ID".
+   * Retrieves the key element names from a CdsEntity. This method extracts the names of all key
+   * fields defined in the entity, allowing for dynamic key field handling instead of hardcoding
+   * "ID".
    *
    * @param entity the CdsEntity to extract key element names from
    * @return a list of key element names
    */
   private List<String> getKeyElementNames(CdsEntity entity) {
-    return entity.elements()
-        .filter(CdsElement::isKey)
-        .map(CdsElement::getName)
-        .toList();
+    return entity.elements().filter(CdsElement::isKey).map(CdsElement::getName).toList();
   }
 
   private void checkAttachmentConstraints(
