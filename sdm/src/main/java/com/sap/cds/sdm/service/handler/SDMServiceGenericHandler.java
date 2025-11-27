@@ -80,10 +80,10 @@ public class SDMServiceGenericHandler implements EventHandler {
     CdsModel cdsModel = context.getModel();
     logger.info("CDS Model fetched in changelog: " + cdsModel);
     logger.info("Target entity qualified name: " + context.getTarget().getQualifiedName());
-    
+
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
     logger.info("CqnAnalyzer created successfully");
-    
+
     Optional<CdsEntity> attachmentEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
     logger.info("Draft attachment entity found: " + attachmentEntity.isPresent());
@@ -91,41 +91,50 @@ public class SDMServiceGenericHandler implements EventHandler {
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
     logger.info("Target keys extracted: " + targetKeys);
-    
+
     // get the objectId against the Id
     String id = targetKeys.get("ID").toString();
     logger.info("Attachment ID: " + id);
-    
+
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
-    logger.info("CMIS document retrieved - ObjectId: " + cmisDocument.getObjectId() + ", FileName: " + cmisDocument.getFileName());
-    
+    logger.info(
+        "CMIS document retrieved - ObjectId: "
+            + cmisDocument.getObjectId()
+            + ", FileName: "
+            + cmisDocument.getFileName());
+
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       logger.info("Filename is null or empty, fetching from non-draft entity");
       // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
       logger.info("Active attachment entity found: " + attachmentEntity.isPresent());
-      
+
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
-      logger.info("CMIS document retrieved from active entity - ObjectId: " + cmisDocument.getObjectId() + ", FileName: " + cmisDocument.getFileName());
+      logger.info(
+          "CMIS document retrieved from active entity - ObjectId: "
+              + cmisDocument.getObjectId()
+              + ", FileName: "
+              + cmisDocument.getFileName());
     }
-    
+
     logger.info("Retrieving SDM credentials");
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     logger.info("SDM credentials retrieved successfully");
-    
+
     logger.info("Is system user: " + context.getUserInfo().isSystemUser());
-    logger.info("Calling SDM service to get change log for objectId: " + cmisDocument.getObjectId());
-    
+    logger.info(
+        "Calling SDM service to get change log for objectId: " + cmisDocument.getObjectId());
+
     JSONObject jsonObject =
         sdmService.getChangeLog(
             cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
     logger.info("Change log retrieved from SDM service");
-    
+
     jsonObject.put("filename", cmisDocument.getFileName());
     logger.info("Filename added to JSON response: " + cmisDocument.getFileName());
-    
+
     context.setResult(jsonObject);
     logger.info("Changelog event handler completed successfully");
   }
