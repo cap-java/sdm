@@ -49,7 +49,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
     // Get comprehensive attachment composition details for each entity
-    logger.info("Processing UPDATE ATTACHMENTS HANDLER");
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
@@ -87,12 +86,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               + "\nPage: "
               + (parentTitle != null ? parentTitle : "Unknown");
 
+      Optional<CdsEntity> attachmentEntity = Optional.empty();
+      if (context.getModel() != null) {
+        attachmentEntity = context.getModel().findEntity(attachmentCompositionDefinition);
+      }
       isError =
           AttachmentsHandlerUtils.validateFileNames(
-              context, data, attachmentCompositionName, contextInfo);
+              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
       if (!isError) {
-        Optional<CdsEntity> attachmentEntity =
-            context.getModel().findEntity(attachmentCompositionDefinition);
         renameDocument(
             attachmentEntity,
             context,

@@ -13,7 +13,6 @@ import com.sap.cds.sdm.model.CreateDraftEntriesRequest;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.RegisterService;
-import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
@@ -27,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @ServiceName(value = "*", type = RegisterService.class)
 public class SDMCustomServiceHandler {
@@ -37,7 +34,6 @@ public class SDMCustomServiceHandler {
   private final List<DraftService> draftService;
   private final TokenHandler tokenHandler;
   private final PersistenceService persistenceService;
-  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsService.class);
 
   // Result class for copyAttachmentsToSDM method
   private static class CopyAttachmentsResult {
@@ -80,24 +76,15 @@ public class SDMCustomServiceHandler {
     String folderName = upID + "__" + compositionName;
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
-    logger.info(
-        "Copying attachments in SDMCustomServiceHandler for upId: {}, facet: {}, objectIds: {}, isSystemUser: {}",
-        upID,
-        parentEntity + "." + compositionName,
-        context.getObjectIds(),
-        isSystemUser);
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     // Check if folder exists before trying to create it
     boolean folderExists =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser)
             != null;
-    logger.info("Folder '{}' exists: {}", folderName, folderExists);
     String folderId = ensureFolderExists(folderName, repositoryId, sdmCredentials, isSystemUser);
-    logger.info("Using folder ID: {}", folderId);
 
     List<String> objectIds = context.getObjectIds();
-    logger.info("Object IDs to copy: {}", objectIds);
 
     CopyAttachmentsRequest request =
         CopyAttachmentsRequest.builder()
@@ -109,20 +96,13 @@ public class SDMCustomServiceHandler {
             .isSystemUser(isSystemUser)
             .folderExists(folderExists)
             .build();
-    logger.info(
-        "CopyAttachmentsRequest prepared with folderId: {}, repositoryId: {}, isSystemUser: {}",
-        folderId,
-        repositoryId,
-        isSystemUser);
 
     CopyAttachmentsResult copyResult = copyAttachmentsToSDM(request);
-    logger.info("Attachments copied successfully to SDM : " + copyResult.getAttachmentsMetadata());
 
     List<List<String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
 
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
-    logger.info("Resolved upIdKey: {}", upIdKey);
 
     CreateDraftEntriesRequest draftRequest =
         CreateDraftEntriesRequest.builder()
@@ -179,10 +159,7 @@ public class SDMCustomServiceHandler {
         attachmentsMetadata.add(
             sdmService.copyAttachment(
                 cmisDocument, request.getSdmCredentials(), request.getIsSystemUser()));
-        logger.info("Attachments metadata after copying: {}", attachmentsMetadata);
       } catch (ServiceException e) {
-        logger.info("Copy failure : " + e);
-        logger.info("Attachments metadata after copy failure : " + attachmentsMetadata);
         handleCopyFailure(
             request.getContext(),
             request.getFolderId(),
@@ -255,11 +232,6 @@ public class SDMCustomServiceHandler {
       String fileName = attachmentMetadata.get(0);
       String mimeType = attachmentMetadata.get(1);
       String newObjectId = attachmentMetadata.get(2);
-      logger.info(
-          "Creating draft entry for attachment - fileName: {}, mimeType: {}, newObjectId: {}",
-          fileName,
-          mimeType,
-          newObjectId);
 
       updatedFields.put("objectId", newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
