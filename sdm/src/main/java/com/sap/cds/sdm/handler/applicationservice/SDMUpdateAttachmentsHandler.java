@@ -49,6 +49,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
     // Get comprehensive attachment composition details for each entity
+    logger.info("Processing UPDATE ATTACHMENTS HANDLER");
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(

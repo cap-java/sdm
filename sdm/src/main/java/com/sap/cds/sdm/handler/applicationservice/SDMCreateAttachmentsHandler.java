@@ -53,6 +53,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
+    logger.info("Processing CREATE ATTACHMENTS HANDLER");
     logger.info("Target Entity : " + context.getTarget().getQualifiedName());
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =

@@ -557,6 +557,10 @@ public class AttachmentsHandlerUtils {
       EventContext context, List<CdsData> data, String composition, String contextInfo) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
+    logger.info(
+        "Validating file names for target entity: {}, composition: {}",
+        targetEntity,
+        composition);
 
     // Validation for file names
     Set<String> whitespaceFilenames =
@@ -565,6 +569,11 @@ public class AttachmentsHandlerUtils {
         SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
     Set<String> duplicateFilenames =
         SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
+    logger.info(
+        "File name validation results - Whitespace: {}, Restricted: {}, Duplicates: {}",
+        whitespaceFilenames,
+        restrictedFileNames,
+        duplicateFilenames);
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
