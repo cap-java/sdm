@@ -80,22 +80,25 @@ public class SDMCustomServiceHandler {
     this.executorService = Executors.newFixedThreadPool(PARALLEL_MOVE_THREAD_POOL_SIZE);
   }
 
-  // Result class for moveAttachmentsInSDM method
+  /**
+   * Encapsulates the result of a batch move operation in SDM. Contains metadata for successfully
+   * moved attachments and tracks failures.
+   */
   private static class MoveAttachmentsResult {
     private final List<List<String>> movedAttachmentsMetadata;
     private final List<CmisDocument> populatedDocuments;
     private final List<String> failedObjectIds;
-    private final Map<String, String> successfulMovesMap; // objectId -> newObjectId mapping
+    private final List<String> successfulObjectIds;
 
     public MoveAttachmentsResult(
         List<List<String>> movedAttachmentsMetadata,
         List<CmisDocument> populatedDocuments,
         List<String> failedObjectIds,
-        Map<String, String> successfulMovesMap) {
+        List<String> successfulObjectIds) {
       this.movedAttachmentsMetadata = movedAttachmentsMetadata;
       this.populatedDocuments = populatedDocuments;
       this.failedObjectIds = failedObjectIds;
-      this.successfulMovesMap = successfulMovesMap;
+      this.successfulObjectIds = successfulObjectIds;
     }
 
     public List<List<String>> getMovedAttachmentsMetadata() {
@@ -110,8 +113,8 @@ public class SDMCustomServiceHandler {
       return failedObjectIds;
     }
 
-    public Map<String, String> getSuccessfulMovesMap() {
-      return successfulMovesMap;
+    public List<String> getSuccessfulObjectIds() {
+      return successfulObjectIds;
     }
   }
 
@@ -168,6 +171,14 @@ public class SDMCustomServiceHandler {
     context.setCompleted();
   }
 
+  /**
+   * Moves attachments from source entity to target entity in SDM. Executes moves in parallel,
+   * updates database records, and cleans up source metadata. If any step fails, the operation is
+   * rolled back to maintain consistency.
+   *
+   * @param context the move event context containing source and target information
+   * @throws IOException if there's an error during the move operation
+   */
   @On(event = RegisterService.EVENT_MOVE_ATTACHMENT)
   public void moveAttachments(AttachmentMoveEventContext context) throws IOException {
     String parentEntity = context.getParentEntity();
@@ -181,7 +192,7 @@ public class SDMCustomServiceHandler {
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
-    // Check if target folder exists before trying to create it
+    // Ensure target folder exists in SDM before attempting moves
     boolean targetFolderExists;
     String targetFolderId;
     try {
@@ -191,7 +202,6 @@ public class SDMCustomServiceHandler {
       targetFolderId =
           ensureFolderExists(targetFolderName, repositoryId, sdmCredentials, isSystemUser);
     } catch (IOException e) {
-      // Folder creation/verification failed - mark all objectIds as failed
       logger.error(
           "Failed to create/verify target folder '{}': {}. Marking all {} attachments as failed.",
           targetFolderName,
@@ -219,13 +229,12 @@ public class SDMCustomServiceHandler {
     List<List<String>> movedAttachmentsMetadata = moveResult.getMovedAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = moveResult.getPopulatedDocuments();
     List<String> failedObjectIds = moveResult.getFailedObjectIds();
-    Map<String, String> successfulMovesMap = moveResult.getSuccessfulMovesMap();
+    List<String> successfulObjectIds = moveResult.getSuccessfulObjectIds();
 
-    // Set the failed object IDs in the context for the caller
-    // Convert to ArrayList to avoid Collections$SynchronizedRandomAccessList serialization issue
+    // Return failed object IDs to caller (convert to ArrayList for serialization)
     context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
 
-    // Only create draft entries for successfully moved attachments
+    // Process successfully moved attachments
     if (!movedAttachmentsMetadata.isEmpty()) {
       String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
@@ -242,69 +251,57 @@ public class SDMCustomServiceHandler {
               .build();
 
       try {
-        // Get the source up__ID BEFORE creating draft entries
-        // This is critical when source and target are the same entity type
-        // We must query before createDraftEntries to avoid getting the target up__ID
-        List<String> oldObjectIds = new ArrayList<>(successfulMovesMap.keySet());
+        // Query source entity's up__ID before creating target records
+        // This ensures we get the correct source ID, especially important when moving
+        // between entities of the same type (e.g., Book A to Book B)
         String sourceUpId = null;
-        if (!oldObjectIds.isEmpty()) {
-          sourceUpId = dbQuery.getSourceUpIdForObjectIds(persistenceService, oldObjectIds, context);
-          logger.info("DEBUG: Retrieved source up__ID BEFORE createDraftEntries: {}", sourceUpId);
+        if (!successfulObjectIds.isEmpty()) {
+          sourceUpId =
+              dbQuery.getSourceUpIdForObjectIds(persistenceService, successfulObjectIds, context);
+          logger.info("Retrieved source up__ID for cleanup: {}", sourceUpId);
         }
 
         createDraftEntries(draftRequest);
 
-        // After successful DB update, clean up source entity metadata
-        // Only clean up successfully moved attachments (not failed ones)
-        logger.info(
-            "DEBUG: successfulMovesMap contains {} entries. Keys (OLD IDs): {}, Values (NEW IDs):"
-                + " {}",
-            successfulMovesMap.size(),
-            oldObjectIds,
-            new ArrayList<>(successfulMovesMap.values()));
-        if (!oldObjectIds.isEmpty() && sourceUpId != null) {
+        // Clean up source entity metadata after successful move
+        if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
           try {
-
             int deletedCount =
                 dbQuery.deleteAttachmentsByObjectIds(
-                    persistenceService, oldObjectIds, sourceUpId, context);
+                    persistenceService, successfulObjectIds, sourceUpId, context);
             logger.info(
                 "Cleaned up {} attachment metadata records from source entity for {} successfully"
                     + " moved attachments",
                 deletedCount,
-                oldObjectIds.size());
+                successfulObjectIds.size());
           } catch (Exception cleanupException) {
-            // Log cleanup failure but don't fail the entire move operation
             logger.warn(
                 "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
                     + " successfully moved to target.",
-                oldObjectIds.size(),
+                successfulObjectIds.size(),
                 cleanupException.getMessage());
           }
         }
       } catch (ServiceException e) {
-        // If DB update fails after retries, rollback the SDM moves
+        // Database update failed - rollback all SDM moves to maintain consistency
         logger.error(
             "Failed to update DB for moved attachments after retries. Rolling back SDM moves: {}",
             e.getMessage());
         rollbackMovedAttachments(
-            successfulMovesMap,
+            successfulObjectIds,
             sourceFolderId,
             targetFolderId,
             repositoryId,
             sdmCredentials,
             isSystemUser,
             context);
-        // Add all successfully moved objects to failed list since we rolled back
-        failedObjectIds.addAll(successfulMovesMap.keySet());
-        // Convert to ArrayList to avoid Collections$SynchronizedRandomAccessList serialization
-        // issue
+        // Mark rolled-back attachments as failed
+        failedObjectIds.addAll(successfulObjectIds);
         context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
-        // Don't throw exception - return failed IDs to caller as per acceptance criteria
         logger.warn(
             "Move operation completed with failures. Total failed: {}, Rolled back: {}",
             failedObjectIds.size(),
-            successfulMovesMap.size());
+            successfulObjectIds.size());
       }
     }
 
@@ -362,6 +359,14 @@ public class SDMCustomServiceHandler {
     return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
   }
 
+  /**
+   * Executes attachment moves in parallel using a thread pool. Tracks successful and failed moves
+   * separately for further processing.
+   *
+   * @param request the move request containing attachments to move
+   * @return result containing moved metadata and success/failure tracking
+   * @throws IOException if parallel execution fails
+   */
   private MoveAttachmentsResult moveAttachmentsInSDM(MoveAttachmentsRequest request)
       throws IOException {
     List<List<String>> movedAttachmentsMetadata =
@@ -369,21 +374,19 @@ public class SDMCustomServiceHandler {
     List<CmisDocument> populatedDocuments =
         java.util.Collections.synchronizedList(new ArrayList<>());
     List<String> failedObjectIds = java.util.Collections.synchronizedList(new ArrayList<>());
-    Map<String, String> successfulMovesMap =
-        new java.util.concurrent.ConcurrentHashMap<>(); // objectId -> newObjectId
+    List<String> successfulObjectIds = java.util.Collections.synchronizedList(new ArrayList<>());
 
-    // Capture the current request context to propagate to background threads
+    // Preserve request context for authentication in parallel threads
     com.sap.cds.services.runtime.RequestContextRunner contextRunner =
         request.getContext().getCdsRuntime().requestContext();
 
-    // Create parallel tasks for each attachment move
+    // Execute moves in parallel for better performance
     List<CompletableFuture<Void>> moveFutures =
         request.getObjectIds().stream()
             .map(
                 objectId ->
                     CompletableFuture.runAsync(
                         () ->
-                            // Run within the captured request context to preserve authentication
                             contextRunner.run(
                                 ctx -> {
                                   try {
@@ -395,27 +398,25 @@ public class SDMCustomServiceHandler {
                                     cmisDocument.setSourceFolderId(request.getSourceFolderId());
                                     cmisDocument.setFolderId(request.getTargetFolderId());
 
-                                    // Create individual document for each attachment with its own
-                                    // type and linkUrl
                                     CmisDocument populatedDocument = new CmisDocument();
                                     populatedDocument.setType(cmisDocument.getType());
                                     populatedDocument.setUrl(cmisDocument.getUrl());
 
-                                    // Perform SDM move operation with retry
+                                    // Move attachment in SDM with automatic retry on transient
+                                    // failures
                                     List<String> metadata =
                                         sdmService.moveAttachment(
                                             cmisDocument,
                                             request.getSdmCredentials(),
                                             request.getIsSystemUser());
 
-                                    // Track successful move for rollback (thread-safe)
-                                    String newObjectId = metadata.get(2);
-                                    successfulMovesMap.put(objectId, newObjectId);
+                                    // Track successful move (SDM preserves objectId within same
+                                    // repository)
+                                    successfulObjectIds.add(objectId);
                                     movedAttachmentsMetadata.add(metadata);
                                     populatedDocuments.add(populatedDocument);
                                   } catch (ServiceException | IOException e) {
-                                    // Add to failed list and continue with next attachment
-                                    // (thread-safe)
+                                    // Track failure and continue with remaining attachments
                                     logger.error(
                                         "Failed to move attachment with objectId {}: {}",
                                         objectId,
@@ -435,7 +436,7 @@ public class SDMCustomServiceHandler {
     }
 
     return new MoveAttachmentsResult(
-        movedAttachmentsMetadata, populatedDocuments, failedObjectIds, successfulMovesMap);
+        movedAttachmentsMetadata, populatedDocuments, failedObjectIds, successfulObjectIds);
   }
 
   private void handleCopyFailure(
@@ -559,11 +560,20 @@ public class SDMCustomServiceHandler {
   }
 
   /**
-   * Rollback moved attachments by moving them back to the source folder. This is called when DB
-   * update fails after SDM move succeeds.
+   * Rolls back successfully moved attachments when database update fails. Moves attachments back to
+   * their original source folder in parallel. Continues with remaining rollbacks even if individual
+   * operations fail.
+   *
+   * @param successfulObjectIds list of objectIds that were successfully moved in SDM
+   * @param sourceFolderId original source folder ID
+   * @param targetFolderId target folder ID where attachments were moved
+   * @param repositoryId SDM repository ID
+   * @param sdmCredentials SDM credentials for authentication
+   * @param isSystemUser whether this is a system user operation
+   * @param context the move event context
    */
   private void rollbackMovedAttachments(
-      Map<String, String> successfulMovesMap,
+      List<String> successfulObjectIds,
       String sourceFolderId,
       String targetFolderId,
       String repositoryId,
@@ -572,44 +582,38 @@ public class SDMCustomServiceHandler {
       AttachmentMoveEventContext context) {
     logger.warn(
         "Rolling back {} moved attachments from {} to {}",
-        successfulMovesMap.size(),
+        successfulObjectIds.size(),
         targetFolderId,
         sourceFolderId);
 
-    // Capture the current request context to propagate to background threads
     com.sap.cds.services.runtime.RequestContextRunner contextRunner =
         context.getCdsRuntime().requestContext();
 
     List<CompletableFuture<Void>> rollbackFutures =
-        successfulMovesMap.entrySet().stream()
+        successfulObjectIds.stream()
             .map(
-                entry ->
+                objectId ->
                     CompletableFuture.runAsync(
                         () ->
                             contextRunner.run(
                                 ctx -> {
-                                  String originalObjectId = entry.getKey();
-                                  String newObjectId = entry.getValue();
                                   try {
-                                    // Create CMIS document for rollback move
                                     CmisDocument rollbackDoc = new CmisDocument();
-                                    rollbackDoc.setObjectId(newObjectId);
+                                    rollbackDoc.setObjectId(objectId);
                                     rollbackDoc.setRepositoryId(repositoryId);
                                     rollbackDoc.setSourceFolderId(targetFolderId);
                                     rollbackDoc.setFolderId(sourceFolderId);
 
-                                    // Move back to source folder with retry
                                     sdmService.moveAttachment(
                                         rollbackDoc, sdmCredentials, isSystemUser);
                                     logger.info(
                                         "Successfully rolled back attachment {} to source folder",
-                                        originalObjectId);
+                                        objectId);
                                   } catch (Exception e) {
                                     logger.error(
-                                        "Failed to rollback attachment {} during rollback: {}",
-                                        originalObjectId,
+                                        "Failed to rollback attachment {}: {}",
+                                        objectId,
                                         e.getMessage());
-                                    // Continue with other rollbacks even if one fails
                                   }
                                   return null;
                                 }),
