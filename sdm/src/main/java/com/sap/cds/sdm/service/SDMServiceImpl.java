@@ -697,6 +697,7 @@ public class SDMServiceImpl implements SDMService {
       JSONObject errorJson = new JSONObject(responseBody);
       String exceptionType = errorJson.optString("exception");
       String errorMessage = errorJson.optString("message");
+      logger.error("Error copying attachment: {} : {}", exceptionType, errorMessage);
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);

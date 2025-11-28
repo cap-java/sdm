@@ -47,6 +47,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     // The last part is the composition name, everything else is the parent entity
     String compositionName = facetParts[facetParts.length - 1];
     String parentEntity = input.facet().substring(0, input.facet().lastIndexOf("."));
+    logger.info("Composition Name: {}, Parent Entity: {}", compositionName, parentEntity);
 
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
