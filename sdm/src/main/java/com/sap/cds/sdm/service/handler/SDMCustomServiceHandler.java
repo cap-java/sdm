@@ -107,14 +107,18 @@ public class SDMCustomServiceHandler {
     Boolean isSystemUser = context.getSystemUser();
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
-    // Fetch secondary types and valid secondary properties from SDM for validation
+    // Fetch secondary types and valid secondary properties from SDM
     List<String> secondaryTypes =
         sdmService.getSecondaryTypes(repositoryId, sdmCredentials, isSystemUser);
     List<String> validSecondaryProperties =
         sdmService.getValidSecondaryProperties(
             secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
 
-    Set<String> customPropertiesInSDM = new java.util.HashSet<>(customPropertyDefinitions.values());
+    // Filter custom properties to only include those that are valid in SDM
+    Set<String> customPropertiesInSDM =
+        customPropertyDefinitions.values().stream()
+            .filter(validSecondaryProperties::contains)
+            .collect(Collectors.toSet());
 
     String upID = context.getUpId();
     String folderName = upID + "__" + compositionName;
@@ -137,8 +141,7 @@ public class SDMCustomServiceHandler {
             .folderExists(folderExists)
             .build();
 
-    CopyAttachmentsResult copyResult =
-        copyAttachmentsToSDM(request, customPropertiesInSDM, validSecondaryProperties);
+    CopyAttachmentsResult copyResult = copyAttachmentsToSDM(request, customPropertiesInSDM);
 
     List<Map<String, String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
@@ -180,10 +183,7 @@ public class SDMCustomServiceHandler {
   }
 
   private CopyAttachmentsResult copyAttachmentsToSDM(
-      CopyAttachmentsRequest request,
-      Set<String> customPropertiesInSDM,
-      List<String> validSecondaryProperties)
-      throws IOException {
+      CopyAttachmentsRequest request, Set<String> customPropertiesInSDM) throws IOException {
     List<Map<String, String>> attachmentsMetadata = new ArrayList<>();
     List<CmisDocument> populatedDocuments = new ArrayList<>();
 
@@ -207,22 +207,6 @@ public class SDMCustomServiceHandler {
                 request.getSdmCredentials(),
                 request.getIsSystemUser(),
                 customPropertiesInSDM);
-
-        // Validate that no invalid custom properties were returned in the response
-        Set<String> returnedCustomProperties =
-            attachmentData.keySet().stream()
-                .filter(key -> !key.startsWith("cmis:"))
-                .collect(Collectors.toSet());
-
-        Set<String> invalidProperties =
-            returnedCustomProperties.stream()
-                .filter(prop -> !validSecondaryProperties.contains(prop))
-                .collect(Collectors.toSet());
-
-        if (!invalidProperties.isEmpty()) {
-          String errorMessage = String.join(", ", invalidProperties);
-          throw new ServiceException(SDMConstants.UNSUPPORTED_PROPERTIES + " " + errorMessage);
-        }
 
         attachmentsMetadata.add(attachmentData);
       } catch (ServiceException e) {
