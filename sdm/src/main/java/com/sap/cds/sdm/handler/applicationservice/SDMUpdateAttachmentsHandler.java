@@ -240,14 +240,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       descriptionInDB = propertiesInDB.get("note");
     }
 
-    // Check for restricted characters early and return
-    if (Boolean.TRUE.equals(SDMUtils.hasRestrictedCharactersInName(filenameInRequest))) {
-      fileNameWithRestrictedCharacters.add(filenameInRequest);
-      AttachmentsHandlerUtils.revertAttachmentProperties(
-          attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties, descriptionInDB);
-      return;
-    }
-
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(

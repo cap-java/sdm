@@ -63,7 +63,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               context.getTarget().getQualifiedName(),
               entityData);
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
-
       updateName(context, data, attachmentCompositionDetails);
     }
   }
@@ -221,14 +220,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     Map<String, String> propertiesInDB =
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
-
-    // Check for restricted characters early and return
-    if (SDMUtils.hasRestrictedCharactersInName(filenameInRequest)) {
-      fileNameWithRestrictedCharacters.add(filenameInRequest);
-      AttachmentsHandlerUtils.revertAttachmentProperties(
-          attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
-      return;
-    }
 
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
