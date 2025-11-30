@@ -16,9 +16,11 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
+import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,10 +174,21 @@ public class DBQuery {
           String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
     }
 
-    // Search in active entity first
+    // Get secondary type properties (annotated with @SDM.Attachments.AdditionalProperty)
+    // to determine which columns to retrieve from database
+    Map<String, String> secondaryTypeProperties =
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, new HashMap<>());
+
+    // Build column list: standard fields (type, linkUrl) + annotated secondary properties
+    List<String> columnsToRetrieve = new ArrayList<>();
+    columnsToRetrieve.add("type");
+    columnsToRetrieve.add("linkUrl");
+    columnsToRetrieve.addAll(secondaryTypeProperties.keySet());
+
+    // Retrieve only the needed columns from database
     CqnSelect q =
         Select.from(attachmentEntity.get())
-            .columns("linkUrl", "type")
+            .columns(columnsToRetrieve.toArray(new String[0]))
             .where(doc -> doc.get("objectId").eq(id));
     Result result = persistenceService.run(q);
     Optional<Row> res = result.first();
@@ -185,13 +198,22 @@ public class DBQuery {
       Row row = res.get();
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      // Store only the secondary properties (no standard fields)
+      Map<String, Object> secondaryProps = new HashMap<>();
+      for (String propertyKey : secondaryTypeProperties.keySet()) {
+        Object value = row.get(propertyKey);
+        if (value != null) {
+          secondaryProps.put(propertyKey, value);
+        }
+      }
+      cmisDocument.setSecondaryProperties(secondaryProps);
     } else {
       // Check in draft table as well
       Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentDraftEntity.isPresent()) {
         q =
             Select.from(attachmentDraftEntity.get())
-                .columns("linkUrl", "type")
+                .columns(columnsToRetrieve.toArray(new String[0]))
                 .where(doc -> doc.get("objectId").eq(id));
         result = persistenceService.run(q);
         res = result.first();
@@ -199,6 +221,15 @@ public class DBQuery {
           Row row = res.get();
           cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
           cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+          // Store only the secondary properties (no standard fields)
+          Map<String, Object> secondaryProps = new HashMap<>();
+          for (String propertyKey : secondaryTypeProperties.keySet()) {
+            Object value = row.get(propertyKey);
+            if (value != null) {
+              secondaryProps.put(propertyKey, value);
+            }
+          }
+          cmisDocument.setSecondaryProperties(secondaryProps);
         }
       }
     }

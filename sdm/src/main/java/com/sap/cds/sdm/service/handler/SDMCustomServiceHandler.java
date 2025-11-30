@@ -246,7 +246,7 @@ public class SDMCustomServiceHandler {
               .compositionName(compositionName)
               .upID(upID)
               .upIdKey(upIdKey)
-              .repositoryId(repositoryId)
+              .repositoryId(targetFolderId)
               .folderId(targetFolderId)
               .build();
 
@@ -401,6 +401,9 @@ public class SDMCustomServiceHandler {
                                     CmisDocument populatedDocument = new CmisDocument();
                                     populatedDocument.setType(cmisDocument.getType());
                                     populatedDocument.setUrl(cmisDocument.getUrl());
+                                    // Preserve secondary properties from source attachment
+                                    populatedDocument.setSecondaryProperties(
+                                        cmisDocument.getSecondaryProperties());
 
                                     // Move attachment in SDM with automatic retry on transient
                                     // failures
@@ -521,6 +524,13 @@ public class SDMCustomServiceHandler {
               + ":"
               + mimeType);
       updatedFields.put(request.getUpIdKey(), request.getUpID());
+
+      // Include secondary properties from source attachment if available
+      // Properties are already filtered in DBQuery.getAttachmentForObjectID()
+      // to only include those annotated with @SDM.Attachments.AdditionalProperty
+      if (cmisDocument.getSecondaryProperties() != null) {
+        updatedFields.putAll(cmisDocument.getSecondaryProperties());
+      }
 
       String baseKeyField =
           request.getUpIdKey() != null ? request.getUpIdKey().replace("up__", "") : "ID";
