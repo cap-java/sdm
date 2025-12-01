@@ -162,17 +162,29 @@ public class SDMServiceGenericHandler implements EventHandler {
         return;
       }
 
+      // Get the primary key field name(s) for the nested entity dynamically
+      CdsEntity nestedEntity = nestedDraftEntity.get();
+      List<String> keyNames = nestedEntity.keyElements().map(CdsElement::getName).toList();
+
+      if (keyNames.isEmpty()) {
+        logger.warn("No key elements found for nested entity: " + nestedEntity.getQualifiedName());
+        return;
+      }
+
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get())
-                  .columns("ID")
+              Select.from(nestedEntity)
+                  .columns(keyNames.toArray(new String[0]))
                   .where(e -> e.get("IsActiveEntity").eq(false)));
 
       for (Row nestedRecord : nestedRecords) {
-        Object nestedEntityId = nestedRecord.get("ID");
-
         Map<String, Object> nestedEntityKeys = new HashMap<>();
-        nestedEntityKeys.put("ID", nestedEntityId);
+
+        // Extract all key values dynamically
+        for (String keyName : keyNames) {
+          Object keyValue = nestedRecord.get(keyName);
+          nestedEntityKeys.put(keyName, keyValue);
+        }
         nestedEntityKeys.put("IsActiveEntity", false);
 
         for (Map.Entry<String, String> entry : nestedAttachmentMapping.entrySet()) {
@@ -211,19 +223,24 @@ public class SDMServiceGenericHandler implements EventHandler {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
 
+    // Get the primary key field name for the attachment entity dynamically
+    List<String> attachmentKeyNames = draftEntity.keyElements().map(CdsElement::getName).toList();
+    String attachmentKeyName = attachmentKeyNames.isEmpty() ? "ID" : attachmentKeyNames.get(0);
+
     for (Row draftLinkRow : draftLinks) {
       Map<String, Object> draftLink = new HashMap<>();
-      draftLink.put("ID", draftLinkRow.get("ID"));
+      draftLink.put(attachmentKeyName, draftLinkRow.get(attachmentKeyName));
       draftLink.put("linkUrl", draftLinkRow.get("linkUrl"));
       draftLink.put("objectId", draftLinkRow.get("objectId"));
       draftLink.put("fileName", draftLinkRow.get("fileName"));
-      String attachmentId = (String) draftLink.get("ID");
+      String attachmentId = (String) draftLink.get(attachmentKeyName);
       String draftLinkUrl = (String) draftLink.get("linkUrl");
       String objectId = (String) draftLink.get("objectId");
       String filename = (String) draftLink.get("fileName");
 
       String originalUrl =
-          getOriginalUrlFromActiveTable(activeEntity, attachmentId, parentId, upIdKey);
+          getOriginalUrlFromActiveTable(
+              activeEntity, attachmentId, parentId, upIdKey, attachmentKeyName);
 
       if (originalUrl != null && !originalUrl.equals(draftLinkUrl)) {
         revertLinkInSDM(objectId, filename, originalUrl, sdmCredentials, isSystemUser);
@@ -232,13 +249,17 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private String getOriginalUrlFromActiveTable(
-      CdsEntity activeEntity, String attachmentId, Object parentId, String upIdKey) {
+      CdsEntity activeEntity,
+      String attachmentId,
+      Object parentId,
+      String upIdKey,
+      String attachmentKeyName) {
     CqnSelect selectActiveLink =
         Select.from(activeEntity)
             .columns("linkUrl")
             .where(
                 a ->
-                    a.get("ID")
+                    a.get(attachmentKeyName)
                         .eq(attachmentId)
                         .and(a.get(upIdKey).eq(parentId))
                         .and(a.get("IsActiveEntity").eq(true))
@@ -282,28 +303,23 @@ public class SDMServiceGenericHandler implements EventHandler {
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
 
-    System.out.println("openAttachment: Extracted targetKeys = " + targetKeys);
-
-    String id = null;
+    // Extract all keys (for composite key support)
+    Map<String, Object> attachmentKeys = new HashMap<>();
     for (Map.Entry<String, Object> entry : targetKeys.entrySet()) {
       if (!entry.getKey().equals("IsActiveEntity")) {
-        id = entry.getValue().toString();
-        System.out.println("openAttachment: Using key '" + entry.getKey() + "' with value = " + id);
-        break;
+        attachmentKeys.put(entry.getKey(), entry.getValue());
       }
     }
 
-    if (id == null) {
+    if (attachmentKeys.isEmpty()) {
       throw new ServiceException("No valid key found in targetKeys");
     }
 
-    CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    CmisDocument cmisDocument = getAttachmentDocument(attachmentEntity.get(), attachmentKeys);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
-      cmisDocument =
-          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+      cmisDocument = getAttachmentDocument(attachmentEntity.get(), attachmentKeys);
     }
     if (cmisDocument.getMimeType().equalsIgnoreCase(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)) {
       context.setResult(cmisDocument.getUrl());
@@ -383,26 +399,19 @@ public class SDMServiceGenericHandler implements EventHandler {
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
 
-    System.out.println("editLink: Extracted targetKeys = " + targetKeys);
-
-    String extractedID = null;
+    // Extract all keys (for composite key support)
+    Map<String, Object> attachmentKeys = new HashMap<>();
     for (Map.Entry<String, Object> entry : targetKeys.entrySet()) {
       if (!entry.getKey().equals("IsActiveEntity")) {
-        extractedID = entry.getValue().toString();
-        System.out.println(
-            "editLink: Using key '" + entry.getKey() + "' with value = " + extractedID);
-        break;
+        attachmentKeys.put(entry.getKey(), entry.getValue());
       }
     }
 
-    if (extractedID == null) {
+    if (attachmentKeys.isEmpty()) {
       throw new ServiceException("No valid key found in targetKeys");
     }
 
-    final String ID = extractedID;
-
-    CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentDraftEntity.get(), persistenceService, ID);
+    CmisDocument cmisDocument = getAttachmentDocument(attachmentDraftEntity.get(), attachmentKeys);
     cmisDocument.setUrl(context.get("url").toString());
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     cmisDocument.setRepositoryId(SDMConstants.REPOSITORY_ID);
@@ -412,10 +421,21 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (status.equals("success")) {
       Map<String, Object> updatedFields = new HashMap<>();
       updatedFields.put("linkUrl", cmisDocument.getUrl());
+
+      // Build WHERE clause with all keys (for composite key support)
       var update =
           Update.entity(attachmentDraftEntity.get())
               .data(updatedFields)
-              .where(doc -> doc.get("ID").eq(ID));
+              .where(
+                  doc -> {
+                    com.sap.cds.ql.Predicate predicate = null;
+                    for (Map.Entry<String, Object> entry : attachmentKeys.entrySet()) {
+                      com.sap.cds.ql.Predicate keyPred =
+                          doc.get(entry.getKey()).eq(entry.getValue());
+                      predicate = (predicate == null) ? keyPred : predicate.and(keyPred);
+                    }
+                    return predicate;
+                  });
       persistenceService.run(update);
       logger.info("Successfully edited link");
     } else {
@@ -456,6 +476,39 @@ public class SDMServiceGenericHandler implements EventHandler {
       upIdKey = fkElements.get(0);
     }
     return upIdKey;
+  }
+
+  private CmisDocument getAttachmentDocument(CdsEntity attachmentEntity, Map<String, Object> keys) {
+    // Build WHERE clause with all keys to support composite keys
+    CqnSelect query =
+        Select.from(attachmentEntity)
+            .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl")
+            .where(
+                doc -> {
+                  com.sap.cds.ql.Predicate predicate = null;
+                  for (Map.Entry<String, Object> entry : keys.entrySet()) {
+                    com.sap.cds.ql.Predicate keyPred = doc.get(entry.getKey()).eq(entry.getValue());
+                    predicate = (predicate == null) ? keyPred : predicate.and(keyPred);
+                  }
+                  return predicate;
+                });
+
+    Result result = persistenceService.run(query);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setContentId(
+          row.get("contentId") != null ? row.get("contentId").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    }
+
+    return cmisDocument;
   }
 
   private void checkAttachmentConstraints(
@@ -579,32 +632,21 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private String fetchUPIDFromCQN(CqnSelect select, CdsModel cdsModel) {
     try {
-      System.out.println("fetchUPIDFromCQN: Full CQN JSON = " + select.toJson());
-
       CqnAnalyzer analyzer = CqnAnalyzer.create(cdsModel);
       Map<String, Object> rootKeys = analyzer.analyze(select).rootKeys();
 
-      System.out.println("fetchUPIDFromCQN: Extracted rootKeys = " + rootKeys);
-      System.out.println("fetchUPIDFromCQN: Number of keys found = " + rootKeys.size());
-
       if (rootKeys.isEmpty()) {
-        System.out.println("fetchUPIDFromCQN: ERROR - No root keys found!");
         throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
       }
 
       for (Map.Entry<String, Object> entry : rootKeys.entrySet()) {
         if (!entry.getKey().equals("IsActiveEntity")) {
-          String upID = entry.getValue().toString();
-          System.out.println(
-              "fetchUPIDFromCQN: Found key '" + entry.getKey() + "' with value = " + upID);
-          return upID;
+          return entry.getValue().toString();
         }
       }
 
-      System.out.println("fetchUPIDFromCQN: ERROR - Only IsActiveEntity found, no actual ID!");
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
     } catch (Exception e) {
-      System.out.println("fetchUPIDFromCQN: EXCEPTION occurred - " + e.getMessage());
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
       throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
