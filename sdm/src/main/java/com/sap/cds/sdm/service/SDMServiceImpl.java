@@ -306,7 +306,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -323,13 +323,15 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getObjectRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
-        return null;
+        if (response.getStatusLine().getStatusCode() == 403) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        }
       }
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonObject = new JSONObject(responseString);
-      JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
-      return succinctProperties.getString("cmis:name");
+      return jsonObject;
     } catch (IOException e) {
+
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
   }
@@ -538,6 +540,7 @@ public class SDMServiceImpl implements SDMService {
         // Fetch the disableVirusScannerForLargeFile
         repoValue.setDisableVirusScannerForLargeFile(
             featureData.getBoolean("disableVirusScannerForLargeFile"));
+        repoValue.setIsAsyncVirusScanEnabled(featureData.getBoolean("asyncVirusScanEnabled"));
       }
     }
     repoValueMap.put(repositoryId, repoValue);

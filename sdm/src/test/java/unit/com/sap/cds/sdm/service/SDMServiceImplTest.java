@@ -1419,8 +1419,11 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    String objectName = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertEquals("desiredObjectName", objectName);
+    JSONObject result = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    assertNotNull(result);
+    assertTrue(result.has("succinctProperties"));
+    JSONObject succinctProperties = result.getJSONObject("succinctProperties");
+    assertEquals("desiredObjectName", succinctProperties.getString("cmis:name"));
   }
 
   @Test
@@ -1439,7 +1442,7 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream("".getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    String objectName = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    JSONObject objectName = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
     assertNull(objectName);
   }
 

@@ -299,7 +299,7 @@ public class DocumentUploadService {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
-    String objectId = "", mimeType = "";
+    String objectId = "", mimeType = "", scanStatus = "";
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
@@ -309,6 +309,7 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        scanStatus = succinctProperties.getString("scanStatus");
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
@@ -345,6 +346,23 @@ public class DocumentUploadService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
         finalResponse.put("mimeType", mimeType);
+
+        // Determine upload status based on scan status using enum
+        SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
+        String uploadStatus;
+        switch (scanStatusEnum) {
+          case IN_PROGRESS:
+            uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
+            break;
+          case VIRUS_DETECTED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+            break;
+          case BLANK:
+          default:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+            break;
+        }
+        finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));

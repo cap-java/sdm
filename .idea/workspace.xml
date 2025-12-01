@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="17e45f53-0cfd-4423-9929-c8405952177e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/RepoValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/RepoValue.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/DocumentUploadService.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/DocumentUploadService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/resources/cds/com.sap.cds/sdm/attachments.cds" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/resources/cds/com.sap.cds/sdm/attachments.cds" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/SDMServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/SDMServiceImplTest.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="35dhAapjJmCr0GjABBtIbt01f6b" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/I324829/Desktop/CAP/sdm&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="17e45f53-0cfd-4423-9929-c8405952177e" name="Changes" comment="" />
+      <created>1763445716498</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1763445716498</updated>
+    </task>
+    <servers />
+  </component>
+</project>

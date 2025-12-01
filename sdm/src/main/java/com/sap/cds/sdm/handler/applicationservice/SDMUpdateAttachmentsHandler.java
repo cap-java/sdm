@@ -23,6 +23,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -216,14 +217,25 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
-    fileNameInDB = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    CmisDocument cmisDocument = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    fileNameInDB = cmisDocument.getFileName();
+    if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
+      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+        throw new ServiceException("Virus Detected in this file kindly delete it.");
+      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+        throw new ServiceException("Virus Scanning is in Progress.");
+    }
     if (fileNameInDB
         == null) { // On entity UPDATE, fetch original attachment name from SDM to revert property
       // values if needed.
       String objectId = (String) attachment.get("objectId");
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-      fileNameInDB =
+      JSONObject objectResponse =
           sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+      if (objectResponse != null) {
+        JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
+        fileNameInDB = succinctProperties.getString("cmis:name");
+      }
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =
@@ -252,7 +264,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
       return;
     }
-    CmisDocument cmisDocument = new CmisDocument();
+     cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
     if (fileNameInDB == null) {

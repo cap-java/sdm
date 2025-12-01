@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -203,16 +204,23 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       throws IOException {
     String id = (String) attachment.get("ID");
     String fileNameInDB;
-    fileNameInDB =
+    CmisDocument cmisDocument =
         dbQuery.getAttachmentForID(
             attachmentEntity.get(),
             persistenceService,
             id); // Fetching the name of the file from DB
+    fileNameInDB = cmisDocument.getFileName();
+    if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
+      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+        throw new ServiceException("Virus Detected in this file kindly delete it.");
+      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+        throw new ServiceException("Virus Scanning is in Progress.");
+    }
     String filenameInRequest =
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    String fileNameInSDM =
+    JSONObject objectResponse =
         sdmService.getObject(
             objectId,
             sdmCredentials,
@@ -220,6 +228,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                 .getUserInfo()
                 .isSystemUser()); // Fetch original filename from SDM since it's null in attachments
     // table until save; needed to revert UI-modified names on error.
+    String fileNameInSDM = null;
+    if (objectResponse != null) {
+      JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
+      fileNameInSDM = succinctProperties.getString("cmis:name");
+    }
 
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(
@@ -244,7 +257,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (SDMUtils.hasRestrictedCharactersInName(filenameInRequest)) {
       fileNameWithRestrictedCharacters.add(filenameInRequest);
     }
-    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
     if (fileNameInDB == null || !fileNameInDB.equals(filenameInRequest)) {

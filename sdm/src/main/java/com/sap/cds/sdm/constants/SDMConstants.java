@@ -55,6 +55,8 @@ public class SDMConstants {
       "This file type is not allowed in this repository. Contact your administrator for assistance.";
   public static final String USER_NOT_AUTHORISED_ERROR_LINK =
       "You do not have the required permissions to create links. Please contact your administrator for access.";
+  public static final String USER_NOT_AUTHORISED_ERROR_OPEN_LINK =
+      "You do not have the required permissions to open links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository";
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
@@ -149,6 +151,39 @@ public class SDMConstants {
       "\"%s\" contains unsupported characters (‘/’ or ‘\\’). Rename and try again.";
   public static final String SINGLE_DUPLICATE_FILENAME =
       "An object named \"%s\" already exists. Rename the object and try again.";
+
+  // Upload Status Constants
+  public static final String UPLOAD_STATUS_SUCCESS = "SUCCESS";
+  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VIRUS_DETECTED";
+  public static final String VIRUS_SCAN_INPROGRESS = "VIRUS_SCAN_IN_PROGRESS";
+
+  public enum ScanStatus {
+    BLANK(""),
+    IN_PROGRESS("IN_PROGRESS"),
+    VIRUS_DETECTED("VIRUS_DETECTED");
+
+    private final String value;
+
+    ScanStatus(String value) {
+      this.value = value;
+    }
+
+    public String getValue() {
+      return value;
+    }
+
+    public static ScanStatus fromValue(String value) {
+      if (value == null || value.trim().isEmpty()) {
+        return BLANK;
+      }
+      for (ScanStatus status : values()) {
+        if (status.value.equalsIgnoreCase(value)) {
+          return status;
+        }
+      }
+      return BLANK; // Default to blank for unknown values
+    }
+  }
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(

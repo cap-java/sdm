@@ -73,7 +73,8 @@ public class Registration implements CdsRuntimeConfiguration {
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool, tokenHandlerInstance);
     DocumentUploadService documentService =
         new DocumentUploadService(binding, connectionPool, tokenHandlerInstance);
-    configurer.eventHandler(buildReadHandler());
+    configurer.eventHandler(
+        buildReadHandler(persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));
     configurer.eventHandler(
         new SDMCreateAttachmentsHandler(
             persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));
@@ -125,7 +126,11 @@ public class Registration implements CdsRuntimeConfiguration {
     return new CdsProperties.ConnectionPool(timeout, maxConnections, maxConnections);
   }
 
-  protected EventHandler buildReadHandler() {
-    return new SDMReadAttachmentsHandler();
+  protected EventHandler buildReadHandler(
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
+    return new SDMReadAttachmentsHandler(persistenceService, sdmService, tokenHandler, dbQuery);
   }
 }
