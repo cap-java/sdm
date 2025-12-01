@@ -246,7 +246,7 @@ public class SDMCustomServiceHandler {
               .compositionName(compositionName)
               .upID(upID)
               .upIdKey(upIdKey)
-              .repositoryId(targetFolderId)
+              .repositoryId(repositoryId)
               .folderId(targetFolderId)
               .build();
 
