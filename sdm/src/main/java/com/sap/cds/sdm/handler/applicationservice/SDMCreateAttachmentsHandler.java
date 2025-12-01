@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -166,7 +167,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String targetEntity = context.getTarget().getQualifiedName();
     List<Map<String, Object>> attachments =
         AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
+
     if (attachments != null) {
+      // get all attachment id's and query the database to fetch the uploadStatus
+      // Check if any of the attachment uploadStatus is not null and not success then prevent saving
+      // and show error to delete if virus found in attachment and wait for the file to processed
+
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
             context,
@@ -212,7 +218,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         (String) attachment.get("fileName"); // Fetching the name of the file from request
     String objectId = (String) attachment.get("objectId");
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    String fileNameInSDM =
+    JSONObject objectResponse =
         sdmService.getObject(
             objectId,
             sdmCredentials,
@@ -220,6 +226,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                 .getUserInfo()
                 .isSystemUser()); // Fetch original filename from SDM since it's null in attachments
     // table until save; needed to revert UI-modified names on error.
+    String fileNameInSDM = null;
+    if (objectResponse != null) {
+      JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
+      fileNameInSDM = succinctProperties.getString("cmis:name");
+    }
 
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(

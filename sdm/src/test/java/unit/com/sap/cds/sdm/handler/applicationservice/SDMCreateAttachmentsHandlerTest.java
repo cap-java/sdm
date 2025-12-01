@@ -25,6 +25,7 @@ import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -514,8 +515,12 @@ public class SDMCreateAttachmentsHandlerTest {
         when(jwtTokenInfo.getToken()).thenReturn("testJwtToken");
 
         // Mock getObject
+        JSONObject mockObjectResponse = new JSONObject();
+        JSONObject mockSuccinctProperties = new JSONObject();
+        mockSuccinctProperties.put("cmis:name", "fileInSDM.txt");
+        mockObjectResponse.put("succinctProperties", mockSuccinctProperties);
         when(sdmService.getObject("test-object-id", mockCredentials, false))
-            .thenReturn("fileInSDM.txt");
+            .thenReturn(mockObjectResponse);
 
         // Mock getSecondaryTypeProperties
         Map<String, String> secondaryTypeProperties = new HashMap<>();

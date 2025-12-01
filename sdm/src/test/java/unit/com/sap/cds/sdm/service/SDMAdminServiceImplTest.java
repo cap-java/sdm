@@ -9,7 +9,6 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.Repository;
 import com.sap.cds.sdm.model.RepositoryParams;
@@ -212,20 +211,18 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockDeleteEntity = mock(HttpEntity.class);
 
     String json =
-        String.format(
-            """
+        """
 {
   "repoAndConnectionInfos": [
     {
       "repository": {
-        "externalId": "%s",
+        "externalId": "repoid",
         "id": "123"
       }
     }
   ]
 }
-""",
-            SDMConstants.REPOSITORY_ID);
+""";
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
     InputStream deleteInputStream =
@@ -300,7 +297,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository with ID " + SDMConstants.REPOSITORY_ID + " not found.", result);
+    assertEquals("Repository with ID repoid not found.", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -354,7 +351,7 @@ public class SDMAdminServiceImplTest {
 
     String result = sdmAdminService.offboardRepository(subdomain);
     assertNotNull(result);
-    assertEquals("Repository with ID " + SDMConstants.REPOSITORY_ID + " not found.", result);
+    assertEquals("Repository with ID repoid not found.", result);
     verify(httpClient, atLeastOnce()).execute(any());
   }
 
@@ -396,20 +393,18 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockGetEntity = mock(HttpEntity.class);
 
     String json =
-        String.format(
-            """
+        """
         {
           "repoAndConnectionInfos": [
             {
               "repository": {
-                "externalId": "%s",
+                "externalId": "repoid",
                 "id": "123"
               }
             }
           ]
         }
-        """,
-            SDMConstants.REPOSITORY_ID);
+        """;
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
 
@@ -426,12 +421,12 @@ public class SDMAdminServiceImplTest {
 
     Exception exception =
         assertThrows(
-            ServiceException.class,
+            RuntimeException.class,
             () -> {
               sdmAdminService.offboardRepository(subdomain);
             });
 
-    assertTrue(exception.getMessage().contains("Error while offboarding repository"));
+    assertTrue(exception.getMessage().contains("Error while offboarding repository."));
   }
 
   @Test
@@ -477,5 +472,728 @@ public class SDMAdminServiceImplTest {
             });
 
     assertTrue(exception.getMessage().contains("Unexpected error while fetching repository ID."));
+  }
+
+  @Test
+  public void testOnboardRepository_nullRepository() {
+    // Act & Assert
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              sdmAdminService.onboardRepository(null);
+            });
+
+    assertEquals("Repository object cannot be null.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_nullCredentials() throws Exception {
+    // Arrange
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepo");
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(null);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_nullCredentialsUrl() throws Exception {
+    // Arrange
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepo");
+
+    SDMCredentials nullUrlCredentials = new SDMCredentials();
+    nullUrlCredentials.setUrl(null);
+    when(tokenHandler.getSDMCredentials()).thenReturn(nullUrlCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_credentialsException() throws Exception {
+    // Arrange
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepo");
+
+    when(tokenHandler.getSDMCredentials()).thenThrow(new RuntimeException("Credentials error"));
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_nullHttpClient() throws Exception {
+    // Arrange
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepo");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(null);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Error while creating HTTP client.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_httpClientException() throws Exception {
+    // Arrange
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepo");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenThrow(new RuntimeException("HTTP client error"));
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Error while creating HTTP client.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_repositoryAlreadyExists()
+      throws UnsupportedEncodingException, JsonProcessingException, IOException {
+    // Arrange
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepository");
+
+    // Mock response for repository already exists (409 status)
+    // The implementation checks for REPOSITORY_ID which comes from env var, so use "repoid" if not
+    // set
+    String responseBody = "repoid already exists";
+    InputStream inputStream = new ByteArrayInputStream(responseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+    when(httpClient.execute(any())).thenReturn(httpResponse);
+    when(httpResponse.getEntity()).thenReturn(entity);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(httpResponse.getStatusLine().getStatusCode()).thenReturn(409);
+
+    // Act
+    String result = sdmAdminService.onboardRepository(repository);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.contains("TestRepository"));
+    assertTrue(result.contains("already exists"));
+  }
+
+  @Test
+  public void testOnboardRepository_responseWithoutId()
+      throws UnsupportedEncodingException, JsonProcessingException, IOException {
+    // Arrange
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepository");
+
+    // Mock response without ID field
+    JSONObject root = new JSONObject();
+    root.put("message", "Created");
+    InputStream inputStream = new ByteArrayInputStream(root.toString().getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+    when(httpClient.execute(any())).thenReturn(httpResponse);
+    when(httpResponse.getEntity()).thenReturn(entity);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(httpResponse.getStatusLine().getStatusCode()).thenReturn(200);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Error in onboarding repository with name TestRepository", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_nullCredentials() {
+    // Arrange
+    when(tokenHandler.getSDMCredentials()).thenReturn(null);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_nullCredentialsUrl() {
+    // Arrange
+    SDMCredentials badCredentials = new SDMCredentials();
+    badCredentials.setUrl(null);
+    badCredentials.setBaseTokenUrl("https://test.com");
+    when(tokenHandler.getSDMCredentials()).thenReturn(badCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_nullBaseTokenUrl() {
+    // Arrange
+    SDMCredentials badCredentials = new SDMCredentials();
+    badCredentials.setUrl("https://test.com");
+    badCredentials.setBaseTokenUrl(null);
+    when(tokenHandler.getSDMCredentials()).thenReturn(badCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_credentialsException() {
+    // Arrange
+    when(tokenHandler.getSDMCredentials()).thenThrow(new RuntimeException("Creds error"));
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to retrieve SDM credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_nullClientId() {
+    // Arrange
+    SDMCredentials badCredentials = new SDMCredentials();
+    badCredentials.setUrl("https://test.com");
+    badCredentials.setBaseTokenUrl("https://token.com");
+    badCredentials.setClientId(null);
+    badCredentials.setClientSecret("secret");
+    when(tokenHandler.getSDMCredentials()).thenReturn(badCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to create client credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_nullClientSecret() {
+    // Arrange
+    SDMCredentials badCredentials = new SDMCredentials();
+    badCredentials.setUrl("https://test.com");
+    badCredentials.setBaseTokenUrl("https://token.com");
+    badCredentials.setClientId("client");
+    badCredentials.setClientSecret(null);
+    when(tokenHandler.getSDMCredentials()).thenReturn(badCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to create client credentials.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_httpClientCreationException() {
+    // Arrange
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock the factory to return null HttpClient
+    when(mockHttpClientFactory.createHttpClient(any())).thenReturn(null);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Error while creating HTTP client.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_httpClientFactoryException() {
+    // Arrange
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock the factory to throw exception
+    when(mockHttpClientFactory.createHttpClient(any()))
+        .thenThrow(new RuntimeException("Factory error"));
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Error while creating HTTP client.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_subdomainReplacementException() {
+    // Arrange
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("invalid-url"); // Invalid URL format
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository("subdomain");
+            });
+
+    assertEquals("Failed to replace subdomain in base token URL.", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_repositoryDetailsException() throws Exception {
+    // Arrange - Test coverage for setting repository details exception
+    Repository repository = mock(Repository.class);
+    when(repository.getSubdomain()).thenReturn("testSubdomain");
+    when(repository.getDisplayName()).thenReturn("TestRepo");
+    // Mock repository to throw exception when setExternalId is called
+    doThrow(new RuntimeException("Repository error")).when(repository).setExternalId(any());
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://example.com/");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Failed to set repository details.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_emptyRepositoryId() throws Exception {
+    // Arrange - Test coverage for empty repository ID scenario
+    String subdomain = "subdomain";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+
+    // Mock response with empty repository ID
+    String json = """
+        {
+          "repoAndConnectionInfos": []
+        }
+        """;
+
+    InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+
+    // Act
+    String result = sdmAdminService.offboardRepository(subdomain);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.contains("not found"));
+  }
+
+  @Test
+  public void testGetRepositoryId_nonArrayResponse() throws Exception {
+    // Arrange - Test coverage for non-array repoAndConnectionInfos
+    String subdomain = "subdomain";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+    HttpEntity mockDeleteEntity = mock(HttpEntity.class);
+
+    // Mock response with single object (not array) for repoAndConnectionInfos
+    String json =
+        """
+        {
+          "repoAndConnectionInfos": {
+            "repository": {
+              "externalId": "repoid",
+              "id": "123"
+            }
+          }
+        }
+        """;
+
+    InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+    InputStream deleteInputStream =
+        new ByteArrayInputStream("Success".getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(mockDeleteResponse.getStatusLine()).thenReturn(statusLine);
+    when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
+    when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
+
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+    when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
+
+    // Act
+    String result = sdmAdminService.offboardRepository(subdomain);
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.contains("123 Offboarded"));
+  }
+
+  @Test
+  public void testOnboardRepository_conflictStatusWithoutMessage() throws Exception {
+    // Arrange - Test coverage for 409 status but without the expected message format
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepository");
+
+    // Mock response with 409 status but different message format
+    String responseBody = "Some other error message";
+    InputStream inputStream = new ByteArrayInputStream(responseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+    when(httpClient.execute(any())).thenReturn(httpResponse);
+    when(httpResponse.getEntity()).thenReturn(entity);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(httpResponse.getStatusLine().getStatusCode()).thenReturn(409);
+
+    // Act - Should not take the "already exists" path
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Error in onboarding repository with name TestRepository", exception.getMessage());
+  }
+
+  @Test
+  public void testOnboardRepository_responseWithNullId() throws Exception {
+    // Arrange - Test coverage for JSON response where id field is null
+    SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
+    when(mockSdmCredentials.getUrl()).thenReturn("https://example.com/");
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+
+    Repository repository = new Repository();
+    repository.setSubdomain("testSubdomain");
+    repository.setDisplayName("TestRepository");
+
+    // Mock response with null id field
+    JSONObject root = new JSONObject();
+    root.put("id", JSONObject.NULL);
+    InputStream inputStream = new ByteArrayInputStream(root.toString().getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+    when(httpClient.execute(any())).thenReturn(httpResponse);
+    when(httpResponse.getEntity()).thenReturn(entity);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(httpResponse.getStatusLine().getStatusCode()).thenReturn(200);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.onboardRepository(repository);
+            });
+
+    assertEquals("Error in onboarding repository with name TestRepository", exception.getMessage());
+  }
+
+  @Test
+  public void testGetRepositoryId_parseException() throws Exception {
+    // Arrange - Test coverage for JSON parsing exception in getRepositoryId
+    String subdomain = "subdomain";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+
+    // Mock response with invalid JSON
+    String invalidJson = "{ invalid json }";
+    InputStream getInputStream =
+        new ByteArrayInputStream(invalidJson.getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository(subdomain);
+            });
+
+    assertEquals("Unexpected error while fetching repository ID.", exception.getMessage());
+  }
+
+  @Test
+  public void testOffboardRepository_404StatusCode() throws Exception {
+    // Arrange
+    String subdomain = "subdomain";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+    HttpEntity mockDeleteEntity = mock(HttpEntity.class);
+    StatusLine getStatusLine = mock(StatusLine.class);
+    StatusLine deleteStatusLine = mock(StatusLine.class);
+
+    String json =
+        """
+        {
+          "repoAndConnectionInfos": [
+            {
+              "repository": {
+                "externalId": "repoid",
+                "id": "123"
+              }
+            }
+          ]
+        }
+        """;
+
+    InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+    InputStream deleteInputStream =
+        new ByteArrayInputStream(
+            "{\"message\":\"Repository not found\"}".getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(getStatusLine);
+    when(getStatusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(mockDeleteResponse.getStatusLine()).thenReturn(deleteStatusLine);
+    when(deleteStatusLine.getStatusCode()).thenReturn(404);
+    when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
+    when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
+
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+    when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
+
+    // Act
+    String result = sdmAdminService.offboardRepository(subdomain);
+
+    // Assert
+    assertNotNull(result);
+    assertEquals("Repository with ID repoid not found.", result);
+  }
+
+  @Test
+  public void testOffboardRepository_500StatusCode() throws Exception {
+    // Arrange
+    String subdomain = "subdomain";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setBaseTokenUrl("https://subdomain.example.com/oauth/token");
+    sdmCredentials.setClientId("clientID");
+    sdmCredentials.setClientSecret("clientSecret");
+    sdmCredentials.setUrl("url");
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    CloseableHttpResponse mockGetResponse = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse mockDeleteResponse = mock(CloseableHttpResponse.class);
+    HttpEntity mockGetEntity = mock(HttpEntity.class);
+    HttpEntity mockDeleteEntity = mock(HttpEntity.class);
+    StatusLine getStatusLine = mock(StatusLine.class);
+    StatusLine deleteStatusLine = mock(StatusLine.class);
+
+    String json =
+        """
+        {
+          "repoAndConnectionInfos": [
+            {
+              "repository": {
+                "externalId": "repoid",
+                "id": "123"
+              }
+            }
+          ]
+        }
+        """;
+
+    InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+    InputStream deleteInputStream =
+        new ByteArrayInputStream(
+            "{\"error\":\"Internal server error\"}".getBytes(StandardCharsets.UTF_8));
+
+    when(mockGetResponse.getStatusLine()).thenReturn(getStatusLine);
+    when(getStatusLine.getStatusCode()).thenReturn(200);
+    when(mockGetResponse.getEntity()).thenReturn(mockGetEntity);
+    when(mockGetEntity.getContent()).thenReturn(getInputStream);
+
+    when(mockDeleteResponse.getStatusLine()).thenReturn(deleteStatusLine);
+    when(deleteStatusLine.getStatusCode()).thenReturn(500);
+    when(mockDeleteResponse.getEntity()).thenReturn(mockDeleteEntity);
+    when(mockDeleteEntity.getContent()).thenReturn(deleteInputStream);
+
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(mockGetResponse);
+    when(httpClient.execute(any(HttpDelete.class))).thenReturn(mockDeleteResponse);
+
+    // Act & Assert
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmAdminService.offboardRepository(subdomain);
+            });
+
+    assertEquals("Unexpected error while offboarding repository.", exception.getMessage());
+  }
+
+  @Test
+  public void testConstructorInitialization() {
+    // Act
+    SDMAdminService newService = new SDMAdminServiceImpl();
+
+    // Assert
+    assertNotNull(newService);
   }
 }

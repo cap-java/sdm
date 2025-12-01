@@ -127,7 +127,7 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT_MESSAGE, e.getMessage());
+      throw new ServiceException("Error in setting timeout", e.getMessage());
     }
   }
 
@@ -306,7 +306,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -327,8 +327,7 @@ public class SDMServiceImpl implements SDMService {
       }
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonObject = new JSONObject(responseString);
-      JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
-      return succinctProperties.getString("cmis:name");
+      return jsonObject;
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
@@ -356,14 +355,7 @@ public class SDMServiceImpl implements SDMService {
       if (responseCode != 200) {
         response.close();
         if (responseCode == 404) {
-          String errorMessage =
-              context
-                  .getCdsRuntime()
-                  .getLocalizedMessage(
-                      "SDM.File.fileNotFoundError", null, context.getParameterInfo().getLocale());
-          if (errorMessage.equalsIgnoreCase(SDMConstants.FILE_NOT_FOUND_ERROR_MSG))
-            throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
-          throw new ServiceException(errorMessage);
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
         }
         throw new ServiceException("Unexpected code");
       }
@@ -476,10 +468,10 @@ public class SDMServiceImpl implements SDMService {
       else if (responseCode == 403) {
         throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       } else {
-        throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + ". " + responseBody);
+        throw new ServiceException("Failed to create folder. " + responseBody);
       }
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + " " + e.getMessage());
+      throw new ServiceException("Failed to create folder " + e.getMessage());
     }
   }
 
@@ -687,7 +679,7 @@ public class SDMServiceImpl implements SDMService {
 
         JSONObject jsonObject = new JSONObject(responseBody);
         JSONObject props = jsonObject.getJSONObject("succinctProperties");
-        String fileName = props.optString("cmis:name");
+        String fileName = props.optString("cmis:contentStreamFileName");
         String mimeType = props.optString("cmis:contentStreamMimeType");
         String objectId = props.optString("cmis:objectId");
         return List.of(fileName, mimeType, objectId);

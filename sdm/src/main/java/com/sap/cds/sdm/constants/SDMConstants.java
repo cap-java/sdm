@@ -150,6 +150,39 @@ public class SDMConstants {
   public static final String SINGLE_DUPLICATE_FILENAME =
       "An object named \"%s\" already exists. Rename the object and try again.";
 
+  // Upload Status Constants
+  public static final String UPLOAD_STATUS_SUCCESS = "SUCCESS";
+  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VIRUS_DETECTED";
+  public static final String VIRUS_SCAN_INPROGRESS = "VIRUS_SCAN_IN_PROGRESS";
+
+  public enum ScanStatus {
+    BLANK(""),
+    IN_PROGRESS("IN_PROGRESS"),
+    VIRUS_DETECTED("VIRUS_DETECTED");
+
+    private final String value;
+
+    ScanStatus(String value) {
+      this.value = value;
+    }
+
+    public String getValue() {
+      return value;
+    }
+
+    public static ScanStatus fromValue(String value) {
+      if (value == null || value.trim().isEmpty()) {
+        return BLANK;
+      }
+      for (ScanStatus status : values()) {
+        if (status.value.equalsIgnoreCase(value)) {
+          return status;
+        }
+      }
+      return BLANK; // Default to blank for unknown values
+    }
+  }
+
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(
       Collection<String> filenames, StringBuilder prefixTemplate, String closingRemark) {

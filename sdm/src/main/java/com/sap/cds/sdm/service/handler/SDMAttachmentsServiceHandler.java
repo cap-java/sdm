@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
-
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -21,6 +19,7 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -53,6 +52,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     this.documentService = documentService;
     this.tokenHandler = tokenHandler;
     this.dbQuery = dbQuery;
+  }
+
+  @Before(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
+  public void createBeforeAttachment(AttachmentCreateEventContext context) throws IOException {
+    System.out.println("Inside Before Create Attachment");
   }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
@@ -147,16 +151,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      String errorMessage =
-          eventContext
-              .getCdsRuntime()
-              .getLocalizedMessage(
-                  "SDM.Repository.versionedRepoError",
-                  null,
-                  eventContext.getParameterInfo().getLocale());
-      if (errorMessage.equalsIgnoreCase(SDMConstants.VERSIONED_REPO_ERROR_MSG))
-        throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-      throw new ServiceException(errorMessage);
+      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
     }
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
@@ -164,16 +159,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (repoValue.getVirusScanEnabled()
         && contentLen > 400 * 1024 * 1024
         && !repoValue.getDisableVirusScannerForLargeFile()) {
-      String errorMessage =
-          eventContext
-              .getCdsRuntime()
-              .getLocalizedMessage(
-                  SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
-                  null,
-                  eventContext.getParameterInfo().getLocale());
-      if (errorMessage.equalsIgnoreCase(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE))
-        throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
-      throw new ServiceException(errorMessage);
+      throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
     }
   }
 
@@ -208,9 +194,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (upAssociation.isPresent()) {
       CdsElement association = upAssociation.get();
       // get association type
-      CdsAssociationType associationType = association.getType();
+      CdsAssociationType assocType = association.getType();
       // get the refs of the association
-      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
+      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
       upIdKey = fkElements.get(0);
     }
     return upIdKey;
@@ -235,16 +221,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (maxCount > 0 && rowCount >= maxCount) {
       String message = maxCountArr[1];
       if (message != null && !"null".equalsIgnoreCase(message)) {
-        String errorMessage =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Attachments.maxCountError",
-                    null,
-                    eventContext.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
-          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
-        throw new ServiceException(errorMessage);
+        throw new ServiceException(message);
       }
       throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
     }
@@ -326,59 +303,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     switch (status) {
       case "duplicate":
-        Object[] duplicatemessage = new Object[1];
-        duplicatemessage[0] = cmisDocument.getFileName();
-        String duplicateErrorMessage =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    SDMConstants.SDM_DUPLICATE_ATTACHMENT,
-                    duplicatemessage,
-                    eventContext.getParameterInfo().getLocale());
-        if (duplicateErrorMessage.equalsIgnoreCase(SDMConstants.SDM_DUPLICATE_ATTACHMENT))
-          throw new ServiceException(
-              SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
-        throw new ServiceException(duplicateErrorMessage);
+        throw new ServiceException(SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
       case "virus":
-        Object[] message = new Object[1];
-        message[0] = cmisDocument.getFileName();
-        String virusErrorMessage =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    SDMConstants.VIRUS_ERROR_MESSAGE,
-                    message,
-                    eventContext.getParameterInfo().getLocale());
-        if (virusErrorMessage.equalsIgnoreCase(SDMConstants.VIRUS_ERROR_MESSAGE))
-          throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
-        throw new ServiceException(virusErrorMessage);
-
+        throw new ServiceException(SDMConstants.getVirusFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        String errorMessage =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Authorization.userNotAuthorizedError",
-                    null,
-                    eventContext.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG))
-          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
-        throw new ServiceException(errorMessage);
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
       case "blocked":
-        String errorMessage2 =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.File.mimetypeInvalidError",
-                    null,
-                    eventContext.getParameterInfo().getLocale());
-        if (errorMessage2.equalsIgnoreCase(SDMConstants.MIMETYPE_INVALID_ERROR_MSG))
-          throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
-        throw new ServiceException(errorMessage2);
+        throw new ServiceException(SDMConstants.MIMETYPE_INVALID_ERROR);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
+        cmisDocument.setMimeType(createResult.get("mimeType").toString());
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

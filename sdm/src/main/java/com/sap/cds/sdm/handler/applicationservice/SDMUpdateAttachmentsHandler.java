@@ -23,6 +23,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -222,8 +223,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       // values if needed.
       String objectId = (String) attachment.get("objectId");
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-      fileNameInDB =
+      JSONObject objectResponse =
           sdmService.getObject(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+      if (objectResponse != null) {
+        JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
+        fileNameInDB = succinctProperties.getString("cmis:name");
+      }
     }
     Map<String, String> propertiesInDB;
     propertiesInDB =

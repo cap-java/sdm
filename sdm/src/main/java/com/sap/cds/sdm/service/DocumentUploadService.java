@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.service;
 
+import static com.sap.cds.sdm.constants.SDMConstants.*;
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
@@ -83,7 +84,7 @@ public class DocumentUploadService {
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT, e);
+      throw new ServiceException("Error setting timeout", e);
     }
   }
 
@@ -299,7 +300,7 @@ public class DocumentUploadService {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
-    String objectId = "", mimeType = "";
+    String objectId = "", mimeType = "", scanStatus = "";
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
@@ -309,6 +310,7 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        scanStatus = succinctProperties.getString("scanStatus");
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
@@ -345,6 +347,23 @@ public class DocumentUploadService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
         finalResponse.put("mimeType", mimeType);
+
+        // Determine upload status based on scan status using enum
+        SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
+        String uploadStatus;
+        switch (scanStatusEnum) {
+          case IN_PROGRESS:
+            uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
+            break;
+          case VIRUS_DETECTED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+            break;
+          case BLANK:
+          default:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+            break;
+        }
+        finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.getGenericError("upload"));
