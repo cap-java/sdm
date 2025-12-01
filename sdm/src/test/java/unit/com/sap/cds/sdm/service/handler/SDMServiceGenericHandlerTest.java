@@ -1534,6 +1534,13 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
     CdsElement upElement = mock(CdsElement.class);
+    CdsElement upAssociation = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
+    when(upAssociation.getType()).thenReturn(associationType);
+    when(associationType.refs()).thenReturn(Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
     when(draftEntity.elements()).thenReturn(Stream.of(upElement));
     when(upElement.getName()).thenReturn("up__ID");
 
@@ -1602,6 +1609,13 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
     CdsElement upElement = mock(CdsElement.class);
+    CdsElement upAssociation = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
+    when(upAssociation.getType()).thenReturn(associationType);
+    when(associationType.refs()).thenReturn(Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
     when(draftEntity.elements()).thenReturn(Stream.of(upElement));
     when(upElement.getName()).thenReturn("up__ID");
 
@@ -1655,6 +1669,13 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
     CdsElement upElement = mock(CdsElement.class);
+    CdsElement upAssociation = mock(CdsElement.class);
+    CdsAssociationType associationType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
+    when(upAssociation.getType()).thenReturn(associationType);
+    when(associationType.refs()).thenReturn(Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
     when(draftEntity.elements()).thenReturn(Stream.of(upElement));
     when(upElement.getName()).thenReturn("up__ID");
 
@@ -1905,6 +1926,13 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(attachmentActiveEntity));
 
     CdsElement upElement = mock(CdsElement.class);
+    CdsElement upAssociation = mock(CdsElement.class);
+    CdsAssociationType upAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(attachmentDraftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
+    when(upAssociation.getType()).thenReturn(upAssocType);
+    when(upAssocType.refs()).thenReturn(Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
     when(attachmentDraftEntity.elements()).thenReturn(Stream.of(upElement));
     when(upElement.getName()).thenReturn("up__ID");
 
@@ -2638,6 +2666,20 @@ public class SDMServiceGenericHandlerTest {
     // Mock upId key extraction for attachment entities
     CdsElement upElement1 = mock(CdsElement.class);
     CdsElement upElement2 = mock(CdsElement.class);
+    CdsElement upAssociation1 = mock(CdsElement.class);
+    CdsAssociationType upAssocType1 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef1 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity1.findAssociation("up_")).thenReturn(Optional.of(upAssociation1));
+    when(upAssociation1.getType()).thenReturn(upAssocType1);
+    when(upAssocType1.refs()).thenReturn(Stream.of(mockRef1));
+    when(mockRef1.path()).thenReturn("ID");
+    CdsElement upAssociation2 = mock(CdsElement.class);
+    CdsAssociationType upAssocType2 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef2 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity2.findAssociation("up_")).thenReturn(Optional.of(upAssociation2));
+    when(upAssociation2.getType()).thenReturn(upAssocType2);
+    when(upAssocType2.refs()).thenReturn(Stream.of(mockRef2));
+    when(mockRef2.path()).thenReturn("ID");
     when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
     when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
     when(upElement1.getName()).thenReturn("up__ID");
@@ -2971,6 +3013,27 @@ public class SDMServiceGenericHandlerTest {
     CdsElement upElement1 = mock(CdsElement.class);
     CdsElement upElement2 = mock(CdsElement.class);
     CdsElement upElement3 = mock(CdsElement.class);
+    CdsElement upAssociation1 = mock(CdsElement.class);
+    CdsAssociationType upAssocType1 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef1 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity1.findAssociation("up_")).thenReturn(Optional.of(upAssociation1));
+    when(upAssociation1.getType()).thenReturn(upAssocType1);
+    when(upAssocType1.refs()).thenReturn(Stream.of(mockRef1));
+    when(mockRef1.path()).thenReturn("ID");
+    CdsElement upAssociation2 = mock(CdsElement.class);
+    CdsAssociationType upAssocType2 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef2 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity2.findAssociation("up_")).thenReturn(Optional.of(upAssociation2));
+    when(upAssociation2.getType()).thenReturn(upAssocType2);
+    when(upAssocType2.refs()).thenReturn(Stream.of(mockRef2));
+    when(mockRef2.path()).thenReturn("ID");
+    CdsElement upAssociation3 = mock(CdsElement.class);
+    CdsAssociationType upAssocType3 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef3 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity3.findAssociation("up_")).thenReturn(Optional.of(upAssociation3));
+    when(upAssociation3.getType()).thenReturn(upAssocType3);
+    when(upAssocType3.refs()).thenReturn(Stream.of(mockRef3));
+    when(mockRef3.path()).thenReturn("ID");
     when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
     when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
     when(attachmentDraftEntity3.elements()).thenReturn(Stream.of(upElement3));

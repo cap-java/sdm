@@ -27,8 +27,11 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SDMUtils {
+  private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
 
   private SDMUtils() {
     // Doesn't do anything
@@ -56,6 +59,10 @@ public class SDMUtils {
 
   public static Set<String> FileNameDuplicateInDrafts(
       List<CdsData> data, String composition, String targetEntity, String upIdKey) {
+    logger.info("Checking for duplicate filenames in draft attachments...");
+    logger.info("Using upIdKey: " + upIdKey);
+    logger.info("Target Entity: " + targetEntity);
+    logger.info("Composition: " + composition);
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
@@ -71,6 +78,7 @@ public class SDMUtils {
             String upId = (String) attachment.get(upIdKey);
             String fileRepositorySpecific =
                 filenameInRequest + "#" + repositoryInRequest + "#" + upId;
+            logger.info("Filename key check : " + fileRepositorySpecific);
             if (!uniqueFilenames.add(fileRepositorySpecific)) {
               duplicateFilenames.add(filenameInRequest);
             }
