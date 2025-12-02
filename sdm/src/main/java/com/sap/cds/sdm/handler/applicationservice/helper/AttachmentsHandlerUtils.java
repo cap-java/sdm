@@ -1,11 +1,14 @@
 package com.sap.cds.sdm.handler.applicationservice.helper;
 
+import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
+import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.EventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 import org.slf4j.Logger;
@@ -99,9 +102,7 @@ public class AttachmentsHandlerUtils {
               : null;
 
       if (isDirectAttachmentTargetAspect(targetAspect)) {
-        String serviceName = entity.getQualifiedName().split("\\.")[0];
-        String entityName = entity.getName();
-        String directPath = serviceName + "." + entityName + "." + compositionName;
+        String directPath = entity.getQualifiedName() + "." + compositionName;
         pathMapping.put(directPath, directPath);
       }
     }
@@ -162,7 +163,9 @@ public class AttachmentsHandlerUtils {
       String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
       String actualPath = buildActualPath(entity, compositionName, attachmentPath);
 
-      if (entityPath != null && actualPath != null) {
+      // Only add the mapping if both paths are non-null and the key doesn't already exist
+      // This preserves direct attachment mappings from being overwritten by nested ones
+      if (entityPath != null && actualPath != null && !pathMapping.containsKey(entityPath)) {
         pathMapping.put(entityPath, actualPath);
       }
     }
@@ -216,17 +219,20 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Get the target entity name (without service prefix)
-        String targetEntityName = targetEntity.getName();
-
         // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the entity path: ServiceName.EntityName.attachments
-        return serviceName + "." + targetEntityName + "." + attachmentPart;
+        // For nested compositions, use the full target entity path to ensure uniqueness
+        // For direct attachments on the parent entity, the targetEntity equals parentEntity
+        String entityPath;
+        if (targetEntity.getQualifiedName().equals(parentEntity.getQualifiedName())) {
+          // Direct attachment: use parent entity path
+          entityPath = parentEntity.getQualifiedName() + "." + attachmentPart;
+        } else {
+          // Nested attachment: use target entity path to ensure uniqueness
+          entityPath = targetEntity.getQualifiedName() + "." + attachmentPart;
+        }
+        return entityPath;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
@@ -239,15 +245,15 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the service name (first part)
-        String serviceName = pathParts[0];
-
-        // Replace the entity name with the composition property name
-        // Keep the attachment part (last part)
+        // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
 
-        // Build the new path: ServiceName.compositionPropertyName.attachments
-        return serviceName + "." + compositionPropertyName + "." + attachmentPart;
+        // Build the new path using parent entity qualified name + composition property name
+        return parentEntity.getQualifiedName()
+            + "."
+            + compositionPropertyName
+            + "."
+            + attachmentPart;
       }
     } catch (Exception e) {
       logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
@@ -362,5 +368,223 @@ public class AttachmentsHandlerUtils {
     Map<String, Object> wrapper = new HashMap<>();
     wrapper.put(targetEntity, root);
     return wrapper;
+  }
+
+  /**
+   * Retrieves comprehensive attachment composition details including parent titles.
+   *
+   * <p>This method combines attachment composition path mapping with parent title extraction to
+   * provide complete details for each attachment composition. Each entry contains the composition
+   * name, definition, and parent entity title.
+   *
+   * @param model the CDS model containing entity definitions and relationships
+   * @param entity the target CDS entity to analyze for attachment path mappings
+   * @param persistenceService the persistence service used for data access operations
+   * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
+   * @param entityData the entity data structure containing potential attachment information
+   * @return a map where keys are attachment composition definitions and values are maps containing
+   *     name, definition, and parentTitle, or an empty map if no attachments are found
+   */
+  public static Map<String, Map<String, String>> getAttachmentCompositionDetails(
+      CdsModel model,
+      CdsEntity entity,
+      PersistenceService persistenceService,
+      String targetEntity,
+      Map<String, Object> entityData) {
+    Map<String, Map<String, String>> attachmentDetails = new HashMap<>();
+
+    // Get the composition path mapping
+    Map<String, String> compositionPathMapping =
+        getAttachmentPathMapping(model, entity, persistenceService);
+
+    // Get parent titles
+    Map<String, String> parentTitles =
+        getAttachmentParentTitles(targetEntity, entityData, compositionPathMapping);
+
+    // Combine into comprehensive details
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String definition = entry.getKey();
+      String name = entry.getValue();
+      String parentTitle = parentTitles.get(name);
+
+      Map<String, String> details = new HashMap<>();
+      details.put("name", name);
+      details.put("definition", definition);
+      details.put("parentTitle", parentTitle);
+
+      attachmentDetails.put(definition, details);
+    }
+
+    return attachmentDetails;
+  }
+
+  /**
+   * Retrieves parent entity titles for each attachment composition found in the entity structure.
+   *
+   * <p>This method analyzes the entity data structure to identify attachment compositions and
+   * extracts the title (or other identifying field) of the parent entity containing each attachment
+   * composition. It handles both direct attachments at the root level and nested attachments within
+   * composed entities.
+   *
+   * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
+   * @param entity the entity data structure containing potential attachment information
+   * @param compositionPathMapping the mapping of attachment composition paths obtained from
+   *     getAttachmentPathMapping
+   * @return a map where keys are attachment composition names and values are the parent entity
+   *     titles, or an empty map if no attachments are found
+   */
+  public static Map<String, String> getAttachmentParentTitles(
+      String targetEntity, Map<String, Object> entity, Map<String, String> compositionPathMapping) {
+    Map<String, String> parentTitles = new HashMap<>();
+
+    String[] targetEntityPath = targetEntity.split("\\.");
+    String entityName = targetEntityPath[targetEntityPath.length - 1];
+    Map<String, Object> wrappedEntity = wrapEntityWithParent(entity, entityName.toLowerCase());
+
+    for (Map.Entry<String, String> compositionEntry : compositionPathMapping.entrySet()) {
+      String compositionPath = compositionEntry.getValue();
+      String parentTitle =
+          findParentTitle(wrappedEntity, compositionPath, entityName.toLowerCase());
+      if (parentTitle != null) {
+        parentTitles.put(compositionPath, parentTitle);
+      }
+    }
+
+    return parentTitles;
+  }
+
+  /**
+   * Finds the parent title for a given attachment composition path.
+   *
+   * @param entity the wrapped entity data structure
+   * @param compositionPath the composition path (e.g., "AdminService.chapters123.attachments" or
+   *     "AdminService.Books.references")
+   * @param rootEntityName the name of the root entity
+   * @return the title of the parent entity containing the attachment composition, or null if not
+   *     found
+   */
+  private static String findParentTitle(
+      Map<String, Object> entity, String compositionPath, String rootEntityName) {
+    try {
+      String[] pathParts = compositionPath.split("\\.");
+
+      if (pathParts.length >= 3) {
+        String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
+
+        // Check if this is a direct composition (entity matches root entity)
+        if (entityPart.equalsIgnoreCase(rootEntityName)) {
+          // Direct attachment at root level (e.g., "AdminService.Books.references")
+          return extractTitleFromEntity(entity.get(rootEntityName));
+        } else {
+          // Nested attachment (e.g., "AdminService.chapters123.attachments")
+          // Navigate to the parent entity
+          Object rootEntity = entity.get(rootEntityName);
+          if (rootEntity instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
+            Object parentCollection = rootMap.get(entityPart);
+
+            if (parentCollection instanceof List) {
+              @SuppressWarnings("unchecked")
+              List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
+              if (!parentList.isEmpty()) {
+                // Get title from the first item in the collection
+                return extractTitleFromEntity(parentList.get(0));
+              }
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
+    }
+
+    return null;
+  }
+
+  /**
+   * Extracts the title field from an entity object, with fallback options.
+   *
+   * @param entityObj the entity object to extract title from
+   * @return the title string, or a fallback identifier, or null if not found
+   */
+  private static String extractTitleFromEntity(Object entityObj) {
+    if (!(entityObj instanceof Map)) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> entityMap = (Map<String, Object>) entityObj;
+
+    // Priority order: title -> name -> ID -> first non-null string value
+    String[] titleFields = {"title", "name", "ID", "id"};
+
+    for (String field : titleFields) {
+      Object value = entityMap.get(field);
+      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+        return (String) value;
+      }
+    }
+
+    // Fallback: find any string value
+    for (Object value : entityMap.values()) {
+      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+        return (String) value;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Validates file names in the provided data for various constraints including whitespace,
+   * restricted characters, and duplicates.
+   *
+   * <p>This method performs comprehensive validation of file names by checking for:
+   *
+   * <ul>
+   *   <li>Whitespace-only or null file names
+   *   <li>Restricted characters (such as / and \)
+   *   <li>Duplicate file names within the same repository
+   * </ul>
+   *
+   * @param context the event context containing messages for error reporting
+   * @param data the list of CDS data containing potential file attachments
+   * @param composition the composition name used to locate attachments in the data structure
+   * @return true if any validation errors are found, false otherwise
+   */
+  public static Boolean validateFileNames(
+      EventContext context, List<CdsData> data, String composition, String contextInfo) {
+    Boolean isError = false;
+    String targetEntity = context.getTarget().getQualifiedName();
+
+    // Validation for file names
+    Set<String> whitespaceFilenames =
+        SDMUtils.FileNameContainsWhitespace(data, composition, targetEntity);
+    List<String> restrictedFileNames =
+        SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
+    Set<String> duplicateFilenames =
+        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
+
+    // Collecting all the errors
+    if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
+      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE + contextInfo);
+      isError = true;
+    }
+    if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
+      context
+          .getMessages()
+          .error(SDMConstants.nameConstraintMessage(restrictedFileNames) + contextInfo);
+      isError = true;
+    }
+    if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
+      String formattedMessage =
+          String.format(
+              "%s%s", SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
+      context.getMessages().error(formattedMessage);
+      isError = true;
+    }
+    // returning the error message
+    return isError;
   }
 }

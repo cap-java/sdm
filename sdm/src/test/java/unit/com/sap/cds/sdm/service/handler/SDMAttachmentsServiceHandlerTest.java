@@ -1,11 +1,14 @@
 package unit.com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -16,6 +19,9 @@ import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.service.model.service.AttachmentModificationResult;
+import com.sap.cds.feature.attachments.service.model.service.CreateAttachmentInput;
+import com.sap.cds.feature.attachments.service.model.service.MarkAsDeletedInput;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
@@ -28,11 +34,14 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
+import com.sap.cds.sdm.service.SDMAttachmentsService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.SDMServiceImpl;
 import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
@@ -49,6 +58,7 @@ import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Stream;
 import org.json.JSONObject;
@@ -439,7 +449,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
       // Mock SDMUtils.isRestrictedCharactersInName
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false); // Return false to indicate no restricted characters
 
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
@@ -544,6 +554,64 @@ public class SDMAttachmentsServiceHandlerTest {
       // Verify the exception message
       assertEquals(SDMConstants.getVirusFilesError("sample.pdf"), thrown.getMessage());
     }
+  }
+
+  @Test
+  void testCopyAttachments_invalidFacetFormat() {
+    SDMAttachmentsService service = new SDMAttachmentsService();
+    CopyAttachmentInput input = mock(CopyAttachmentInput.class);
+    when(input.facet()).thenReturn("invalidfacet");
+    when(input.upId()).thenReturn("upId");
+    when(input.objectIds()).thenReturn(List.of("obj1"));
+    Exception ex =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              service.copyAttachments(input, false);
+            });
+    assertTrue(ex.getMessage().contains("Invalid facet format"));
+  }
+
+  @Test
+  void testReadAttachment_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    InputStream result = service.readAttachment("docId");
+    assertNull(result);
+  }
+
+  @Test
+  void testCreateAttachment_emitsContextAndReturnsResult() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    CreateAttachmentInput input = mock(CreateAttachmentInput.class);
+    MediaData mediaData = MediaData.create();
+    when(input.attachmentIds()).thenReturn(new HashMap<>());
+    when(input.attachmentEntity()).thenReturn(mock(com.sap.cds.reflect.CdsEntity.class));
+    when(input.fileName()).thenReturn("file.txt");
+    when(input.mimeType()).thenReturn("text/plain");
+    when(input.content()).thenReturn(new ByteArrayInputStream(new byte[0]));
+    AttachmentModificationResult result = service.createAttachment(input);
+    assertNotNull(result);
+  }
+
+  @Test
+  void testMarkAttachmentAsDeleted_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    MarkAsDeletedInput input = mock(MarkAsDeletedInput.class);
+    when(input.contentId()).thenReturn("docId");
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.getName()).thenReturn("user");
+    when(input.userInfo()).thenReturn(userInfo);
+    service.markAttachmentAsDeleted(input);
+  }
+
+  @Test
+  void testRestoreAttachment_emitsContext() {
+    SDMAttachmentsService service = spy(new SDMAttachmentsService());
+    doNothing().when(service).emit(any());
+    service.restoreAttachment(Instant.now());
   }
 
   @Test
@@ -674,6 +742,10 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
+    // Ensure filename is present so handler's own validateFileName doesn't throw whitespace error
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockMediaData.get("fileName")).thenReturn("test.txt");
+    when(mockMediaData.getFileName()).thenReturn("test.txt");
 
     // Mock the behavior of createDocument and other dependencies
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
@@ -687,10 +759,15 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+        MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+            mockStatic(AttachmentsHandlerUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("10__null");
+      attachmentUtilsMockedStatic
+          .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
+          .thenCallRealMethod();
 
       // Assert that a ServiceException is thrown and verify its message
       ServiceException thrown =
@@ -710,8 +787,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockAttachmentIds.put("up__ID", "upid");
     mockAttachmentIds.put("ID", "id");
     mockAttachmentIds.put("repositoryId", "repo1");
+    mockAttachmentIds.put("fileName", "test.txt");
 
     MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.get("fileName")).thenReturn("test.txt");
+    when(mockMediaData.getFileName()).thenReturn("test.txt");
     Result mockResult = mock(Result.class);
     List<Row> nonEmptyRowList = List.of(mock(Row.class));
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
@@ -719,6 +799,8 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsElement mockAssociationElement = mock(CdsElement.class);
     CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
     CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+    byte[] byteArray = "Test content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
 
     // Set up the JSON response for the "unauthorized" case
     JSONObject mockCreateResult = new JSONObject();
@@ -746,6 +828,10 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn("Unauthorised error german");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
+    when(mockMediaData.getContent()).thenReturn(contentStream);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
 
     // Mock the behavior of createDocument and other dependencies
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
@@ -762,16 +848,25 @@ public class SDMAttachmentsServiceHandlerTest {
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("10__null");
+          .thenReturn("0__null");
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
+          .thenReturn(false);
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentUtilsMockedStatic
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
+            .thenCallRealMethod();
 
-      // Assert that a ServiceException is thrown and verify its message
-      ServiceException thrown =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                handlerSpy.createAttachment(mockContext);
-              });
-      assertEquals("Unauthorised error german", thrown.getMessage());
+        // Assert that a ServiceException is thrown and verify its message
+        ServiceException thrown =
+            assertThrows(
+                ServiceException.class,
+                () -> {
+                  handlerSpy.createAttachment(mockContext);
+                });
+        assertEquals("Unauthorised error german", thrown.getMessage());
+      }
     }
   }
 
@@ -782,8 +877,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockAttachmentIds.put("up__ID", "upid");
     mockAttachmentIds.put("ID", "id");
     mockAttachmentIds.put("repositoryId", "repo1");
+    mockAttachmentIds.put("fileName", "test.txt");
 
     MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.get("fileName")).thenReturn("test.txt");
+    when(mockMediaData.getFileName()).thenReturn("test.txt");
     Result mockResult = mock(Result.class);
     List<Row> nonEmptyRowList = List.of(mock(Row.class));
     CdsEntity mockDraftEntity = mock(CdsEntity.class);
@@ -791,6 +889,8 @@ public class SDMAttachmentsServiceHandlerTest {
     CdsElement mockAssociationElement = mock(CdsElement.class);
     CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
     CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+    byte[] byteArray = "Test content".getBytes();
+    InputStream contentStream = new ByteArrayInputStream(byteArray);
 
     // Set up the JSON response for the "blocked" case
     JSONObject mockCreateResult = new JSONObject();
@@ -812,6 +912,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(userInfo.getTenant()).thenReturn("t1");
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
     when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
@@ -819,6 +920,9 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(SDMConstants.MIMETYPE_INVALID_ERROR);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
+    when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
 
     // Mock the behavior of createDocument and other dependencies
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
@@ -835,16 +939,25 @@ public class SDMAttachmentsServiceHandlerTest {
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("10__null");
+          .thenReturn("0__null");
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
+          .thenReturn(false);
+      try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
+          mockStatic(AttachmentsHandlerUtils.class)) {
+        attachmentUtilsMockedStatic
+            .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
+            .thenCallRealMethod();
 
-      // Assert that a ServiceException is thrown and verify its message
-      ServiceException thrown =
-          assertThrows(
-              ServiceException.class,
-              () -> {
-                handlerSpy.createAttachment(mockContext);
-              });
-      assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+        // Assert that a ServiceException is thrown and verify its message
+        ServiceException thrown =
+            assertThrows(
+                ServiceException.class,
+                () -> {
+                  handlerSpy.createAttachment(mockContext);
+                });
+        assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+      }
     }
   }
 
@@ -1170,7 +1283,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("0__null");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.isRestrictedCharactersInName(anyString()))
+          .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(true);
 
       // Use assertThrows to expect a ServiceException and validate the message
@@ -1183,7 +1296,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
       // Verify the exception message
       assertEquals(
-          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf"), "Upload"),
+          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf")),
           thrown.getMessage());
     }
   }
@@ -1250,14 +1363,14 @@ public class SDMAttachmentsServiceHandlerTest {
   void testDuplicateCheck_NoDuplicates() {
     Result result = mock(Result.class);
 
-    // Mocking a raw list of maps
+    // Mocking a raw list of maps to match Result.listOf(Map.class) expectation
+    @SuppressWarnings("rawtypes")
     List<Map> mockedResultList = new ArrayList<>();
     Map<String, Object> map1 = new HashMap<>();
     map1.put("key1", "value1");
     mockedResultList.add(map1);
 
-    // Casting to raw types to avoid type mismatch
-    when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
+    when(result.listOf(Map.class)).thenReturn(mockedResultList);
 
     String filename = "sample.pdf";
     String fileid = "123";
@@ -1265,8 +1378,9 @@ public class SDMAttachmentsServiceHandlerTest {
     attachment.put("fileName", filename);
     attachment.put("ID", fileid);
 
+    @SuppressWarnings("rawtypes")
     List<Map> resultList = Arrays.asList((Map) attachment);
-    when(result.listOf(Map.class)).thenReturn((List) resultList);
+    when(result.listOf(Map.class)).thenReturn(resultList);
 
     boolean isDuplicate = handlerSpy.duplicateCheck(filename, fileid, result);
     assertFalse(isDuplicate, "Expected no duplicates");
@@ -1279,8 +1393,9 @@ public class SDMAttachmentsServiceHandlerTest {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
           .thenReturn("0__null");
-      // Mocking a raw list of maps
-      List<Map> mockedResultList = new ArrayList<>();
+
+      // Initialize list with proper generic type
+      List<Map<String, Object>> mockedResultList = new ArrayList<>();
 
       // Creating a map with duplicate filename but different file ID
       Map<String, Object> attachment1 = new HashMap<>();
@@ -1291,11 +1406,13 @@ public class SDMAttachmentsServiceHandlerTest {
       attachment2.put("fileName", "sample.pdf");
       attachment2.put("ID", "456"); // Same filename but different ID (this is the duplicate)
       attachment2.put("repositoryId", SDMConstants.REPOSITORY_ID);
-      mockedResultList.add((Map) attachment1);
-      mockedResultList.add((Map) attachment2);
+      mockedResultList.add(attachment1);
+      mockedResultList.add(attachment2);
 
-      // Mocking the result to return the list containing the attachments
-      when(result.listOf(Map.class)).thenReturn((List) mockedResultList);
+      // Mock with proper type casting
+      @SuppressWarnings("unchecked")
+      List<Map> typedList = (List<Map>) (List<?>) mockedResultList;
+      when(result.listOf(Map.class)).thenReturn(typedList);
 
       String filename = "sample.pdf";
       String fileid = "123"; // The fileid to check, same as attachment1, different from attachment2
@@ -1610,7 +1727,6 @@ public class SDMAttachmentsServiceHandlerTest {
 
   @Test
   public void throwAttachmetDraftEntityException() throws IOException {
-
     when(eventContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t123");
     RepoValue repoValue = new RepoValue();
@@ -1625,12 +1741,14 @@ public class SDMAttachmentsServiceHandlerTest {
     when(parameterInfo.getHeaders()).thenReturn(headers);
     when(cdsModel.findEntity(anyString()))
         .thenThrow(new ServiceException(SDMConstants.DRAFT_NOT_FOUND));
+
     ServiceException thrown =
         assertThrows(
             ServiceException.class,
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
+    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
   }
 
   @Test
