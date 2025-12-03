@@ -1,0 +1,19 @@
+name: Check Release Branch Names
+
+on:
+  workflow_run:
+    workflows: ["Single Tenant Deploy and Integration Test"]
+    types: [completed]
+  workflow_dispatch:
+jobs:
+  check_release_branches:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: List Release branches
+      run: |
+        echo "Downstream job completed successfully"

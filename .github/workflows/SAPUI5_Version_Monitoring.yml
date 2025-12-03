@@ -1,0 +1,111 @@
+name: Daily SAPUI5 Version Update
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-version:
+    name: Check and Update SAPUI5 Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout the develop_deploy branch
+        uses: actions/checkout@v3
+        with:
+          ref: develop_deploy
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
+      - name: Run version update script
+        id: run_script
+        run: |
+          #!/bin/bash
+          
+          # Define the target file
+          FILE_PATH="cap-notebook/demoapp/app/index.html"
+          
+          # Function to get the latest version and its corresponding latest patch version
+          fetch_versions() {
+              local json_url="https://sapui5.hana.ondemand.com/versionoverview.json"
+              local json_content=$(curl -s "$json_url")
+          
+              local latest_version_with_long_term_maintenance
+              latest_version_with_long_term_maintenance=$(echo "$json_content" | jq -r \
+                  '[.versions[] | select(.support == "Maintenance" and (.eom | test("Long-term Maintenance")))][0].version' | tr -d '*')
+          
+              local latest_patch_version
+              latest_patch_version=$(echo "$json_content" | jq -r --arg version_prefix "${latest_version_with_long_term_maintenance%.*}" \
+                  '[.patches[] | select((.version | startswith($version_prefix)) and (.eocp != "To Be Determined"))] | sort_by(.version | split("-")[0] | split(".") | map(tonumber)) | last | .version')
+          
+              echo "$latest_version_with_long_term_maintenance $latest_patch_version"
+          }
+          
+          # Function to fetch the current version from the file
+          fetch_current_version() {
+              local file="$1"
+              local current_version
+              current_version=$(grep 'sap-ui-core.js' "$file" | sed -E 's|.*sapui5\.hana\.ondemand\.com/([0-9]+\.[0-9]+\.[0-9]+)/resources.*|\1|')
+              echo "$current_version"
+          }
+          
+          # Get the latest versions
+          read -r latest_version latest_patch_version < <(fetch_versions)
+          echo "Latest SAPUI5 version found: $latest_patch_version"
+          
+          # Get the current version
+          current_version=$(fetch_current_version "$FILE_PATH")
+          
+          if [[ -z "$current_version" ]]; then
+            echo "Error: Current version could not be found in $FILE_PATH. Exiting."
+            exit 1
+          fi
+          
+          echo "Current SAPUI5 version in file: $current_version"
+          
+          # Split versions into components for numerical comparison
+          IFS='.' read -r LATEST_MAJOR LATEST_MINOR LATEST_PATCH <<< "$latest_patch_version"
+          IFS='.' read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "$current_version"
+          
+          echo "Comparing versions: $current_version vs $latest_patch_version"
+          
+          # Perform numerical comparison
+          if (( LATEST_MAJOR > CURRENT_MAJOR || \
+                (LATEST_MAJOR == CURRENT_MAJOR && LATEST_MINOR > CURRENT_MINOR) || \
+                (LATEST_MAJOR == CURRENT_MAJOR && LATEST_MINOR == CURRENT_MINOR && LATEST_PATCH > CURRENT_PATCH) )); then
+              
+              echo "A newer version of SAPUI5 is available. Updating..."
+              
+              # Use sed to replace only the version number
+              sed -i "s|sapui5.hana.ondemand.com/${current_version}|sapui5.hana.ondemand.com/${latest_patch_version}|g" "$FILE_PATH"
+              
+              echo "Update successful."
+              
+              # Set output variables to be used in subsequent steps
+              echo "changes_made=true" >> "$GITHUB_OUTPUT"
+              echo "latest_version=$latest_patch_version" >> "$GITHUB_OUTPUT"
+              echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
+          else
+              echo "Current version is up-to-date. No changes needed."
+          fi
+        shell: bash
+
+      - name: Create Pull Request
+        if: steps.run_script.outputs.changes_made == 'true'
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GIT_TOKEN }}
+          commit-message: 'chore: Update SAPUI5 to ${{ steps.run_script.outputs.latest_version }}'
+          title: 'Automated: Update SAPUI5 to ${{ steps.run_script.outputs.latest_version }}'
+          body: |
+            This is an automated pull request to update the SAPUI5 version in `index.html`.
+            Current Version: ${{ steps.run_script.outputs.current_version }}
+            Latest patch version: ${{ steps.run_script.outputs.latest_version }}
+          branch: 'update-sapui5-version'
+          base: develop_deploy
+          assignees: yashmeet29
