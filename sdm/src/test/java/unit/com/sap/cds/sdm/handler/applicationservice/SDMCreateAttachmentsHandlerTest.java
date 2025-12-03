@@ -135,6 +135,12 @@ public class SDMCreateAttachmentsHandlerTest {
       CdsEntity targetEntity = mock(CdsEntity.class);
       when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
       when(context.getTarget()).thenReturn(targetEntity);
+
+      // Mock the attachment entity
+      CdsEntity attachmentEntity = mock(CdsEntity.class);
+      when(context.getModel().findEntity("compositionDefinition"))
+          .thenReturn(Optional.of(attachmentEntity));
+
       // Make validateFileName execute its real implementation, and stub helper methods
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
@@ -144,6 +150,7 @@ public class SDMCreateAttachmentsHandlerTest {
               () ->
                   SDMUtils.FileNameContainsRestrictedCharaters(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptyList());
+      sdmUtilsMockedStatic.when(() -> SDMUtils.getUpIdKey(attachmentEntity)).thenReturn("upId");
       sdmUtilsMockedStatic
           .when(
               () ->

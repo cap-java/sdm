@@ -197,6 +197,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
 
     final String upIdKey = SDMUtils.getUpIdKey(draftEntity);
+    if (upIdKey == null || upIdKey.isEmpty()) {
+      return;
+    }
     String parentKeyName = upIdKey.replaceFirst("^up__", "");
     Object parentId = parentKeys.get(parentKeyName);
 

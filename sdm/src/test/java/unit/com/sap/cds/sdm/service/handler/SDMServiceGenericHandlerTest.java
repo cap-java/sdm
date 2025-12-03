@@ -1533,17 +1533,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    CdsElement upAssociation = mock(CdsElement.class);
-    CdsAssociationType associationType = mock(CdsAssociationType.class);
-    CqnElementRef mockRef = mock(CqnElementRef.class);
-    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
-    when(upAssociation.getType()).thenReturn(associationType);
-    when(associationType.refs()).thenReturn(Stream.of(mockRef));
-    when(mockRef.path()).thenReturn("ID");
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
@@ -1569,6 +1558,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(draftLinksResult)
         .thenReturn(activeResult);
 
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
             "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
@@ -1587,7 +1578,7 @@ public class SDMServiceGenericHandlerTest {
           }
         });
 
-    verify(persistenceService, atLeast(1)).run(any(CqnSelect.class));
+    verify(persistenceService, times(2)).run(any(CqnSelect.class));
     verify(tokenHandler, times(1)).getSDMCredentials();
     verify(context, times(1)).getUserInfo();
   }
@@ -1608,17 +1599,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    CdsElement upAssociation = mock(CdsElement.class);
-    CdsAssociationType associationType = mock(CdsAssociationType.class);
-    CqnElementRef mockRef = mock(CqnElementRef.class);
-    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
-    when(upAssociation.getType()).thenReturn(associationType);
-    when(associationType.refs()).thenReturn(Stream.of(mockRef));
-    when(mockRef.path()).thenReturn("ID");
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result emptyResult = mock(Result.class);
     when(emptyResult.iterator()).thenReturn(Collections.emptyIterator());
     when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
@@ -1628,6 +1608,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(true);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
@@ -1668,17 +1650,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    CdsElement upAssociation = mock(CdsElement.class);
-    CdsAssociationType associationType = mock(CdsAssociationType.class);
-    CqnElementRef mockRef = mock(CqnElementRef.class);
-    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
-    when(upAssociation.getType()).thenReturn(associationType);
-    when(associationType.refs()).thenReturn(Stream.of(mockRef));
-    when(mockRef.path()).thenReturn("ID");
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
@@ -1702,6 +1673,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
@@ -1944,6 +1917,9 @@ public class SDMServiceGenericHandlerTest {
 
     Result emptyDraftLinksResult = mock(Result.class);
     when(emptyDraftLinksResult.iterator()).thenReturn(Collections.emptyIterator());
+
+    // Mock SDMUtils.getUpIdKey to return non-null value
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(attachmentDraftEntity)).thenReturn("up__ID");
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -3047,6 +3023,9 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Mock SDMUtils.getUpIdKey to return non-null value for all attachment entities
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any(CdsEntity.class))).thenReturn("up__ID");
 
     // Mock the static method call
     try (var attachmentUtilsMock =
