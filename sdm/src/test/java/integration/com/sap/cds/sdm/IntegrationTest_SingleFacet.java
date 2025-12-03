@@ -2701,8 +2701,7 @@ class IntegrationTest_SingleFacet {
         String errorCode = json.getJSONObject("error").getString("code");
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
-        assertEquals(
-            "Maximum number of attachments reached in English", errorMessage);
+        assertEquals("Maximum number of attachments reached in English", errorMessage);
       }
       String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
       if (!response.equals("Saved")) {
