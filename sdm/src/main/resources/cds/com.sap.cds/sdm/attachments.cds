@@ -22,7 +22,7 @@ annotate Attachments with @UI: {
         {Value: note, @HTML5.CssDefaults: {width: '20%'}}
     ]
 } {
-    note       @(title: '{i18n>Note}');
+    note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
     modifiedAt @(odata.etag: null);
     content
