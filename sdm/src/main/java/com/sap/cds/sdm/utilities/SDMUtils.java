@@ -59,10 +59,6 @@ public class SDMUtils {
 
   public static Set<String> FileNameDuplicateInDrafts(
       List<CdsData> data, String composition, String targetEntity, String upIdKey) {
-    logger.info("Checking for duplicate filenames in draft attachments...");
-    logger.info("Using upIdKey: " + upIdKey);
-    logger.info("Target Entity: " + targetEntity);
-    logger.info("Composition: " + composition);
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
