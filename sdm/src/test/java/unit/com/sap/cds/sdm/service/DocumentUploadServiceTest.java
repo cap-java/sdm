@@ -632,4 +632,612 @@ class DocumentUploadServiceTest {
         .baseTokenUrl("https://token.example.com/")
         .build();
   }
+
+  @Test
+  void testFormResponseWithSuccessAndNoMimeType() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse = "{\"succinctProperties\":{\"cmis:objectId\":\"12345\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("success", result.getString("status"));
+      assertEquals("12345", result.getString("objectId"));
+      // Check if mimeType key exists in response
+      assertFalse(
+          result.has(
+              "mimeType")); // Since objectId is not empty but mimeType is null, it won't be added
+    }
+  }
+
+  @Test
+  void testFormResponseWithOtherForbiddenError() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(403);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse = "{\"message\":\"Access denied for other reason\"}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals(
+          "success", result.getString("status")); // Status remains success for unhandled 403 cases
+      assertEquals("", result.getString("message")); // Message is empty since error wasn't set
+    }
+  }
+
+  @Test
+  void testCreateDocumentJustOverBoundarySize() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContentLength(400 * 1024 * 1024 + 1); // Just over 400MB - should use chunked
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    // When
+    IOException exception =
+        assertThrows(
+            IOException.class,
+            () -> {
+              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+            });
+
+    // Then
+    assertNotNull(exception);
+    assertTrue(exception.getMessage().contains("Error uploading document"));
+  }
+
+  @Test
+  void testUploadSingleChunkWithExecuteHttpPostIOException() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
+
+    // When & Then
+    assertThrows(
+        com.sap.cds.services.ServiceException.class,
+        () -> {
+          documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+        });
+  }
+
+  @Test
+  void testFormResponseWithIOExceptionInEntityUtils() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils
+          .when(() -> EntityUtils.toString(httpEntity))
+          .thenThrow(new IOException("Failed to read response"));
+
+      // When & Then
+      assertThrows(
+          com.sap.cds.services.ServiceException.class,
+          () -> {
+            documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+          });
+    }
+  }
+
+  @Test
+  void testCreateDocumentWithLargeFileAndIOException() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContentLength(500 * 1024 * 1024); // 500MB - should use chunked upload
+    cmisDocument.setContent(
+        null); // This will cause issues when trying to create ReadAheadInputStream
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    // When
+    IOException exception =
+        assertThrows(
+            IOException.class,
+            () -> {
+              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+            });
+
+    // Then
+    assertNotNull(exception);
+    assertTrue(exception.getMessage().contains("Error uploading document"));
+  }
+
+  @Test
+  void testUploadSingleChunkWithSystemUserFlow() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"12345\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, true);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("success", result.getString("status"));
+      verify(tokenHandler).getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW"));
+    }
+  }
+
+  @Test
+  void testUploadSingleChunkWithNamedUserFlow() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"12345\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("success", result.getString("status"));
+      verify(tokenHandler).getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE"));
+    }
+  }
+
+  @Test
+  void testCreateDocumentWithEdgeCaseMimeTypes() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setMimeType("APPLICATION/INTERNET-SHORTCUT"); // Test case sensitivity
+    cmisDocument.setUrl("https://example.com");
+    cmisDocument.setContentLength(100);
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+
+    // When
+    IOException exception =
+        assertThrows(
+            IOException.class,
+            () -> {
+              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+            });
+
+    // Then
+    assertNotNull(exception);
+    assertTrue(exception.getMessage().contains("Error uploading document"));
+  }
+
+  @Test
+  void testUploadSingleChunkWithLinkAndNullContent() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setMimeType("application/internet-shortcut");
+    cmisDocument.setUrl("https://example.com");
+    cmisDocument.setContent(null); // Should be fine for links
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"12345\",\"cmis:contentStreamMimeType\":\"application/internet-shortcut\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When & Then
+      assertDoesNotThrow(
+          () -> {
+            documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+          });
+    }
+  }
+
+  @Test
+  void testCreateDocumentWithZeroSizeFile() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContentLength(0); // Zero size should use single chunk
+    cmisDocument.setContent(new ByteArrayInputStream(new byte[0]));
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"12345\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("success", result.getString("status"));
+    }
+  }
+
+  @Test
+  void testFormResponseWithMalformedJSON() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(500);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String malformedResponse = "{invalid json}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(malformedResponse);
+
+      // When & Then
+      assertThrows(
+          Exception.class,
+          () -> {
+            documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+          });
+    }
+  }
+
+  @Test
+  void testCreateDocumentWithNegativeContentLength() throws Exception {
+    // Given
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContentLength(-1); // Invalid content length
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"12345\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+
+      // Then - Should handle negative content length gracefully
+      assertNotNull(result);
+    }
+  }
+
+  @Test
+  void testMultipleConsecutiveCalls() throws Exception {
+    // Given
+    CmisDocument cmisDocument1 = createTestCmisDocument();
+    cmisDocument1.setContent(new ByteArrayInputStream("test content 1".getBytes()));
+    cmisDocument1.setAttachmentId("att1");
+    cmisDocument1.setFileName("file1.txt");
+
+    CmisDocument cmisDocument2 = createTestCmisDocument();
+    cmisDocument2.setContent(new ByteArrayInputStream("test content 2".getBytes()));
+    cmisDocument2.setAttachmentId("att2");
+    cmisDocument2.setFileName("file2.txt");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse1 =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"obj1\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+    String jsonResponse2 =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"obj2\",\"cmis:contentStreamMimeType\":\"text/plain\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils
+          .when(() -> EntityUtils.toString(httpEntity))
+          .thenReturn(jsonResponse1)
+          .thenReturn(jsonResponse2);
+
+      // When
+      var result1 = documentUploadService.uploadSingleChunk(cmisDocument1, sdmCredentials, false);
+      var result2 = documentUploadService.uploadSingleChunk(cmisDocument2, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result1);
+      assertNotNull(result2);
+      assertEquals("success", result1.getString("status"));
+      assertEquals("success", result2.getString("status"));
+      assertEquals("obj1", result1.getString("objectId"));
+      assertEquals("obj2", result2.getString("objectId"));
+      assertEquals("att1", result1.getString("id"));
+      assertEquals("att2", result2.getString("id"));
+    }
+  }
+
+  @Test
+  void testFormResponseWithParseException() throws Exception {
+    // Given - Test JSON parsing exception in formResponse
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    // Return malformed JSON to trigger parse exception
+    String malformedJson = "{\"invalid\"json\\";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(malformedJson);
+
+      // When & Then
+      assertThrows(
+          Exception.class,
+          () -> documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false));
+    }
+  }
+
+  @Test
+  void testFormResponseWith500Error() throws Exception {
+    // Given - Test 500 server error response
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(500);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String errorResponse = "{\"message\":\"Internal server error\"}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(errorResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("fail", result.getString("status"));
+      assertEquals("Internal server error", result.getString("message"));
+    }
+  }
+
+  @Test
+  void testFormResponseWith400Error() throws Exception {
+    // Given - Test 400 bad request error response
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(400);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String errorResponse = "{\"message\":\"Bad request parameters\"}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(errorResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("fail", result.getString("status"));
+      assertEquals("Bad request parameters", result.getString("message"));
+    }
+  }
+
+  @Test
+  void testCreateDocumentWithExceptionInCreateDocument() throws Exception {
+    // Given - Test exception handling in createDocument method
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("application/pdf");
+    cmisDocument.setContentLength(100 * 1024); // Small file
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any()))
+        .thenThrow(new RuntimeException("Token handler error"));
+
+    // When & Then
+    IOException exception =
+        assertThrows(
+            IOException.class,
+            () -> documentUploadService.createDocument(cmisDocument, sdmCredentials, false));
+
+    assertTrue(exception.getMessage().contains("Error uploading document"));
+  }
+
+  @Test
+  void testUploadSingleChunkWithCustomMimeType() throws Exception {
+    // Given - Test uploadSingleChunk with various mime types
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("custom content".getBytes()));
+    cmisDocument.setMimeType("application/vnd.custom+xml");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    String jsonResponse =
+        "{\"succinctProperties\":{\"cmis:objectId\":\"custom123\",\"cmis:contentStreamMimeType\":\"application/vnd.custom+xml\"}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When
+      var result = documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false);
+
+      // Then
+      assertNotNull(result);
+      assertEquals("success", result.getString("status"));
+      assertEquals("custom123", result.getString("objectId"));
+      assertEquals("application/vnd.custom+xml", result.getString("mimeType"));
+    }
+  }
+
+  @Test
+  void testFormResponseWithEmptySuccinctProperties() throws Exception {
+    // Given - Test response with empty succinct properties
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(httpResponse);
+    when(httpResponse.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(httpResponse.getEntity()).thenReturn(httpEntity);
+
+    // Response with empty succinct properties
+    String jsonResponse = "{\"succinctProperties\":{}}";
+
+    try (MockedStatic<EntityUtils> mockedEntityUtils = mockStatic(EntityUtils.class)) {
+      mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
+
+      // When & Then - This should cause an exception when trying to get objectId
+      assertThrows(
+          Exception.class,
+          () -> documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false));
+    }
+  }
+
+  @Test
+  void testExecuteHttpPostServiceException() throws Exception {
+    // Given - Test ServiceException handling in executeHttpPost
+    CmisDocument cmisDocument = createTestCmisDocument();
+    cmisDocument.setContent(new ByteArrayInputStream("test content".getBytes()));
+    cmisDocument.setMimeType("text/plain");
+
+    SDMCredentials sdmCredentials = createTestSDMCredentials();
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Connection timeout"));
+
+    // When & Then
+    Exception exception =
+        assertThrows(
+            Exception.class,
+            () -> documentUploadService.uploadSingleChunk(cmisDocument, sdmCredentials, false));
+
+    // The exception should be wrapped in a ServiceException or IOException
+    assertTrue(
+        exception.getMessage().contains("Connection timeout")
+            || exception.getCause().getMessage().contains("Connection timeout"));
+  }
 }

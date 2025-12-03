@@ -59,7 +59,7 @@ class SDMAttachmentsServiceTest {
   void testCopyAttachments_WithSystemUser() {
     // Given
     String upId = "test-up-id";
-    String facet = "test-facet";
+    String facet = "TestService.TestEntity.attachments";
     List<String> objectIds = Arrays.asList("obj1", "obj2", "obj3");
     boolean isSystemUser = true;
 
@@ -75,7 +75,8 @@ class SDMAttachmentsServiceTest {
 
       // Then
       verify(mockContext).setUpId(upId);
-      verify(mockContext).setFacet(facet);
+      verify(mockContext).setParentEntity("TestService.TestEntity"); // Service.Entity part
+      verify(mockContext).setCompositionName("attachments"); // composition name part
       verify(mockContext).setObjectIds(objectIds);
       verify(mockContext).setSystemUser(true);
       verify(service).emit(mockContext);
@@ -85,9 +86,9 @@ class SDMAttachmentsServiceTest {
   @Test
   void testCopyAttachments_WithNonSystemUser() {
     // Given
-    String upId = "test-up-id-2";
-    String facet = "test-facet-2";
-    List<String> objectIds = Arrays.asList("obj4", "obj5");
+    String upId = "test-up-id";
+    String facet = "TestService.TestEntity.attachments";
+    List<String> objectIds = Arrays.asList("obj1", "obj2", "obj3");
     boolean isSystemUser = false;
 
     try (MockedStatic<AttachmentCopyEventContext> mockedStatic =
@@ -102,7 +103,8 @@ class SDMAttachmentsServiceTest {
 
       // Then
       verify(mockContext).setUpId(upId);
-      verify(mockContext).setFacet(facet);
+      verify(mockContext).setParentEntity("TestService.TestEntity"); // Service.Entity part
+      verify(mockContext).setCompositionName("attachments"); // composition name part
       verify(mockContext).setObjectIds(objectIds);
       verify(mockContext).setSystemUser(false);
       verify(service).emit(mockContext);
@@ -334,7 +336,7 @@ class SDMAttachmentsServiceTest {
   void testCopyAttachments_WithEmptyObjectIds() {
     // Given
     String upId = "test-up-id";
-    String facet = "test-facet";
+    String facet = "TestService.TestEntity.attachments";
     List<String> objectIds = Arrays.asList(); // Empty list
     boolean isSystemUser = false;
 
@@ -350,7 +352,8 @@ class SDMAttachmentsServiceTest {
 
       // Then
       verify(mockContext).setUpId(upId);
-      verify(mockContext).setFacet(facet);
+      verify(mockContext).setParentEntity("TestService.TestEntity"); // Service.Entity part
+      verify(mockContext).setCompositionName("attachments"); // composition name part
       verify(mockContext).setObjectIds(objectIds);
       verify(mockContext).setSystemUser(false);
       verify(service).emit(mockContext);
