@@ -586,8 +586,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       JsonNode whereArray = secondLast.path("where");
 
       // Get the actual key field names from the parent entity
-      List<String> keyElementNames =
-          parentEntity != null ? getKeyElementNames(parentEntity) : List.of("ID");
+      List<String> keyElementNames = getKeyElementNames(parentEntity);
 
       for (int i = 0; i < whereArray.size(); i++) {
         JsonNode node = whereArray.get(i);
