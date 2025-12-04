@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
@@ -303,8 +301,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    RepoValue repoValue =
-        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
+    RepoValue repoValue = sdmService.checkRepositoryType(repositoryId, eventContext);
     if (repoValue.getVersionEnabled()) {
       String errorMessage =
           eventContext
@@ -329,7 +326,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    String upID = fetchUPIDFromCQN(select);
+    String upID = fetchUPIDFromCQN(select, context);
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -337,7 +334,7 @@ public class SDMServiceGenericHandler implements EventHandler {
             attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
 
     checkAttachmentConstraints(context, attachmentDraftEntity.get(), upID, upIdKey);
-    validateLinkName(filenameInRequest, result);
+    validateLinkName(filenameInRequest, result, context);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
     String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
@@ -453,7 +450,7 @@ public class SDMServiceGenericHandler implements EventHandler {
                 .getCdsRuntime()
                 .getLocalizedMessage(
                     "SDM.Attachments.maxCountError", null, context.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+        if (errorMessage.equalsIgnoreCase(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
           throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
         throw new ServiceException(errorMessage);
       }
@@ -461,9 +458,17 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private void validateLinkName(String filename, Result result) throws ServiceException {
+  private void validateLinkName(String filename, Result result, EventContext context)
+      throws ServiceException {
     if (filename == null || filename.isBlank()) {
-      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      String errorMessage =
+          context
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.File.filenameWhitespaceError", null, context.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.FILENAME_WHITESPACE_ERROR_MSG))
+        throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      throw new ServiceException(errorMessage);
     }
     if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
@@ -548,7 +553,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private String fetchUPIDFromCQN(CqnSelect select) {
+  private String fetchUPIDFromCQN(CqnSelect select, EventContext context) {
     try {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
@@ -567,12 +572,26 @@ public class SDMServiceGenericHandler implements EventHandler {
         }
       }
       if (upID == null) {
-        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Link.entityProcessingError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.ENTITY_PROCESSING_ERROR_LINK_MSG))
+          throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+        throw new ServiceException(errorMessage);
       }
       return upID;
     } catch (Exception e) {
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
-      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      String errorMessage =
+          context
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Link.entityProcessingError", null, context.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.ENTITY_PROCESSING_ERROR_LINK_MSG))
+        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      throw new ServiceException(errorMessage, e);
     }
   }
 }

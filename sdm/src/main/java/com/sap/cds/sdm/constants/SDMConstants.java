@@ -21,10 +21,6 @@ public class SDMConstants {
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
       "SDM.Attachments.AdditionalProperty";
-  public static final String DUPLICATE_FILE_IN_DRAFT_ERROR_MESSAGE =
-      "The file(s) %s have been added multiple times. Please rename and try again.";
-  public static final String FILES_RENAME_WARNING_MESSAGE =
-      "The following files could not be renamed as they already exist:\n%s\n";
   public static final String COULD_NOT_UPDATE_THE_ATTACHMENT = "Could not update the attachment";
   public static final String ATTACHMENT_NOT_FOUND = "Attachment not found";
   public static final String GENERIC_ERROR = "Could not %s the document.";
@@ -98,9 +94,7 @@ public class SDMConstants {
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
   public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
   public static final String FAILED_TO_COPY_ATTACHMENT = "Failed to copy attachment";
-  public static final String FAILED_TO_FETCH_UP_ID = "Failed to fetch up_id";
-  public static final String FAILED_TO_FETCH_FACET =
-      "Invalid facet format, unable to extract required information.";
+
   public static final String PARENT_ENTITY_NOT_FOUND_ERROR = "Unable to find parent entity: %s";
   public static final String COMPOSITION_NOT_FOUND_ERROR =
       "Unable to find composition '%s' in entity: %s";
