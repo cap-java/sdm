@@ -3,6 +3,7 @@ package integration.com.sap.cds.sdm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import okio.ByteString;
 
@@ -15,7 +16,12 @@ public class Api implements ApiInterface {
 
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
-    this.httpClient = new OkHttpClient();
+    this.httpClient =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .build();
     this.token = this.config.get("Authorization");
     this.serviceName = this.config.get("serviceName");
   }
