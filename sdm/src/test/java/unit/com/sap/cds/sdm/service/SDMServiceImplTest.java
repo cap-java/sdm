@@ -638,7 +638,6 @@ public class SDMServiceImplTest {
   public void testCreateDocumentFailVirus() throws IOException {
     String mockResponseBody =
         "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}, \"message\": \"Malware Service Exception: Virus found in the file!\"}";
-
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName("sample.pdf");
     cmisDocument.setAttachmentId("attachmentId");
@@ -1419,8 +1418,8 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    String objectName = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertEquals("desiredObjectName", objectName);
+    List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    assertEquals("desiredObjectName", objectInfo.get(0));
   }
 
   @Test
@@ -1439,8 +1438,8 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream("".getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    String objectName = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertNull(objectName);
+    List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    assertNull(objectInfo);
   }
 
   @Test
@@ -1527,9 +1526,12 @@ public class SDMServiceImplTest {
           .thenReturn(responseBody);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-      List<String> result = sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true);
+      Map<String, String> result =
+          sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>());
 
-      assertEquals(List.of("file1.pdf", "application/pdf", "obj123"), result);
+      assertEquals("file1.pdf", result.get("cmis:name"));
+      assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
+      assertEquals("obj123", result.get("cmis:objectId"));
     }
   }
 
@@ -1565,7 +1567,9 @@ public class SDMServiceImplTest {
       ServiceException ex =
           assertThrows(
               ServiceException.class,
-              () -> sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true));
+              () ->
+                  sdmServiceImpl.copyAttachment(
+                      cmisDocument, sdmCredentials, true, new HashSet<>()));
       assertTrue(ex.getMessage().contains("SomeException"));
       assertTrue(ex.getMessage().contains("Something went wrong"));
     }
@@ -1588,7 +1592,8 @@ public class SDMServiceImplTest {
     ServiceException ex =
         assertThrows(
             ServiceException.class,
-            () -> sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true));
+            () ->
+                sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>()));
     assertTrue(ex.getMessage().contains(SDMConstants.FAILED_TO_COPY_ATTACHMENT));
     assertTrue(ex.getCause() instanceof IOException);
   }
