@@ -7,9 +7,14 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
+import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.io.IOException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -586,5 +591,208 @@ public class AttachmentsHandlerUtils {
     }
     // returning the error message
     return isError;
+  }
+
+  /**
+   * Fetches attachment data (filename and description) from SDM.
+   *
+   * @param sdmService the SDM service to fetch data from
+   * @param objectId the object ID in SDM
+   * @param sdmCredentials the credentials for SDM access
+   * @param isSystemUser whether the request is from a system user
+   * @return a list containing [filename, description]
+   * @throws IOException if there's an error fetching from SDM
+   */
+  public static List<String> fetchAttachmentDataFromSDM(
+      SDMService sdmService, String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    return sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+  }
+
+  /**
+   * Updates the filename property in the secondary properties map if needed.
+   *
+   * @param fileNameInDB the filename currently in the database
+   * @param filenameInRequest the filename from the request
+   * @param updatedSecondaryProperties the map to update
+   * @throws ServiceException if filename validation fails
+   */
+  public static void updateFilenameProperty(
+      String fileNameInDB, String filenameInRequest, Map<String, String> updatedSecondaryProperties)
+      throws ServiceException {
+    if (fileNameInDB == null) {
+      if (filenameInRequest != null) {
+        updatedSecondaryProperties.put("filename", filenameInRequest);
+      } else {
+        throw new ServiceException("Filename cannot be empty");
+      }
+    } else {
+      if (filenameInRequest == null) {
+        throw new ServiceException("Filename cannot be empty");
+      } else if (!fileNameInDB.equals(filenameInRequest)) {
+        updatedSecondaryProperties.put("filename", filenameInRequest);
+      }
+    }
+  }
+
+  /**
+   * Updates the description property in the secondary properties map if needed.
+   *
+   * @param descriptionInDB the description currently in the database
+   * @param descriptionInRequest the description from the request
+   * @param updatedSecondaryProperties the map to update
+   */
+  public static void updateDescriptionProperty(
+      String descriptionInDB,
+      String descriptionInRequest,
+      Map<String, String> updatedSecondaryProperties) {
+    if (descriptionInDB == null) {
+      if (descriptionInRequest != null) {
+        updatedSecondaryProperties.put("description", descriptionInRequest);
+      }
+    } else {
+      if (descriptionInRequest != null && !descriptionInDB.equals(descriptionInRequest)) {
+        updatedSecondaryProperties.put("description", descriptionInRequest);
+      }
+    }
+  }
+
+  /**
+   * Handles the SDM service response and adds to appropriate error/warning lists.
+   *
+   * @param responseCode the HTTP response code from SDM
+   * @param attachment the attachment map to potentially revert
+   * @param fileNameInSDM the original filename in SDM
+   * @param filenameInRequest the filename from the request
+   * @param propertiesInDB the properties from the database
+   * @param secondaryTypeProperties the secondary type properties
+   * @param descriptionInSDM the original description in SDM
+   * @param noSDMRoles list to add to if 403 error
+   * @param duplicateFileNameList list to add to if 409 error
+   * @param filesNotFound list to add to if 404 error
+   */
+  public static void handleSDMUpdateResponse(
+      int responseCode,
+      Map<String, Object> attachment,
+      String fileNameInSDM,
+      String filenameInRequest,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties,
+      String descriptionInSDM,
+      List<String> noSDMRoles,
+      List<String> duplicateFileNameList,
+      List<String> filesNotFound) {
+    switch (responseCode) {
+      case 403:
+        noSDMRoles.add(fileNameInSDM);
+        revertAttachmentProperties(
+            attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
+        break;
+      case 409:
+        duplicateFileNameList.add(filenameInRequest);
+        revertAttachmentProperties(
+            attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
+        break;
+      case 404:
+        filesNotFound.add(fileNameInSDM);
+        revertAttachmentProperties(
+            attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
+        break;
+      case 200:
+      case 201:
+        // Success cases, do nothing
+        break;
+      default:
+        throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, (Object[]) null);
+    }
+  }
+
+  /**
+   * Handles exceptions from SDM service calls.
+   *
+   * @param e the service exception
+   * @param attachment the attachment map to potentially revert
+   * @param fileNameInSDM the original filename in SDM
+   * @param filenameInRequest the filename from the request
+   * @param propertiesInDB the properties from the database
+   * @param secondaryTypeProperties the secondary type properties
+   * @param descriptionInSDM the original description in SDM
+   * @param filesWithUnsupportedProperties list to add to if unsupported properties error
+   * @param badRequest map to add to for other errors
+   */
+  public static void handleSDMServiceException(
+      ServiceException e,
+      Map<String, Object> attachment,
+      String fileNameInSDM,
+      String filenameInRequest,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties,
+      String descriptionInSDM,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest) {
+    if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
+      String unsupportedDetails =
+          e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
+      filesWithUnsupportedProperties.add(unsupportedDetails);
+      revertAttachmentProperties(
+          attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
+    } else {
+      badRequest.put(filenameInRequest, e.getMessage());
+      revertAttachmentProperties(
+          attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
+    }
+  }
+
+  /**
+   * Reverts attachment properties to their original values from the database.
+   *
+   * @param attachment the attachment map to update
+   * @param fileName the filename to restore
+   * @param propertiesInDB the properties from the database
+   * @param secondaryTypeProperties the secondary type properties mapping
+   * @param descriptionInSDM the description to restore
+   */
+  public static void revertAttachmentProperties(
+      Map<String, Object> attachment,
+      String fileName,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties,
+      String descriptionInSDM) {
+    if (propertiesInDB != null) {
+      for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
+        String dbKey = entry.getKey();
+        String dbValue = entry.getValue();
+
+        String secondaryKey =
+            secondaryTypeProperties.entrySet().stream()
+                .filter(e -> e.getValue().equals(dbKey))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        if (secondaryKey != null) {
+          attachment.replace(secondaryKey, dbValue);
+        }
+      }
+    }
+    attachment.replace("fileName", fileName);
+    attachment.replace("note", descriptionInSDM);
+  }
+
+  /**
+   * Prepares a CmisDocument with the provided attachment data.
+   *
+   * @param filenameInRequest the filename from the request
+   * @param descriptionInRequest the description from the request
+   * @param objectId the object ID in SDM
+   * @return a configured CmisDocument
+   */
+  public static CmisDocument prepareCmisDocument(
+      String filenameInRequest, String descriptionInRequest, String objectId) {
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setFileName(filenameInRequest);
+    cmisDocument.setDescription(descriptionInRequest);
+    cmisDocument.setObjectId(objectId);
+    return cmisDocument;
   }
 }

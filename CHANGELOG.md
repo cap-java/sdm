@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.6.1
+
+### Fixed
+- Incorrect filename shown after copying attachment
+- Defensive EhCache initialization
+- Improved filename validation
+- Removed harcoded ServiceName type 
+- Improved error handling for nested entities
+- Link doesn't get reverted in SDM when changes are discarded on the UI 
+- Support for entities defined with namespace  
+
 ## Version 1.6.0
 
 ### Added
