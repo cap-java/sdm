@@ -77,7 +77,14 @@ public class SDMConstants {
   public static final String REPOSITORY_ERROR_MSG = "SDM.Repository.repositoryError";
   public static final String FILE_NOT_FOUND_ERROR_MSG = "SDM.File.fileNotFoundError";
   public static final String MIMETYPE_INVALID_ERROR_MSG = "SDM.File.mimetypeInvalidError";
+  public static final String FILENAME_EMPTY_ERROR_MSG = "SDM.File.filenameEmptyError";
+  public static final String SDM_ROLES_ERROR_MSG = "SDM.Authorization.sdmRolesError";
+  public static final String ENTITY_PROCESSING_ERROR_LINK_MSG = "SDM.Link.entityProcessingError";
+  public static final String USER_NOT_AUTHORISED_ERROR_OPEN_ATTACHMENT_MSG =
+      "SDM.Authorization.userNotAuthorizedAttachmentError";
+  public static final String FILENAME_WHITESPACE_ERROR_MSG = "SDM.File.filenameWhitespaceError";
   public static final String FAILED_TO_FETCH_FACET_MSG = "SDM.Facet.failedToFetchFacetError";
+  public static final String INVALID_FACET_FORMAT_ERROR_MSG = "SDM.Facet.invalidFormatError";
   public static final String NO_SDM_BINDING = "No SDM binding found";
   public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
   public static final String DI_TOKEN_EXCHANGE_PARAMS =

@@ -29,9 +29,12 @@ public interface SDMService {
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
-  public RepoValue checkRepositoryType(String repositoryId, String tenant) throws IOException;
+  public RepoValue checkRepositoryType(
+      String repositoryId, String tenant, com.sap.cds.services.EventContext context)
+      throws IOException;
 
-  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) throws IOException;
+  public JSONObject getRepositoryInfo(
+      SDMCredentials sdmCredentials, com.sap.cds.services.EventContext context) throws IOException;
 
   public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 

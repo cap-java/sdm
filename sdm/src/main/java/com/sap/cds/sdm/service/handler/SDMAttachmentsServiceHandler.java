@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
-
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
 import com.sap.cds.feature.attachments.service.AttachmentService;
@@ -145,7 +143,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     RepoValue repoValue =
-        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
+        sdmService.checkRepositoryType(
+            repositoryId, eventContext.getUserInfo().getTenant(), eventContext);
     if (repoValue.getVersionEnabled()) {
       String errorMessage =
           eventContext
@@ -190,7 +189,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     checkAttachmentConstraints(eventContext, attachmentDraftEntity, upID, upIdKey);
 
     MediaData data = eventContext.getData();
-    validateFileName(data.getFileName(), result, attachmentIds);
+    validateFileName(data.getFileName(), result, attachmentIds, eventContext);
     createDocumentInSDM(data, result, eventContext, attachmentIds, upIdKey, upID);
   }
 
@@ -242,7 +241,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
                     "SDM.Attachments.maxCountError",
                     null,
                     eventContext.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
+        if (errorMessage.equalsIgnoreCase(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
           throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
         throw new ServiceException(errorMessage);
       }
@@ -250,10 +249,23 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
   }
 
-  private void validateFileName(String filename, Result result, Map<String, Object> attachmentIds)
+  private void validateFileName(
+      String filename,
+      Result result,
+      Map<String, Object> attachmentIds,
+      AttachmentCreateEventContext eventContext)
       throws ServiceException {
     if (filename == null || filename.isBlank()) {
-      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.File.filenameWhitespaceError",
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.FILENAME_WHITESPACE_ERROR_MSG))
+        throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      throw new ServiceException(errorMessage);
     }
     if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(

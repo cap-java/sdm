@@ -301,7 +301,9 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    RepoValue repoValue = sdmService.checkRepositoryType(repositoryId, eventContext);
+    RepoValue repoValue =
+        sdmService.checkRepositoryType(
+            repositoryId, eventContext.getUserInfo().getTenant(), eventContext);
     if (repoValue.getVersionEnabled()) {
       String errorMessage =
           eventContext

@@ -108,9 +108,15 @@ public class SDMServiceImplTest {
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("test");
+    com.sap.cds.services.EventContext mockEventContext =
+        mock(com.sap.cds.services.EventContext.class);
+    com.sap.cds.services.request.ParameterInfo mockParameterInfo =
+        mock(com.sap.cds.services.request.ParameterInfo.class);
+    when(mockEventContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getLocale()).thenReturn(java.util.Locale.ENGLISH);
     com.sap.cds.sdm.service.SDMService sdmService =
         new SDMServiceImpl(binding, connectionPool, tokenHandler);
-    JSONObject json = sdmService.getRepositoryInfo(sdmCredentials);
+    JSONObject json = sdmService.getRepositoryInfo(sdmCredentials, mockEventContext);
 
     JSONObject fetchedRepoInfo = json.getJSONObject(REPO_ID);
     JSONObject fetchedCapabilities = fetchedRepoInfo.getJSONObject("capabilities");
@@ -135,7 +141,18 @@ public class SDMServiceImplTest {
         assertThrows(
             ServiceException.class,
             () -> {
-              sdmService.getRepositoryInfo(sdmCredentials);
+              com.sap.cds.services.EventContext mockEventContext =
+                  mock(com.sap.cds.services.EventContext.class);
+              com.sap.cds.services.request.ParameterInfo mockParameterInfo =
+                  mock(com.sap.cds.services.request.ParameterInfo.class);
+              com.sap.cds.services.runtime.CdsRuntime mockCdsRuntime =
+                  mock(com.sap.cds.services.runtime.CdsRuntime.class);
+              when(mockEventContext.getParameterInfo()).thenReturn(mockParameterInfo);
+              when(mockParameterInfo.getLocale()).thenReturn(java.util.Locale.ENGLISH);
+              when(mockEventContext.getCdsRuntime()).thenReturn(mockCdsRuntime);
+              when(mockCdsRuntime.getLocalizedMessage(anyString(), any(), any()))
+                  .thenReturn(SDMConstants.REPOSITORY_ERROR);
+              sdmService.getRepositoryInfo(sdmCredentials, mockEventContext);
             });
     assertEquals("Failed to get repository info.", exception.getMessage());
   }
@@ -155,9 +172,21 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     // Assert that ServiceException is thrown
+    com.sap.cds.services.EventContext mockEventContext =
+        mock(com.sap.cds.services.EventContext.class);
+    com.sap.cds.services.request.ParameterInfo mockParameterInfo =
+        mock(com.sap.cds.services.request.ParameterInfo.class);
+    com.sap.cds.services.runtime.CdsRuntime mockCdsRuntime =
+        mock(com.sap.cds.services.runtime.CdsRuntime.class);
+    when(mockEventContext.getParameterInfo()).thenReturn(mockParameterInfo);
+    when(mockParameterInfo.getLocale()).thenReturn(java.util.Locale.ENGLISH);
+    when(mockEventContext.getCdsRuntime()).thenReturn(mockCdsRuntime);
+    when(mockCdsRuntime.getLocalizedMessage(anyString(), any(), any()))
+        .thenReturn(SDMConstants.REPOSITORY_ERROR);
     ServiceException exception =
         assertThrows(
-            ServiceException.class, () -> sdmServiceImpl.getRepositoryInfo(mockSdmCredentials));
+            ServiceException.class,
+            () -> sdmServiceImpl.getRepositoryInfo(mockSdmCredentials, mockEventContext));
 
     assertEquals(SDMConstants.REPOSITORY_ERROR, exception.getMessage());
   }
@@ -213,7 +242,9 @@ public class SDMServiceImplTest {
       InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
       when(entity.getContent()).thenReturn(inputStream);
 
-      RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      RepoValue repoValue =
+          spySDMService.checkRepositoryType(
+              repositoryId, tenant, mock(com.sap.cds.services.EventContext.class));
       assertEquals(true, repoValue.getVersionEnabled());
       assertEquals(false, repoValue.getVirusScanEnabled());
     }
@@ -273,7 +304,9 @@ public class SDMServiceImplTest {
       InputStream inputStream = new ByteArrayInputStream(mockRepoData.toString().getBytes());
       when(entity.getContent()).thenReturn(inputStream);
 
-      RepoValue repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      RepoValue repoValue =
+          spySDMService.checkRepositoryType(
+              repositoryId, tenant, mock(com.sap.cds.services.EventContext.class));
       assertEquals(false, repoValue.getVersionEnabled());
       assertEquals(false, repoValue.getVirusScanEnabled());
     }
@@ -297,7 +330,9 @@ public class SDMServiceImplTest {
       repoValue.setDisableVirusScannerForLargeFile(false);
       Mockito.when(mockCache.get(repoKey)).thenReturn(repoValue);
       cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
-      repoValue = spySDMService.checkRepositoryType(repositoryId, tenant);
+      repoValue =
+          spySDMService.checkRepositoryType(
+              repositoryId, tenant, mock(com.sap.cds.services.EventContext.class));
       assertEquals(false, repoValue.getVersionEnabled());
       assertEquals(false, repoValue.getVirusScanEnabled());
       assertEquals(false, repoValue.getDisableVirusScannerForLargeFile());

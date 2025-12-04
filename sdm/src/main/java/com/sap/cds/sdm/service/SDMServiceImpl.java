@@ -388,6 +388,7 @@ public class SDMServiceImpl implements SDMService {
       String folderName,
       boolean isSystemUser) {
 
+    @SuppressWarnings("unchecked")
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
@@ -490,14 +491,15 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public RepoValue checkRepositoryType(String repositoryId, String tenant) {
+  public RepoValue checkRepositoryType(
+      String repositoryId, String tenant, com.sap.cds.services.EventContext context) {
     RepoKey repoKey = new RepoKey();
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
     RepoValue repoValue = CacheConfig.getRepoCache().get(repoKey);
     if (repoValue == null) {
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-      JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
+      JSONObject repoInfo = getRepositoryInfo(sdmCredentials, context);
       Map<String, RepoValue> repoValueMap = fetchRepositoryData(repoInfo, repositoryId);
       repoKey = new RepoKey();
       repoKey.setSubdomain(tenant);
@@ -509,7 +511,8 @@ public class SDMServiceImpl implements SDMService {
     return repoValue;
   }
 
-  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
+  public JSONObject getRepositoryInfo(
+      SDMCredentials sdmCredentials, com.sap.cds.services.EventContext context) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
@@ -517,12 +520,27 @@ public class SDMServiceImpl implements SDMService {
         sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=repositoryInfo";
     HttpGet getRepoInfoRequest = new HttpGet(getRepoInfoUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepoInfoRequest)) {
-      if (response.getStatusLine().getStatusCode() != 200)
-        throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+      if (response.getStatusLine().getStatusCode() != 200) {
+        String errorMessage =
+            context
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    "SDM.Repository.repositoryError", null, context.getParameterInfo().getLocale());
+        if (errorMessage.equalsIgnoreCase(SDMConstants.REPOSITORY_ERROR_MSG))
+          throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+        throw new ServiceException(errorMessage);
+      }
       String responseString = EntityUtils.toString(response.getEntity());
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+      String errorMessage =
+          context
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  "SDM.Repository.repositoryError", null, context.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.REPOSITORY_ERROR_MSG))
+        throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+      throw new ServiceException(errorMessage);
     }
   }
 
