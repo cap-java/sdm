@@ -765,6 +765,9 @@ public class SDMServiceImpl implements SDMService {
 
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
+    }
+  }
+
   private Map<String, String> processCopyAttachmentResponse(
       String responseBody, Set<String> customPropertiesInSDM) {
     Map<String, String> resultMap = new HashMap<>();
