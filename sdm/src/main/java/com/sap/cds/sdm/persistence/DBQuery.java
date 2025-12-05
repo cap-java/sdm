@@ -227,6 +227,75 @@ public class DBQuery {
     return secondaryProperties;
   }
 
+  /**
+   * Retrieves valid secondary properties and the target entity for the move operation.
+   *
+   * @param context The move event context containing target entity information
+   * @return Object array with [0] = Map of DB field to SDM property, [1] = CdsEntity
+   */
+  public Object[] getValidSecondaryPropertiesWithEntity(AttachmentMoveEventContext context) {
+    String parentEntity = context.getParentEntity();
+    String compositionName = context.getCompositionName();
+    CdsModel model = context.getModel();
+
+    // Find the parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      throw new ServiceException(
+          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+    }
+
+    // Find the composition element
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      throw new ServiceException(
+          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+    }
+
+    // Get the target entity
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    // Find the target attachment entity
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isEmpty()) {
+      attachmentEntity = model.findEntity(targetEntityName + "_drafts");
+      if (attachmentEntity.isEmpty()) {
+        throw new ServiceException(
+            String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+      }
+    }
+
+    CdsEntity entity = attachmentEntity.get();
+
+    // Get secondary properties annotations
+    Map<String, String> secondaryProperties = new HashMap<>();
+    entity
+        .elements()
+        .forEach(
+            element -> {
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> annotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> nameAnnotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
+
+              if (annotation.isPresent()) {
+                secondaryProperties.put(element.getName(), element.getName());
+              } else if (nameAnnotation.isPresent()) {
+                String sdmPropertyName = nameAnnotation.get().getValue().toString();
+                secondaryProperties.put(element.getName(), sdmPropertyName);
+              }
+            });
+
+    logger.info(
+        "Resolved {} secondary properties from target entity '{}'",
+        secondaryProperties.size(),
+        targetEntityName);
+
+    return new Object[] {secondaryProperties, entity};
+  }
+
   public Result getAttachmentsForUPIDAndRepository(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,

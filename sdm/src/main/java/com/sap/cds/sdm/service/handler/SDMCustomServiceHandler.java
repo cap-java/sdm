@@ -550,11 +550,15 @@ public class SDMCustomServiceHandler {
   private static class SDMValidationData {
     final List<String> validSecondaryProperties;
     final Map<String, String> entityAnnotations;
+    final com.sap.cds.reflect.CdsEntity targetEntity;
 
     SDMValidationData(
-        List<String> validSecondaryProperties, Map<String, String> entityAnnotations) {
+        List<String> validSecondaryProperties,
+        Map<String, String> entityAnnotations,
+        com.sap.cds.reflect.CdsEntity targetEntity) {
       this.validSecondaryProperties = validSecondaryProperties;
       this.entityAnnotations = entityAnnotations;
+      this.targetEntity = targetEntity;
     }
   }
 
@@ -598,15 +602,17 @@ public class SDMCustomServiceHandler {
       throw new IOException("Failed to fetch valid secondary properties from SDM", e);
     }
 
-    // Get entity annotations for filtering properties during DB insertion
-    Map<String, String> entityAnnotations =
-        dbQuery.getValidSecondaryPropertiesForMove(request.getContext());
+    // Get entity annotations and target entity for filtering properties during DB insertion
+    Object[] entityData = dbQuery.getValidSecondaryPropertiesWithEntity(request.getContext());
+    @SuppressWarnings("unchecked")
+    Map<String, String> entityAnnotations = (Map<String, String>) entityData[0];
+    com.sap.cds.reflect.CdsEntity targetEntity = (com.sap.cds.reflect.CdsEntity) entityData[1];
     logger.info(
         "Target entity has {} annotated secondary properties for DB mapping: {}",
         entityAnnotations.size(),
         entityAnnotations);
 
-    return new SDMValidationData(validSecondaryProperties, entityAnnotations);
+    return new SDMValidationData(validSecondaryProperties, entityAnnotations, targetEntity);
   }
 
   /**
@@ -631,6 +637,7 @@ public class SDMCustomServiceHandler {
     SDMValidationData validationData = fetchSDMValidationData(request);
     List<String> validSecondaryProperties = validationData.validSecondaryProperties;
     Map<String, String> entityAnnotations = validationData.entityAnnotations;
+    com.sap.cds.reflect.CdsEntity targetEntity = validationData.targetEntity;
 
     // Preserve request context for authentication in parallel threads
     com.sap.cds.services.runtime.RequestContextRunner contextRunner =
@@ -656,6 +663,7 @@ public class SDMCustomServiceHandler {
                                           request,
                                           validSecondaryProperties,
                                           entityAnnotations,
+                                          targetEntity,
                                           processingResults,
                                           failedAttachments);
                                   processSingleAttachmentMove(moveContext);
@@ -728,6 +736,7 @@ public class SDMCustomServiceHandler {
     final MoveAttachmentsRequest request;
     final List<String> validSecondaryProperties;
     final Map<String, String> entityAnnotations;
+    final com.sap.cds.reflect.CdsEntity targetEntity;
     final AttachmentProcessingResults processingResults;
     final List<Map<String, String>> failedAttachments;
 
@@ -736,12 +745,14 @@ public class SDMCustomServiceHandler {
         MoveAttachmentsRequest request,
         List<String> validSecondaryProperties,
         Map<String, String> entityAnnotations,
+        com.sap.cds.reflect.CdsEntity targetEntity,
         AttachmentProcessingResults processingResults,
         List<Map<String, String>> failedAttachments) {
       this.objectId = objectId;
       this.request = request;
       this.validSecondaryProperties = validSecondaryProperties;
       this.entityAnnotations = entityAnnotations;
+      this.targetEntity = targetEntity;
       this.processingResults = processingResults;
       this.failedAttachments = failedAttachments;
     }
@@ -838,6 +849,7 @@ public class SDMCustomServiceHandler {
             movedObjectId,
             succinctProperties,
             moveContext.entityAnnotations,
+            moveContext.targetEntity,
             moveContext.processingResults);
       }
 
@@ -885,6 +897,7 @@ public class SDMCustomServiceHandler {
    * @param movedObjectId the new object ID after move
    * @param succinctProperties SDM response properties
    * @param entityAnnotations mapping of DB fields to SDM properties
+   * @param targetEntity the target attachment entity (for type checking)
    * @param results holder for successful processing results
    */
   private void processValidatedAttachment(
@@ -895,6 +908,7 @@ public class SDMCustomServiceHandler {
       String movedObjectId,
       org.json.JSONObject succinctProperties,
       Map<String, String> entityAnnotations,
+      com.sap.cds.reflect.CdsEntity targetEntity,
       AttachmentProcessingResults results) {
     logger.info("Attachment {} validation PASSED - Processing for DB insertion", objectId);
     logger.info("Entity annotations mapping (DB field -> SDM property): {}", entityAnnotations);
@@ -923,8 +937,32 @@ public class SDMCustomServiceHandler {
             value,
             value != null ? value.getClass().getSimpleName() : "null");
         if (value != null && !org.json.JSONObject.NULL.equals(value)) {
-          filteredSecondaryProps.put(dbPropertyName, value);
-          logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, value);
+          // Convert Long timestamp to Instant ONLY for DateTime fields
+          // Check the CDS type of the field to determine if conversion is needed
+          Object convertedValue = value;
+          if (value instanceof Long) {
+            com.sap.cds.reflect.CdsElement element = targetEntity.getElement(dbPropertyName);
+            if (element != null
+                && element.getType() != null
+                && "cds.DateTime".equals(element.getType().getQualifiedName())) {
+              convertedValue = java.time.Instant.ofEpochMilli((Long) value);
+              logger.info(
+                  "Converted Long timestamp {} to Instant {} for DateTime field '{}'",
+                  value,
+                  convertedValue,
+                  dbPropertyName);
+            } else {
+              logger.info(
+                  "Keeping Long value {} as-is for non-DateTime field '{}' (type: {})",
+                  value,
+                  dbPropertyName,
+                  element != null && element.getType() != null
+                      ? element.getType().getQualifiedName()
+                      : "unknown");
+            }
+          }
+          filteredSecondaryProps.put(dbPropertyName, convertedValue);
+          logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, convertedValue);
         }
       }
     }
