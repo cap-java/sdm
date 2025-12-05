@@ -10,7 +10,7 @@ import java.util.List;
  * @param sourceFacet The full facet path of the source entity (e.g., "Service.Entity.composition")
  *     that will be internally parsed to determine source parent entity and composition name for
  *     cleanup
- * @param upId The key of the target parent entity instance
+ * @param targetUpId The key of the target parent entity instance
  * @param targetFacet The qualified name of the target facet/entity (e.g., "Service.Attachments")
  * @param objectIds List of attachment object IDs to move
  */
