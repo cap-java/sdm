@@ -524,7 +524,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
         // Mock getObject
         when(sdmService.getObject("test-object-id", mockCredentials, false))
-            .thenReturn("fileInSDM.txt");
+            .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
 
         // Mock getSecondaryTypeProperties
         Map<String, String> secondaryTypeProperties = new HashMap<>();

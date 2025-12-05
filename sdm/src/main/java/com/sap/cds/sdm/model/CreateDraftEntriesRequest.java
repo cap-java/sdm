@@ -1,13 +1,14 @@
 package com.sap.cds.sdm.model;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parameter object for createDraftEntries method to reduce parameter count and improve code
  * maintainability.
  */
 public class CreateDraftEntriesRequest {
-  private final List<List<String>> attachmentsMetadata;
+  private final List<Map<String, String>> attachmentsMetadata;
   private final List<CmisDocument> populatedDocuments;
   private final String parentEntity;
   private final String compositionName;
@@ -15,6 +16,7 @@ public class CreateDraftEntriesRequest {
   private final String upIdKey;
   private final String repositoryId;
   private final String folderId;
+  private final Map<String, String> customPropertyValues;
 
   private CreateDraftEntriesRequest(Builder builder) {
     this.attachmentsMetadata = builder.attachmentsMetadata;
@@ -25,10 +27,11 @@ public class CreateDraftEntriesRequest {
     this.upIdKey = builder.upIdKey;
     this.repositoryId = builder.repositoryId;
     this.folderId = builder.folderId;
+    this.customPropertyValues = builder.customPropertyValues;
   }
 
   // Getters
-  public List<List<String>> getAttachmentsMetadata() {
+  public List<Map<String, String>> getAttachmentsMetadata() {
     return attachmentsMetadata;
   }
 
@@ -60,12 +63,16 @@ public class CreateDraftEntriesRequest {
     return folderId;
   }
 
+  public Map<String, String> getCustomPropertyValues() {
+    return customPropertyValues;
+  }
+
   public static Builder builder() {
     return new Builder();
   }
 
   public static class Builder {
-    private List<List<String>> attachmentsMetadata;
+    private List<Map<String, String>> attachmentsMetadata;
     private List<CmisDocument> populatedDocuments;
     private String parentEntity;
     private String compositionName;
@@ -73,8 +80,9 @@ public class CreateDraftEntriesRequest {
     private String upIdKey;
     private String repositoryId;
     private String folderId;
+    private Map<String, String> customPropertyValues;
 
-    public Builder attachmentsMetadata(List<List<String>> attachmentsMetadata) {
+    public Builder attachmentsMetadata(List<Map<String, String>> attachmentsMetadata) {
       this.attachmentsMetadata = attachmentsMetadata;
       return this;
     }
@@ -111,6 +119,11 @@ public class CreateDraftEntriesRequest {
 
     public Builder folderId(String folderId) {
       this.folderId = folderId;
+      return this;
+    }
+
+    public Builder customPropertyValues(Map<String, String> customPropertyValues) {
+      this.customPropertyValues = customPropertyValues;
       return this;
     }
 

@@ -63,7 +63,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               context.getTarget().getQualifiedName(),
               entityData);
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
-
       updateName(context, data, attachmentCompositionDetails);
     }
   }
@@ -202,38 +201,27 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
-    String fileNameInDB;
-    fileNameInDB =
-        dbQuery.getAttachmentForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id); // Fetching the name of the file from DB
-    String filenameInRequest =
-        (String) attachment.get("fileName"); // Fetching the name of the file from request
+    String filenameInRequest = (String) attachment.get("fileName");
+    String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
+
+    // Fetch original data from DB and SDM
+    String fileNameInDB =
+        dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    String fileNameInSDM =
-        sdmService.getObject(
-            objectId,
-            sdmCredentials,
-            context
-                .getUserInfo()
-                .isSystemUser()); // Fetch original filename from SDM since it's null in attachments
-    // table until save; needed to revert UI-modified names on error.
+    List<String> sdmAttachmentData =
+        AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
+            sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+    String fileNameInSDM = sdmAttachmentData.get(0);
+    String descriptionInSDM = sdmAttachmentData.get(1);
 
     Map<String, String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(
-            attachmentEntity,
-            attachment); // Fetching the secondary type properties from the attachment entity
-    Map<String, String> propertiesInDB;
-    propertiesInDB =
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+    Map<String, String> propertiesInDB =
         dbQuery.getPropertiesForID(
-            attachmentEntity.get(),
-            persistenceService,
-            id,
-            secondaryTypeProperties); // Fetching the values of the properties from the DB
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
-    // Get the updated secondary properties
+    // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -241,16 +229,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-    if (SDMUtils.hasRestrictedCharactersInName(filenameInRequest)) {
-      fileNameWithRestrictedCharacters.add(filenameInRequest);
-    }
-    CmisDocument cmisDocument = new CmisDocument();
-    cmisDocument.setFileName(filenameInRequest);
-    cmisDocument.setObjectId(objectId);
-    if (fileNameInDB == null || !fileNameInDB.equals(filenameInRequest)) {
-      updatedSecondaryProperties.put("filename", filenameInRequest);
-    }
+    CmisDocument cmisDocument =
+        AttachmentsHandlerUtils.prepareCmisDocument(
+            filenameInRequest, descriptionInRequest, objectId);
 
+    // Update filename and description properties
+    AttachmentsHandlerUtils.updateFilenameProperty(
+        fileNameInDB, filenameInRequest, updatedSecondaryProperties);
+    AttachmentsHandlerUtils.updateDescriptionProperty(
+        descriptionInSDM, descriptionInRequest, updatedSecondaryProperties);
+
+    // Send update to SDM and handle response
     try {
       int responseCode =
           sdmService.updateAttachments(
@@ -259,66 +248,29 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               updatedSecondaryProperties,
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
-      switch (responseCode) {
-        case 403:
-          // SDM Roles for user are missing
-          noSDMRoles.add(fileNameInSDM);
-          replacePropertiesInAttachment(
-              attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-          break;
-        case 404:
-          filesNotFound.add(filenameInRequest);
-          replacePropertiesInAttachment(
-              attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
-          break;
-        case 200:
-        case 201:
-          // Success cases, do nothing
-          break;
-
-        default:
-          throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, null);
-      }
+      AttachmentsHandlerUtils.handleSDMUpdateResponse(
+          responseCode,
+          attachment,
+          fileNameInSDM,
+          filenameInRequest,
+          propertiesInDB,
+          secondaryTypeProperties,
+          descriptionInSDM,
+          noSDMRoles,
+          duplicateFileNameList,
+          filesNotFound);
     } catch (ServiceException e) {
-      // This exception is thrown when there are unsupported properties in the request
-      if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
-        String unsupportedDetails =
-            e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
-        filesWithUnsupportedProperties.add(unsupportedDetails);
-        replacePropertiesInAttachment(
-            attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties);
-      } else {
-        badRequest.put(filenameInRequest, e.getMessage());
-        replacePropertiesInAttachment(
-            attachment, filenameInRequest, propertiesInDB, secondaryTypeProperties);
-      }
+      AttachmentsHandlerUtils.handleSDMServiceException(
+          e,
+          attachment,
+          fileNameInSDM,
+          filenameInRequest,
+          propertiesInDB,
+          secondaryTypeProperties,
+          descriptionInSDM,
+          filesWithUnsupportedProperties,
+          badRequest);
     }
-  }
-
-  private void replacePropertiesInAttachment(
-      Map<String, Object> attachment,
-      String fileName,
-      Map<String, String> propertiesInDB,
-      Map<String, String> secondaryTypeProperties) {
-    if (propertiesInDB != null) {
-      for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
-        String dbKey = entry.getKey();
-        String dbValue = entry.getValue();
-
-        // Find the key in secondaryTypeProperties where the value matches dbKey
-        String secondaryKey =
-            secondaryTypeProperties.entrySet().stream()
-                .filter(e -> e.getValue().equals(dbKey))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
-
-        if (secondaryKey != null) {
-          attachment.replace(secondaryKey, dbValue);
-        }
-      }
-    }
-    attachment.replace("fileName", fileName);
   }
 
   private void handleWarnings(

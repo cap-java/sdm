@@ -116,7 +116,7 @@ public class SDMUtils {
   }
 
   public static void prepareSecondaryProperties(
-      Map<String, String> requestBody, Map<String, String> secondaryProperties, String fileName) {
+      Map<String, String> requestBody, Map<String, String> secondaryProperties) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
     int index = 1;
@@ -124,6 +124,9 @@ public class SDMUtils {
       Map.Entry<String, String> entry = iterator.next();
       if ("filename".equals(entry.getKey())) {
         requestBody.put("propertyId[" + index + "]", "cmis:name");
+        requestBody.put("propertyValue[" + index + "]", entry.getValue());
+      } else if ("description".equals(entry.getKey())) {
+        requestBody.put("propertyId[" + index + "]", "cmis:description");
         requestBody.put("propertyValue[" + index + "]", entry.getValue());
       } else {
         requestBody.put("propertyId[" + index + "]", entry.getKey());
@@ -197,7 +200,10 @@ public class SDMUtils {
     }
   }
 
-  /* Create a map of property names to their UI titles for intuitive error messages. */
+  /*
+   * Create a map of property names to their UI titles for intuitive error
+   * messages.
+   */
   public static Map<String, String> getPropertyTitles(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     Map<String, String> titleMap = new HashMap<>();
@@ -222,7 +228,10 @@ public class SDMUtils {
   }
 
   private static String extractPropertyName(CdsElement element) {
-    /* Check both old and new SDM annotations to track titles for properties needing error handling. */
+    /*
+     * Check both old and new SDM annotations to track titles for properties needing
+     * error handling.
+     */
     if (element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME).isPresent()) {
       return element
           .findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME)
@@ -242,7 +251,10 @@ public class SDMUtils {
         .orElse(element.getName());
   }
 
-  /* Identify incorrectly defined properties in the CDS file to group them with unsupported ones where "MCM" is not true. */
+  /*
+   * Identify incorrectly defined properties in the CDS file to group them with
+   * unsupported ones where "MCM" is not true.
+   */
   public static Map<String, String> getSecondaryPropertiesWithInvalidDefinition(
       Optional<CdsEntity> attachmentEntity, Map<String, Object> attachment) {
     List<String> keysList = new ArrayList<>(attachment.keySet());
@@ -264,9 +276,10 @@ public class SDMUtils {
             if (titleAnnotation.isPresent()) {
               title = titleAnnotation.get().getValue().toString();
             } else {
-              title =
-                  element
-                      .getName(); /* This is in case the user has not specified a title for the column in the cds file (which is optional) */
+              title = element.getName(); /*
+                               * This is in case the user has not specified a title for the column in the cds
+                               * file (which is optional)
+                               */
             }
             invalidProperties.put(key, title);
           }
@@ -289,18 +302,21 @@ public class SDMUtils {
         }
         CdsElement element = entity.getElement(key);
         if (element != null) {
-          // Checking the SDM Annotation, both the old (outdated method) and the correct method.
+          // Checking the SDM Annotation, both the old (outdated method) and the correct
+          // method.
           Optional<CdsAnnotation<Object>> annotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
           Optional<CdsAnnotation<Object>> nameAnnotation =
               element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
           if (annotation.isPresent()) {
-            // If the property was defined using the old method, we will use the actual name of the
+            // If the property was defined using the old method, we will use the actual name
+            // of the
             // property
             secondaryTypeProperties.put(element.getName(), element.getName());
           }
           if (nameAnnotation.isPresent()) {
-            // If the property was defined using the new method, we will use the name specified in
+            // If the property was defined using the new method, we will use the name
+            // specified in
             // the annotation
             secondaryTypeProperties.put(
                 element.getName(), nameAnnotation.get().getValue().toString());
