@@ -163,11 +163,19 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -262,11 +270,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -327,11 +344,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -388,11 +414,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/URL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -450,11 +485,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -514,11 +558,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -585,11 +638,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -657,11 +719,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -728,11 +799,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1148,6 +1228,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1206,6 +1289,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/invalid\\name");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1260,6 +1346,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
