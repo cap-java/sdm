@@ -774,26 +774,35 @@ public class SDMCustomServiceHandler {
       String description = succinctProperties.optString("cmis:description");
       String movedObjectId = succinctProperties.optString("cmis:objectId");
 
-      logger.debug(
+      logger.info(
           "Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}",
           moveContext.objectId,
           fileName,
           mimeType);
+      logger.info(
+          "SDM response for attachment {} contains {} total properties: {}",
+          moveContext.objectId,
+          succinctProperties.length(),
+          succinctProperties.keySet());
 
       // Step 2: Validate target entity properties in SDM response
       // Get target entity's SDM property names from annotations
       Set<String> targetEntitySdmProperties = new HashSet<>(moveContext.entityAnnotations.values());
       Set<String> sdmResponseProperties = new HashSet<>(succinctProperties.keySet());
 
-      logger.debug(
+      logger.info(
           "Validating attachment {} - Target entity expects {} SDM properties: {}",
           moveContext.objectId,
           targetEntitySdmProperties.size(),
           targetEntitySdmProperties);
-      logger.debug(
+      logger.info(
           "SDM response has {} properties: {}",
           sdmResponseProperties.size(),
           sdmResponseProperties);
+      logger.info(
+          "Valid secondary properties list has {} entries: {}",
+          moveContext.validSecondaryProperties.size(),
+          moveContext.validSecondaryProperties);
 
       // Validate: Check target entity properties that exist in SDM response
       List<String> invalidProperties = new ArrayList<>();
@@ -888,6 +897,7 @@ public class SDMCustomServiceHandler {
       Map<String, String> entityAnnotations,
       AttachmentProcessingResults results) {
     logger.info("Attachment {} validation PASSED - Processing for DB insertion", objectId);
+    logger.info("Entity annotations mapping (DB field -> SDM property): {}", entityAnnotations);
 
     CmisDocument populatedDocument = new CmisDocument();
     populatedDocument.setType(succinctProperties.optString("sap:type", null));
@@ -899,10 +909,22 @@ public class SDMCustomServiceHandler {
       String dbPropertyName = propEntry.getKey();
       String sdmPropertyName = propEntry.getValue();
 
+      logger.info(
+          "Checking property - DB field: '{}', SDM property: '{}', exists in SDM response: {}",
+          dbPropertyName,
+          sdmPropertyName,
+          succinctProperties.has(sdmPropertyName));
+
       if (succinctProperties.has(sdmPropertyName)) {
         Object value = succinctProperties.get(sdmPropertyName);
+        logger.info(
+            "Found SDM property '{}' with value: {} (type: {})",
+            sdmPropertyName,
+            value,
+            value != null ? value.getClass().getSimpleName() : "null");
         if (value != null && !org.json.JSONObject.NULL.equals(value)) {
           filteredSecondaryProps.put(dbPropertyName, value);
+          logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, value);
         }
       }
     }
@@ -910,9 +932,10 @@ public class SDMCustomServiceHandler {
     populatedDocument.setSecondaryProperties(filteredSecondaryProps);
 
     logger.info(
-        "Attachment {} - Prepared {} properties for DB insertion",
+        "Attachment {} - Prepared {} properties for DB insertion: {}",
         objectId,
-        filteredSecondaryProps.size());
+        filteredSecondaryProps.size(),
+        filteredSecondaryProps);
 
     // Add to successful results
     results.successfulObjectIds.add(objectId);
@@ -1040,8 +1063,21 @@ public class SDMCustomServiceHandler {
       // to only include those annotated with @SDM.Attachments.AdditionalProperty
       // and present in valid secondary properties list
       if (cmisDocument.getSecondaryProperties() != null) {
+        logger.info(
+            "Adding {} secondary properties to DB insert for attachment {}: {}",
+            cmisDocument.getSecondaryProperties().size(),
+            newObjectId,
+            cmisDocument.getSecondaryProperties());
         updatedFields.putAll(cmisDocument.getSecondaryProperties());
+      } else {
+        logger.warn("No secondary properties to add for attachment {}", newObjectId);
       }
+
+      logger.info(
+          "Final DB insert map for attachment {} contains {} fields: {}",
+          newObjectId,
+          updatedFields.size(),
+          updatedFields.keySet());
 
       String baseKeyField = upIdKey != null ? upIdKey.replace("up__", "") : "ID";
       var insert =
