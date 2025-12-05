@@ -913,59 +913,9 @@ public class SDMCustomServiceHandler {
     logger.info("Attachment {} validation PASSED - Processing for DB insertion", objectId);
     logger.info("Entity annotations mapping (DB field -> SDM property): {}", entityAnnotations);
 
-    CmisDocument populatedDocument = new CmisDocument();
-    populatedDocument.setType(succinctProperties.optString("sap:type", null));
-    populatedDocument.setUrl(succinctProperties.optString("sap:linkURL", null));
-
-    // Filter secondary properties for DB
-    Map<String, Object> filteredSecondaryProps = new HashMap<>();
-    for (Map.Entry<String, String> propEntry : entityAnnotations.entrySet()) {
-      String dbPropertyName = propEntry.getKey();
-      String sdmPropertyName = propEntry.getValue();
-
-      logger.info(
-          "Checking property - DB field: '{}', SDM property: '{}', exists in SDM response: {}",
-          dbPropertyName,
-          sdmPropertyName,
-          succinctProperties.has(sdmPropertyName));
-
-      if (succinctProperties.has(sdmPropertyName)) {
-        Object value = succinctProperties.get(sdmPropertyName);
-        logger.info(
-            "Found SDM property '{}' with value: {} (type: {})",
-            sdmPropertyName,
-            value,
-            value != null ? value.getClass().getSimpleName() : "null");
-        if (value != null && !org.json.JSONObject.NULL.equals(value)) {
-          // Convert Long timestamp to Instant ONLY for DateTime fields
-          // Check the CDS type of the field to determine if conversion is needed
-          Object convertedValue = value;
-          if (value instanceof Long) {
-            com.sap.cds.reflect.CdsElement element = targetEntity.getElement(dbPropertyName);
-            if (element != null
-                && element.getType() != null
-                && "cds.DateTime".equals(element.getType().getQualifiedName())) {
-              convertedValue = java.time.Instant.ofEpochMilli((Long) value);
-              logger.info(
-                  "Converted Long timestamp {} to Instant {} for DateTime field '{}'",
-                  value,
-                  convertedValue,
-                  dbPropertyName);
-            } else {
-              logger.info(
-                  "Keeping Long value {} as-is for non-DateTime field '{}' (type: {})",
-                  value,
-                  dbPropertyName,
-                  element != null && element.getType() != null
-                      ? element.getType().getQualifiedName()
-                      : "unknown");
-            }
-          }
-          filteredSecondaryProps.put(dbPropertyName, convertedValue);
-          logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, convertedValue);
-        }
-      }
-    }
+    CmisDocument populatedDocument = createPopulatedDocument(succinctProperties);
+    Map<String, Object> filteredSecondaryProps =
+        filterSecondaryProperties(objectId, succinctProperties, entityAnnotations, targetEntity);
 
     populatedDocument.setSecondaryProperties(filteredSecondaryProps);
 
@@ -979,6 +929,135 @@ public class SDMCustomServiceHandler {
     results.successfulObjectIds.add(objectId);
     results.movedAttachmentsMetadata.add(List.of(fileName, mimeType, description, movedObjectId));
     results.populatedDocuments.add(populatedDocument);
+  }
+
+  /**
+   * Creates a CmisDocument with basic metadata from SDM response.
+   *
+   * @param succinctProperties SDM response properties
+   * @return populated CmisDocument
+   */
+  private CmisDocument createPopulatedDocument(org.json.JSONObject succinctProperties) {
+    CmisDocument document = new CmisDocument();
+    document.setType(succinctProperties.optString("sap:type", null));
+    document.setUrl(succinctProperties.optString("sap:linkURL", null));
+    return document;
+  }
+
+  /**
+   * Filters and converts secondary properties from SDM response for DB insertion.
+   *
+   * @param objectId the attachment object ID (for logging)
+   * @param succinctProperties SDM response properties
+   * @param entityAnnotations mapping of DB fields to SDM properties
+   * @param targetEntity the target attachment entity (for type checking)
+   * @return filtered and converted properties map
+   */
+  private Map<String, Object> filterSecondaryProperties(
+      String objectId,
+      org.json.JSONObject succinctProperties,
+      Map<String, String> entityAnnotations,
+      com.sap.cds.reflect.CdsEntity targetEntity) {
+    Map<String, Object> filteredProperties = new HashMap<>();
+
+    for (Map.Entry<String, String> propEntry : entityAnnotations.entrySet()) {
+      String dbPropertyName = propEntry.getKey();
+      String sdmPropertyName = propEntry.getValue();
+
+      logger.info(
+          "Checking property - DB field: '{}', SDM property: '{}', exists in SDM response: {}",
+          dbPropertyName,
+          sdmPropertyName,
+          succinctProperties.has(sdmPropertyName));
+
+      if (succinctProperties.has(sdmPropertyName)) {
+        Object value = succinctProperties.get(sdmPropertyName);
+        processSecondaryProperty(
+            objectId, dbPropertyName, sdmPropertyName, value, targetEntity, filteredProperties);
+      }
+    }
+
+    return filteredProperties;
+  }
+
+  /**
+   * Processes a single secondary property: logs, converts if needed, and adds to filtered map.
+   *
+   * @param objectId the attachment object ID (for logging)
+   * @param dbPropertyName the DB field name
+   * @param sdmPropertyName the SDM property name
+   * @param value the property value from SDM
+   * @param targetEntity the target entity for type checking
+   * @param filteredProperties the map to add the processed property to
+   */
+  private void processSecondaryProperty(
+      String objectId,
+      String dbPropertyName,
+      String sdmPropertyName,
+      Object value,
+      com.sap.cds.reflect.CdsEntity targetEntity,
+      Map<String, Object> filteredProperties) {
+    logger.info(
+        "Found SDM property '{}' with value: {} (type: {})",
+        sdmPropertyName,
+        value,
+        value != null ? value.getClass().getSimpleName() : "null");
+
+    if (value == null || org.json.JSONObject.NULL.equals(value)) {
+      return;
+    }
+
+    Object convertedValue = convertValueIfNeeded(value, dbPropertyName, targetEntity);
+    filteredProperties.put(dbPropertyName, convertedValue);
+    logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, convertedValue);
+  }
+
+  /**
+   * Converts value to appropriate type based on CDS field definition. Specifically handles Long to
+   * Instant conversion for DateTime fields.
+   *
+   * @param value the original value
+   * @param dbPropertyName the DB field name
+   * @param targetEntity the target entity for type checking
+   * @return converted value or original value if no conversion needed
+   */
+  private Object convertValueIfNeeded(
+      Object value, String dbPropertyName, com.sap.cds.reflect.CdsEntity targetEntity) {
+    if (!(value instanceof Long)) {
+      return value;
+    }
+
+    com.sap.cds.reflect.CdsElement element = targetEntity.getElement(dbPropertyName);
+    if (isDateTimeField(element)) {
+      Object converted = java.time.Instant.ofEpochMilli((Long) value);
+      logger.info(
+          "Converted Long timestamp {} to Instant {} for DateTime field '{}'",
+          value,
+          converted,
+          dbPropertyName);
+      return converted;
+    }
+
+    logger.info(
+        "Keeping Long value {} as-is for non-DateTime field '{}' (type: {})",
+        value,
+        dbPropertyName,
+        element != null && element.getType() != null
+            ? element.getType().getQualifiedName()
+            : "unknown");
+    return value;
+  }
+
+  /**
+   * Checks if a CDS element is a DateTime field.
+   *
+   * @param element the CDS element
+   * @return true if the element is a DateTime field
+   */
+  private boolean isDateTimeField(com.sap.cds.reflect.CdsElement element) {
+    return element != null
+        && element.getType() != null
+        && "cds.DateTime".equals(element.getType().getQualifiedName());
   }
 
   // Rollback a single attachment to source folder
