@@ -347,7 +347,7 @@ public class SDMCustomServiceHandler {
     // Clean up source entity metadata after successful move
     if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
       try {
-        int deletedCount =
+        long deletedCount =
             dbQuery.deleteAttachmentsByObjectIds(
                 persistenceService, successfulObjectIds, sourceUpId, context);
         logger.info(

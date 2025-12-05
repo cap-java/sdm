@@ -321,7 +321,7 @@ public class DBQuery {
    * @param context The move event context containing source entity information
    * @return The number of records deleted
    */
-  public int deleteAttachmentsByObjectIds(
+  public long deleteAttachmentsByObjectIds(
       PersistenceService persistenceService,
       List<String> objectIds,
       String sourceUpId,
