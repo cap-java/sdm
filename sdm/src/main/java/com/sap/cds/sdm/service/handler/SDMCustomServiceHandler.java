@@ -276,20 +276,18 @@ public class SDMCustomServiceHandler {
     if (!movedAttachmentsMetadata.isEmpty()) {
       String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
-      CreateDraftEntriesRequest draftRequest =
-          CreateDraftEntriesRequest.builder()
-              .attachmentsMetadata(movedAttachmentsMetadata)
-              .populatedDocuments(populatedDocuments)
-              .parentEntity(parentEntity)
-              .compositionName(compositionName)
-              .upID(upID)
-              .upIdKey(upIdKey)
-              .repositoryId(repositoryId)
-              .folderId(targetFolderId)
-              .build();
-
       try {
-        updateDatabaseAndCleanupSource(draftRequest, successfulObjectIds, context);
+        updateDatabaseAndCleanupSource(
+            movedAttachmentsMetadata,
+            populatedDocuments,
+            parentEntity,
+            compositionName,
+            upID,
+            upIdKey,
+            repositoryId,
+            targetFolderId,
+            successfulObjectIds,
+            context);
       } catch (ServiceException e) {
         DatabaseFailureContext failureContext =
             new DatabaseFailureContext(
@@ -314,7 +312,14 @@ public class SDMCustomServiceHandler {
    * @throws ServiceException if database operations fail
    */
   private void updateDatabaseAndCleanupSource(
-      CreateDraftEntriesRequest draftRequest,
+      List<List<String>> movedAttachmentsMetadata,
+      List<CmisDocument> populatedDocuments,
+      String parentEntity,
+      String compositionName,
+      String upID,
+      String upIdKey,
+      String repositoryId,
+      String folderId,
       List<String> successfulObjectIds,
       AttachmentMoveEventContext context)
       throws ServiceException {
@@ -328,7 +333,16 @@ public class SDMCustomServiceHandler {
       logger.info("Retrieved source up__ID for cleanup: {}", sourceUpId);
     }
 
-    createDraftEntries(draftRequest);
+    // Create draft entries for moved attachments with secondary properties
+    createDraftEntriesForMove(
+        movedAttachmentsMetadata,
+        populatedDocuments,
+        parentEntity,
+        compositionName,
+        upID,
+        upIdKey,
+        repositoryId,
+        folderId);
 
     // Clean up source entity metadata after successful move
     if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
@@ -480,7 +494,7 @@ public class SDMCustomServiceHandler {
     }
     return folderId;
   }
-  
+
   /** Helper class to hold target folder information. */
   private static class TargetFolderInfo {
     final String targetFolderId;
@@ -684,7 +698,6 @@ public class SDMCustomServiceHandler {
         objectId,
         invalidProperties.size(),
         invalidProperties);
-
     try {
       rollbackSingleAttachment(
           objectId,
@@ -758,6 +771,7 @@ public class SDMCustomServiceHandler {
 
       String fileName = succinctProperties.optString("cmis:name");
       String mimeType = succinctProperties.optString("cmis:contentStreamMimeType");
+      String description = succinctProperties.optString("cmis:description");
       String movedObjectId = succinctProperties.optString("cmis:objectId");
 
       logger.debug(
@@ -811,6 +825,7 @@ public class SDMCustomServiceHandler {
             moveContext.objectId,
             fileName,
             mimeType,
+            description,
             movedObjectId,
             succinctProperties,
             moveContext.entityAnnotations,
@@ -857,6 +872,7 @@ public class SDMCustomServiceHandler {
    * @param objectId the attachment object ID
    * @param fileName the file name
    * @param mimeType the MIME type
+   * @param description the description (note) from cmis:description
    * @param movedObjectId the new object ID after move
    * @param succinctProperties SDM response properties
    * @param entityAnnotations mapping of DB fields to SDM properties
@@ -866,6 +882,7 @@ public class SDMCustomServiceHandler {
       String objectId,
       String fileName,
       String mimeType,
+      String description,
       String movedObjectId,
       org.json.JSONObject succinctProperties,
       Map<String, String> entityAnnotations,
@@ -899,7 +916,7 @@ public class SDMCustomServiceHandler {
 
     // Add to successful results
     results.successfulObjectIds.add(objectId);
-    results.movedAttachmentsMetadata.add(List.of(fileName, mimeType, movedObjectId));
+    results.movedAttachmentsMetadata.add(List.of(fileName, mimeType, description, movedObjectId));
     results.populatedDocuments.add(populatedDocument);
   }
 
@@ -969,6 +986,98 @@ public class SDMCustomServiceHandler {
     return null;
   }
 
+  /**
+   * Creates draft entries for moved attachments with secondary properties support. This method is
+   * specifically for move operations where we need to preserve validated secondary properties from
+   * the SDM response.
+   */
+  private void createDraftEntriesForMove(
+      List<List<String>> movedAttachmentsMetadata,
+      List<CmisDocument> populatedDocuments,
+      String parentEntity,
+      String compositionName,
+      String upID,
+      String upIdKey,
+      String repositoryId,
+      String folderId) {
+
+    for (int i = 0; i < movedAttachmentsMetadata.size(); i++) {
+      List<String> attachmentMetadata = movedAttachmentsMetadata.get(i);
+      CmisDocument cmisDocument = populatedDocuments.get(i);
+      Map<String, Object> updatedFields = new HashMap<>();
+
+      String fileName = attachmentMetadata.get(0);
+      String mimeType = attachmentMetadata.get(1);
+      String description = attachmentMetadata.get(2);
+      String newObjectId = attachmentMetadata.get(3);
+
+      updatedFields.put(OBJECT_ID_KEY, newObjectId);
+      updatedFields.put("repositoryId", repositoryId);
+      updatedFields.put("folderId", folderId);
+      updatedFields.put("status", "Clean");
+      updatedFields.put("mimeType", mimeType);
+      updatedFields.put("type", cmisDocument.getType());
+      updatedFields.put("fileName", fileName);
+      updatedFields.put("note", description);
+      updatedFields.put("HasDraftEntity", false);
+      updatedFields.put("HasActiveEntity", false);
+      updatedFields.put("linkUrl", cmisDocument.getUrl());
+      updatedFields.put(
+          "contentId",
+          newObjectId
+              + ":"
+              + folderId
+              + ":"
+              + parentEntity
+              + "."
+              + compositionName
+              + ":"
+              + mimeType);
+      updatedFields.put(upIdKey, upID);
+
+      // Include secondary properties from moved attachment
+      // Properties are already filtered and validated in processValidatedAttachment()
+      // to only include those annotated with @SDM.Attachments.AdditionalProperty
+      // and present in valid secondary properties list
+      if (cmisDocument.getSecondaryProperties() != null) {
+        updatedFields.putAll(cmisDocument.getSecondaryProperties());
+      }
+
+      String baseKeyField = upIdKey != null ? upIdKey.replace("up__", "") : "ID";
+      var insert =
+          Insert.into(parentEntity, e -> e.filter(e.get(baseKeyField).eq(upID)).to(compositionName))
+              .entry(updatedFields);
+
+      DraftService matchingService =
+          draftService.stream()
+              .filter(ds -> parentEntity.contains(ds.getName()))
+              .findFirst()
+              .orElse(null);
+
+      if (matchingService != null) {
+        // Wrap DB insert with retry logic to handle transient DB failures
+        try {
+          io.reactivex.Flowable.fromCallable(
+                  () -> {
+                    matchingService.newDraft(insert);
+                    return true;
+                  })
+              .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
+              .blockingFirst();
+        } catch (Exception e) {
+          throw new ServiceException(
+              "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
+        }
+      } else {
+        throw new ServiceException("No suitable service found for entity: " + parentEntity);
+      }
+    }
+  }
+
+  /**
+   * Creates draft entries for copied attachments with custom properties support. This method is for
+   * copy operations where custom properties come from the SDM copyAttachment response.
+   */
   private void createDraftEntries(
       CreateDraftEntriesRequest request, Map<String, String> customPropertyDefinitions) {
 

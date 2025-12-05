@@ -740,9 +740,8 @@ public class SDMServiceImpl implements SDMService {
       }
     }
   }
-}
 
-@Override
+  @Override
   public String moveAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
@@ -798,3 +797,4 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(SDMConstants.FAILED_TO_MOVE_ATTACHMENT, e);
     }
   }
+}
