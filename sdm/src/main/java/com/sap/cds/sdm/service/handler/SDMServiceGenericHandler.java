@@ -332,7 +332,20 @@ public class SDMServiceGenericHandler implements EventHandler {
     String upIdKey =
         attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    String upID = fetchUPIDFromCQN(select);
+    // Get parent entity to extract its key names dynamically
+    String parentEntityName = null;
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(select.toString());
+    JsonNode refArray = root.path("SELECT").path("from").path("ref");
+    if (refArray.isArray() && refArray.size() >= 2) {
+      JsonNode parentNode = refArray.get(refArray.size() - 2);
+      parentEntityName = parentNode.path("id").asText();
+    }
+
+    Optional<CdsEntity> parentEntity =
+        parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+
+    String upID = fetchUPIDFromCQN(select, parentEntity.orElse(null));
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -343,7 +356,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
-    String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
+    String[] parts = context.getTarget().getQualifiedName().split("\\.");
+    String entityName = parts[parts.length - 1];
     String folderName = upID + "__" + entityName;
 
     String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
@@ -563,7 +577,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private String fetchUPIDFromCQN(CqnSelect select) {
+  private String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
     try {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
@@ -571,14 +585,21 @@ public class SDMServiceGenericHandler implements EventHandler {
       JsonNode refArray = root.path("SELECT").path("from").path("ref");
       JsonNode secondLast = refArray.get(refArray.size() - 2);
       JsonNode whereArray = secondLast.path("where");
+
+      // Get the actual key field names from the parent entity
+      List<String> keyElementNames = getKeyElementNames(parentEntity);
+
       for (int i = 0; i < whereArray.size(); i++) {
         JsonNode node = whereArray.get(i);
-        if (node.has("ref")
-            && node.get("ref").isArray()
-            && node.get("ref").get(0).asText().equals("ID")) {
-          JsonNode valNode = whereArray.get(i + 2);
-          upID = valNode.path("val").asText();
-          break;
+
+        if (node.has("ref") && node.get("ref").isArray()) {
+          String fieldName = node.get("ref").get(0).asText();
+
+          if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
+            JsonNode valNode = whereArray.get(i + 2);
+            upID = valNode.path("val").asText();
+            break;
+          }
         }
       }
       if (upID == null) {
