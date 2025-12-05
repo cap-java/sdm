@@ -25,7 +25,9 @@ import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,8 +79,12 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(FOLDER_ID);
 
     // Mock attachment copy
-    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
-        .thenReturn(List.of("fileName.url", "application/internet-shortcut", OBJECT_ID));
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "fileName.url");
+    attachmentData.put("cmis:contentStreamMimeType", "application/internet-shortcut");
+    attachmentData.put("cmis:objectId", OBJECT_ID);
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any()))
+        .thenReturn(attachmentData);
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
@@ -94,7 +100,7 @@ public class SDMCustomServiceHandlerTest {
 
     // Assert
     verify(sdmService, times(1))
-        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class));
+        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any());
     verify(draftService, times(1)).newDraft(any());
     verify(context, times(1)).setCompleted();
   }
@@ -111,8 +117,12 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(FOLDER_ID);
 
     // Mock attachment copy
-    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
-        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "fileName");
+    attachmentData.put("cmis:contentStreamMimeType", "mimeType");
+    attachmentData.put("cmis:objectId", OBJECT_ID);
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any()))
+        .thenReturn(attachmentData);
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://document");
     when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
@@ -127,7 +137,7 @@ public class SDMCustomServiceHandlerTest {
 
     // Assert
     verify(sdmService, times(1))
-        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class));
+        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any());
     verify(draftService, times(1)).newDraft(any());
     verify(context, times(1)).setCompleted();
   }
@@ -149,8 +159,12 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + FOLDER_ID + "\"}}");
 
     // Mock attachment copy
-    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
-        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID));
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "fileName");
+    attachmentData.put("cmis:contentStreamMimeType", "mimeType");
+    attachmentData.put("cmis:objectId", OBJECT_ID);
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any()))
+        .thenReturn(attachmentData);
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
     cmisDocument.setUrl("https://example.com");
@@ -170,7 +184,7 @@ public class SDMCustomServiceHandlerTest {
         .createFolder(
             any(String.class), any(String.class), any(SDMCredentials.class), any(Boolean.class));
     verify(sdmService, times(1))
-        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class));
+        .copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any());
   }
 
   @Test
@@ -185,8 +199,12 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(FOLDER_ID);
 
     // Mock attachment copy failure
-    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class)))
-        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID))
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "fileName");
+    attachmentData.put("cmis:contentStreamMimeType", "mimeType");
+    attachmentData.put("cmis:objectId", OBJECT_ID);
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), any(Boolean.class), any()))
+        .thenReturn(attachmentData)
         .thenThrow(new ServiceException("Copy failed"));
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setType("sap-icon://internet-browser");
@@ -228,7 +246,7 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + FOLDER_ID + "\"}}");
 
     // Simulate copyAttachment throws ServiceException on first call
-    when(sdmService.copyAttachment(any(), any(), anyBoolean()))
+    when(sdmService.copyAttachment(any(), any(), anyBoolean(), any()))
         .thenThrow(new ServiceException("Copy failed"));
 
     AttachmentCopyEventContext context = createMockContext();
@@ -264,8 +282,12 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.getFolderIdByPath(any(), any(), any(), anyBoolean())).thenReturn(FOLDER_ID);
 
     // First call succeeds, second call fails
-    when(sdmService.copyAttachment(any(), any(), anyBoolean()))
-        .thenReturn(List.of("fileName", "mimeType", OBJECT_ID))
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "fileName");
+    attachmentData.put("cmis:contentStreamMimeType", "mimeType");
+    attachmentData.put("cmis:objectId", OBJECT_ID);
+    when(sdmService.copyAttachment(any(), any(), anyBoolean(), any()))
+        .thenReturn(attachmentData)
         .thenThrow(new ServiceException("Copy failed"));
 
     AttachmentCopyEventContext context = createMockContext();

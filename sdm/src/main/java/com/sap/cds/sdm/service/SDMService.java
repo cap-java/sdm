@@ -10,6 +10,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.json.JSONObject;
 
 public interface SDMService {
@@ -46,8 +47,8 @@ public interface SDMService {
       boolean isSystemUser)
       throws ServiceException;
 
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
-      throws IOException;
+  public List<String> getObject(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public List<String> getSecondaryTypes(
       String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
@@ -59,8 +60,11 @@ public interface SDMService {
       boolean isSystemUser)
       throws IOException;
 
-  public List<String> copyAttachment(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public Map<String, String> copyAttachment(
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      Set<String> customPropertiesInSDM)
       throws IOException;
 
   public String moveAttachment(

@@ -29,5 +29,6 @@ public class CmisDocument {
   private String url;
   private String contentId;
   private String type;
+  private String description;
   private Map<String, Object> secondaryProperties;
 }
