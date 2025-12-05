@@ -366,7 +366,7 @@ public class DBQuery {
     CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
     String sourceAttachmentEntityName = assocType.getTarget().getQualifiedName();
 
-    int deletedCount = 0;
+    long deletedCount = 0;
 
     // Resolve the up__ID key name
     String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
