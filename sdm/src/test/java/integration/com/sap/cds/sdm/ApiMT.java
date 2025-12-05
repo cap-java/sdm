@@ -27,7 +27,7 @@ public class ApiMT implements ApiInterface {
     this.token = this.config.get("Authorization");
   }
 
-  private Response executeWithRetry(Request request) throws IOException { //Retry
+  private Response executeWithRetry(Request request) throws IOException {
     IOException lastException = null;
     for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
