@@ -44,11 +44,11 @@ public class ApiMT implements ApiInterface {
           continue;
         }
         return response;
-      } catch (IOException e) {
+      } catch (java.net.SocketTimeoutException e) {
         lastException = e;
         if (attempt < MAX_RETRIES) {
           System.out.println(
-              "Request failed, retrying... (attempt "
+              "Socket timeout occurred, retrying... (attempt "
                   + attempt
                   + "/"
                   + MAX_RETRIES
@@ -60,6 +60,8 @@ public class ApiMT implements ApiInterface {
             Thread.currentThread().interrupt();
             throw new IOException("Retry interrupted", ie);
           }
+        } else {
+          throw e;
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
