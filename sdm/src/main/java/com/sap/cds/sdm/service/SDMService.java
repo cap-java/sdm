@@ -63,7 +63,7 @@ public interface SDMService {
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
-  public List<String> moveAttachment(
+  public String moveAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 

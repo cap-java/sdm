@@ -11,13 +11,12 @@ import java.util.List;
  *     that will be internally parsed to determine source parent entity and composition name for
  *     cleanup
  * @param upId The key of the target parent entity instance
- * @param targetFacet The full facet path (e.g., "Service.Entity.composition") that will be
- *     internally parsed to determine target parent entity and composition name
- * @param objectIds The list of attachment object IDs to be moved
+ * @param targetFacet The qualified name of the target facet/entity (e.g., "Service.Attachments")
+ * @param objectIds List of attachment object IDs to move
  */
 public record MoveAttachmentInput(
     String sourceFolderId,
     String sourceFacet,
-    String upId,
+    String targetUpId,
     String targetFacet,
     List<String> objectIds) {}

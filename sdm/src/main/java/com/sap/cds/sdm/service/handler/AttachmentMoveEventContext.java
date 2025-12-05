@@ -5,6 +5,7 @@ import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.EventName;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The {@link AttachmentMoveEventContext} is used to store the context of the move attachment event.
@@ -156,18 +157,18 @@ public interface AttachmentMoveEventContext extends AttachmentCreateEventContext
   void setSystemUser(boolean systemUser);
 
   /**
-   * Gets the list of object IDs for which the move operation failed. This is populated by the
-   * handler after attempting to move all attachments.
+   * Gets the list of failed attachments with their failure reasons. Each map contains objectId and
+   * failureReason.
    *
-   * @return The list of failed object IDs or {@code Collections.emptyList()} if all moves succeeded
+   * @return The list of failed attachments or {@code Collections.emptyList()} if all moves
+   *     succeeded
    */
-  List<String> getFailedObjectIds();
+  List<java.util.Map<String, String>> getFailedAttachments();
 
   /**
-   * Sets the list of object IDs for which the move operation failed. This should be set by the
-   * handler after processing all move operations.
+   * Sets the list of failed attachments with their failure reasons.
    *
-   * @param failedObjectIds The list of object IDs that failed to move
+   * @param failedAttachments The list of maps containing objectId and failureReason
    */
-  void setFailedObjectIds(List<String> failedObjectIds);
+  void setFailedAttachments(List<Map<String, String>> failedAttachments);
 }

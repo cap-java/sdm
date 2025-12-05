@@ -69,7 +69,7 @@ public class SDMAttachmentsService extends ServiceDelegator
             + " {}, objectIds: {}, isSystemUser: {}",
         input.sourceFolderId(),
         input.sourceFacet(),
-        input.upId(),
+        input.targetUpId(),
         input.targetFacet(),
         input.objectIds(),
         isSystemUser);
@@ -99,7 +99,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     moveContext.setSourceFolderId(input.sourceFolderId());
     moveContext.setSourceParentEntity(sourceParentEntity);
     moveContext.setSourceCompositionName(sourceCompositionName);
-    moveContext.setUpId(input.upId());
+    moveContext.setUpId(input.targetUpId());
     moveContext.setParentEntity(targetParentEntity);
     moveContext.setCompositionName(targetCompositionName);
     moveContext.setObjectIds(input.objectIds());
@@ -107,11 +107,14 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     emit(moveContext);
 
-    // Get the failed object IDs and return them in a structured format
-    List<String> failedIds = moveContext.getFailedObjectIds();
-    if (failedIds != null && !failedIds.isEmpty()) {
-      logger.warn(
-          "Move operation completed with {} failed attachments: {}", failedIds.size(), failedIds);
+    // Get the failed attachments and return them in a structured format
+    List<Map<String, String>> failedAttachments = moveContext.getFailedAttachments();
+    if (failedAttachments != null && !failedAttachments.isEmpty()) {
+      logger.warn("Move operation completed with {} failed attachments", failedAttachments.size());
+      for (Map<String, String> failure : failedAttachments) {
+        logger.warn(
+            "  - ObjectId: {}, Reason: {}", failure.get("objectId"), failure.get("failureReason"));
+      }
     } else {
       logger.info(
           "Move operation completed successfully for all {} attachments", input.objectIds().size());
@@ -119,7 +122,7 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     // Return structured result that OData can serialize
     Map<String, Object> result = new HashMap<>();
-    result.put("failedObjectIds", failedIds != null ? failedIds : List.of());
+    result.put("failedAttachments", failedAttachments != null ? failedAttachments : List.of());
     return result;
   }
 

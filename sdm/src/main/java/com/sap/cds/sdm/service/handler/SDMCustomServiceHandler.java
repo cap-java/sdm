@@ -24,9 +24,11 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,6 +47,8 @@ public class SDMCustomServiceHandler {
 
   private static final int PARALLEL_MOVE_THREAD_POOL_SIZE = 10;
   private static final Logger logger = LoggerFactory.getLogger(SDMCustomServiceHandler.class);
+  private static final String OBJECT_ID_KEY = "objectId";
+  private static final String FAILURE_REASON_KEY = "failureReason";
 
   // Result class for copyAttachmentsToSDM method
   private static class CopyAttachmentsResult {
@@ -87,17 +91,17 @@ public class SDMCustomServiceHandler {
   private static class MoveAttachmentsResult {
     private final List<List<String>> movedAttachmentsMetadata;
     private final List<CmisDocument> populatedDocuments;
-    private final List<String> failedObjectIds;
+    private final List<Map<String, String>> failedAttachments;
     private final List<String> successfulObjectIds;
 
     public MoveAttachmentsResult(
         List<List<String>> movedAttachmentsMetadata,
         List<CmisDocument> populatedDocuments,
-        List<String> failedObjectIds,
+        List<Map<String, String>> failedAttachments,
         List<String> successfulObjectIds) {
       this.movedAttachmentsMetadata = movedAttachmentsMetadata;
       this.populatedDocuments = populatedDocuments;
-      this.failedObjectIds = failedObjectIds;
+      this.failedAttachments = failedAttachments;
       this.successfulObjectIds = successfulObjectIds;
     }
 
@@ -109,8 +113,8 @@ public class SDMCustomServiceHandler {
       return populatedDocuments;
     }
 
-    public List<String> getFailedObjectIds() {
-      return failedObjectIds;
+    public List<Map<String, String>> getFailedAttachments() {
+      return failedAttachments;
     }
 
     public List<String> getSuccessfulObjectIds() {
@@ -193,24 +197,11 @@ public class SDMCustomServiceHandler {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     // Ensure target folder exists in SDM before attempting moves
-    boolean targetFolderExists;
-    String targetFolderId;
-    try {
-      targetFolderExists =
-          sdmService.getFolderIdByPath(targetFolderName, repositoryId, sdmCredentials, isSystemUser)
-              != null;
-      targetFolderId =
-          ensureFolderExists(targetFolderName, repositoryId, sdmCredentials, isSystemUser);
-    } catch (IOException e) {
-      logger.error(
-          "Failed to create/verify target folder '{}': {}. Marking all {} attachments as failed.",
-          targetFolderName,
-          e.getMessage(),
-          objectIds.size());
-      context.setFailedObjectIds(objectIds);
-      context.setCompleted();
-      return;
-    }
+    TargetFolderInfo folderInfo =
+        ensureTargetFolderReady(
+            targetFolderName, repositoryId, sdmCredentials, isSystemUser, objectIds, context);
+    String targetFolderId = folderInfo.targetFolderId;
+    boolean targetFolderExists = folderInfo.targetFolderExists;
 
     MoveAttachmentsRequest request =
         MoveAttachmentsRequest.builder()
@@ -228,11 +219,26 @@ public class SDMCustomServiceHandler {
 
     List<List<String>> movedAttachmentsMetadata = moveResult.getMovedAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = moveResult.getPopulatedDocuments();
-    List<String> failedObjectIds = moveResult.getFailedObjectIds();
+    List<Map<String, String>> failedAttachments = moveResult.getFailedAttachments();
     List<String> successfulObjectIds = moveResult.getSuccessfulObjectIds();
 
-    // Return failed object IDs to caller (convert to ArrayList for serialization)
-    context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
+    // Return failed attachments to caller
+    context.setFailedAttachments(new ArrayList<>(failedAttachments));
+
+    // Show warning if there are failures
+    if (!failedAttachments.isEmpty()) {
+      StringBuilder warningMessage =
+          new StringBuilder("Failed to move the following attachments:\n");
+      for (Map<String, String> failure : failedAttachments) {
+        warningMessage
+            .append("  - ObjectId: ")
+            .append(failure.get(OBJECT_ID_KEY))
+            .append(", Reason: ")
+            .append(failure.get(FAILURE_REASON_KEY))
+            .append("\n");
+      }
+      context.getMessages().warn(warningMessage.toString());
+    }
 
     // Process successfully moved attachments
     if (!movedAttachmentsMetadata.isEmpty()) {
@@ -251,61 +257,180 @@ public class SDMCustomServiceHandler {
               .build();
 
       try {
-        // Query source entity's up__ID before creating target records
-        // This ensures we get the correct source ID, especially important when moving
-        // between entities of the same type (e.g., Book A to Book B)
-        String sourceUpId = null;
-        if (!successfulObjectIds.isEmpty()) {
-          sourceUpId =
-              dbQuery.getSourceUpIdForObjectIds(persistenceService, successfulObjectIds, context);
-          logger.info("Retrieved source up__ID for cleanup: {}", sourceUpId);
-        }
-
-        createDraftEntries(draftRequest);
-
-        // Clean up source entity metadata after successful move
-        if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
-          try {
-            int deletedCount =
-                dbQuery.deleteAttachmentsByObjectIds(
-                    persistenceService, successfulObjectIds, sourceUpId, context);
-            logger.info(
-                "Cleaned up {} attachment metadata records from source entity for {} successfully"
-                    + " moved attachments",
-                deletedCount,
-                successfulObjectIds.size());
-          } catch (Exception cleanupException) {
-            logger.warn(
-                "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
-                    + " successfully moved to target.",
-                successfulObjectIds.size(),
-                cleanupException.getMessage());
-          }
-        }
+        updateDatabaseAndCleanupSource(draftRequest, successfulObjectIds, context);
       } catch (ServiceException e) {
-        // Database update failed - rollback all SDM moves to maintain consistency
-        logger.error(
-            "Failed to update DB for moved attachments after retries. Rolling back SDM moves: {}",
-            e.getMessage());
-        rollbackMovedAttachments(
-            successfulObjectIds,
-            sourceFolderId,
-            targetFolderId,
-            repositoryId,
-            sdmCredentials,
-            isSystemUser,
-            context);
-        // Mark rolled-back attachments as failed
-        failedObjectIds.addAll(successfulObjectIds);
-        context.setFailedObjectIds(new ArrayList<>(failedObjectIds));
-        logger.warn(
-            "Move operation completed with failures. Total failed: {}, Rolled back: {}",
-            failedObjectIds.size(),
-            successfulObjectIds.size());
+        DatabaseFailureContext failureContext =
+            new DatabaseFailureContext(
+                successfulObjectIds,
+                sourceFolderId,
+                targetFolderId,
+                repositoryId,
+                sdmCredentials,
+                isSystemUser,
+                context,
+                failedAttachments);
+        handleDatabaseUpdateFailure(e, failureContext);
       }
     }
 
     context.setCompleted();
+  }
+
+  /**
+   * Updates database with moved attachments and cleans up source entity metadata.
+   *
+   * @throws ServiceException if database operations fail
+   */
+  private void updateDatabaseAndCleanupSource(
+      CreateDraftEntriesRequest draftRequest,
+      List<String> successfulObjectIds,
+      AttachmentMoveEventContext context)
+      throws ServiceException {
+    // Query source entity's up__ID before creating target records
+    // This ensures we get the correct source ID, especially important when moving
+    // between entities of the same type (e.g., Book A to Book B)
+    String sourceUpId = null;
+    if (!successfulObjectIds.isEmpty()) {
+      sourceUpId =
+          dbQuery.getSourceUpIdForObjectIds(persistenceService, successfulObjectIds, context);
+      logger.info("Retrieved source up__ID for cleanup: {}", sourceUpId);
+    }
+
+    createDraftEntries(draftRequest);
+
+    // Clean up source entity metadata after successful move
+    if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
+      try {
+        int deletedCount =
+            dbQuery.deleteAttachmentsByObjectIds(
+                persistenceService, successfulObjectIds, sourceUpId, context);
+        logger.info(
+            "Cleaned up {} attachment metadata records from source entity for {} successfully"
+                + " moved attachments",
+            deletedCount,
+            successfulObjectIds.size());
+      } catch (Exception cleanupException) {
+        logger.warn(
+            "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
+                + " successfully moved to target.",
+            successfulObjectIds.size(),
+            cleanupException.getMessage());
+      }
+    }
+  }
+
+  /** Helper class to hold database failure context information. */
+  private static class DatabaseFailureContext {
+    final List<String> successfulObjectIds;
+    final String sourceFolderId;
+    final String targetFolderId;
+    final String repositoryId;
+    final SDMCredentials sdmCredentials;
+    final Boolean isSystemUser;
+    final AttachmentMoveEventContext context;
+    final List<Map<String, String>> failedAttachments;
+
+    DatabaseFailureContext(
+        List<String> successfulObjectIds,
+        String sourceFolderId,
+        String targetFolderId,
+        String repositoryId,
+        SDMCredentials sdmCredentials,
+        Boolean isSystemUser,
+        AttachmentMoveEventContext context,
+        List<Map<String, String>> failedAttachments) {
+      this.successfulObjectIds = successfulObjectIds;
+      this.sourceFolderId = sourceFolderId;
+      this.targetFolderId = targetFolderId;
+      this.repositoryId = repositoryId;
+      this.sdmCredentials = sdmCredentials;
+      this.isSystemUser = isSystemUser;
+      this.context = context;
+      this.failedAttachments = failedAttachments;
+    }
+  }
+
+  /**
+   * Handles database update failure by rolling back SDM moves and marking attachments as failed.
+   */
+  private void handleDatabaseUpdateFailure(
+      ServiceException e, DatabaseFailureContext failureContext) {
+    // Database update failed - rollback all SDM moves to maintain consistency
+    logger.error(
+        "Failed to update DB for moved attachments after retries. Rolling back SDM moves: {}",
+        e.getMessage());
+    rollbackMovedAttachments(
+        failureContext.successfulObjectIds,
+        failureContext.sourceFolderId,
+        failureContext.targetFolderId,
+        failureContext.repositoryId,
+        failureContext.sdmCredentials,
+        failureContext.isSystemUser,
+        failureContext.context);
+    // Mark rolled-back attachments as failed
+    for (String objectId : failureContext.successfulObjectIds) {
+      Map<String, String> failureMap = new HashMap<>();
+      failureMap.put(OBJECT_ID_KEY, objectId);
+      failureMap.put(
+          FAILURE_REASON_KEY, "Database update failed, move rolled back: " + e.getMessage());
+      failureContext.failedAttachments.add(failureMap);
+    }
+    failureContext.context.setFailedAttachments(new ArrayList<>(failureContext.failedAttachments));
+
+    // Add warning message
+    StringBuilder warningMessage =
+        new StringBuilder(
+            "Move operation failed during database update. Rolled back attachments:\n");
+    for (String objectId : failureContext.successfulObjectIds) {
+      warningMessage.append("  - ObjectId: ").append(objectId).append("\n");
+    }
+    failureContext.context.getMessages().warn(warningMessage.toString());
+
+    logger.warn(
+        "Move operation completed with failures. Total failed: {}, Rolled back: {}",
+        failureContext.failedAttachments.size(),
+        failureContext.successfulObjectIds.size());
+  }
+
+  /**
+   * Ensures target folder exists and returns the folder state information.
+   *
+   * @return array containing [targetFolderId, targetFolderExists]
+   * @throws IOException if folder creation/verification fails
+   */
+  private TargetFolderInfo ensureTargetFolderReady(
+      String targetFolderName,
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser,
+      List<String> objectIds,
+      AttachmentMoveEventContext context)
+      throws IOException {
+    try {
+      boolean targetFolderExists =
+          sdmService.getFolderIdByPath(targetFolderName, repositoryId, sdmCredentials, isSystemUser)
+              != null;
+      String targetFolderId =
+          ensureFolderExists(targetFolderName, repositoryId, sdmCredentials, isSystemUser);
+      return new TargetFolderInfo(targetFolderId, targetFolderExists);
+    } catch (IOException e) {
+      logger.error(
+          "Failed to create/verify target folder '{}': {}. Marking all {} attachments as failed.",
+          targetFolderName,
+          e.getMessage(),
+          objectIds.size());
+      // Create failed attachments list with error reason
+      List<Map<String, String>> failedAttachments = new ArrayList<>();
+      for (String objectId : objectIds) {
+        Map<String, String> failureMap = new HashMap<>();
+        failureMap.put(OBJECT_ID_KEY, objectId);
+        failureMap.put(FAILURE_REASON_KEY, "Failed to create target folder: " + e.getMessage());
+        failedAttachments.add(failureMap);
+      }
+      context.setFailedAttachments(failedAttachments);
+      context.setCompleted();
+      throw e;
+    }
   }
 
   private String ensureFolderExists(
@@ -322,6 +447,17 @@ public class SDMCustomServiceHandler {
       folderId = succinctProperties.getString("cmis:objectId");
     }
     return folderId;
+  }
+
+  /** Helper class to hold target folder information. */
+  private static class TargetFolderInfo {
+    final String targetFolderId;
+    final boolean targetFolderExists;
+
+    TargetFolderInfo(String targetFolderId, boolean targetFolderExists) {
+      this.targetFolderId = targetFolderId;
+      this.targetFolderExists = targetFolderExists;
+    }
   }
 
   private CopyAttachmentsResult copyAttachmentsToSDM(CopyAttachmentsRequest request)
@@ -359,6 +495,69 @@ public class SDMCustomServiceHandler {
     return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
   }
 
+  /** Helper class to hold SDM validation data. */
+  private static class SDMValidationData {
+    final List<String> validSecondaryProperties;
+    final Map<String, String> entityAnnotations;
+
+    SDMValidationData(
+        List<String> validSecondaryProperties, Map<String, String> entityAnnotations) {
+      this.validSecondaryProperties = validSecondaryProperties;
+      this.entityAnnotations = entityAnnotations;
+    }
+  }
+
+  /**
+   * Fetches SDM validation data including secondary types and properties.
+   *
+   * @throws IOException if SDM operations fail
+   */
+  private SDMValidationData fetchSDMValidationData(MoveAttachmentsRequest request)
+      throws IOException {
+    // Fetch secondary types from SDM repository (similar to updateAttachments)
+    List<String> secondaryTypes;
+    try {
+      secondaryTypes =
+          sdmService.getSecondaryTypes(
+              request.getRepositoryId(), request.getSdmCredentials(), request.getIsSystemUser());
+      logger.info(
+          "Fetched {} secondary types from SDM repository: {}",
+          secondaryTypes.size(),
+          secondaryTypes);
+    } catch (Exception e) {
+      logger.error("Failed to fetch secondary types from SDM: {}", e.getMessage(), e);
+      throw new IOException("Failed to fetch secondary types from SDM", e);
+    }
+
+    // Fetch valid secondary properties from SDM (similar to updateAttachments)
+    List<String> validSecondaryProperties;
+    try {
+      validSecondaryProperties =
+          sdmService.getValidSecondaryProperties(
+              secondaryTypes,
+              request.getSdmCredentials(),
+              request.getRepositoryId(),
+              request.getIsSystemUser());
+      logger.info(
+          "Fetched {} valid secondary properties from SDM: {}",
+          validSecondaryProperties.size(),
+          validSecondaryProperties);
+    } catch (Exception e) {
+      logger.error("Failed to fetch valid secondary properties from SDM: {}", e.getMessage(), e);
+      throw new IOException("Failed to fetch valid secondary properties from SDM", e);
+    }
+
+    // Get entity annotations for filtering properties during DB insertion
+    Map<String, String> entityAnnotations =
+        dbQuery.getValidSecondaryPropertiesForMove(request.getContext());
+    logger.info(
+        "Target entity has {} annotated secondary properties for DB mapping: {}",
+        entityAnnotations.size(),
+        entityAnnotations);
+
+    return new SDMValidationData(validSecondaryProperties, entityAnnotations);
+  }
+
   /**
    * Executes attachment moves in parallel using a thread pool. Tracks successful and failed moves
    * separately for further processing.
@@ -373,15 +572,26 @@ public class SDMCustomServiceHandler {
         java.util.Collections.synchronizedList(new ArrayList<>());
     List<CmisDocument> populatedDocuments =
         java.util.Collections.synchronizedList(new ArrayList<>());
-    List<String> failedObjectIds = java.util.Collections.synchronizedList(new ArrayList<>());
+    List<Map<String, String>> failedAttachments =
+        java.util.Collections.synchronizedList(new ArrayList<>());
     List<String> successfulObjectIds = java.util.Collections.synchronizedList(new ArrayList<>());
+
+    // Fetch SDM validation data
+    SDMValidationData validationData = fetchSDMValidationData(request);
+    List<String> validSecondaryProperties = validationData.validSecondaryProperties;
+    Map<String, String> entityAnnotations = validationData.entityAnnotations;
 
     // Preserve request context for authentication in parallel threads
     com.sap.cds.services.runtime.RequestContextRunner contextRunner =
         request.getContext().getCdsRuntime().requestContext();
 
-    // Execute moves in parallel for better performance
-    List<CompletableFuture<Void>> moveFutures =
+    // Create results wrapper for successful processing
+    AttachmentProcessingResults processingResults =
+        new AttachmentProcessingResults(
+            successfulObjectIds, movedAttachmentsMetadata, populatedDocuments);
+
+    // Process each attachment in parallel: Move → Validate → Process/Rollback immediately
+    List<CompletableFuture<Void>> processFutures =
         request.getObjectIds().stream()
             .map(
                 objectId ->
@@ -389,57 +599,288 @@ public class SDMCustomServiceHandler {
                         () ->
                             contextRunner.run(
                                 ctx -> {
-                                  try {
-                                    CmisDocument cmisDocument =
-                                        dbQuery.getAttachmentForObjectID(
-                                            persistenceService, objectId, request.getContext());
-                                    cmisDocument.setObjectId(objectId);
-                                    cmisDocument.setRepositoryId(request.getRepositoryId());
-                                    cmisDocument.setSourceFolderId(request.getSourceFolderId());
-                                    cmisDocument.setFolderId(request.getTargetFolderId());
-
-                                    CmisDocument populatedDocument = new CmisDocument();
-                                    populatedDocument.setType(cmisDocument.getType());
-                                    populatedDocument.setUrl(cmisDocument.getUrl());
-                                    // Preserve secondary properties from source attachment
-                                    populatedDocument.setSecondaryProperties(
-                                        cmisDocument.getSecondaryProperties());
-
-                                    // Move attachment in SDM with automatic retry on transient
-                                    // failures
-                                    List<String> metadata =
-                                        sdmService.moveAttachment(
-                                            cmisDocument,
-                                            request.getSdmCredentials(),
-                                            request.getIsSystemUser());
-
-                                    // Track successful move (SDM preserves objectId within same
-                                    // repository)
-                                    successfulObjectIds.add(objectId);
-                                    movedAttachmentsMetadata.add(metadata);
-                                    populatedDocuments.add(populatedDocument);
-                                  } catch (ServiceException | IOException e) {
-                                    // Track failure and continue with remaining attachments
-                                    logger.error(
-                                        "Failed to move attachment with objectId {}: {}",
-                                        objectId,
-                                        e.getMessage());
-                                    failedObjectIds.add(objectId);
-                                  }
+                                  AttachmentMoveContext moveContext =
+                                      new AttachmentMoveContext(
+                                          objectId,
+                                          request,
+                                          validSecondaryProperties,
+                                          entityAnnotations,
+                                          processingResults,
+                                          failedAttachments);
+                                  processSingleAttachmentMove(moveContext);
                                   return null;
                                 }),
                         executorService))
             .toList();
 
-    // Wait for all move operations to complete
+    // Wait for all operations to complete
     try {
-      CompletableFuture.allOf(moveFutures.toArray(new CompletableFuture[0])).join();
+      CompletableFuture.allOf(processFutures.toArray(new CompletableFuture[0])).join();
     } catch (Exception e) {
-      throw new IOException("Error during parallel move operations", e);
+      throw new IOException("Error during parallel move and validation operations", e);
     }
 
+    logger.info(
+        "Move operation completed - Successful: {}, Failed: {}",
+        successfulObjectIds.size(),
+        failedAttachments.size());
+
     return new MoveAttachmentsResult(
-        movedAttachmentsMetadata, populatedDocuments, failedObjectIds, successfulObjectIds);
+        movedAttachmentsMetadata, populatedDocuments, failedAttachments, successfulObjectIds);
+  }
+
+  /**
+   * Handles validation failure by rolling back the attachment and recording the failure.
+   *
+   * @param objectId the attachment object ID
+   * @param invalidProperties list of invalid properties found
+   * @param request the move request containing credentials and folder info
+   * @param failedAttachments list to add the failure record to
+   */
+  private void handleValidationFailure(
+      String objectId,
+      List<String> invalidProperties,
+      MoveAttachmentsRequest request,
+      List<Map<String, String>> failedAttachments) {
+    logger.error(
+        "Attachment {} validation FAILED - Found {} invalid properties: {}. Rolling back...",
+        objectId,
+        invalidProperties.size(),
+        invalidProperties);
+
+    try {
+      rollbackSingleAttachment(
+          objectId,
+          request.getSourceFolderId(),
+          request.getTargetFolderId(),
+          request.getRepositoryId(),
+          request.getSdmCredentials(),
+          request.getIsSystemUser());
+      logger.info("Successfully rolled back attachment {} to source folder", objectId);
+    } catch (Exception rollbackEx) {
+      logger.error("Failed to rollback attachment {}: {}", objectId, rollbackEx.getMessage());
+    }
+
+    Map<String, String> failure = new HashMap<>();
+    failure.put(OBJECT_ID_KEY, objectId);
+    failure.put(
+        FAILURE_REASON_KEY,
+        "Target entity properties "
+            + invalidProperties
+            + " found in SDM response but not in valid secondary properties list. Attachment"
+            + " rolled back.");
+    failedAttachments.add(failure);
+  }
+
+  /** Helper class to hold attachment processing context for parallel execution. */
+  private static class AttachmentMoveContext {
+    final String objectId;
+    final MoveAttachmentsRequest request;
+    final List<String> validSecondaryProperties;
+    final Map<String, String> entityAnnotations;
+    final AttachmentProcessingResults processingResults;
+    final List<Map<String, String>> failedAttachments;
+
+    AttachmentMoveContext(
+        String objectId,
+        MoveAttachmentsRequest request,
+        List<String> validSecondaryProperties,
+        Map<String, String> entityAnnotations,
+        AttachmentProcessingResults processingResults,
+        List<Map<String, String>> failedAttachments) {
+      this.objectId = objectId;
+      this.request = request;
+      this.validSecondaryProperties = validSecondaryProperties;
+      this.entityAnnotations = entityAnnotations;
+      this.processingResults = processingResults;
+      this.failedAttachments = failedAttachments;
+    }
+  }
+
+  /**
+   * Processes a single attachment move: Move in SDM → Validate → Process or Rollback.
+   *
+   * @param moveContext the context containing all necessary information for processing
+   */
+  private void processSingleAttachmentMove(AttachmentMoveContext moveContext) {
+    try {
+      // Step 1: Move attachment in SDM
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setObjectId(moveContext.objectId);
+      cmisDocument.setRepositoryId(moveContext.request.getRepositoryId());
+      cmisDocument.setSourceFolderId(moveContext.request.getSourceFolderId());
+      cmisDocument.setFolderId(moveContext.request.getTargetFolderId());
+
+      String sdmResponseJson =
+          sdmService.moveAttachment(
+              cmisDocument,
+              moveContext.request.getSdmCredentials(),
+              moveContext.request.getIsSystemUser());
+      org.json.JSONObject sdmResponse = new org.json.JSONObject(sdmResponseJson);
+      org.json.JSONObject succinctProperties = sdmResponse.getJSONObject("succinctProperties");
+
+      String fileName = succinctProperties.optString("cmis:name");
+      String mimeType = succinctProperties.optString("cmis:contentStreamMimeType");
+      String movedObjectId = succinctProperties.optString("cmis:objectId");
+
+      logger.debug(
+          "Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}",
+          moveContext.objectId,
+          fileName,
+          mimeType);
+
+      // Step 2: Validate target entity properties in SDM response
+      // Get target entity's SDM property names from annotations
+      Set<String> targetEntitySdmProperties = new HashSet<>(moveContext.entityAnnotations.values());
+      Set<String> sdmResponseProperties = new HashSet<>(succinctProperties.keySet());
+
+      logger.debug(
+          "Validating attachment {} - Target entity expects {} SDM properties: {}",
+          moveContext.objectId,
+          targetEntitySdmProperties.size(),
+          targetEntitySdmProperties);
+      logger.debug(
+          "SDM response has {} properties: {}",
+          sdmResponseProperties.size(),
+          sdmResponseProperties);
+
+      // Validate: Check target entity properties that exist in SDM response
+      List<String> invalidProperties = new ArrayList<>();
+      for (String targetSdmProperty : targetEntitySdmProperties) {
+        if (sdmResponseProperties.contains(targetSdmProperty)
+            && !moveContext.validSecondaryProperties.contains(targetSdmProperty)) {
+          // Property defined in target entity, present in SDM response, but NOT in valid list →
+          // INVALID
+          invalidProperties.add(targetSdmProperty);
+          logger.warn(
+              "Attachment {} - Property '{}' is defined in target entity and in SDM response but"
+                  + " NOT in valid secondary properties list",
+              moveContext.objectId,
+              targetSdmProperty);
+        }
+      }
+
+      if (!invalidProperties.isEmpty()) {
+        // Step 3a: Validation failed → Rollback immediately
+        handleValidationFailure(
+            moveContext.objectId,
+            invalidProperties,
+            moveContext.request,
+            moveContext.failedAttachments);
+
+      } else {
+        // Step 3b: Validation passed → Process for DB insertion
+        processValidatedAttachment(
+            moveContext.objectId,
+            fileName,
+            mimeType,
+            movedObjectId,
+            succinctProperties,
+            moveContext.entityAnnotations,
+            moveContext.processingResults);
+      }
+
+    } catch (ServiceException | IOException e) {
+      // Move operation failed
+      logger.error("Failed to move attachment {}: {}", moveContext.objectId, e.getMessage());
+      Map<String, String> failure = new HashMap<>();
+      failure.put(OBJECT_ID_KEY, moveContext.objectId);
+      failure.put(FAILURE_REASON_KEY, "SDM move failed: " + e.getMessage());
+      moveContext.failedAttachments.add(failure);
+    } catch (Exception e) {
+      // Validation/processing failed
+      logger.error(
+          "Failed to validate/process attachment {}: {}", moveContext.objectId, e.getMessage(), e);
+      Map<String, String> failure = new HashMap<>();
+      failure.put(OBJECT_ID_KEY, moveContext.objectId);
+      failure.put(FAILURE_REASON_KEY, "Validation/processing failed: " + e.getMessage());
+      moveContext.failedAttachments.add(failure);
+    }
+  }
+
+  /** Helper class to hold results for processed attachments. */
+  private static class AttachmentProcessingResults {
+    final List<String> successfulObjectIds;
+    final List<List<String>> movedAttachmentsMetadata;
+    final List<CmisDocument> populatedDocuments;
+
+    AttachmentProcessingResults(
+        List<String> successfulObjectIds,
+        List<List<String>> movedAttachmentsMetadata,
+        List<CmisDocument> populatedDocuments) {
+      this.successfulObjectIds = successfulObjectIds;
+      this.movedAttachmentsMetadata = movedAttachmentsMetadata;
+      this.populatedDocuments = populatedDocuments;
+    }
+  }
+
+  /**
+   * Processes a successfully validated attachment for DB insertion.
+   *
+   * @param objectId the attachment object ID
+   * @param fileName the file name
+   * @param mimeType the MIME type
+   * @param movedObjectId the new object ID after move
+   * @param succinctProperties SDM response properties
+   * @param entityAnnotations mapping of DB fields to SDM properties
+   * @param results holder for successful processing results
+   */
+  private void processValidatedAttachment(
+      String objectId,
+      String fileName,
+      String mimeType,
+      String movedObjectId,
+      org.json.JSONObject succinctProperties,
+      Map<String, String> entityAnnotations,
+      AttachmentProcessingResults results) {
+    logger.info("Attachment {} validation PASSED - Processing for DB insertion", objectId);
+
+    CmisDocument populatedDocument = new CmisDocument();
+    populatedDocument.setType(succinctProperties.optString("sap:type", null));
+    populatedDocument.setUrl(succinctProperties.optString("sap:linkURL", null));
+
+    // Filter secondary properties for DB
+    Map<String, Object> filteredSecondaryProps = new HashMap<>();
+    for (Map.Entry<String, String> propEntry : entityAnnotations.entrySet()) {
+      String dbPropertyName = propEntry.getKey();
+      String sdmPropertyName = propEntry.getValue();
+
+      if (succinctProperties.has(sdmPropertyName)) {
+        Object value = succinctProperties.get(sdmPropertyName);
+        if (value != null && !org.json.JSONObject.NULL.equals(value)) {
+          filteredSecondaryProps.put(dbPropertyName, value);
+        }
+      }
+    }
+
+    populatedDocument.setSecondaryProperties(filteredSecondaryProps);
+
+    logger.info(
+        "Attachment {} - Prepared {} properties for DB insertion",
+        objectId,
+        filteredSecondaryProps.size());
+
+    // Add to successful results
+    results.successfulObjectIds.add(objectId);
+    results.movedAttachmentsMetadata.add(List.of(fileName, mimeType, movedObjectId));
+    results.populatedDocuments.add(populatedDocument);
+  }
+
+  // Rollback a single attachment to source folder
+  private void rollbackSingleAttachment(
+      String objectId,
+      String sourceFolderId,
+      String targetFolderId,
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser)
+      throws IOException {
+    CmisDocument rollbackDoc = new CmisDocument();
+    rollbackDoc.setObjectId(objectId);
+    rollbackDoc.setRepositoryId(repositoryId);
+    rollbackDoc.setSourceFolderId(targetFolderId); // Move back from target
+    rollbackDoc.setFolderId(sourceFolderId); // To source
+    sdmService.moveAttachment(rollbackDoc, sdmCredentials, isSystemUser);
   }
 
   private void handleCopyFailure(
@@ -502,7 +943,7 @@ public class SDMCustomServiceHandler {
       String mimeType = attachmentMetadata.get(1);
       String newObjectId = attachmentMetadata.get(2);
 
-      updatedFields.put("objectId", newObjectId);
+      updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
       updatedFields.put("status", "Clean");

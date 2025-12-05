@@ -141,9 +141,16 @@ public class DBQuery {
     return cmisDocument;
   }
 
-  public CmisDocument getAttachmentForObjectID(
-      PersistenceService persistenceService, String id, AttachmentMoveEventContext context) {
-    // Use the new API to resolve the target attachment entity
+  /**
+   * Retrieves valid secondary properties for the target attachment entity. Used to determine which
+   * properties from SDM should be persisted to the database.
+   *
+   * @param context The move event context containing target entity information
+   * @return Map of valid secondary property names and their SDM property names
+   */
+  public Map<String, String> getValidSecondaryPropertiesForMove(
+      AttachmentMoveEventContext context) {
+    // Use target entity to determine which secondary properties are valid
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
     CdsModel model = context.getModel();
@@ -175,65 +182,7 @@ public class DBQuery {
     }
 
     // Get secondary type properties (annotated with @SDM.Attachments.AdditionalProperty)
-    // to determine which columns to retrieve from database
-    Map<String, String> secondaryTypeProperties =
-        SDMUtils.getSecondaryTypeProperties(attachmentEntity, new HashMap<>());
-
-    // Build column list: standard fields (type, linkUrl) + annotated secondary properties
-    List<String> columnsToRetrieve = new ArrayList<>();
-    columnsToRetrieve.add("type");
-    columnsToRetrieve.add("linkUrl");
-    columnsToRetrieve.addAll(secondaryTypeProperties.keySet());
-
-    // Retrieve only the needed columns from database
-    CqnSelect q =
-        Select.from(attachmentEntity.get())
-            .columns(columnsToRetrieve.toArray(new String[0]))
-            .where(doc -> doc.get("objectId").eq(id));
-    Result result = persistenceService.run(q);
-    Optional<Row> res = result.first();
-
-    CmisDocument cmisDocument = new CmisDocument();
-    if (res.isPresent()) {
-      Row row = res.get();
-      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
-      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
-      // Store only the secondary properties (no standard fields)
-      Map<String, Object> secondaryProps = new HashMap<>();
-      for (String propertyKey : secondaryTypeProperties.keySet()) {
-        Object value = row.get(propertyKey);
-        if (value != null) {
-          secondaryProps.put(propertyKey, value);
-        }
-      }
-      cmisDocument.setSecondaryProperties(secondaryProps);
-    } else {
-      // Check in draft table as well
-      Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
-      if (attachmentDraftEntity.isPresent()) {
-        q =
-            Select.from(attachmentDraftEntity.get())
-                .columns(columnsToRetrieve.toArray(new String[0]))
-                .where(doc -> doc.get("objectId").eq(id));
-        result = persistenceService.run(q);
-        res = result.first();
-        if (res.isPresent()) {
-          Row row = res.get();
-          cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
-          cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
-          // Store only the secondary properties (no standard fields)
-          Map<String, Object> secondaryProps = new HashMap<>();
-          for (String propertyKey : secondaryTypeProperties.keySet()) {
-            Object value = row.get(propertyKey);
-            if (value != null) {
-              secondaryProps.put(propertyKey, value);
-            }
-          }
-          cmisDocument.setSecondaryProperties(secondaryProps);
-        }
-      }
-    }
-    return cmisDocument;
+    return SDMUtils.getSecondaryTypeProperties(attachmentEntity, new HashMap<>());
   }
 
   public Result getAttachmentsForUPIDAndRepository(

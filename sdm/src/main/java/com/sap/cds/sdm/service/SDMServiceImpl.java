@@ -704,7 +704,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public List<String> moveAttachment(
+  public String moveAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
@@ -741,13 +741,8 @@ public class SDMServiceImpl implements SDMService {
 
                   if (response.getStatusLine().getStatusCode() == 201
                       || response.getStatusLine().getStatusCode() == 200) {
-                    // Process successful response
-                    JSONObject jsonObject = new JSONObject(responseBody);
-                    JSONObject props = jsonObject.getJSONObject("succinctProperties");
-                    String fileName = props.optString("cmis:name");
-                    String mimeType = props.optString("cmis:contentStreamMimeType");
-                    String objectId = props.optString("cmis:objectId");
-                    return List.of(fileName, mimeType, objectId);
+                    // Return the SDM response JSON - caller can extract needed properties
+                    return responseBody;
                   }
 
                   // On error, throw exception with error information
