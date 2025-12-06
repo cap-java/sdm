@@ -765,8 +765,18 @@ public class SDMCustomServiceHandler {
    */
   private void processSingleAttachmentMove(AttachmentMoveContext moveContext) {
     try {
-      // Step 1: Move attachment in SDM
-      CmisDocument cmisDocument = new CmisDocument();
+      // Step 1: Fetch attachment metadata from database to get type and URL (needed for link
+      // attachments)
+      // Create a copy event context to fetch attachment from source location
+      AttachmentMoveEventContext eventContext = moveContext.request.getContext();
+      AttachmentCopyEventContext copyContext = AttachmentCopyEventContext.create();
+      copyContext.setParentEntity(eventContext.getSourceParentEntity());
+      copyContext.setCompositionName(eventContext.getSourceCompositionName());
+
+      CmisDocument cmisDocument =
+          dbQuery.getAttachmentForObjectID(persistenceService, moveContext.objectId, copyContext);
+
+      // Set move operation specific fields
       cmisDocument.setObjectId(moveContext.objectId);
       cmisDocument.setRepositoryId(moveContext.request.getRepositoryId());
       cmisDocument.setSourceFolderId(moveContext.request.getSourceFolderId());
@@ -850,7 +860,8 @@ public class SDMCustomServiceHandler {
             succinctProperties,
             moveContext.entityAnnotations,
             moveContext.targetEntity,
-            moveContext.processingResults);
+            moveContext.processingResults,
+            cmisDocument);
       }
 
     } catch (ServiceException | IOException e) {
@@ -899,6 +910,7 @@ public class SDMCustomServiceHandler {
    * @param entityAnnotations mapping of DB fields to SDM properties
    * @param targetEntity the target attachment entity (for type checking)
    * @param results holder for successful processing results
+   * @param sourceCmisDocument the original cmisDocument from database with type and URL
    */
   private void processValidatedAttachment(
       String objectId,
@@ -909,11 +921,13 @@ public class SDMCustomServiceHandler {
       org.json.JSONObject succinctProperties,
       Map<String, String> entityAnnotations,
       com.sap.cds.reflect.CdsEntity targetEntity,
-      AttachmentProcessingResults results) {
+      AttachmentProcessingResults results,
+      CmisDocument sourceCmisDocument) {
     logger.info("Attachment {} validation PASSED - Processing for DB insertion", objectId);
     logger.info("Entity annotations mapping (DB field -> SDM property): {}", entityAnnotations);
 
-    CmisDocument populatedDocument = createPopulatedDocument(succinctProperties);
+    CmisDocument populatedDocument =
+        createPopulatedDocument(succinctProperties, sourceCmisDocument);
     Map<String, Object> filteredSecondaryProps =
         filterSecondaryProperties(objectId, succinctProperties, entityAnnotations, targetEntity);
 
@@ -932,15 +946,19 @@ public class SDMCustomServiceHandler {
   }
 
   /**
-   * Creates a CmisDocument with basic metadata from SDM response.
+   * Creates a CmisDocument with basic metadata from SDM response and source document.
    *
    * @param succinctProperties SDM response properties
+   * @param sourceCmisDocument the original cmisDocument from database with type and URL
    * @return populated CmisDocument
    */
-  private CmisDocument createPopulatedDocument(org.json.JSONObject succinctProperties) {
+  private CmisDocument createPopulatedDocument(
+      org.json.JSONObject succinctProperties, CmisDocument sourceCmisDocument) {
     CmisDocument document = new CmisDocument();
-    document.setType(succinctProperties.optString("sap:type", null));
-    document.setUrl(succinctProperties.optString("sap:linkURL", null));
+    // Preserve type and URL from source document (fetched from database)
+    // This is essential for link attachments where URL is not in SDM response
+    document.setType(sourceCmisDocument.getType());
+    document.setUrl(sourceCmisDocument.getUrl());
     return document;
   }
 
