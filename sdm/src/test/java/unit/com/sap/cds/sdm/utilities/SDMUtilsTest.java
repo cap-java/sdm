@@ -4,6 +4,7 @@ import static com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -1151,5 +1152,312 @@ public class SDMUtilsTest {
       // Assert the result
       assertEquals("0__null", result);
     }
+  }
+
+  // Note: extractPropertyName and extractTitle are private methods, so they are tested
+  // indirectly through the public methods that use them (getPropertyTitles, etc.)
+
+  @Test
+  void testGetPropertyTitles_withEmptyEntity() {
+    // Given
+    Optional<CdsEntity> attachmentEntity = Optional.empty();
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+
+    // When
+    Map<String, String> result = SDMUtils.getPropertyTitles(attachmentEntity, attachment);
+
+    // Then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testGetPropertyTitles_withValidEntityAndProperties() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsElement mockElement = mock(CdsElement.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> mockNameAnnotation = mock(CdsAnnotation.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> mockTitleAnnotation = mock(CdsAnnotation.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+    attachment.put(SDMConstants.DRAFT_READONLY_CONTEXT, "should_be_skipped");
+
+    when(mockEntity.getElement("property1")).thenReturn(mockElement);
+    // DRAFT_READONLY_CONTEXT should be skipped, so no element returned for it
+
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME))
+        .thenReturn(Optional.of(mockNameAnnotation));
+    when(mockNameAnnotation.getValue()).thenReturn("customProperty");
+
+    when(mockElement.findAnnotation("title")).thenReturn(Optional.of(mockTitleAnnotation));
+    when(mockTitleAnnotation.getValue()).thenReturn("Custom Title");
+
+    // When
+    Map<String, String> result = SDMUtils.getPropertyTitles(Optional.of(mockEntity), attachment);
+
+    // Then
+    assertEquals(1, result.size());
+    assertEquals("Custom Title", result.get("customProperty"));
+  }
+
+  @Test
+  void testGetPropertyTitles_withNullElement() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("nonExistentProperty", "value1");
+
+    when(mockEntity.getElement("nonExistentProperty")).thenReturn(null);
+
+    // When
+    Map<String, String> result = SDMUtils.getPropertyTitles(Optional.of(mockEntity), attachment);
+
+    // Then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testGetSecondaryPropertiesWithInvalidDefinition_withEmptyEntity() {
+    // Given
+    Optional<CdsEntity> attachmentEntity = Optional.empty();
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getSecondaryPropertiesWithInvalidDefinition(attachmentEntity, attachment);
+
+    // Then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testGetSecondaryPropertiesWithInvalidDefinition_withValidEntity() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsElement mockElement = mock(CdsElement.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> mockSdmAnnotation = mock(CdsAnnotation.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> mockTitleAnnotation = mock(CdsAnnotation.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+    attachment.put(SDMConstants.DRAFT_READONLY_CONTEXT, "should_be_skipped");
+
+    when(mockEntity.getElement("property1")).thenReturn(mockElement);
+    // DRAFT_READONLY_CONTEXT should be skipped, so no stubbing needed
+
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(mockSdmAnnotation));
+    when(mockElement.findAnnotation("title")).thenReturn(Optional.of(mockTitleAnnotation));
+    when(mockTitleAnnotation.getValue()).thenReturn("Property Title");
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getSecondaryPropertiesWithInvalidDefinition(Optional.of(mockEntity), attachment);
+
+    // Then
+    assertEquals(1, result.size());
+    assertEquals("Property Title", result.get("property1"));
+  }
+
+  @Test
+  void testGetSecondaryPropertiesWithInvalidDefinition_withoutTitleAnnotation() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    CdsElement mockElement = mock(CdsElement.class);
+    @SuppressWarnings("unchecked")
+    CdsAnnotation<Object> mockSdmAnnotation = mock(CdsAnnotation.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+
+    when(mockEntity.getElement("property1")).thenReturn(mockElement);
+    when(mockElement.getName()).thenReturn("property1");
+
+    when(mockElement.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY))
+        .thenReturn(Optional.of(mockSdmAnnotation));
+    when(mockElement.findAnnotation("title")).thenReturn(Optional.empty());
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getSecondaryPropertiesWithInvalidDefinition(Optional.of(mockEntity), attachment);
+
+    // Then
+    assertEquals(1, result.size());
+    assertEquals("property1", result.get("property1"));
+  }
+
+  @Test
+  void testGetUpdatedSecondaryProperties_withModifiedValues() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "newValue1");
+    attachment.put("property2", "sameValue");
+    attachment.put("property3", null);
+
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    secondaryTypeProperties.put("property1", "prop1Name");
+    secondaryTypeProperties.put("property2", "prop2Name");
+    secondaryTypeProperties.put("property3", "prop3Name");
+
+    Map<String, String> propertiesInDB = new HashMap<>();
+    propertiesInDB.put("property1", "oldValue1");
+    propertiesInDB.put("property2", "sameValue");
+    propertiesInDB.put("property3", "oldValue3");
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity),
+            attachment,
+            mockPersistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
+
+    // Then
+    assertEquals(2, result.size());
+    assertEquals("newValue1", result.get("prop1Name"));
+    assertNull(result.get("prop3Name"));
+    assertFalse(result.containsKey("prop2Name")); // Should not contain unchanged values
+  }
+
+  @Test
+  void testGetUpdatedSecondaryProperties_withNullValuesInAttachment() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", null);
+
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    secondaryTypeProperties.put("property1", "prop1Name");
+
+    Map<String, String> propertiesInDB = new HashMap<>();
+    propertiesInDB.put("property1", "existingValue");
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity),
+            attachment,
+            mockPersistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
+
+    // Then
+    assertEquals(1, result.size());
+    assertNull(result.get("prop1Name"));
+  }
+
+  @Test
+  void testGetUpdatedSecondaryProperties_withNewPropertyNotInDB() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "newValue");
+
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    secondaryTypeProperties.put("property1", "prop1Name");
+
+    Map<String, String> propertiesInDB = new HashMap<>();
+    // property1 is not in DB (null)
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity),
+            attachment,
+            mockPersistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
+
+    // Then
+    assertEquals(1, result.size());
+    assertEquals("newValue", result.get("prop1Name"));
+  }
+
+  @Test
+  void testGetUpdatedSecondaryProperties_withEmptySecondaryTypeProperties() {
+    // Given
+    CdsEntity mockEntity = mock(CdsEntity.class);
+    PersistenceService mockPersistenceService = mock(PersistenceService.class);
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("property1", "value1");
+
+    Map<String, String> secondaryTypeProperties = new HashMap<>();
+    Map<String, String> propertiesInDB = new HashMap<>();
+
+    // When
+    Map<String, String> result =
+        SDMUtils.getUpdatedSecondaryProperties(
+            Optional.of(mockEntity),
+            attachment,
+            mockPersistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
+
+    // Then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void testIsRelatedEntity_withRelatedEntity() {
+    // Given
+    CdsEntity attachmentEntity = mock(CdsEntity.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+
+    when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
+    when(cdsEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne");
+
+    // When
+    boolean result = SDMUtils.isRelatedEntity(attachmentEntity, cdsEntity);
+
+    // Then
+    assertTrue(result);
+  }
+
+  @Test
+  void testIsRelatedEntity_withSameEntity() {
+    // Given
+    CdsEntity attachmentEntity = mock(CdsEntity.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+
+    when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne");
+    when(cdsEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne");
+
+    // When
+    boolean result = SDMUtils.isRelatedEntity(attachmentEntity, cdsEntity);
+
+    // Then
+    assertFalse(result);
+  }
+
+  @Test
+  void testIsRelatedEntity_withUnrelatedEntity() {
+    // Given
+    CdsEntity attachmentEntity = mock(CdsEntity.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+
+    when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityTwo.Attachments");
+    when(cdsEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne");
+
+    // When
+    boolean result = SDMUtils.isRelatedEntity(attachmentEntity, cdsEntity);
+
+    // Then
+    assertFalse(result);
   }
 }
