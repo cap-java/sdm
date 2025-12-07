@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.reflect.CdsEntity;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.json.JSONObject;
@@ -80,15 +81,39 @@ public class ValidatedAttachmentData {
   }
 
   public List<String> getSuccessfulObjectIds() {
-    return successfulObjectIds;
+    return Collections.unmodifiableList(successfulObjectIds);
   }
 
   public List<List<String>> getMovedAttachmentsMetadata() {
-    return movedAttachmentsMetadata;
+    return Collections.unmodifiableList(movedAttachmentsMetadata);
   }
 
   public List<CmisDocument> getPopulatedDocuments() {
-    return populatedDocuments;
+    return Collections.unmodifiableList(populatedDocuments);
+  }
+
+  /**
+   * Internal method for adding successful object IDs during processing. For internal use only - do
+   * not expose to external callers.
+   */
+  public void addSuccessfulObjectId(String objectId) {
+    successfulObjectIds.add(objectId);
+  }
+
+  /**
+   * Internal method for adding moved attachments metadata during processing. For internal use only
+   * - do not expose to external callers.
+   */
+  public void addMovedAttachmentMetadata(List<String> metadata) {
+    movedAttachmentsMetadata.add(metadata);
+  }
+
+  /**
+   * Internal method for adding populated documents during processing. For internal use only - do
+   * not expose to external callers.
+   */
+  public void addPopulatedDocument(CmisDocument document) {
+    populatedDocuments.add(document);
   }
 
   public CmisDocument getSourceCmisDocument() {

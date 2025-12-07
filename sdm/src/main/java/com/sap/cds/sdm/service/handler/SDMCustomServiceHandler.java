@@ -759,7 +759,7 @@ public class SDMCustomServiceHandler {
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
       failure.put(FAILURE_REASON_KEY, "SDM move failed: " + e.getMessage());
-      moveContext.getFailedAttachments().add(failure);
+      moveContext.addFailedAttachment(failure);
     } catch (Exception e) {
       // Validation/processing failed
       logger.error(
@@ -770,7 +770,7 @@ public class SDMCustomServiceHandler {
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
       failure.put(FAILURE_REASON_KEY, "Validation/processing failed: " + e.getMessage());
-      moveContext.getFailedAttachments().add(failure);
+      moveContext.addFailedAttachment(failure);
     }
   }
 
@@ -801,15 +801,14 @@ public class SDMCustomServiceHandler {
         filteredSecondaryProps);
 
     // Add to successful results
-    data.getSuccessfulObjectIds().add(data.getObjectId());
-    data.getMovedAttachmentsMetadata()
-        .add(
-            List.of(
-                data.getFileName(),
-                data.getMimeType(),
-                data.getDescription(),
-                data.getMovedObjectId()));
-    data.getPopulatedDocuments().add(populatedDocument);
+    data.addSuccessfulObjectId(data.getObjectId());
+    data.addMovedAttachmentMetadata(
+        List.of(
+            data.getFileName(),
+            data.getMimeType(),
+            data.getDescription(),
+            data.getMovedObjectId()));
+    data.addPopulatedDocument(populatedDocument);
   }
 
   /**

@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -63,6 +64,14 @@ public class DatabaseFailureContext {
   }
 
   public List<Map<String, String>> getFailedAttachments() {
-    return failedAttachments;
+    return Collections.unmodifiableList(failedAttachments);
+  }
+
+  /**
+   * Internal method for adding failed attachments during processing. For internal use only - do not
+   * expose to external callers.
+   */
+  public void addFailedAttachment(Map<String, String> failure) {
+    failedAttachments.add(failure);
   }
 }
