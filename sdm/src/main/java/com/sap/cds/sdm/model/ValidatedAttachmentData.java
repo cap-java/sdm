@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.reflect.CdsEntity;
-import com.sap.cds.sdm.service.CmisDocument;
 import java.util.List;
 import java.util.Map;
 import org.json.JSONObject;
