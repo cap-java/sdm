@@ -15,6 +15,7 @@ import com.sap.cds.sdm.model.CopyAttachmentsRequest;
 import com.sap.cds.sdm.model.CopyAttachmentsResult;
 import com.sap.cds.sdm.model.CreateDraftEntriesRequest;
 import com.sap.cds.sdm.model.DatabaseFailureContext;
+import com.sap.cds.sdm.model.DatabaseUpdateRequest;
 import com.sap.cds.sdm.model.DraftEntryMoveData;
 import com.sap.cds.sdm.model.MoveAttachmentsRequest;
 import com.sap.cds.sdm.model.MoveAttachmentsResult;
@@ -244,17 +245,19 @@ public class SDMCustomServiceHandler {
       String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
       try {
-        updateDatabaseAndCleanupSource(
-            movedAttachmentsMetadata,
-            populatedDocuments,
-            parentEntity,
-            compositionName,
-            upID,
-            upIdKey,
-            repositoryId,
-            targetFolderId,
-            successfulObjectIds,
-            context);
+        DatabaseUpdateRequest updateRequest =
+            new DatabaseUpdateRequest(
+                movedAttachmentsMetadata,
+                populatedDocuments,
+                parentEntity,
+                compositionName,
+                upID,
+                upIdKey,
+                repositoryId,
+                targetFolderId,
+                successfulObjectIds,
+                context);
+        updateDatabaseAndCleanupSource(updateRequest);
       } catch (ServiceException e) {
         DatabaseFailureContext failureContext =
             new DatabaseFailureContext(
@@ -396,59 +399,54 @@ public class SDMCustomServiceHandler {
   /**
    * Updates database with moved attachments and cleans up source entity metadata.
    *
+   * @param request encapsulated database update request data
    * @throws ServiceException if database operations fail
    */
-  private void updateDatabaseAndCleanupSource(
-      List<List<String>> movedAttachmentsMetadata,
-      List<CmisDocument> populatedDocuments,
-      String parentEntity,
-      String compositionName,
-      String upID,
-      String upIdKey,
-      String repositoryId,
-      String folderId,
-      List<String> successfulObjectIds,
-      AttachmentMoveEventContext context)
+  private void updateDatabaseAndCleanupSource(DatabaseUpdateRequest request)
       throws ServiceException {
     // Query source entity's up__ID before creating target records
     // This ensures we get the correct source ID, especially important when moving
     // between entities of the same type (e.g., Book A to Book B)
     String sourceUpId = null;
-    if (!successfulObjectIds.isEmpty()) {
+    if (!request.getSuccessfulObjectIds().isEmpty()) {
       sourceUpId =
-          dbQuery.getSourceUpIdForObjectIds(persistenceService, successfulObjectIds, context);
+          dbQuery.getSourceUpIdForObjectIds(
+              persistenceService, request.getSuccessfulObjectIds(), request.getContext());
       logger.info("Retrieved source up__ID for cleanup: {}", sourceUpId);
     }
 
     // Create draft entries for moved attachments with secondary properties
     DraftEntryMoveData draftData =
         new DraftEntryMoveData(
-            movedAttachmentsMetadata,
-            populatedDocuments,
-            parentEntity,
-            compositionName,
-            upID,
-            upIdKey,
-            repositoryId,
-            folderId);
+            request.getMovedAttachmentsMetadata(),
+            request.getPopulatedDocuments(),
+            request.getParentEntity(),
+            request.getCompositionName(),
+            request.getUpID(),
+            request.getUpIdKey(),
+            request.getRepositoryId(),
+            request.getFolderId());
     createDraftEntriesForMove(draftData);
 
     // Clean up source entity metadata after successful move
-    if (!successfulObjectIds.isEmpty() && sourceUpId != null) {
+    if (!request.getSuccessfulObjectIds().isEmpty() && sourceUpId != null) {
       try {
         long deletedCount =
             dbQuery.deleteAttachmentsByObjectIds(
-                persistenceService, successfulObjectIds, sourceUpId, context);
+                persistenceService,
+                request.getSuccessfulObjectIds(),
+                sourceUpId,
+                request.getContext());
         logger.info(
             "Cleaned up {} attachment metadata records from source entity for {} successfully"
                 + " moved attachments",
             deletedCount,
-            successfulObjectIds.size());
+            request.getSuccessfulObjectIds().size());
       } catch (Exception cleanupException) {
         logger.warn(
             "Failed to clean up source entity metadata for {} attachments: {}. Attachments were"
                 + " successfully moved to target.",
-            successfulObjectIds.size(),
+            request.getSuccessfulObjectIds().size(),
             cleanupException.getMessage());
       }
     }
@@ -764,27 +762,137 @@ public class SDMCustomServiceHandler {
   }
 
   /**
-   * Parses SDM error message to extract meaningful failure reason.
+   * Parses SDM error message to extract meaningful failure reason. Handles different SDM error
+   * types similar to createAttachment() flow.
    *
-   * @param errorMessage The raw error message from SDM
+   * @param exception The exception from SDM operation
    * @return A user-friendly failure reason
    */
-  private String parseSDMErrorMessage(String errorMessage) {
+  private String parseSDMErrorMessage(Exception exception) {
+    String errorMessage = extractErrorMessage(exception);
+
     if (errorMessage == null || errorMessage.isEmpty()) {
       return SDMConstants.SDM_MOVE_OPERATION_FAILED;
     }
 
-    // Check for nameConstraintViolation (duplicate file)
-    if (errorMessage.contains("nameConstraintViolation")) {
-      // Extract the meaningful part: "Child 6.pdf with Id ... already exists"
-      int colonIndex = errorMessage.indexOf(":");
-      if (colonIndex != -1 && colonIndex + 1 < errorMessage.length()) {
-        return errorMessage.substring(colonIndex + 1).trim();
+    // Try to match specific error types
+    String specificError = matchSpecificErrorType(errorMessage);
+    if (specificError != null) {
+      return specificError;
+    }
+
+    // Generic SDM error pattern: "errorType : detailed message"
+    return extractDetailedMessage(errorMessage);
+  }
+
+  /**
+   * Extracts error message from exception chain.
+   *
+   * @param exception the exception to extract message from
+   * @return the most detailed error message found
+   */
+  private String extractErrorMessage(Exception exception) {
+    String errorMessage = exception.getMessage();
+
+    // If the main message is generic, check the cause chain
+    if (isGenericMessage(errorMessage) && exception.getCause() != null) {
+      Throwable cause = exception.getCause();
+      while (cause != null) {
+        String causeMessage = cause.getMessage();
+        if (!isGenericMessage(causeMessage)) {
+          return causeMessage;
+        }
+        cause = cause.getCause();
       }
     }
 
-    // Check for other common SDM errors and extract meaningful parts
-    // For now, return the full message as fallback
+    return errorMessage;
+  }
+
+  /**
+   * Checks if a message is generic and should be replaced with a more detailed one.
+   *
+   * @param message the message to check
+   * @return true if the message is null, empty, or generic
+   */
+  private boolean isGenericMessage(String message) {
+    return message == null
+        || message.isEmpty()
+        || message.equals(SDMConstants.FAILED_TO_MOVE_ATTACHMENT);
+  }
+
+  /**
+   * Matches error message against specific SDM error types.
+   *
+   * @param errorMessage the error message to match
+   * @return specific error message if matched, null otherwise
+   */
+  private String matchSpecificErrorType(String errorMessage) {
+    String lowerCaseMessage = errorMessage.toLowerCase();
+
+    if (lowerCaseMessage.contains("duplicate")
+        || lowerCaseMessage.contains("nameconstraintviolation")) {
+      return parseDuplicateError(errorMessage);
+    }
+
+    if (lowerCaseMessage.contains("virus") || lowerCaseMessage.contains("malware")) {
+      return "File contains potential malware and cannot be moved";
+    }
+
+    if (lowerCaseMessage.contains("unauthorized")
+        || lowerCaseMessage.contains("not authorized")
+        || lowerCaseMessage.contains("permission")) {
+      return SDMConstants.USER_NOT_AUTHORISED_ERROR;
+    }
+
+    if (lowerCaseMessage.contains("blocked") || lowerCaseMessage.contains("mimetype")) {
+      return SDMConstants.MIMETYPE_INVALID_ERROR;
+    }
+
+    if (lowerCaseMessage.contains("not found") || lowerCaseMessage.contains("object not found")) {
+      return SDMConstants.FILE_NOT_FOUND_ERROR;
+    }
+
+    return null;
+  }
+
+  /**
+   * Parses duplicate file error and extracts filename.
+   *
+   * @param errorMessage the error message
+   * @return parsed duplicate error message
+   */
+  private String parseDuplicateError(String errorMessage) {
+    int colonIndex = errorMessage.indexOf(" : ");
+    if (colonIndex == -1) {
+      return "Duplicate file already exists in the target location";
+    }
+
+    String detailedMessage = errorMessage.substring(colonIndex + 3).trim();
+    if (detailedMessage.startsWith("Child ")) {
+      int withIndex = detailedMessage.indexOf(" with Id");
+      if (withIndex != -1) {
+        String filename = detailedMessage.substring(6, withIndex).trim();
+        return SDMConstants.getDuplicateFilesError(filename);
+      }
+    }
+    return detailedMessage;
+  }
+
+  /**
+   * Extracts detailed message from generic SDM error pattern.
+   *
+   * @param errorMessage the error message
+   * @return detailed message or original message
+   */
+  private String extractDetailedMessage(String errorMessage) {
+    int colonIndex = errorMessage.indexOf(" : ");
+    if (colonIndex != -1) {
+      String detailedMessage = errorMessage.substring(colonIndex + 3).trim();
+      if (!detailedMessage.isEmpty()) {
+        return detailedMessage;
+      }
+    }
     return errorMessage;
   }
 
@@ -955,11 +1063,13 @@ public class SDMCustomServiceHandler {
           "[Thread: {}] Failed to move attachment {}: {}",
           Thread.currentThread().getName(),
           moveContext.getObjectId(),
-          e.getMessage());
+          e.getMessage(),
+          e);
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
       // Parse SDM error message to extract meaningful failure reason
-      String failureReason = parseSDMErrorMessage(e.getMessage());
+      // Check both the exception message and cause for detailed error
+      String failureReason = parseSDMErrorMessage(e);
       failure.put(FAILURE_REASON_KEY, failureReason);
       moveContext.addFailedAttachment(failure);
     } catch (Exception e) {
