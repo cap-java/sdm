@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -64,8 +63,6 @@ public class DatabaseFailureContext {
   }
 
   public List<Map<String, String>> getFailedAttachments() {
-    // Return an unmodifiable list with each map also wrapped as unmodifiable for deep immutability
-    return Collections.unmodifiableList(
-        failedAttachments.stream().map(Collections::unmodifiableMap).toList());
+    return failedAttachments;
   }
 }

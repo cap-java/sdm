@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.reflect.CdsEntity;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +56,6 @@ public class AttachmentMoveContext {
   }
 
   public List<Map<String, String>> getFailedAttachments() {
-    return Collections.unmodifiableList(failedAttachments);
+    return failedAttachments;
   }
 }

@@ -1,7 +1,7 @@
 package com.sap.cds.sdm.model;
 
 import com.sap.cds.reflect.CdsEntity;
-import java.util.Collections;
+import com.sap.cds.sdm.service.CmisDocument;
 import java.util.List;
 import java.util.Map;
 import org.json.JSONObject;
@@ -81,15 +81,15 @@ public class ValidatedAttachmentData {
   }
 
   public List<String> getSuccessfulObjectIds() {
-    return List.copyOf(successfulObjectIds);
+    return successfulObjectIds;
   }
 
   public List<List<String>> getMovedAttachmentsMetadata() {
-    return Collections.unmodifiableList(movedAttachmentsMetadata);
+    return movedAttachmentsMetadata;
   }
 
   public List<CmisDocument> getPopulatedDocuments() {
-    return Collections.unmodifiableList(populatedDocuments);
+    return populatedDocuments;
   }
 
   public CmisDocument getSourceCmisDocument() {
