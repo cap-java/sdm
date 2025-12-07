@@ -44,13 +44,15 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     // Parse facet to extract parent entity and composition name
     String[] facetParts = input.facet().split("\\.");
-    if (facetParts.length < 3) {
+    if (facetParts.length < 2) {
       throw new IllegalArgumentException(
           String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
     }
 
-    String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity
-    String compositionName = facetParts[2]; // composition name
+    // The last part is the composition name, everything else is the parent entity
+    String compositionName = facetParts[facetParts.length - 1];
+    String parentEntity = input.facet().substring(0, input.facet().lastIndexOf("."));
+    logger.info("Composition Name: {}, Parent Entity: {}", compositionName, parentEntity);
 
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
