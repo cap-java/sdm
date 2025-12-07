@@ -625,10 +625,9 @@ public class SDMCustomServiceHandler {
     failure.put(OBJECT_ID_KEY, objectId);
     failure.put(
         FAILURE_REASON_KEY,
-        "Target entity properties "
-            + invalidProperties
-            + " found in SDM response but not in valid secondary properties list. Attachment"
-            + " rolled back.");
+        SDMConstants.INVALID_SECONDARY_PROPERTIES_PREFIX
+            + String.join(", ", invalidProperties)
+            + SDMConstants.INVALID_SECONDARY_PROPERTIES_SUFFIX);
     failedAttachments.add(failure);
   }
 
@@ -758,7 +757,10 @@ public class SDMCustomServiceHandler {
           e.getMessage());
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
-      failure.put(FAILURE_REASON_KEY, "SDM move failed: " + e.getMessage());
+      // Pass through the actual SDM error message for clarity
+      failure.put(
+          FAILURE_REASON_KEY,
+          e.getMessage() != null ? e.getMessage() : SDMConstants.SDM_MOVE_OPERATION_FAILED);
       moveContext.addFailedAttachment(failure);
     } catch (Exception e) {
       // Validation/processing failed
@@ -769,7 +771,12 @@ public class SDMCustomServiceHandler {
           e);
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
-      failure.put(FAILURE_REASON_KEY, "Validation/processing failed: " + e.getMessage());
+      // Provide detailed validation error with context
+      String detailedReason =
+          e.getMessage() != null && !e.getMessage().isEmpty()
+              ? SDMConstants.VALIDATION_FAILED_PREFIX + e.getMessage()
+              : SDMConstants.VALIDATION_FAILED_DEFAULT_MESSAGE;
+      failure.put(FAILURE_REASON_KEY, detailedReason);
       moveContext.addFailedAttachment(failure);
     }
   }
