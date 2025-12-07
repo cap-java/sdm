@@ -1,5 +1,6 @@
 package com.sap.cds.sdm.service.handler;
 
+import com.sap.cds.Result;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
@@ -24,6 +25,7 @@ import com.sap.cds.sdm.model.ValidatedAttachmentData;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.RegisterService;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
@@ -183,6 +185,16 @@ public class SDMCustomServiceHandler {
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
+    // Check maxCount constraint before attempting move
+    List<Map<String, String>> failedAttachments =
+        checkMaxCountConstraintForMove(context, parentEntity, compositionName, upID, objectIds);
+    if (!failedAttachments.isEmpty()) {
+      // All attachments failed maxCount validation
+      context.setFailedAttachments(failedAttachments);
+      context.setCompleted();
+      return;
+    }
+
     // Ensure target folder exists in SDM before attempting moves
     TargetFolderInfo folderInfo =
         ensureTargetFolderReady(
@@ -206,17 +218,17 @@ public class SDMCustomServiceHandler {
 
     List<List<String>> movedAttachmentsMetadata = moveResult.getMovedAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = moveResult.getPopulatedDocuments();
-    List<Map<String, String>> failedAttachments = moveResult.getFailedAttachments();
+    List<Map<String, String>> moveFailures = moveResult.getFailedAttachments();
     List<String> successfulObjectIds = moveResult.getSuccessfulObjectIds();
 
     // Return failed attachments to caller
-    context.setFailedAttachments(new ArrayList<>(failedAttachments));
+    context.setFailedAttachments(new ArrayList<>(moveFailures));
 
     // Show warning if there are failures
-    if (!failedAttachments.isEmpty()) {
+    if (!moveFailures.isEmpty()) {
       StringBuilder warningMessage =
           new StringBuilder("Failed to move the following attachments:\n");
-      for (Map<String, String> failure : failedAttachments) {
+      for (Map<String, String> failure : moveFailures) {
         warningMessage
             .append("  - ObjectId: ")
             .append(failure.get(OBJECT_ID_KEY))
@@ -259,6 +271,126 @@ public class SDMCustomServiceHandler {
     }
 
     context.setCompleted();
+  }
+
+  /**
+   * Checks if moving attachments would exceed the maxCount constraint on the target entity.
+   *
+   * @param context the move event context
+   * @param parentEntity the parent entity name
+   * @param compositionName the composition name
+   * @param upID the up ID
+   * @param objectIds list of attachment object IDs to move
+   * @return list of failed attachments if constraint is violated, empty list otherwise
+   */
+  private List<Map<String, String>> checkMaxCountConstraintForMove(
+      AttachmentMoveEventContext context,
+      String parentEntity,
+      String compositionName,
+      String upID,
+      List<String> objectIds) {
+    List<Map<String, String>> failedAttachments = new ArrayList<>();
+
+    try {
+      // Get target attachment entity
+      Optional<CdsEntity> targetEntityOptional =
+          context.getModel().findEntity(parentEntity + "." + compositionName);
+      if (targetEntityOptional.isEmpty()) {
+        logger.warn(
+            "Target entity {}.{} not found, skipping maxCount validation",
+            parentEntity,
+            compositionName);
+        return failedAttachments;
+      }
+
+      CdsEntity targetAttachmentEntity = targetEntityOptional.get();
+
+      // Get maxCount and error message from annotations
+      String errorMessageCount =
+          SDMUtils.getAttachmentCountAndMessage(
+              context.getModel().entities().toList(), targetAttachmentEntity);
+      String[] maxCountArr = errorMessageCount.split("__");
+      long maxCount = Long.parseLong(maxCountArr[0]);
+
+      // If maxCount is 0 or negative, no limit is enforced
+      if (maxCount <= 0) {
+        return failedAttachments;
+      }
+
+      // Get target attachment draft entity for querying existing attachments
+      Optional<CdsEntity> draftEntityOptional =
+          context.getModel().findEntity(targetAttachmentEntity.getQualifiedName() + "_drafts");
+      if (draftEntityOptional.isEmpty()) {
+        logger.warn(
+            "Draft entity for {} not found, skipping maxCount validation",
+            targetAttachmentEntity.getQualifiedName());
+        return failedAttachments;
+      }
+
+      CdsEntity attachmentDraftEntity = draftEntityOptional.get();
+      String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity);
+
+      // Count existing attachments in target entity
+      Result result =
+          dbQuery.getAttachmentsForUPIDAndRepository(
+              attachmentDraftEntity, persistenceService, upID, upIdKey);
+      long existingCount = result.rowCount();
+      long totalCountAfterMove = existingCount + objectIds.size();
+
+      logger.info(
+          "MaxCount validation - Target entity: {}, MaxCount: {}, Existing: {}, Moving: {},"
+              + " Total after move: {}",
+          targetAttachmentEntity.getQualifiedName(),
+          maxCount,
+          existingCount,
+          objectIds.size(),
+          totalCountAfterMove);
+
+      // Check if total would exceed maxCount
+      if (totalCountAfterMove > maxCount) {
+        String errorMessage = maxCountArr[1];
+        String failureReason;
+
+        if (errorMessage != null && !"null".equalsIgnoreCase(errorMessage)) {
+          // Use custom error message from annotation
+          failureReason = errorMessage;
+        } else {
+          // Use default error message
+          failureReason =
+              String.format(
+                  "Cannot move %d attachment(s). Target entity allows maximum %d attachments, and"
+                      + " already has %d. Maximum count would be exceeded.",
+                  objectIds.size(), maxCount, existingCount);
+        }
+
+        logger.warn(
+            "Move operation rejected: Total count {} exceeds maxCount {}. Marking all {} attachments"
+                + " as failed.",
+            totalCountAfterMove,
+            maxCount,
+            objectIds.size());
+
+        // Mark all attachments as failed
+        for (String objectId : objectIds) {
+          Map<String, String> failure = new HashMap<>();
+          failure.put(OBJECT_ID_KEY, objectId);
+          failure.put(FAILURE_REASON_KEY, failureReason);
+          failedAttachments.add(failure);
+        }
+
+        // Show warning message
+        context.getMessages().warn(failureReason);
+      }
+    } catch (Exception e) {
+      logger.error(
+          "Error during maxCount validation for move operation: {}. Proceeding without"
+              + " validation.",
+          e.getMessage(),
+          e);
+      // Don't block the move operation if validation fails
+    }
+
+    return failedAttachments;
   }
 
   /**
@@ -632,6 +764,73 @@ public class SDMCustomServiceHandler {
   }
 
   /**
+   * Parses SDM error message to extract meaningful failure reason.
+   *
+   * @param errorMessage The raw error message from SDM
+   * @return A user-friendly failure reason
+   */
+  private String parseSDMErrorMessage(String errorMessage) {
+    if (errorMessage == null || errorMessage.isEmpty()) {
+      return SDMConstants.SDM_MOVE_OPERATION_FAILED;
+    }
+
+    // Check for nameConstraintViolation (duplicate file)
+    if (errorMessage.contains("nameConstraintViolation")) {
+      // Extract the meaningful part: "Child 6.pdf with Id ... already exists"
+      int colonIndex = errorMessage.indexOf(":");
+      if (colonIndex != -1 && colonIndex + 1 < errorMessage.length()) {
+        return errorMessage.substring(colonIndex + 1).trim();
+      }
+    }
+
+    // Check for other common SDM errors and extract meaningful parts
+    // For now, return the full message as fallback
+    return errorMessage;
+  }
+
+  /**
+   * Builds a detailed validation failure message including invalid properties if available.
+   *
+   * @param moveContext The move context containing validation state
+   * @param exception The exception that occurred
+   * @return A detailed failure message
+   */
+  private String buildValidationFailureMessage(
+      AttachmentMoveContext moveContext, Exception exception) {
+    // Check if we have invalid properties information in the context
+    if (moveContext.getInvalidProperties() != null
+        && !moveContext.getInvalidProperties().isEmpty()) {
+      return SDMConstants.INVALID_SECONDARY_PROPERTIES_PREFIX
+          + String.join(", ", moveContext.getInvalidProperties())
+          + SDMConstants.INVALID_SECONDARY_PROPERTIES_SUFFIX;
+    }
+
+    // Detect specific failure types and provide meaningful messages
+    String exceptionType = exception.getClass().getSimpleName();
+    String exceptionMessage = exception.getMessage();
+
+    // Database fetch failure
+    if (exceptionType.contains("ServiceException")
+        || exceptionMessage != null && exceptionMessage.contains("database")) {
+      return "Failed to retrieve attachment metadata from database. Attachment rolled back to source.";
+    }
+
+    // JSON parsing failure
+    if (exceptionType.contains("JSONException")
+        || exceptionMessage != null && exceptionMessage.contains("JSON")) {
+      return "Failed to parse SDM response. Attachment rolled back to source.";
+    }
+
+    // Processing/other failures with specific message
+    if (exceptionMessage != null && !exceptionMessage.isEmpty()) {
+      return "Processing failed: " + exceptionMessage + ". Attachment rolled back to source.";
+    }
+
+    // Generic fallback
+    return "Attachment processing failed. Attachment rolled back to source.";
+  }
+
+  /**
    * Processes a single attachment move: Move in SDM → Validate → Process or Rollback.
    *
    * @param moveContext the context containing all necessary information for processing
@@ -723,6 +922,8 @@ public class SDMCustomServiceHandler {
 
       if (!invalidProperties.isEmpty()) {
         // Step 3a: Validation failed → Rollback immediately
+        // Store invalid properties in context for detailed error message
+        moveContext.setInvalidProperties(invalidProperties);
         handleValidationFailure(
             moveContext.getObjectId(),
             invalidProperties,
@@ -757,10 +958,9 @@ public class SDMCustomServiceHandler {
           e.getMessage());
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
-      // Pass through the actual SDM error message for clarity
-      failure.put(
-          FAILURE_REASON_KEY,
-          e.getMessage() != null ? e.getMessage() : SDMConstants.SDM_MOVE_OPERATION_FAILED);
+      // Parse SDM error message to extract meaningful failure reason
+      String failureReason = parseSDMErrorMessage(e.getMessage());
+      failure.put(FAILURE_REASON_KEY, failureReason);
       moveContext.addFailedAttachment(failure);
     } catch (Exception e) {
       // Validation/processing failed
@@ -771,11 +971,8 @@ public class SDMCustomServiceHandler {
           e);
       Map<String, String> failure = new HashMap<>();
       failure.put(OBJECT_ID_KEY, moveContext.getObjectId());
-      // Provide detailed validation error with context
-      String detailedReason =
-          e.getMessage() != null && !e.getMessage().isEmpty()
-              ? SDMConstants.VALIDATION_FAILED_PREFIX + e.getMessage()
-              : SDMConstants.VALIDATION_FAILED_DEFAULT_MESSAGE;
+      // Provide detailed validation error with invalid properties if available
+      String detailedReason = buildValidationFailureMessage(moveContext, e);
       failure.put(FAILURE_REASON_KEY, detailedReason);
       moveContext.addFailedAttachment(failure);
     }

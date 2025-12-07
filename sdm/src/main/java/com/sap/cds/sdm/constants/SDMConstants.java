@@ -107,7 +107,7 @@ public class SDMConstants {
   public static final String INVALID_SECONDARY_PROPERTIES_PREFIX =
       "Invalid secondary properties detected: ";
   public static final String INVALID_SECONDARY_PROPERTIES_SUFFIX =
-      ". These properties are not supported in the target entity. Attachment rolled back to source.";
+      ". Attachment rolled back to source.";
   public static final String FAILED_TO_MOVE_ATTACHMENT = "Failed to move attachment";
   public static final String FAILED_TO_MOVE_ATTACHMENT_MSG = "SDM.Move.failedToMoveAttachmentError";
   public static final String MOVE_OPERATION_PARTIAL_FAILURE =

@@ -14,6 +14,7 @@ public class AttachmentMoveContext {
   private final CdsEntity targetEntity;
   private final AttachmentProcessingResults processingResults;
   private final List<Map<String, String>> failedAttachments;
+  private List<String> invalidProperties; // Mutable field to track validation failures
 
   public AttachmentMoveContext(
       String objectId,
@@ -58,6 +59,14 @@ public class AttachmentMoveContext {
 
   public List<Map<String, String>> getFailedAttachments() {
     return Collections.unmodifiableList(failedAttachments);
+  }
+
+  public List<String> getInvalidProperties() {
+    return invalidProperties;
+  }
+
+  public void setInvalidProperties(List<String> invalidProperties) {
+    this.invalidProperties = invalidProperties;
   }
 
   /**
