@@ -78,22 +78,32 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     // Parse target facet to extract parent entity and composition name
     String[] targetFacetParts = input.targetFacet().split("\\.");
-    if (targetFacetParts.length < 3) {
+    if (targetFacetParts.length < 2) {
       throw new IllegalArgumentException(
           String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.targetFacet()));
     }
 
-    String targetParentEntity = targetFacetParts[0] + "." + targetFacetParts[1]; // Service.Entity
-    String targetCompositionName = targetFacetParts[2]; // composition name
+    // The last part is the composition name, everything else is the parent entity
+    String targetCompositionName = targetFacetParts[targetFacetParts.length - 1];
+    String targetParentEntity =
+        input.targetFacet().substring(0, input.targetFacet().lastIndexOf("."));
+    logger.info(
+        "Target Composition Name: {}, Target Parent Entity: {}",
+        targetCompositionName,
+        targetParentEntity);
 
     // Parse source facet to extract source entity information for cleanup
     String sourceParentEntity = null;
     String sourceCompositionName = null;
     if (input.sourceFacet() != null && !input.sourceFacet().isEmpty()) {
       String[] sourceFacetParts = input.sourceFacet().split("\\.");
-      if (sourceFacetParts.length >= 3) {
-        sourceParentEntity = sourceFacetParts[0] + "." + sourceFacetParts[1]; // Service.Entity
-        sourceCompositionName = sourceFacetParts[2]; // composition name
+      if (sourceFacetParts.length >= 2) {
+        sourceCompositionName = sourceFacetParts[sourceFacetParts.length - 1];
+        sourceParentEntity = input.sourceFacet().substring(0, input.sourceFacet().lastIndexOf("."));
+        logger.info(
+            "Source Composition Name: {}, Source Parent Entity: {}",
+            sourceCompositionName,
+            sourceParentEntity);
       }
     }
 
