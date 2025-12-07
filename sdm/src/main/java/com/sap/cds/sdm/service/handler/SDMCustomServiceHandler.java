@@ -790,10 +790,7 @@ public class SDMCustomServiceHandler {
     CmisDocument populatedDocument = createPopulatedDocument(data.getSourceCmisDocument());
     Map<String, Object> filteredSecondaryProps =
         filterSecondaryProperties(
-            data.getObjectId(),
-            data.getSuccinctProperties(),
-            data.getEntityAnnotations(),
-            data.getTargetEntity());
+            data.getSuccinctProperties(), data.getEntityAnnotations(), data.getTargetEntity());
 
     populatedDocument.setSecondaryProperties(filteredSecondaryProps);
 
@@ -833,14 +830,12 @@ public class SDMCustomServiceHandler {
   /**
    * Filters and converts secondary properties from SDM response for DB insertion.
    *
-   * @param objectId the attachment object ID (for logging)
    * @param succinctProperties SDM response properties
    * @param entityAnnotations mapping of DB fields to SDM properties
    * @param targetEntity the target attachment entity (for type checking)
    * @return filtered and converted properties map
    */
   private Map<String, Object> filterSecondaryProperties(
-      String objectId,
       JSONObject succinctProperties,
       Map<String, String> entityAnnotations,
       CdsEntity targetEntity) {
