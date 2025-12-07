@@ -87,15 +87,15 @@ public class ValidatedAttachmentData {
   }
 
   public List<String> getSuccessfulObjectIds() {
-    return successfulObjectIds;
+    return List.copyOf(successfulObjectIds);
   }
 
   public List<List<String>> getMovedAttachmentsMetadata() {
-    return movedAttachmentsMetadata;
+    return Collections.unmodifiableList(movedAttachmentsMetadata);
   }
 
   public List<CmisDocument> getPopulatedDocuments() {
-    return populatedDocuments;
+    return Collections.unmodifiableList(populatedDocuments);
   }
 
   public CmisDocument getSourceCmisDocument() {
