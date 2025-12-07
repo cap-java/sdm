@@ -4,7 +4,6 @@ import com.sap.cds.reflect.CdsEntity;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.json.JSONObject;
 
 /** Helper class to encapsulate validated attachment data for processing. */
@@ -43,14 +42,9 @@ public class ValidatedAttachmentData {
     this.succinctProperties = succinctProperties;
     this.entityAnnotations = entityAnnotations;
     this.targetEntity = targetEntity;
-    this.successfulObjectIds = List.copyOf(successfulObjectIds);
-    // Deep immutability: wrap outer list and each inner list as unmodifiable
-    this.movedAttachmentsMetadata =
-        Collections.unmodifiableList(
-            movedAttachmentsMetadata.stream()
-                .map(Collections::unmodifiableList)
-                .collect(Collectors.toList()));
-    this.populatedDocuments = List.copyOf(populatedDocuments);
+    this.successfulObjectIds = successfulObjectIds;
+    this.movedAttachmentsMetadata = movedAttachmentsMetadata;
+    this.populatedDocuments = populatedDocuments;
     this.sourceCmisDocument = sourceCmisDocument;
   }
 
