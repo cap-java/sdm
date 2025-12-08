@@ -559,9 +559,17 @@ public class AttachmentsHandlerUtils {
    * @return true if any validation errors are found, false otherwise
    */
   public static Boolean validateFileNames(
-      EventContext context, List<CdsData> data, String composition, String contextInfo) {
+      EventContext context,
+      List<CdsData> data,
+      String composition,
+      String contextInfo,
+      Optional<CdsEntity> attachmentEntity) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
+    String upIdKey = "";
+    if (attachmentEntity.isPresent()) {
+      upIdKey = SDMUtils.getUpIdKey(attachmentEntity.get());
+    }
 
     // Validation for file names
     Set<String> whitespaceFilenames =
@@ -569,7 +577,7 @@ public class AttachmentsHandlerUtils {
     List<String> restrictedFileNames =
         SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
     Set<String> duplicateFilenames =
-        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
+        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity, upIdKey);
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {

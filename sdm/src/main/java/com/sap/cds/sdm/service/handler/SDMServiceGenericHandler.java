@@ -199,7 +199,10 @@ public class SDMServiceGenericHandler implements EventHandler {
     CdsEntity draftEntity = model.findEntity(draftEntityName).get();
     CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
 
-    String upIdKey = getUpIdKey(draftEntity);
+    final String upIdKey = SDMUtils.getUpIdKey(draftEntity);
+    if (upIdKey == null || upIdKey.isEmpty()) {
+      return;
+    }
     String parentKeyName = upIdKey.replaceFirst("^up__", "");
     Object parentId = parentKeys.get(parentKeyName);
 
@@ -330,7 +333,9 @@ public class SDMServiceGenericHandler implements EventHandler {
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
     String upIdKey =
-        attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
+        attachmentDraftEntity.isPresent()
+            ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+            : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
     // Get parent entity to extract its key names dynamically
     String parentEntityName = null;
@@ -430,20 +435,6 @@ public class SDMServiceGenericHandler implements EventHandler {
       }
     }
     context.setCompleted();
-  }
-
-  private String getUpIdKey(CdsEntity attachmentDraftEntity) {
-    String upIdKey = "";
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType associationType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
-    return upIdKey;
   }
 
   /**

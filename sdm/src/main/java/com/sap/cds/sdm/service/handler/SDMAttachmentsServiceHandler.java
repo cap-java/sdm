@@ -182,7 +182,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     Map<String, Object> attachmentIds = eventContext.getAttachmentIds();
     CdsEntity attachmentDraftEntity = getAttachmentDraftEntity(eventContext);
-    String upIdKey = getUpIdKey(attachmentDraftEntity);
+    String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity);
     String upID = (String) attachmentIds.get(upIdKey);
 
     Result result =
@@ -200,20 +200,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         model.findEntity(eventContext.getAttachmentEntity() + "_drafts");
     return attachmentDraftEntity.orElseThrow(
         () -> new ServiceException(SDMConstants.DRAFT_NOT_FOUND));
-  }
-
-  private String getUpIdKey(CdsEntity attachmentDraftEntity) {
-    String upIdKey = "";
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType associationType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
-    return upIdKey;
   }
 
   private void checkAttachmentConstraints(

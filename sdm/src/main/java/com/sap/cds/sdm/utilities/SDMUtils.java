@@ -2,6 +2,7 @@ package com.sap.cds.sdm.utilities;
 
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAnnotation;
+import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -26,8 +27,11 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SDMUtils {
+  private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
 
   private SDMUtils() {
     // Doesn't do anything
@@ -54,7 +58,7 @@ public class SDMUtils {
   }
 
   public static Set<String> FileNameDuplicateInDrafts(
-      List<CdsData> data, String composition, String targetEntity) {
+      List<CdsData> data, String composition, String targetEntity, String upIdKey) {
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
@@ -67,7 +71,10 @@ public class SDMUtils {
           String filenameInRequest = (String) attachment.get("fileName");
           if (filenameInRequest != null && !filenameInRequest.isBlank()) {
             String repositoryInRequest = (String) attachment.get("repositoryId");
-            String fileRepositorySpecific = filenameInRequest + "#" + repositoryInRequest;
+            String upId = (String) attachment.get(upIdKey);
+            String fileRepositorySpecific =
+                filenameInRequest + "#" + repositoryInRequest + "#" + upId;
+            logger.info("Filename key check : " + fileRepositorySpecific);
             if (!uniqueFilenames.add(fileRepositorySpecific)) {
               duplicateFilenames.add(filenameInRequest);
             }
@@ -382,6 +389,30 @@ public class SDMUtils {
     String attachmentQualifiedName = attachmentEntity.getQualifiedName();
     return attachmentQualifiedName.contains(cdsEntity.getQualifiedName())
         && !attachmentQualifiedName.equals(cdsEntity.getQualifiedName());
+  }
+
+  public static String getUpIdKey(CdsEntity attachmentDraftEntity) {
+    String upIdKey = "";
+    Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
+    if (upAssociation.isPresent()) {
+      CdsElement association = upAssociation.get();
+      // get association type
+      CdsAssociationType associationType = association.getType();
+      // get the refs of the association
+      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
+      if (!fkElements.isEmpty()) {
+        upIdKey = fkElements.get(0);
+      }
+    }
+    // Fallback: if no association found, try to find element starting with "up__"
+    if (upIdKey.isEmpty()) {
+      Optional<CdsElement> upElement =
+          attachmentDraftEntity.elements().filter(e -> e.getName().startsWith("up__")).findFirst();
+      if (upElement.isPresent()) {
+        upIdKey = upElement.get().getName();
+      }
+    }
+    return upIdKey;
   }
 
   private static void processCompositions(
