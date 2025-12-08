@@ -1004,6 +1004,41 @@ public class SDMCustomServiceHandler {
   }
 
   /**
+   * Fetches link URL from SDM content stream and sets it on the CmisDocument. Link URLs are stored
+   * in the content stream in format: [InternetShortcut]\nURL=<url>. If fetching fails, continues
+   * with null URL as the type is still correctly set.
+   *
+   * @param cmisDocument the document to set the URL on
+   * @param movedObjectId the objectId to fetch the link URL for
+   * @param moveContext the move context containing request credentials
+   */
+  private void fetchAndSetLinkUrl(
+      CmisDocument cmisDocument, String movedObjectId, AttachmentMoveContext moveContext) {
+    try {
+      String linkUrl =
+          sdmService.getLinkUrl(
+              movedObjectId,
+              moveContext.getRequest().getSdmCredentials(),
+              moveContext.getRequest().getIsSystemUser());
+      if (linkUrl != null) {
+        cmisDocument.setUrl(linkUrl);
+        logger.info(
+            "[Thread: {}] Fetched and set linkUrl for attachment {}: {}",
+            Thread.currentThread().getName(),
+            moveContext.getObjectId(),
+            linkUrl);
+      }
+    } catch (Exception e) {
+      logger.warn(
+          "[Thread: {}] Failed to fetch link URL for attachment {}: {}",
+          Thread.currentThread().getName(),
+          moveContext.getObjectId(),
+          e.getMessage());
+      // Continue with null URL - the type is still correctly set
+    }
+  }
+
+  /**
    * Processes a single attachment move: Move in SDM → Validate → Process or Rollback.
    *
    * @param moveContext the context containing all necessary information for processing
@@ -1046,28 +1081,7 @@ public class SDMCustomServiceHandler {
       // For link attachments, fetch the actual URL from SDM content if not already available
       // Link URLs are stored in the content stream in format: [InternetShortcut]\nURL=<url>
       if ("sap:link".equals(objectTypeId) && cmisDocument.getUrl() == null) {
-        try {
-          String linkUrl =
-              sdmService.getLinkUrl(
-                  movedObjectId,
-                  moveContext.getRequest().getSdmCredentials(),
-                  moveContext.getRequest().getIsSystemUser());
-          if (linkUrl != null) {
-            cmisDocument.setUrl(linkUrl);
-            logger.info(
-                "[Thread: {}] Fetched and set linkUrl for attachment {}: {}",
-                Thread.currentThread().getName(),
-                moveContext.getObjectId(),
-                linkUrl);
-          }
-        } catch (Exception e) {
-          logger.warn(
-              "[Thread: {}] Failed to fetch link URL for attachment {}: {}",
-              Thread.currentThread().getName(),
-              moveContext.getObjectId(),
-              e.getMessage());
-          // Continue with null URL - the type is still correctly set
-        }
+        fetchAndSetLinkUrl(cmisDocument, movedObjectId, moveContext);
       }
 
       logger.info(
