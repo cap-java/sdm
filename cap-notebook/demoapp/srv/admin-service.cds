@@ -21,8 +21,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -48,8 +48,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -75,8 +75,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -102,8 +102,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -129,8 +129,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -156,8 +156,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -183,8 +183,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -210,8 +210,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
@@ -238,8 +238,8 @@ service AdminService @(requires: ['admin','system-user']) {
         in: many $self, 
         up__ID: String, 
         sourceFolderId: String,
-        sourceFacet: String,      // For source entity cleanup
-        objectIds: String
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
