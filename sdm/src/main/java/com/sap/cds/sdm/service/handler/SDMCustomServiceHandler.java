@@ -1034,32 +1034,26 @@ public class SDMCustomServiceHandler {
       String mimeType = succinctProperties.optString("cmis:contentStreamMimeType");
       String description = succinctProperties.optString("cmis:description");
       String movedObjectId = succinctProperties.optString("cmis:objectId");
+      String objectTypeId = succinctProperties.optString("cmis:objectTypeId");
 
-      // Extract linkUrl from SDM response if not already set (when sourceFacet not provided)
-      // This ensures link attachments are properly handled even without database fetch
-      if (cmisDocument.getUrl() == null) {
-        String urlFromSDM = succinctProperties.optString("sap:linkUrl", null);
-        cmisDocument.setUrl(urlFromSDM);
-      }
+      // Determine attachment type based on cmis:objectTypeId from SDM response
+      // Link attachments: "sap:link" -> "sap-icon://internet-browser"
+      // Document attachments: "cmis:document" -> "sap-icon://document"
+      String attachmentType =
+          "sap:link".equals(objectTypeId) ? "sap-icon://internet-browser" : "sap-icon://document";
+      cmisDocument.setType(attachmentType);
 
-      // Set type based on whether it's a link attachment or document attachment
-      // Link attachments: "sap-icon://internet-browser"
-      // Document attachments: "sap-icon://document"
-      // This should be done after extracting URL to properly determine the type
-      if (cmisDocument.getType() == null) {
-        String attachmentType =
-            (cmisDocument.getUrl() != null && !cmisDocument.getUrl().isEmpty())
-                ? "sap-icon://internet-browser"
-                : "sap-icon://document";
-        cmisDocument.setType(attachmentType);
-      }
+      // For link attachments, extract the URL from database if sourceFacet was provided
+      // Note: sap:linkUrl is not in the SDM move response, so we rely on database fetch
+      // If sourceFacet not provided, linkUrl will remain null (which is acceptable for move)
 
       logger.info(
-          "[Thread: {}] Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}, Type: {}, LinkUrl: {}",
+          "[Thread: {}] Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}, ObjectTypeId: {}, Type: {}, LinkUrl: {}",
           Thread.currentThread().getName(),
           moveContext.getObjectId(),
           fileName,
           mimeType,
+          objectTypeId,
           cmisDocument.getType(),
           cmisDocument.getUrl());
       logger.info(
