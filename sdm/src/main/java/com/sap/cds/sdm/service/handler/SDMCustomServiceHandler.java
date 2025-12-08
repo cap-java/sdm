@@ -939,6 +939,71 @@ public class SDMCustomServiceHandler {
   }
 
   /**
+   * Fetches attachment metadata either from database or directly from SDM.
+   *
+   * @param moveContext the context containing attachment and request information
+   * @param threadName the name of the current thread for logging
+   * @return CmisDocument with attachment metadata
+   */
+  private CmisDocument fetchAttachmentMetadata(
+      AttachmentMoveContext moveContext, String threadName) {
+    AttachmentMoveEventContext eventContext = moveContext.getRequest().getContext();
+
+    // If sourceFacet is provided, fetch from database; otherwise fetch from SDM directly
+    if (eventContext.getSourceParentEntity() != null
+        && !eventContext.getSourceParentEntity().isEmpty()) {
+      // Source facet provided - fetch metadata from database
+      logger.info(
+          "[Thread: {}] Fetching attachment metadata from database (sourceFacet provided)",
+          threadName);
+      AttachmentCopyEventContext copyContext = AttachmentCopyEventContext.create();
+      copyContext.setParentEntity(eventContext.getSourceParentEntity());
+      copyContext.setCompositionName(eventContext.getSourceCompositionName());
+
+      return dbQuery.getAttachmentForObjectID(
+          persistenceService, moveContext.getObjectId(), copyContext);
+    } else {
+      // No source facet - fetch metadata directly from SDM
+      logger.info(
+          "[Thread: {}] Fetching attachment metadata from SDM (no sourceFacet provided)",
+          threadName);
+      return fetchAttachmentMetadataFromSDM(moveContext);
+    }
+  }
+
+  /**
+   * Fetches attachment metadata directly from SDM repository.
+   *
+   * @param moveContext the context containing attachment and request information
+   * @return CmisDocument with attachment metadata from SDM
+   */
+  private CmisDocument fetchAttachmentMetadataFromSDM(AttachmentMoveContext moveContext) {
+    try {
+      List<String> sdmMetadata =
+          sdmService.getObject(
+              moveContext.getObjectId(),
+              moveContext.getRequest().getSdmCredentials(),
+              moveContext.getRequest().getIsSystemUser());
+
+      if (sdmMetadata == null || sdmMetadata.isEmpty()) {
+        throw new ServiceException("Attachment not found in SDM: " + moveContext.getObjectId());
+      }
+
+      // Create CmisDocument with metadata from SDM
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setFileName(sdmMetadata.get(0)); // cmis:name
+      if (sdmMetadata.size() > 1) {
+        cmisDocument.setDescription(sdmMetadata.get(1)); // cmis:description
+      }
+      // Type and URL will be null for non-link attachments (which is fine for move)
+      return cmisDocument;
+    } catch (IOException e) {
+      throw new ServiceException(
+          "Failed to fetch attachment metadata from SDM: " + e.getMessage(), e);
+    }
+  }
+
+  /**
    * Processes a single attachment move: Move in SDM → Validate → Process or Rollback.
    *
    * @param moveContext the context containing all necessary information for processing
@@ -948,17 +1013,8 @@ public class SDMCustomServiceHandler {
     logger.info(
         "[Thread: {}] Starting move for attachment: {}", threadName, moveContext.getObjectId());
     try {
-      // Step 1: Fetch attachment metadata from database to get type and URL (needed for link
-      // attachments)
-      // Create a copy event context to fetch attachment from source location
-      AttachmentMoveEventContext eventContext = moveContext.getRequest().getContext();
-      AttachmentCopyEventContext copyContext = AttachmentCopyEventContext.create();
-      copyContext.setParentEntity(eventContext.getSourceParentEntity());
-      copyContext.setCompositionName(eventContext.getSourceCompositionName());
-
-      CmisDocument cmisDocument =
-          dbQuery.getAttachmentForObjectID(
-              persistenceService, moveContext.getObjectId(), copyContext);
+      // Step 1: Fetch attachment metadata
+      CmisDocument cmisDocument = fetchAttachmentMetadata(moveContext, threadName);
 
       // Set move operation specific fields
       cmisDocument.setObjectId(moveContext.getObjectId());
@@ -979,12 +1035,26 @@ public class SDMCustomServiceHandler {
       String description = succinctProperties.optString("cmis:description");
       String movedObjectId = succinctProperties.optString("cmis:objectId");
 
+      // Extract type and linkUrl from SDM response if not already set (when sourceFacet not
+      // provided)
+      // This ensures link attachments are properly handled even without database fetch
+      if (cmisDocument.getType() == null) {
+        String typeFromSDM = succinctProperties.optString("sap:type", null);
+        cmisDocument.setType(typeFromSDM);
+      }
+      if (cmisDocument.getUrl() == null) {
+        String urlFromSDM = succinctProperties.optString("sap:linkUrl", null);
+        cmisDocument.setUrl(urlFromSDM);
+      }
+
       logger.info(
-          "[Thread: {}] Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}",
+          "[Thread: {}] Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}, Type: {}, LinkUrl: {}",
           Thread.currentThread().getName(),
           moveContext.getObjectId(),
           fileName,
-          mimeType);
+          mimeType,
+          cmisDocument.getType(),
+          cmisDocument.getUrl());
       logger.info(
           "SDM response for attachment {} contains {} total properties: {}",
           moveContext.getObjectId(),
