@@ -382,6 +382,50 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
+  public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("Fetching link URL - This is a :{} flow", grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+
+    String sdmUrl =
+        sdmCredentials.getUrl()
+            + "browser/"
+            + SDMConstants.REPOSITORY_ID
+            + "/root?objectID="
+            + objectId
+            + "&cmisselector=content";
+
+    HttpGet getContentRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode != 200) {
+        logger.warn("Failed to fetch link content for objectId {}: {}", objectId, responseCode);
+        return null;
+      }
+
+      // Read the content which is in format: [InternetShortcut]\nURL=<actual-url>
+      String content = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+
+      // Parse the URL from the content
+      String[] lines = content.split("\n");
+      for (String line : lines) {
+        if (line.startsWith("URL=")) {
+          String url = line.substring(4).trim();
+          logger.info("Extracted link URL for objectId {}: {}", objectId, url);
+          return url;
+        }
+      }
+
+      logger.warn("Could not find URL in link content for objectId {}", objectId);
+      return null;
+    } catch (IOException e) {
+      logger.error("Failed to fetch link URL for objectId {}: {}", objectId, e.getMessage(), e);
+      throw new ServiceException("Failed to fetch link URL", e);
+    }
+  }
+
+  @Override
   public String getFolderId(
       Result result,
       PersistenceService persistenceService,

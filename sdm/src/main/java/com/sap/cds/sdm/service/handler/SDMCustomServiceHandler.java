@@ -1043,9 +1043,32 @@ public class SDMCustomServiceHandler {
           "sap:link".equals(objectTypeId) ? "sap-icon://internet-browser" : "sap-icon://document";
       cmisDocument.setType(attachmentType);
 
-      // For link attachments, extract the URL from database if sourceFacet was provided
-      // Note: sap:linkUrl is not in the SDM move response, so we rely on database fetch
-      // If sourceFacet not provided, linkUrl will remain null (which is acceptable for move)
+      // For link attachments, fetch the actual URL from SDM content if not already available
+      // Link URLs are stored in the content stream in format: [InternetShortcut]\nURL=<url>
+      if ("sap:link".equals(objectTypeId) && cmisDocument.getUrl() == null) {
+        try {
+          String linkUrl =
+              sdmService.getLinkUrl(
+                  movedObjectId,
+                  moveContext.getRequest().getSdmCredentials(),
+                  moveContext.getRequest().getIsSystemUser());
+          if (linkUrl != null) {
+            cmisDocument.setUrl(linkUrl);
+            logger.info(
+                "[Thread: {}] Fetched and set linkUrl for attachment {}: {}",
+                Thread.currentThread().getName(),
+                moveContext.getObjectId(),
+                linkUrl);
+          }
+        } catch (Exception e) {
+          logger.warn(
+              "[Thread: {}] Failed to fetch link URL for attachment {}: {}",
+              Thread.currentThread().getName(),
+              moveContext.getObjectId(),
+              e.getMessage());
+          // Continue with null URL - the type is still correctly set
+        }
+      }
 
       logger.info(
           "[Thread: {}] Successfully moved attachment {} to target folder. FileName: {}, MimeType: {}, ObjectTypeId: {}, Type: {}, LinkUrl: {}",

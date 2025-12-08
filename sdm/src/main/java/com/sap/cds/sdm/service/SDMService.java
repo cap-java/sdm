@@ -74,4 +74,7 @@ public interface SDMService {
   public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
+
+  public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
 }
