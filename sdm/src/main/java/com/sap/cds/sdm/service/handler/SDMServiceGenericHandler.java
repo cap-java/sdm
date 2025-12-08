@@ -103,8 +103,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     // Use the full target qualified name as the targetFacet
     String targetFacet = context.getTarget().getQualifiedName();
 
+    // Pass String directly - the constructor will automatically wrap it in Optional
     var moveEventInput =
-        new MoveAttachmentInput(sourceFolderId, sourceFacet, upID, targetFacet, objectIds);
+        new MoveAttachmentInput(sourceFolderId, upID, targetFacet, objectIds, sourceFacet);
 
     Map<String, Object> result =
         attachmentService.moveAttachments(moveEventInput, context.getUserInfo().isSystemUser());

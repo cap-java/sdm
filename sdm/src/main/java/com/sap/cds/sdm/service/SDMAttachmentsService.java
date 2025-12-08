@@ -95,11 +95,12 @@ public class SDMAttachmentsService extends ServiceDelegator
     // Parse source facet to extract source entity information for cleanup
     String sourceParentEntity = null;
     String sourceCompositionName = null;
-    if (input.sourceFacet() != null && !input.sourceFacet().isEmpty()) {
-      String[] sourceFacetParts = input.sourceFacet().split("\\.");
+    if (input.sourceFacet().isPresent()) {
+      String sourceFacetValue = input.sourceFacet().get();
+      String[] sourceFacetParts = sourceFacetValue.split("\\.");
       if (sourceFacetParts.length >= 2) {
         sourceCompositionName = sourceFacetParts[sourceFacetParts.length - 1];
-        sourceParentEntity = input.sourceFacet().substring(0, input.sourceFacet().lastIndexOf("."));
+        sourceParentEntity = sourceFacetValue.substring(0, sourceFacetValue.lastIndexOf("."));
         logger.info(
             "Source Composition Name: {}, Source Parent Entity: {}",
             sourceCompositionName,

@@ -1035,16 +1035,23 @@ public class SDMCustomServiceHandler {
       String description = succinctProperties.optString("cmis:description");
       String movedObjectId = succinctProperties.optString("cmis:objectId");
 
-      // Extract type and linkUrl from SDM response if not already set (when sourceFacet not
-      // provided)
+      // Extract linkUrl from SDM response if not already set (when sourceFacet not provided)
       // This ensures link attachments are properly handled even without database fetch
-      if (cmisDocument.getType() == null) {
-        String typeFromSDM = succinctProperties.optString("sap:type", null);
-        cmisDocument.setType(typeFromSDM);
-      }
       if (cmisDocument.getUrl() == null) {
         String urlFromSDM = succinctProperties.optString("sap:linkUrl", null);
         cmisDocument.setUrl(urlFromSDM);
+      }
+
+      // Set type based on whether it's a link attachment or document attachment
+      // Link attachments: "sap-icon://internet-browser"
+      // Document attachments: "sap-icon://document"
+      // This should be done after extracting URL to properly determine the type
+      if (cmisDocument.getType() == null) {
+        String attachmentType =
+            (cmisDocument.getUrl() != null && !cmisDocument.getUrl().isEmpty())
+                ? "sap-icon://internet-browser"
+                : "sap-icon://document";
+        cmisDocument.setType(attachmentType);
       }
 
       logger.info(
