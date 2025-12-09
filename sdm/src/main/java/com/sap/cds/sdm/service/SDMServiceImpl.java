@@ -196,7 +196,6 @@ public class SDMServiceImpl implements SDMService {
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String objectId = cmisDocument.getObjectId();
-    String fileName = cmisDocument.getFileName();
     List<String> secondaryTypes;
     try {
       secondaryTypes =
@@ -243,7 +242,11 @@ public class SDMServiceImpl implements SDMService {
 
     Set<String> keysToRemove =
         secondaryProperties.keySet().stream()
-            .filter(key -> !key.equals("filename") && !validSecondaryProperties.contains(key))
+            .filter(
+                key ->
+                    !key.equals("filename")
+                        && !key.equals("description")
+                        && !validSecondaryProperties.contains(key))
             .collect(
                 Collectors
                     .toSet()); // Adding the properties which are unsupported to a list so that
@@ -284,7 +287,7 @@ public class SDMServiceImpl implements SDMService {
           secondaryTypes.get(index)); // Adding Secondary Types to the request body
     }
 
-    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties, fileName);
+    SDMUtils.prepareSecondaryProperties(updateRequestBody, secondaryProperties);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
@@ -306,8 +309,8 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
-      throws IOException {
+  public List<String> getObject(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -323,15 +326,15 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getObjectRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
-        if (response.getStatusLine().getStatusCode() == 403) {
-          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
-        }
+        return Collections.emptyList();
       }
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonObject = new JSONObject(responseString);
-      return jsonObject;
+      JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
+      String cmisName = succinctProperties.optString("cmis:name", "");
+      String cmisDescription = succinctProperties.optString("cmis:description", "");
+      return List.of(cmisName, cmisDescription);
     } catch (IOException e) {
-
       throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
     }
   }
@@ -395,7 +398,8 @@ public class SDMServiceImpl implements SDMService {
     for (Map<String, Object> attachment : resultList) {
       if (attachment.get("folderId") != null) {
         repositoryId = attachment.get("repositoryId").toString();
-        // check if folderId exists for the repositoryId if not then make folderId null else
+        // check if folderId exists for the repositoryId if not then make folderId null
+        // else
         // continue
         if (repoId.equalsIgnoreCase(repositoryId)) {
           folderId = attachment.get("folderId").toString();
@@ -540,11 +544,6 @@ public class SDMServiceImpl implements SDMService {
         // Fetch the disableVirusScannerForLargeFile
         repoValue.setDisableVirusScannerForLargeFile(
             featureData.getBoolean("disableVirusScannerForLargeFile"));
-
-        repoValue.setIsAsyncVirusScanEnabled(
-            featureData.has("asyncVirusScanEnabled")
-                ? featureData.getBoolean("asyncVirusScanEnabled")
-                : false);
       }
     }
     repoValueMap.put(repositoryId, repoValue);
@@ -664,8 +663,11 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public List<String> copyAttachment(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public Map<String, String> copyAttachment(
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      Set<String> customPropertiesInSDM)
       throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
@@ -690,14 +692,7 @@ public class SDMServiceImpl implements SDMService {
           entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
 
       if (response.getStatusLine().getStatusCode() == 201) {
-        // Process successful response
-
-        JSONObject jsonObject = new JSONObject(responseBody);
-        JSONObject props = jsonObject.getJSONObject("succinctProperties");
-        String fileName = props.optString("cmis:name");
-        String mimeType = props.optString("cmis:contentStreamMimeType");
-        String objectId = props.optString("cmis:objectId");
-        return List.of(fileName, mimeType, objectId);
+        return processCopyAttachmentResponse(responseBody, customPropertiesInSDM);
       }
 
       // On error, throw exception with error information
@@ -707,6 +702,42 @@ public class SDMServiceImpl implements SDMService {
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
       throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
+    }
+  }
+
+  private Map<String, String> processCopyAttachmentResponse(
+      String responseBody, Set<String> customPropertiesInSDM) {
+    Map<String, String> resultMap = new HashMap<>();
+    JSONObject jsonObject = new JSONObject(responseBody);
+    JSONObject props = jsonObject.optJSONObject("succinctProperties");
+
+    // Extract standard CMIS properties
+    resultMap.put("cmis:name", extractProperty(props, jsonObject, "cmis:name"));
+    resultMap.put(
+        "cmis:contentStreamMimeType",
+        extractProperty(props, jsonObject, "cmis:contentStreamMimeType"));
+    resultMap.put("cmis:description", extractProperty(props, jsonObject, "cmis:description"));
+    resultMap.put("cmis:objectId", extractProperty(props, jsonObject, "cmis:objectId"));
+
+    // Extract custom properties from SDM response
+    extractCustomProperties(props, customPropertiesInSDM, resultMap);
+
+    return resultMap;
+  }
+
+  private String extractProperty(JSONObject props, JSONObject jsonObject, String propertyName) {
+    return props != null ? props.optString(propertyName) : jsonObject.optString(propertyName);
+  }
+
+  private void extractCustomProperties(
+      JSONObject props, Set<String> customPropertiesInSDM, Map<String, String> resultMap) {
+    if (props != null && customPropertiesInSDM != null && !customPropertiesInSDM.isEmpty()) {
+      for (String customProperty : customPropertiesInSDM) {
+        if (props.has(customProperty)) {
+          Object value = props.get(customProperty);
+          resultMap.put(customProperty, value != null ? value.toString() : "");
+        }
+      }
     }
   }
 }

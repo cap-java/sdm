@@ -34,7 +34,7 @@ annotate Attachments with @UI: {
 {Value: uploadStatus, @HTML5.CssDefaults: {width: '15%'}, Criticality: statusCriticality},
     ]
 } {
-    note       @(title: '{i18n>Note}');
+    note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
     modifiedAt @(odata.etag: null);
     uploadStatus  @(title: '{i18n>Upload Status}', UI.Criticality: statusCriticality);

@@ -28,4 +28,5 @@ public class CmisDocument {
   private String contentId;
   private String type;
   private String uploadStatus;
+  private String description;
 }
