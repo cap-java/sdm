@@ -217,12 +217,16 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             attachment); // Fetching the secondary type properties from the attachment entity
     String fileNameInDB;
-    CmisDocument cmisDocument = dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    CmisDocument cmisDocument =
+        dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     fileNameInDB = cmisDocument.getFileName();
-    if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+    if (cmisDocument.getUploadStatus() != null
+        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
+      if (cmisDocument
+          .getUploadStatus()
+          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
         throw new ServiceException("Virus Detected in this file kindly delete it.");
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
         throw new ServiceException("Virus Scanning is in Progress.");
     }
     if (fileNameInDB
@@ -264,7 +268,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           attachment, fileNameInDB, propertiesInDB, secondaryTypeProperties);
       return;
     }
-     cmisDocument = new CmisDocument();
+    cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setObjectId(objectId);
     if (fileNameInDB == null) {

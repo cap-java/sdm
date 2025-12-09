@@ -16,6 +16,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 
@@ -46,11 +47,51 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
+  public Result getAllAttachments(
+      CdsReadEventContext context, PersistenceService persistenceService) {
+    Optional<CdsEntity> attachmentDraftEntity =
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+
+      CqnSelect q =
+          Select.from(attachmentDraftEntity.get())
+              .columns(
+                  "fileName",
+                  "ID",
+                  "IsActiveEntity",
+                  "folderId",
+                  "repositoryId",
+                  "mimeType",
+                  "uploadStatus");
+      return persistenceService.run(q);
+    } else {
+      attachmentDraftEntity = context.getModel().findEntity(context.getTarget().getQualifiedName());
+      CqnSelect q =
+          Select.from(attachmentDraftEntity.get())
+              .columns(
+                  "fileName",
+                  "ID",
+                  "IsActiveEntity",
+                  "folderId",
+                  "repositoryId",
+                  "mimeType",
+                  "uploadStatus");
+      return persistenceService.run(q);
+    }
+  }
+
   public CmisDocument getObjectIdForAttachmentID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl","uploadStatus")
+            .columns(
+                "objectId",
+                "folderId",
+                "fileName",
+                "mimeType",
+                "contentId",
+                "linkUrl",
+                "uploadStatus")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     Optional<Row> res = result.first();
@@ -64,7 +105,8 @@ public class DBQuery {
       cmisDocument.setContentId(
           row.get("contentId") != null ? row.get("contentId").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
-      cmisDocument.setUploadStatus(row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }
     return cmisDocument;
   }
@@ -155,12 +197,15 @@ public class DBQuery {
   public CmisDocument getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
-        Select.from(attachmentEntity).columns("fileName","uploadStatus").where(doc -> doc.get("ID").eq(id));
+        Select.from(attachmentEntity)
+            .columns("fileName", "uploadStatus")
+            .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     CmisDocument cmisDocument = new CmisDocument();
     for (Row row : result.list()) {
       cmisDocument.setFileName(row.get("fileName").toString());
-      cmisDocument.setUploadStatus(row.get("uploadStatus")!=null? row.get("uploadStatus").toString():null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }
     return cmisDocument;
   }
@@ -177,6 +222,7 @@ public class DBQuery {
     updatedFields.put("status", "Clean");
     updatedFields.put("type", "sap-icon://document");
     updatedFields.put("mimeType", cmisDocument.getMimeType());
+    updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
@@ -224,8 +270,6 @@ public class DBQuery {
     }
     return cmisDocuments;
   }
-
-
 
   public Map<String, String> getPropertiesForID(
       CdsEntity attachmentEntity,
@@ -324,6 +368,28 @@ public class DBQuery {
         Update.entity(attachmentEntity)
             .data("uploadStatus", uploadStatus)
             .where(doc -> doc.get("objectId").eq(objectId));
+
+    persistenceService.run(updateQuery);
+  }
+
+  /**
+   * Updates the criticality value for an attachment based on its upload status.
+   *
+   * @param attachmentEntity the attachment entity
+   * @param persistenceService the persistence service
+   * @param attachmentId the attachment ID
+   * @param criticality the calculated criticality value
+   */
+  public void updateAttachmentCriticality(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String attachmentId,
+      int criticality) {
+
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data("statusCriticality", criticality)
+            .where(doc -> doc.get("ID").eq(attachmentId));
 
     persistenceService.run(updateQuery);
   }

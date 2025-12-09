@@ -9,7 +9,6 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
-import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -22,7 +21,6 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.handler.EventHandler;
-import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -57,10 +55,21 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     this.dbQuery = dbQuery;
   }
 
-
+  //  @Before(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
+  //  @HandlerOrder(TRANSACTION_BEGIN)
+  //  public void beforeAttachment(AttachmentCreateEventContext context) throws IOException {
+  //    System.out.println("Before Attachments");
+  //    CmisDocument cmisDocument = new CmisDocument();
+  //    cmisDocument.setUploadStatus("Upload InProgress");
+  //    Map<String, Object> attachmentIds = context.getAttachmentIds();
+  //    cmisDocument.setAttachmentId((String) attachmentIds.get("ID"));
+  //    dbQuery.addAttachmentToDraft(
+  //        getAttachmentDraftEntity(context), persistenceService, cmisDocument);
+  //  }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+
     logger.info(
         "CREATE_ATTACHMENT Event Received with content length {} At {}",
         (context.getParameterInfo() != null && context.getParameterInfo().getHeaders() != null)
@@ -105,13 +114,17 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String objectId = contentIdParts[0];
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     Optional<CdsEntity> attachmentEntity =
-            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
     CmisDocument cmisDocument =
-            dbQuery.getuploadStatusForAttachment(attachmentEntity.get().getQualifiedName(), persistenceService, objectId,context);
-    if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+        dbQuery.getuploadStatusForAttachment(
+            attachmentEntity.get().getQualifiedName(), persistenceService, objectId, context);
+    if (cmisDocument.getUploadStatus() != null
+        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
+      if (cmisDocument
+          .getUploadStatus()
+          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
         throw new ServiceException("Virus Detected in this file kindly delete it.");
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
         throw new ServiceException("Virus Scanning is in Progress.");
     }
     try {
@@ -174,18 +187,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
-    if(!repoValue.getIsAsyncVirusScanEnabled()) {
+    if (!repoValue.getIsAsyncVirusScanEnabled()) {
       // Check if repository is virus scanned
       if (repoValue.getVirusScanEnabled()
-              && contentLen > 400 * 1024 * 1024
-              && !repoValue.getDisableVirusScannerForLargeFile()) {
+          && contentLen > 400 * 1024 * 1024
+          && !repoValue.getDisableVirusScannerForLargeFile()) {
         String errorMessage =
-                eventContext
-                        .getCdsRuntime()
-                        .getLocalizedMessage(
-                                SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
-                                null,
-                                eventContext.getParameterInfo().getLocale());
+            eventContext
+                .getCdsRuntime()
+                .getLocalizedMessage(
+                    SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
+                    null,
+                    eventContext.getParameterInfo().getLocale());
         if (errorMessage.equalsIgnoreCase(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE))
           throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
         throw new ServiceException(errorMessage);
@@ -304,7 +317,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     JSONObject createResult = null;
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
+      createResult =
+          documentService.createDocument(
+              cmisDocument, sdmCredentials, isSystemUser, eventContext, persistenceService);
       logger.info("Synchronous Response from documentService: {}", createResult);
       logger.info("Upload Finished at: {}", System.currentTimeMillis());
     } catch (Exception e) {
@@ -395,7 +410,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         throw new ServiceException(errorMessage2);
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
-        cmisDocument.setUploadStatus((createResult.get("uploadStatus")!= null)?createResult.get("uploadStatus").toString():null);
+        cmisDocument.setUploadStatus(
+            (createResult.get("uploadStatus") != null)
+                ? createResult.get("uploadStatus").toString()
+                : null);
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

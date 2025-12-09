@@ -11,7 +11,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
+  public static final String REPOSITORY_ID = "MY_REPO";
   public static final String MIMETYPE_INTERNET_SHORTCUT = "application/internet-shortcut";
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
@@ -153,13 +153,15 @@ public class SDMConstants {
       "An object named \"%s\" already exists. Rename the object and try again.";
 
   // Upload Status Constants
-  public static final String UPLOAD_STATUS_SUCCESS = "SUCCESS";
-  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VIRUS_DETECTED";
-  public static final String VIRUS_SCAN_INPROGRESS = "VIRUS_SCAN_IN_PROGRESS";
+  public static final String UPLOAD_STATUS_SUCCESS = "Success";
+  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "Virus Detected";
+  public static final String UPLOAD_STATUS_IN_PROGRESS = "Upload InProgress";
+  public static final String VIRUS_SCAN_INPROGRESS = "In progress (Refresh the page)";
 
   public enum ScanStatus {
     BLANK(""),
     IN_PROGRESS("IN_PROGRESS"),
+    UPLOAD_IN_PROGRESS("UPLOAD_IN_PROGRESS"),
     VIRUS_DETECTED("VIRUS_DETECTED");
 
     private final String value;

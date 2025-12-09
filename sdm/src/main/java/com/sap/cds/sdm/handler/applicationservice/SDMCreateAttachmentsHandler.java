@@ -210,10 +210,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             id); // Fetching the name of the file from DB
     fileNameInDB = cmisDocument.getFileName();
-    if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+    if (cmisDocument.getUploadStatus() != null
+        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
+      if (cmisDocument
+          .getUploadStatus()
+          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
         throw new ServiceException("Virus Detected in this file kindly delete it.");
-      if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
         throw new ServiceException("Virus Scanning is in Progress.");
     }
     String filenameInRequest =

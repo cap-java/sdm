@@ -287,12 +287,15 @@ public class SDMServiceGenericHandler implements EventHandler {
     String id = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
-   if(cmisDocument.getUploadStatus()!=null && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)){
-     if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
-     throw new ServiceException("Virus Detected in this file kindly delete it.");
-     if(cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
-       throw new ServiceException("Virus Scanning is in Progress.");
-   }
+    if (cmisDocument.getUploadStatus() != null
+        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
+      if (cmisDocument
+          .getUploadStatus()
+          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+        throw new ServiceException("Virus Detected in this file kindly delete it.");
+      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+        throw new ServiceException("Virus Scanning is in Progress.");
+    }
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
       attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
@@ -300,21 +303,20 @@ public class SDMServiceGenericHandler implements EventHandler {
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
 
-
-
     if (cmisDocument.getMimeType().equalsIgnoreCase(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)) {
       // Verify access to the object by calling getObject from SDMService
       try {
         SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
         JSONObject objectResponse =
-                sdmService.getObject(
-                        cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+            sdmService.getObject(
+                cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
 
         if (objectResponse == null) {
           throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
         }
       } catch (ServiceException e) {
-        if (e.getMessage() != null && e.getMessage().contains("User does not have required scope")) {
+        if (e.getMessage() != null
+            && e.getMessage().contains("User does not have required scope")) {
           throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_OPEN_LINK);
         }
         throw e;
@@ -380,7 +382,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     JSONObject createResult = null;
 
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
+      createResult =
+          documentService.createDocument(
+              cmisDocument, sdmCredentials, isSystemUser, null, persistenceService);
     } catch (Exception e) {
       throw new ServiceException(
           SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);

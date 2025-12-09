@@ -3,12 +3,17 @@ package com.sap.cds.sdm.service;
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.*;
 import java.lang.management.MemoryMXBean;
@@ -34,23 +39,30 @@ public class DocumentUploadService {
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
   private final TokenHandler tokenHandler;
+  private DBQuery dbQuery;
 
   public DocumentUploadService(
       ServiceBinding binding,
       CdsProperties.ConnectionPool connectionPool,
-      TokenHandler tokenHandler) {
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     logger.info("DocumentUploadService is instantiated");
 
     this.connectionPool = connectionPool;
     this.binding = binding;
     this.tokenHandler = tokenHandler;
+    this.dbQuery = dbQuery;
   }
 
   /*
    * Implementation to create document.
    */
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      AttachmentCreateEventContext eventContext,
+      PersistenceService persistenceService)
       throws IOException {
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
@@ -59,15 +71,26 @@ public class DocumentUploadService {
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
-
+      CdsModel model = eventContext.getModel();
+      Optional<CdsEntity> attachmentDraftEntity =
+          model.findEntity(eventContext.getAttachmentEntity() + "_drafts");
+      cmisDocument.setUploadStatus("IN_PROGRESS");
       if (totalSize <= 400 * 1024 * 1024) {
+
+        dbQuery.addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
         // Upload directly if file is ≤ 400MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > 400MB
-        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
+        return uploadLargeFileInChunks(
+            cmisDocument,
+            sdmUrl,
+            chunkSize,
+            isSystemUser,
+            attachmentDraftEntity.get(),
+            persistenceService);
       }
     } catch (Exception e) {
       throw new IOException("Error uploading document: " + e.getMessage(), e);
@@ -212,7 +235,12 @@ public class DocumentUploadService {
   }
 
   private JSONObject uploadLargeFileInChunks(
-      CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
+      CmisDocument cmisDocument,
+      String sdmUrl,
+      int chunkSize,
+      boolean isSystemUser,
+      CdsEntity entity,
+      PersistenceService persistenceService)
       throws IOException {
 
     try (ReadAheadInputStream chunkedStream =
@@ -225,7 +253,8 @@ public class DocumentUploadService {
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
       logger.info("Response Body: {}", responseBody);
-
+      cmisDocument.setUploadStatus("IN_PROGRESS");
+      dbQuery.addAttachmentToDraft(entity, persistenceService, cmisDocument);
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
       logger.info("objectId of empty doc is {}", objectId);
@@ -309,7 +338,10 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
-        scanStatus = succinctProperties.getString("scanStatus");
+        scanStatus =
+            succinctProperties.has("scanStatus")
+                ? succinctProperties.getString("scanStatus")
+                : scanStatus;
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
