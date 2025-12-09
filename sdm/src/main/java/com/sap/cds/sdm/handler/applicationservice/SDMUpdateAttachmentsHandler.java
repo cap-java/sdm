@@ -35,10 +35,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
 
   public SDMUpdateAttachmentsHandler(
-          PersistenceService persistenceService,
-          SDMService sdmService,
-          TokenHandler tokenHandler,
-          DBQuery dbQuery) {
+      PersistenceService persistenceService,
+      SDMService sdmService,
+      TokenHandler tokenHandler,
+      DBQuery dbQuery) {
     this.persistenceService = persistenceService;
     this.sdmService = sdmService;
     this.tokenHandler = tokenHandler;
@@ -51,12 +51,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     // Get comprehensive attachment composition details for each entity
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
-              AttachmentsHandlerUtils.getAttachmentCompositionDetails(
-                      context.getModel(),
-                      context.getTarget(),
-                      persistenceService,
-                      context.getTarget().getQualifiedName(),
-                      entityData);
+          AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+              context.getModel(),
+              context.getTarget(),
+              persistenceService,
+              context.getTarget().getQualifiedName(),
+              entityData);
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
 
       updateName(context, data, attachmentCompositionDetails);
@@ -64,10 +64,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   }
 
   public void updateName(
-          CdsUpdateEventContext context,
-          List<CdsData> data,
-          Map<String, Map<String, String>> attachmentCompositionDetails)
-          throws IOException {
+      CdsUpdateEventContext context,
+      List<CdsData> data,
+      Map<String, Map<String, String>> attachmentCompositionDetails)
+      throws IOException {
     for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
       String attachmentCompositionDefinition = entry.getKey();
       String attachmentCompositionName = entry.getValue().get("name");
@@ -81,38 +81,38 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         compositionName = parts[parts.length - 1];
       }
       String contextInfo =
-              "\n\nTable: "
-                      + compositionName
-                      + "\nPage: "
-                      + (parentTitle != null ? parentTitle : "Unknown");
+          "\n\nTable: "
+              + compositionName
+              + "\nPage: "
+              + (parentTitle != null ? parentTitle : "Unknown");
 
       Optional<CdsEntity> attachmentEntity = Optional.empty();
       if (context.getModel() != null) {
         attachmentEntity = context.getModel().findEntity(attachmentCompositionDefinition);
       }
       isError =
-              AttachmentsHandlerUtils.validateFileNames(
-                      context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+          AttachmentsHandlerUtils.validateFileNames(
+              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
       if (!isError) {
         renameDocument(
-                attachmentEntity,
-                context,
-                data,
-                attachmentCompositionDefinition,
-                attachmentCompositionName,
-                contextInfo);
+            attachmentEntity,
+            context,
+            data,
+            attachmentCompositionDefinition,
+            attachmentCompositionName,
+            contextInfo);
       }
     }
   }
 
   private void renameDocument(
-          Optional<CdsEntity> attachmentEntity,
-          CdsUpdateEventContext context,
-          List<CdsData> data,
-          String attachmentCompositionDefinition,
-          String attachmentCompositionName,
-          String contextInfo)
-          throws IOException {
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      List<CdsData> data,
+      String attachmentCompositionDefinition,
+      String attachmentCompositionName,
+      String contextInfo)
+      throws IOException {
     List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
@@ -124,7 +124,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String targetEntity = context.getTarget().getQualifiedName();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments =
-              AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
+          AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
 
       if (attachments != null && !attachments.isEmpty()) {
         propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
@@ -133,64 +133,64 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
       if (attachments != null && !attachments.isEmpty()) {
         secondaryPropertiesWithInvalidDefinitions =
-                SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
-                        attachmentEntity, attachments.get(0));
+            SDMUtils.getSecondaryPropertiesWithInvalidDefinition(
+                attachmentEntity, attachments.get(0));
       } else {
         // Handle the case where attachments is null or empty
         secondaryPropertiesWithInvalidDefinitions = null;
       }
       if ((attachments != null) && !attachments.isEmpty()) {
         processAttachments(
-                attachmentEntity,
-                context,
-                attachments,
-                duplicateFileNameList,
-                fileNameWithRestrictedCharacters,
-                filesNotFound,
-                filesWithUnsupportedProperties,
-                badRequest,
-                secondaryPropertiesWithInvalidDefinitions,
-                noSDMRoles);
-      }
-    }
-    handleWarnings(
+            attachmentEntity,
             context,
+            attachments,
             duplicateFileNameList,
             fileNameWithRestrictedCharacters,
             filesNotFound,
             filesWithUnsupportedProperties,
             badRequest,
-            propertyTitles,
-            noSDMRoles,
-            contextInfo);
+            secondaryPropertiesWithInvalidDefinitions,
+            noSDMRoles);
+      }
+    }
+    handleWarnings(
+        context,
+        duplicateFileNameList,
+        fileNameWithRestrictedCharacters,
+        filesNotFound,
+        filesWithUnsupportedProperties,
+        badRequest,
+        propertyTitles,
+        noSDMRoles,
+        contextInfo);
   }
 
   private void processAttachments(
-          Optional<CdsEntity> attachmentEntity,
-          CdsUpdateEventContext context,
-          List<Map<String, Object>> attachments,
-          List<String> duplicateFileNameList,
-          List<String> fileNameWithRestrictedCharacters,
-          List<String> filesNotFound,
-          List<String> filesWithUnsupportedProperties,
-          Map<String, String> badRequest,
-          Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-          List<String> noSDMRoles)
-          throws IOException {
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      List<Map<String, Object>> attachments,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
+      throws IOException {
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
       Map<String, Object> attachment = iterator.next();
       processAttachment(
-              attachmentEntity,
-              context,
-              attachment,
-              duplicateFileNameList,
-              fileNameWithRestrictedCharacters,
-              filesNotFound,
-              filesWithUnsupportedProperties,
-              badRequest,
-              secondaryPropertiesWithInvalidDefinitions,
-              noSDMRoles);
+          attachmentEntity,
+          context,
+          attachment,
+          duplicateFileNameList,
+          fileNameWithRestrictedCharacters,
+          filesNotFound,
+          filesWithUnsupportedProperties,
+          badRequest,
+          secondaryPropertiesWithInvalidDefinitions,
+          noSDMRoles);
     }
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
@@ -201,34 +201,34 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   }
 
   public void processAttachment(
-          Optional<CdsEntity> attachmentEntity,
-          CdsUpdateEventContext context,
-          Map<String, Object> attachment,
-          List<String> duplicateFileNameList,
-          List<String> fileNameWithRestrictedCharacters,
-          List<String> filesNotFound,
-          List<String> filesWithUnsupportedProperties,
-          Map<String, String> badRequest,
-          Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-          List<String> noSDMRoles)
-          throws IOException {
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      Map<String, Object> attachment,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles)
+      throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
 
     Map<String, String> secondaryTypeProperties =
-            SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+        SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     String fileNameInDB;
-    CmisDocument cmisDocument=
-            dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    CmisDocument cmisDocument =
+        dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     fileNameInDB = cmisDocument.getFileName();
     if (cmisDocument.getUploadStatus() != null
-            && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
+        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
       if (cmisDocument
-              .getUploadStatus()
-              .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+          .getUploadStatus()
+          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
         throw new ServiceException("Virus Detected in this file kindly delete it.");
       if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
         throw new ServiceException("Virus Scanning is in Progress.");
@@ -237,15 +237,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String descriptionInDB = null;
     if (fileNameInDB == null) {
       List<String> sdmAttachmentData =
-              AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
-                      sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+          AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
+              sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
       fileNameInDB = sdmAttachmentData.get(0);
       descriptionInDB = sdmAttachmentData.get(1);
     }
 
     Map<String, String> propertiesInDB =
-            dbQuery.getPropertiesForID(
-                    attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+        dbQuery.getPropertiesForID(
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
     // Extract note (description) from DB if it exists
     if (propertiesInDB != null && propertiesInDB.containsKey("note")) {
@@ -254,21 +254,21 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
-            SDMUtils.getUpdatedSecondaryProperties(
-                    attachmentEntity,
-                    attachment,
-                    persistenceService,
-                    secondaryTypeProperties,
-                    propertiesInDB);
-     cmisDocument =
-            AttachmentsHandlerUtils.prepareCmisDocument(
-                    filenameInRequest, descriptionInRequest, objectId);
+        SDMUtils.getUpdatedSecondaryProperties(
+            attachmentEntity,
+            attachment,
+            persistenceService,
+            secondaryTypeProperties,
+            propertiesInDB);
+    cmisDocument =
+        AttachmentsHandlerUtils.prepareCmisDocument(
+            filenameInRequest, descriptionInRequest, objectId);
 
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
-            fileNameInDB, filenameInRequest, updatedSecondaryProperties);
+        fileNameInDB, filenameInRequest, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
-            descriptionInDB, descriptionInRequest, updatedSecondaryProperties);
+        descriptionInDB, descriptionInRequest, updatedSecondaryProperties);
 
     // Send update to SDM only if there are changes
     if (updatedSecondaryProperties.isEmpty()) {
@@ -277,58 +277,58 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     try {
       int responseCode =
-              sdmService.updateAttachments(
-                      tokenHandler.getSDMCredentials(),
-                      cmisDocument,
-                      updatedSecondaryProperties,
-                      secondaryPropertiesWithInvalidDefinitions,
-                      context.getUserInfo().isSystemUser());
+          sdmService.updateAttachments(
+              tokenHandler.getSDMCredentials(),
+              cmisDocument,
+              updatedSecondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions,
+              context.getUserInfo().isSystemUser());
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
-              responseCode,
-              attachment,
-              fileNameInDB,
-              filenameInRequest,
-              propertiesInDB,
-              secondaryTypeProperties,
-              descriptionInDB,
-              noSDMRoles,
-              duplicateFileNameList,
-              filesNotFound);
+          responseCode,
+          attachment,
+          fileNameInDB,
+          filenameInRequest,
+          propertiesInDB,
+          secondaryTypeProperties,
+          descriptionInDB,
+          noSDMRoles,
+          duplicateFileNameList,
+          filesNotFound);
     } catch (ServiceException e) {
       AttachmentsHandlerUtils.handleSDMServiceException(
-              e,
-              attachment,
-              fileNameInDB,
-              filenameInRequest,
-              propertiesInDB,
-              secondaryTypeProperties,
-              descriptionInDB,
-              filesWithUnsupportedProperties,
-              badRequest);
+          e,
+          attachment,
+          fileNameInDB,
+          filenameInRequest,
+          propertiesInDB,
+          secondaryTypeProperties,
+          descriptionInDB,
+          filesWithUnsupportedProperties,
+          badRequest);
     }
   }
 
   private void handleWarnings(
-          CdsUpdateEventContext context,
-          List<String> duplicateFileNameList,
-          List<String> fileNameWithRestrictedCharacters,
-          List<String> filesNotFound,
-          List<String> filesWithUnsupportedProperties,
-          Map<String, String> badRequest,
-          Map<String, String> propertyTitles,
-          List<String> noSDMRoles,
-          String contextInfo) {
+      CdsUpdateEventContext context,
+      List<String> duplicateFileNameList,
+      List<String> fileNameWithRestrictedCharacters,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest,
+      Map<String, String> propertyTitles,
+      List<String> noSDMRoles,
+      String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
-              .getMessages()
-              .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
+          .getMessages()
+          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
-              .getMessages()
-              .warn(
-                      String.format(
-                              SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
+          .getMessages()
+          .warn(
+              String.format(
+                  SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
       context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
@@ -348,8 +348,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
       if (!invalidPropertyNames.isEmpty()) {
         context
-                .getMessages()
-                .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
+            .getMessages()
+            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
     if (!badRequest.isEmpty()) {
@@ -357,8 +357,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
     if (!noSDMRoles.isEmpty()) {
       context
-              .getMessages()
-              .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update") + contextInfo);
+          .getMessages()
+          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update") + contextInfo);
     }
   }
 }

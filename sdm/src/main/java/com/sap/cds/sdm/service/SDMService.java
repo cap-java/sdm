@@ -15,19 +15,19 @@ import org.json.JSONObject;
 
 public interface SDMService {
   public JSONObject createDocument(
-          CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException;
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) throws IOException;
 
   public String createFolder(
-          String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
-          throws IOException;
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
 
   public String getFolderId(
-          Result result, PersistenceService persistenceService, String upID, boolean isSystemUser)
-          throws IOException;
+      Result result, PersistenceService persistenceService, String upID, boolean isSystemUser)
+      throws IOException;
 
   public String getFolderIdByPath(
-          String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
-          throws IOException;
+      String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
 
   public RepoValue checkRepositoryType(String repositoryId, String tenant) throws IOException;
 
@@ -36,38 +36,38 @@ public interface SDMService {
   public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 
   public void readDocument(
-          String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
-          throws IOException;
+      String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
+      throws IOException;
 
   public int updateAttachments(
-          SDMCredentials sdmCredentials,
-          CmisDocument cmisDocument,
-          Map<String, String> secondaryProperties,
-          Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-          boolean isSystemUser)
-          throws ServiceException;
+      SDMCredentials sdmCredentials,
+      CmisDocument cmisDocument,
+      Map<String, String> secondaryProperties,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      boolean isSystemUser)
+      throws ServiceException;
 
   public List<String> getObject(
-          String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public List<String> getSecondaryTypes(
-          String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
+      String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 
   public List<String> getValidSecondaryProperties(
-          List<String> secondaryTypes,
-          SDMCredentials sdmCredentials,
-          String repositoryId,
-          boolean isSystemUser)
-          throws IOException;
+      List<String> secondaryTypes,
+      SDMCredentials sdmCredentials,
+      String repositoryId,
+      boolean isSystemUser)
+      throws IOException;
 
   public Map<String, String> copyAttachment(
-          CmisDocument cmisDocument,
-          SDMCredentials sdmCredentials,
-          boolean isSystemUser,
-          Set<String> customPropertiesInSDM)
-          throws IOException;
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      Set<String> customPropertiesInSDM)
+      throws IOException;
 
   public JSONObject editLink(
-          CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
-          throws IOException;
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
 }
