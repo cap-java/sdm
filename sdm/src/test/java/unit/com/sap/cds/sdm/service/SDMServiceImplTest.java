@@ -1742,6 +1742,7 @@ public class SDMServiceImplTest {
     CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
     HttpEntity repositoryEntity = mock(HttpEntity.class);
     HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
@@ -1752,7 +1753,9 @@ public class SDMServiceImplTest {
         .thenReturn(repositoryResponse1)
         .thenReturn(changeLogResponse1);
 
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
     when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
     when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
     when(changeLogStatusLine.getStatusCode()).thenReturn(200);
@@ -1800,6 +1803,7 @@ public class SDMServiceImplTest {
     CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
     HttpEntity repositoryEntity = mock(HttpEntity.class);
     HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
@@ -1809,7 +1813,9 @@ public class SDMServiceImplTest {
         .thenReturn(repositoryResponse1)
         .thenReturn(changeLogResponse1);
 
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
     when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
     when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
     when(changeLogStatusLine.getStatusCode()).thenReturn(200);
@@ -1855,6 +1861,7 @@ public class SDMServiceImplTest {
     CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
     CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
     HttpEntity repositoryEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
@@ -1864,7 +1871,9 @@ public class SDMServiceImplTest {
         .thenReturn(repositoryResponse1)
         .thenReturn(changeLogResponse1);
 
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
     when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
     when(changeLogStatusLine.getStatusCode()).thenReturn(404);
 
@@ -1874,9 +1883,15 @@ public class SDMServiceImplTest {
           .thenReturn(repositoryResponse);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
-      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
 
-      assertNull(result);
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
+
+      assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, exception.getMessage());
     }
   }
 
@@ -1900,7 +1915,7 @@ public class SDMServiceImplTest {
               sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
             });
 
-    assertEquals("Error in offboarding ", exception.getMessage());
+    assertEquals("Failed to get repository info.", exception.getMessage());
   }
 
   @Test
@@ -1925,6 +1940,7 @@ public class SDMServiceImplTest {
 
     CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
     HttpEntity repositoryEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
         .thenReturn(httpClient);
@@ -1933,7 +1949,9 @@ public class SDMServiceImplTest {
         .thenReturn(repositoryResponse1)
         .thenThrow(new IOException("Network error on changelog"));
 
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
 
     try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
       entityUtilsMock
@@ -1949,7 +1967,7 @@ public class SDMServiceImplTest {
                 sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
               });
 
-      assertEquals(SDMConstants.ATTACHMENT_NOT_FOUND, exception.getMessage());
+      assertEquals(SDMConstants.FETCH_CHANGELOG_ERROR, exception.getMessage());
     }
   }
 

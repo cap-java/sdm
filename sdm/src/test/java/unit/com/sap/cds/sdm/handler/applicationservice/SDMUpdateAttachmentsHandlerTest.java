@@ -376,14 +376,14 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.updateFilenameProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class)))
           .thenAnswer(invocation -> null);
 
       attachmentsMockStatic
           .when(
               () ->
                   AttachmentsHandlerUtils.updateDescriptionProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class), any(Boolean.class)))
           .thenAnswer(invocation -> null);
 
       // Mock handleSDMUpdateResponse
