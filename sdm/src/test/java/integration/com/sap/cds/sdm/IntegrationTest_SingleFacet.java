@@ -58,6 +58,8 @@ class IntegrationTest_SingleFacet {
   private static String copyAttachmentTargetEntityEmpty;
   private static String copyLinkSourceEntity;
   private static String copyLinkTargetEntity;
+  private static String copyCustomSourceEntity;
+  private static String copyCustomTargetEntity;
   private static String createLinkEntity;
   private static String editLinkEntity;
   private static List<String> sourceObjectIds = new ArrayList<>();
@@ -2414,16 +2416,597 @@ class IntegrationTest_SingleFacet {
 
   @Test
   @Order(37)
+  void testCopyAttachmentWithNotesField() throws IOException {
+    System.out.println(
+        "Test (37): Create entity with attachment containing notes, copy to new entity and verify notes field");
+    Boolean testStatus = false;
+    // Create source entity
+    copyCustomSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (copyCustomSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Create and upload attachment to source entity
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", copyCustomSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+
+    if (!createResponse.get(0).equals("Attachment created")) {
+      fail("Could not create attachment");
+    }
+
+    String sourceAttachmentId = createResponse.get(1);
+
+    // Update attachment with notes field
+    String notesValue = "This is a test note for copy attachment verification";
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+    RequestBody updateBody = RequestBody.create(jsonPayload, mediaType);
+
+    String updateResponse =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, updateBody);
+
+    if (!updateResponse.equals("Updated")) {
+      fail("Could not update attachment notes field");
+    }
+
+    // Save source entity
+    String saveSourceResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity");
+    }
+
+    // Fetch attachment metadata to get objectId
+    Map<String, Object> sourceAttachmentMetadata =
+        api.fetchMetadata(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId);
+
+    if (!sourceAttachmentMetadata.containsKey("objectId")) {
+      fail("Source attachment metadata does not contain objectId");
+    }
+
+    // Store objectId in array
+    String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+    if (sourceObjectIds.isEmpty()) {
+      sourceObjectIds.add(sourceObjectId);
+    } else {
+      sourceObjectIds.set(0, sourceObjectId);
+    }
+
+    String sourceNoteValue =
+        sourceAttachmentMetadata.get("note") != null
+            ? sourceAttachmentMetadata.get("note").toString()
+            : null;
+
+    if (!notesValue.equals(sourceNoteValue)) {
+      fail(
+          "Notes field was not properly set in source attachment. Expected: "
+              + notesValue
+              + ", Got: "
+              + sourceNoteValue);
+    }
+
+    // Create target entity
+    copyCustomTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (copyCustomTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Copy attachment to target entity
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectIds.get(0)); // Use objectId from array
+
+    String copyResponse =
+        api.copyAttachment(appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+
+    if (!copyResponse.equals("Attachments copied successfully")) {
+      fail("Could not copy attachment to target entity: " + copyResponse);
+    }
+
+    // Save target entity
+    String saveTargetResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity");
+    }
+
+    // Fetch target entity attachments metadata
+    List<Map<String, Object>> targetAttachmentsMetadata =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+
+    if (targetAttachmentsMetadata.isEmpty()) {
+      fail("No attachments found in target entity");
+    }
+
+    // Verify the copied attachment has the same notes value
+    Map<String, Object> copiedAttachmentMetadata = targetAttachmentsMetadata.get(0);
+    String copiedNoteValue =
+        copiedAttachmentMetadata.get("note") != null
+            ? copiedAttachmentMetadata.get("note").toString()
+            : null;
+
+    if (!notesValue.equals(copiedNoteValue)) {
+      fail(
+          "Notes field was not properly copied. Expected: "
+              + notesValue
+              + ", Got: "
+              + copiedNoteValue);
+    }
+
+    // Verify attachment content can be read from target entity
+    String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+    String readResponse =
+        api.readAttachment(
+            appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+
+    if (readResponse.equals("OK")) {
+      testStatus = true;
+    }
+    if (!testStatus) {
+      fail("Could not verify that notes field was copied from source to target attachment");
+    }
+  }
+
+  @Test
+  @Order(38)
+  void testCopyAttachmentWithSecondaryPropertiesField() throws IOException {
+    System.out.println(
+        "Test (38): Verify that secondary properties are preserved when copying attachments between entities");
+    Boolean testStatus = false;
+
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!editResponse.equals("Entity in draft mode")) {
+      fail("Could not edit source entity");
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample1.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", copyCustomSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+
+    if (!createResponse.get(0).equals("Attachment created")) {
+      fail("Could not create attachment");
+    }
+
+    String sourceAttachmentId = createResponse.get(1);
+
+    // Update attachment with secondary properties
+    // DocumentInfoRecordBoolean : Set to true
+    RequestBody bodyBoolean =
+        RequestBody.create(
+            MediaType.parse("application/json"),
+            ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
+    String updateSecondaryPropertyResponse1 =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyBoolean);
+
+    if (!updateSecondaryPropertyResponse1.equals("Updated")) {
+      fail(
+          "Could not update attachment DocumentInfoRecordBoolean field. Response: "
+              + updateSecondaryPropertyResponse1);
+    }
+
+    // customProperty2 : Set to 12345
+    Integer customProperty2Value = 12345;
+    RequestBody bodyInt =
+        RequestBody.create(
+            MediaType.parse("application/json"),
+            ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value + "\n}"));
+    String updateSecondaryPropertyResponse2 =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyInt);
+
+    if (!updateSecondaryPropertyResponse2.equals("Updated")) {
+      fail(
+          "Could not update attachment customProperty2 field. Response: "
+              + updateSecondaryPropertyResponse2);
+    }
+
+    // Save source entity
+    String saveSourceResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity. Response: " + saveSourceResponse);
+    }
+
+    // Fetch attachment metadata to get objectId and verify secondary properties
+    Map<String, Object> sourceAttachmentMetadata =
+        api.fetchMetadata(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId);
+
+    if (!sourceAttachmentMetadata.containsKey("objectId")) {
+      fail("Source attachment metadata does not contain objectId");
+    }
+
+    // Store objectId in array for reuse
+    String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+    if (sourceObjectIds.size() < 2) {
+      sourceObjectIds.add(sourceObjectId);
+    } else {
+      sourceObjectIds.set(1, sourceObjectId);
+    }
+
+    // Verify all secondary properties in source attachment
+    Boolean sourceCustomProperty6 =
+        sourceAttachmentMetadata.get("customProperty6") != null
+            ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
+            : null;
+    Integer sourceCustomProperty2 =
+        sourceAttachmentMetadata.get("customProperty2") != null
+            ? (Integer) sourceAttachmentMetadata.get("customProperty2")
+            : null;
+
+    if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
+      fail(
+          "DocumentInfoRecordBoolean was not properly set in source attachment. Expected: true, Got: "
+              + sourceCustomProperty6);
+    }
+
+    if (!customProperty2Value.equals(sourceCustomProperty2)) {
+      fail(
+          "customProperty2 was not properly set in source attachment. Expected: "
+              + customProperty2Value
+              + ", Got: "
+              + sourceCustomProperty2);
+    }
+
+    String editTargetResponse =
+        api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+    if (!editTargetResponse.equals("Entity in draft mode")) {
+      fail("Could not edit target entity from test 37");
+    }
+
+    // Copy attachment to target entity
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectIds.get(1)); // Use objectId from array
+
+    String copyResponse =
+        api.copyAttachment(appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+
+    if (!copyResponse.equals("Attachments copied successfully")) {
+      fail("Could not copy attachment to target entity: " + copyResponse);
+    }
+
+    // Save target entity
+    String saveTargetResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity");
+    }
+
+    // Fetch target entity attachments metadata
+    List<Map<String, Object>> targetAttachmentsMetadata =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+
+    if (targetAttachmentsMetadata.isEmpty()) {
+      fail("No attachments found in target entity");
+    }
+
+    // Verify the copied attachment has the same secondary properties
+    // Find the attachment we just copied by matching the filename
+    Map<String, Object> copiedAttachmentMetadata =
+        targetAttachmentsMetadata.stream()
+            .filter(attachment -> "sample1.pdf".equals(attachment.get("fileName")))
+            .findFirst()
+            .orElse(null);
+
+    if (copiedAttachmentMetadata == null) {
+      fail("Could not find the copied attachment with file in target entity");
+    }
+
+    Boolean copiedCustomProperty6 =
+        copiedAttachmentMetadata.get("customProperty6") != null
+            ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
+            : null;
+    Integer copiedCustomProperty2 =
+        copiedAttachmentMetadata.get("customProperty2") != null
+            ? (Integer) copiedAttachmentMetadata.get("customProperty2")
+            : null;
+
+    // Verify DocumentInfoRecordBoolean
+    if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
+      fail(
+          "DocumentInfoRecordBoolean as not properly copied. Expected: true, Got: "
+              + copiedCustomProperty6);
+    }
+
+    // Verify customProperty2
+    if (!customProperty2Value.equals(copiedCustomProperty2)) {
+      fail(
+          "customProperty2 was not properly copied. Expected: "
+              + customProperty2Value
+              + ", Got: "
+              + copiedCustomProperty2);
+    }
+
+    // Verify attachment content can be read from target entity
+    String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+    String readResponse =
+        api.readAttachment(
+            appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+
+    if (readResponse.equals("OK")) {
+      testStatus = true;
+    }
+    if (!testStatus) {
+      fail(
+          "Could not verify that all secondary properties were copied from source to target attachment");
+    }
+  }
+
+  @Test
+  @Order(39)
+  void testCopyAttachmentWithNotesAndSecondaryPropertiesField() throws IOException {
+    System.out.println(
+        "Test (39): Verify that both notes field and secondary properties are preserved during attachment copy");
+    Boolean testStatus = false;
+
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!editResponse.equals("Entity in draft mode")) {
+      fail("Could not edit source entity from test 37");
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample2.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", copyCustomSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+
+    if (!createResponse.get(0).equals("Attachment created")) {
+      fail("Could not create attachment");
+    }
+
+    String sourceAttachmentId = createResponse.get(1);
+
+    // Update attachment with notes field
+    String notesValue = "This attachment has both notes and secondary properties for testing";
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+    RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
+
+    String updateNotesResponse =
+        api.updateSecondaryProperty(
+            appUrl,
+            entityName,
+            facetName,
+            copyCustomSourceEntity,
+            sourceAttachmentId,
+            updateNotesBody);
+
+    if (!updateNotesResponse.equals("Updated")) {
+      fail("Could not update attachment notes field");
+    }
+
+    // Update attachment with secondary properties
+    // DocumentInfoRecordBoolean : Set to true
+    RequestBody bodyBoolean =
+        RequestBody.create(
+            MediaType.parse("application/json"),
+            ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
+    String updateSecondaryPropertyResponse1 =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyBoolean);
+
+    if (!updateSecondaryPropertyResponse1.equals("Updated")) {
+      fail(
+          "Could not update attachment DocumentInfoRecordBoolean (customProperty6) field. Response: "
+              + updateSecondaryPropertyResponse1);
+    }
+
+    // customProperty2 : Set to 99999
+    Integer customProperty2Value = 99999;
+    RequestBody bodyInt =
+        RequestBody.create(
+            MediaType.parse("application/json"),
+            ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value + "\n}"));
+    String updateSecondaryPropertyResponse2 =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyInt);
+
+    if (!updateSecondaryPropertyResponse2.equals("Updated")) {
+      fail(
+          "Could not update attachment customProperty2 field. Response: "
+              + updateSecondaryPropertyResponse2);
+    }
+
+    // Save source entity
+    String saveSourceResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity. Response: " + saveSourceResponse);
+    }
+
+    // Fetch attachment metadata to get objectId and verify notes and secondary properties
+    Map<String, Object> sourceAttachmentMetadata =
+        api.fetchMetadata(
+            appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId);
+
+    if (!sourceAttachmentMetadata.containsKey("objectId")) {
+      fail("Source attachment metadata does not contain objectId");
+    }
+
+    String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+    if (sourceObjectIds.size() < 3) {
+      sourceObjectIds.add(sourceObjectId);
+    } else {
+      sourceObjectIds.set(2, sourceObjectId);
+    }
+
+    String sourceNoteValue =
+        sourceAttachmentMetadata.get("note") != null
+            ? sourceAttachmentMetadata.get("note").toString()
+            : null;
+
+    if (!notesValue.equals(sourceNoteValue)) {
+      fail(
+          "Notes field was not properly set in source attachment. Expected: "
+              + notesValue
+              + ", Got: "
+              + sourceNoteValue);
+    }
+
+    Boolean sourceCustomProperty6 =
+        sourceAttachmentMetadata.get("customProperty6") != null
+            ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
+            : null;
+    Integer sourceCustomProperty2 =
+        sourceAttachmentMetadata.get("customProperty2") != null
+            ? (Integer) sourceAttachmentMetadata.get("customProperty2")
+            : null;
+
+    if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
+      fail(
+          "DocumentInfoRecordBoolean was not properly set in source attachment. Expected: true, Got: "
+              + sourceCustomProperty6);
+    }
+
+    if (!customProperty2Value.equals(sourceCustomProperty2)) {
+      fail(
+          "customProperty2 was not properly set in source attachment. Expected: "
+              + customProperty2Value
+              + ", Got: "
+              + sourceCustomProperty2);
+    }
+
+    String editTargetResponse =
+        api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+    if (!editTargetResponse.equals("Entity in draft mode")) {
+      fail("Could not edit target entity from test 37");
+    }
+
+    // Copy attachment to target entity
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectIds.get(2)); // Use objectId from array
+
+    String copyResponse =
+        api.copyAttachment(appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+
+    if (!copyResponse.equals("Attachments copied successfully")) {
+      fail("Could not copy attachment to target entity: " + copyResponse);
+    }
+
+    // Save target entity
+    String saveTargetResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity");
+    }
+
+    // Fetch target entity attachments metadata
+    List<Map<String, Object>> targetAttachmentsMetadata =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+
+    if (targetAttachmentsMetadata.isEmpty()) {
+      fail("No attachments found in target entity");
+    }
+
+    // Verify the copied attachment has the same notes and secondary properties
+    // Find the attachment we just copied by matching the filename
+    Map<String, Object> copiedAttachmentMetadata =
+        targetAttachmentsMetadata.stream()
+            .filter(attachment -> "sample2.pdf".equals(attachment.get("fileName")))
+            .findFirst()
+            .orElse(null);
+
+    if (copiedAttachmentMetadata == null) {
+      fail("Could not find the copied attachment with file 'sample2.pdf' in target entity");
+    }
+
+    // Verify notes field was copied
+    String copiedNoteValue =
+        copiedAttachmentMetadata.get("note") != null
+            ? copiedAttachmentMetadata.get("note").toString()
+            : null;
+
+    if (!notesValue.equals(copiedNoteValue)) {
+      fail(
+          "Notes field was not properly copied. Expected: "
+              + notesValue
+              + ", Got: "
+              + copiedNoteValue);
+    }
+
+    // Verify secondary properties were copied
+    Boolean copiedCustomProperty6 =
+        copiedAttachmentMetadata.get("customProperty6") != null
+            ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
+            : null;
+    Integer copiedCustomProperty2 =
+        copiedAttachmentMetadata.get("customProperty2") != null
+            ? (Integer) copiedAttachmentMetadata.get("customProperty2")
+            : null;
+
+    // Verify DocumentInfoRecordBoolean
+    if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
+      fail(
+          "DocumentInfoRecordBoolean was not properly copied. Expected: true, Got: "
+              + copiedCustomProperty6);
+    }
+
+    // Verify customProperty2
+    if (!customProperty2Value.equals(copiedCustomProperty2)) {
+      fail(
+          "customProperty2 was not properly copied. Expected: "
+              + customProperty2Value
+              + ", Got: "
+              + copiedCustomProperty2);
+    }
+
+    // Verify attachment content can be read from target entity
+    String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+    String readResponse =
+        api.readAttachment(
+            appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+
+    if (readResponse.equals("OK")) {
+      testStatus = true;
+    }
+    if (!testStatus) {
+      fail(
+          "Could not verify that notes field and all secondary properties were copied from source to target attachment");
+    }
+  }
+
+  @Test
+  @Order(40)
   void testCopyAttachmentsSuccessExistingEntity() throws IOException {
-    System.out.println("Test (37): Copy attachments from one entity to another existing entity");
+    System.out.println("Test (40): Copy attachments from one entity to another existing entity");
     List<String> attachments = new ArrayList<>();
     ClassLoader classLoader = getClass().getClassLoader();
     List<File> files = new ArrayList<>();
     File file1 = new File(classLoader.getResource("sample.pdf").getFile());
     File file2 = new File(classLoader.getResource("sample1.pdf").getFile());
-    File tempFile1 = new File(System.getProperty("java.io.tmpdir"), "sample3.pdf");
+    File tempFile1 = new File(System.getProperty("java.io.tmpdir"), "sample_copy_existing_1.pdf");
     Files.copy(file1.toPath(), tempFile1.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    File tempFile2 = new File(System.getProperty("java.io.tmpdir"), "sample4.pdf");
+    File tempFile2 = new File(System.getProperty("java.io.tmpdir"), "sample_copy_existing_2.pdf");
     Files.copy(file2.toPath(), tempFile2.toPath(), StandardCopyOption.REPLACE_EXISTING);
     files.add(tempFile1);
     files.add(tempFile2);
@@ -2521,9 +3104,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(38)
+  @Order(41)
   void testCopyAttachmentsUnsuccessfulExistingEntity() throws IOException {
-    System.out.println("Test (38): Copy attachments from one entity to another new entity");
+    System.out.println(
+        "Test (41): Copy attachments from one entity to another existing entity - unsuccessful");
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     String editResponse2 =
@@ -2551,9 +3135,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(39)
+  @Order(42)
   void testCreateLinkSuccess() throws IOException {
-    System.out.println("Test (39): Create link in entity");
+    System.out.println("Test (42): Create link in entity");
     List<String> attachments = new ArrayList<>();
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntity.equals("Could not create entity")) {
@@ -2594,9 +3178,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(40)
+  @Order(43)
   void testCreateLinkDifferentEntity() throws IOException {
-    System.out.println("Test (40): Create link with same name in different entity");
+    System.out.println("Test (43): Create link with same name in different entity");
     String createLinkDifferentEntity =
         api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkDifferentEntity.equals("Could not edit entity")) {
@@ -2622,9 +3206,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(41)
+  @Order(44)
   void testCreateLinkFailure() throws IOException {
-    System.out.println("Test (41): Create link fails due to invalid URL and name");
+    System.out.println("Test (44): Create link fails due to invalid URL and name");
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
     if (!editEntityResponse.equals("Could not edit entity")) {
       String linkName = "sample";
@@ -2722,9 +3306,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(42)
+  @Order(45)
   void testCreateLinkNoSDMRoles() throws IOException {
-    System.out.println("Test (42): Create link fails due to no SDM roles assigned");
+    System.out.println("Test (45): Create link fails due to no SDM roles assigned");
     String createLinkEntityNoSDMRoles =
         apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntityNoSDMRoles.equals("Could not edit entity")) {
@@ -2761,9 +3345,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(43)
+  @Order(46)
   void testDeleteLink() throws IOException {
-    System.out.println("Test (43): Delete link in entity");
+    System.out.println("Test (46): Delete link in entity");
     List<String> attachments = new ArrayList<>();
     String createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!createLinkEntity.equals("Could not create entity")) {
@@ -2820,9 +3404,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(44)
+  @Order(47)
   void testRenameLinkSuccess() throws IOException {
-    System.out.println("Test (44): Rename link in entity");
+    System.out.println("Test (47): Rename link in entity");
     List<String> attachments = new ArrayList<>();
 
     createLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -2867,9 +3451,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(45)
+  @Order(48)
   void testRenameLinkDuplicate() throws IOException {
-    System.out.println("Test (45): Rename link in entity fails due to duplicate error");
+    System.out.println("Test (48): Rename link in entity fails due to duplicate error");
     List<String> attachments = new ArrayList<>();
 
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
@@ -2919,10 +3503,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(46)
+  @Order(49)
   void testRenameLinkUnsupportedCharacters() throws IOException {
     System.out.println(
-        "Test (46): Rename link in entity fails due to unsupported characters in name");
+        "Test (49): Rename link in entity fails due to unsupported characters in name");
     List<String> attachments = new ArrayList<>();
 
     String editEntityResponse = api.editEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
@@ -2972,9 +3556,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(47)
+  @Order(50)
   void testEditLinkSuccess() throws IOException {
-    System.out.println("Test (47): Edit existing link in entity");
+    System.out.println("Test (50): Edit existing link in entity");
 
     List<String> attachments = new ArrayList<>();
     editLinkEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3029,9 +3613,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(48)
+  @Order(51)
   void testEditLinkFailureInvalidURL() throws IOException {
-    System.out.println("Test (48): Edit existing link with invalid url");
+    System.out.println("Test (51): Edit existing link with invalid url");
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
 
@@ -3076,9 +3660,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(49)
+  @Order(52)
   void testEditLinkFailureEmptyURL() throws IOException {
-    System.out.println("Test (49): Edit existing link with an empty url");
+    System.out.println("Test (52): Edit existing link with an empty url");
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
 
@@ -3119,9 +3703,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(50)
+  @Order(53)
   void testEditLinkNoSDMRoles() throws IOException {
-    System.out.println("Test (50): Edit link fails due to no SDM roles assigned");
+    System.out.println("Test (53): Edit link fails due to no SDM roles assigned");
 
     Boolean testStatus = false;
     List<String> attachments = new ArrayList<>();
@@ -3165,9 +3749,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(51)
+  @Order(54)
   void testCopyLinkSuccessNewEntity() throws IOException {
-    System.out.println("Test (51): Copy link from one entity to another new entity");
+    System.out.println("Test (54): Copy link from one entity to another new entity");
     List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3244,10 +3828,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(52)
+  @Order(55)
   void testCopyLinkUnsuccessfulNewEntity() throws IOException {
     System.out.println(
-        "Test (52): Copy invalid type of link from one entity to another new entity");
+        "Test (55): Copy invalid type of link from one entity to another new entity");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3279,9 +3863,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(53)
+  @Order(56)
   void testCopyLinkFromNewEntityToExistingEntity() throws IOException {
-    System.out.println("Test (53): Copy link from a new entity to an existing target entity");
+    System.out.println("Test (56): Copy link from a new entity to an existing target entity");
     List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3366,10 +3950,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(54)
+  @Order(57)
   void testCopyInvalidLinkFromNewEntityToExistingEntity() throws IOException {
     System.out.println(
-        "Test (54): Copy invalid type of link from new entity to existing target entity");
+        "Test (57): Copy invalid type of link from new entity to existing target entity");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (copyLinkSourceEntity.equals("Could not create entity")) {
@@ -3419,9 +4003,9 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(55)
+  @Order(58)
   void testCopyLinkSuccessNewEntityDraft() throws IOException {
-    System.out.println("Test (55): Copy link from one entity to another new entity draft mode");
+    System.out.println("Test (58): Copy link from one entity to another new entity draft mode");
 
     copyLinkSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyLinkTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -3493,10 +4077,10 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(56)
+  @Order(59)
   void testCopyAttachmentsSuccessNewEntityDraft() throws IOException {
     System.out.println(
-        "Test (56): Copy attachments from one entity to another new entity draft mode");
+        "Test (59): Copy attachments from one entity to another new entity draft mode");
     List<String> attachments = new ArrayList<>();
     copyAttachmentSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     copyAttachmentTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
