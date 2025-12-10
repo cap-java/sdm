@@ -254,9 +254,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, updatedSecondaryProperties);
+        fileNameInDB, filenameInRequest, null, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
-        descriptionInDB, descriptionInRequest, updatedSecondaryProperties);
+        descriptionInDB, descriptionInRequest, null, updatedSecondaryProperties, true);
 
     // Send update to SDM only if there are changes
     if (updatedSecondaryProperties.isEmpty()) {
