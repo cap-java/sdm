@@ -2673,7 +2673,7 @@ class IntegrationTest_SingleFacet {
     String editTargetResponse =
         api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
     if (!editTargetResponse.equals("Entity in draft mode")) {
-      fail("Could not edit target entity from test 37");
+      fail("Could not edit target entity");
     }
 
     // Copy attachment to target entity
@@ -2763,7 +2763,7 @@ class IntegrationTest_SingleFacet {
 
     String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
     if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit source entity from test 37");
+      fail("Could not edit source entity");
     }
 
     ClassLoader classLoader = getClass().getClassLoader();
@@ -2899,7 +2899,7 @@ class IntegrationTest_SingleFacet {
     String editTargetResponse =
         api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
     if (!editTargetResponse.equals("Entity in draft mode")) {
-      fail("Could not edit target entity from test 37");
+      fail("Could not edit target entity");
     }
 
     // Copy attachment to target entity
@@ -2937,7 +2937,7 @@ class IntegrationTest_SingleFacet {
             .orElse(null);
 
     if (copiedAttachmentMetadata == null) {
-      fail("Could not find the copied attachment with file 'sample2.pdf' in target entity");
+      fail("Could not find the copied attachment with fil in target entity");
     }
 
     // Verify notes field was copied
