@@ -632,7 +632,7 @@ public class AttachmentsHandlerUtils {
       Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
     if (fileNameInDB == null) {
-      if (filenameInRequest != null && (filenameInRequest != fileNameInSDM)) {
+      if (filenameInRequest != null && !filenameInRequest.equals(fileNameInSDM)) {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       } else {
         throw new ServiceException("Filename cannot be empty");
@@ -658,15 +658,14 @@ public class AttachmentsHandlerUtils {
       if (descriptionInRequest != null) {
         updatedSecondaryProperties.put("description", descriptionInRequest);
       }
-    } else if (descriptionInDB == null
-        && !isUpdate) { // Attachment contained description during upload and it was changed before
+    } else if (descriptionInDB
+        == null) { // Attachment contained description during upload and it was changed before
       // saving or description was added before save handler (create) was called
-      if ((descriptionInRequest != descriptionInSDM)) {
+      if (!(descriptionInRequest.equals(descriptionInSDM))) {
         updatedSecondaryProperties.put("description", descriptionInRequest);
       }
-    } else if ((descriptionInDB != null)
-        && (descriptionInDB
-            != descriptionInRequest)) { // Attachment contained description and is being updated now
+    } else if (!(descriptionInDB.equals(
+        descriptionInRequest))) { // Attachment contained description and is being updated now
       updatedSecondaryProperties.put("description", descriptionInRequest);
     }
   }
