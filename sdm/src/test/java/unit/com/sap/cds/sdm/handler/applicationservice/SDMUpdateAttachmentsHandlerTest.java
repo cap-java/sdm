@@ -168,7 +168,7 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.validateFileNames(
-                      any(), anyList(), anyString(), anyString()))
+                      any(), anyList(), anyString(), anyString(), any()))
           .thenCallRealMethod();
 
       // Mock SDMUtils helper methods to ensure validation works correctly
@@ -185,7 +185,10 @@ public class SDMUpdateAttachmentsHandlerTest {
         Set<String> duplicateFiles = new HashSet<>();
         duplicateFiles.add("file1.txt");
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(
+                () ->
+                    SDMUtils.FileNameDuplicateInDrafts(
+                        anyList(), anyString(), anyString(), anyString()))
             .thenReturn(duplicateFiles);
 
         // Call the method under test; validateFileNames will detect duplicates and call
@@ -411,7 +414,7 @@ public class SDMUpdateAttachmentsHandlerTest {
             .when(
                 () ->
                     SDMUtils.FileNameDuplicateInDrafts(
-                        any(List.class), eq("compositionName"), anyString()))
+                        any(List.class), eq("compositionName"), anyString(), anyString()))
             .thenReturn(Collections.emptySet());
 
         sdmUtilsMock

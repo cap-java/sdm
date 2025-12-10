@@ -229,17 +229,20 @@ public class SDMServiceGenericHandler implements EventHandler {
         return;
       }
 
+      // Get the actual key field names from the entity instead of hardcoding "ID"
+      List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
+
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get())
-                  .columns("ID")
-                  .where(e -> e.get("IsActiveEntity").eq(false)));
+              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
 
       for (Row nestedRecord : nestedRecords) {
-        Object nestedEntityId = nestedRecord.get("ID");
-
         Map<String, Object> nestedEntityKeys = new HashMap<>();
-        nestedEntityKeys.put("ID", nestedEntityId);
+
+        // Populate the key map with all actual key field names and values
+        for (String keyName : keyElementNames) {
+          nestedEntityKeys.put(keyName, nestedRecord.get(keyName));
+        }
         nestedEntityKeys.put("IsActiveEntity", false);
 
         for (Map.Entry<String, String> entry : nestedAttachmentMapping.entrySet()) {
@@ -261,7 +264,10 @@ public class SDMServiceGenericHandler implements EventHandler {
     CdsEntity draftEntity = model.findEntity(draftEntityName).get();
     CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
 
-    String upIdKey = getUpIdKey(draftEntity);
+    final String upIdKey = SDMUtils.getUpIdKey(draftEntity);
+    if (upIdKey == null || upIdKey.isEmpty()) {
+      return;
+    }
     String parentKeyName = upIdKey.replaceFirst("^up__", "");
     Object parentId = parentKeys.get(parentKeyName);
 
@@ -392,9 +398,24 @@ public class SDMServiceGenericHandler implements EventHandler {
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
     String upIdKey =
-        attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
+        attachmentDraftEntity.isPresent()
+            ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+            : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    String upID = fetchUPIDFromCQN(select);
+    // Get parent entity to extract its key names dynamically
+    String parentEntityName = null;
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode root = mapper.readTree(select.toString());
+    JsonNode refArray = root.path("SELECT").path("from").path("ref");
+    if (refArray.isArray() && refArray.size() >= 2) {
+      JsonNode parentNode = refArray.get(refArray.size() - 2);
+      parentEntityName = parentNode.path("id").asText();
+    }
+
+    Optional<CdsEntity> parentEntity =
+        parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+
+    String upID = fetchUPIDFromCQN(select, parentEntity.orElse(null));
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -405,7 +426,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
-    String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
+    String[] parts = context.getTarget().getQualifiedName().split("\\.");
+    String entityName = parts[parts.length - 1];
     String folderName = upID + "__" + entityName;
 
     String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
@@ -480,18 +502,16 @@ public class SDMServiceGenericHandler implements EventHandler {
     context.setCompleted();
   }
 
-  private String getUpIdKey(CdsEntity attachmentDraftEntity) {
-    String upIdKey = "";
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType associationType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = associationType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
-    return upIdKey;
+  /**
+   * Retrieves the key element names from a CdsEntity. This method extracts the names of all key
+   * fields defined in the entity, allowing for dynamic key field handling instead of hardcoding
+   * "ID".
+   *
+   * @param entity the CdsEntity to extract key element names from
+   * @return a list of key element names
+   */
+  private List<String> getKeyElementNames(CdsEntity entity) {
+    return entity.elements().filter(CdsElement::isKey).map(CdsElement::getName).toList();
   }
 
   private void checkAttachmentConstraints(
@@ -613,7 +633,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private String fetchUPIDFromCQN(CqnSelect select) {
+  private String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
     try {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
@@ -621,14 +641,21 @@ public class SDMServiceGenericHandler implements EventHandler {
       JsonNode refArray = root.path("SELECT").path("from").path("ref");
       JsonNode secondLast = refArray.get(refArray.size() - 2);
       JsonNode whereArray = secondLast.path("where");
+
+      // Get the actual key field names from the parent entity
+      List<String> keyElementNames = getKeyElementNames(parentEntity);
+
       for (int i = 0; i < whereArray.size(); i++) {
         JsonNode node = whereArray.get(i);
-        if (node.has("ref")
-            && node.get("ref").isArray()
-            && node.get("ref").get(0).asText().equals("ID")) {
-          JsonNode valNode = whereArray.get(i + 2);
-          upID = valNode.path("val").asText();
-          break;
+
+        if (node.has("ref") && node.get("ref").isArray()) {
+          String fieldName = node.get("ref").get(0).asText();
+
+          if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
+            JsonNode valNode = whereArray.get(i + 2);
+            upID = valNode.path("val").asText();
+            break;
+          }
         }
       }
       if (upID == null) {

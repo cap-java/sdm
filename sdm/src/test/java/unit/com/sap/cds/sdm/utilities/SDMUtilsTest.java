@@ -90,7 +90,7 @@ public class SDMUtilsTest {
     data.add(CdsData.create(entity));
 
     Set<String> duplicateFilenames =
-        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity");
+        SDMUtils.FileNameDuplicateInDrafts(data, "attachmentCompositionName", "entity", "upId");
 
     assertTrue(duplicateFilenames.contains("file1.txt"));
   }

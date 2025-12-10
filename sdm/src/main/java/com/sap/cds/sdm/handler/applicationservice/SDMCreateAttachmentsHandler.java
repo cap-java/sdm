@@ -93,9 +93,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               + "\nPage: "
               + (parentTitle != null ? parentTitle : "Unknown");
 
+      Optional<CdsEntity> attachmentEntity =
+          context.getModel().findEntity(attachmentCompositionDefinition);
       isError =
           AttachmentsHandlerUtils.validateFileNames(
-              context, data, attachmentCompositionName, contextInfo);
+              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
       if (!isError) {
         List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
         List<String> duplicateFileNameList = new ArrayList<>();
@@ -114,8 +116,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                 targetEntity);
             continue;
           }
-          Optional<CdsEntity> attachmentEntity =
-              context.getModel().findEntity(attachmentCompositionDefinition);
           propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
           secondaryPropertiesWithInvalidDefinitions =
               SDMUtils.getSecondaryPropertiesWithInvalidDefinition(

@@ -1439,7 +1439,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertNull(objectInfo);
+    assertTrue(objectInfo.isEmpty());
   }
 
   @Test

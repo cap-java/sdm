@@ -86,12 +86,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               + "\nPage: "
               + (parentTitle != null ? parentTitle : "Unknown");
 
+      Optional<CdsEntity> attachmentEntity = Optional.empty();
+      if (context.getModel() != null) {
+        attachmentEntity = context.getModel().findEntity(attachmentCompositionDefinition);
+      }
       isError =
           AttachmentsHandlerUtils.validateFileNames(
-              context, data, attachmentCompositionName, contextInfo);
+              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
       if (!isError) {
-        Optional<CdsEntity> attachmentEntity =
-            context.getModel().findEntity(attachmentCompositionDefinition);
         renameDocument(
             attachmentEntity,
             context,

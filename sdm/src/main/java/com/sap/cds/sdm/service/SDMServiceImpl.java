@@ -334,7 +334,7 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getObjectRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
-        return null;
+        return Collections.emptyList();
       }
       String responseString = EntityUtils.toString(response.getEntity());
       JSONObject jsonObject = new JSONObject(responseString);
