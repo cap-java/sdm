@@ -70,6 +70,7 @@ public class SDMConstants {
   public static final String ATTACHMENT_MAXCOUNT_ERROR_MSG = "SDM.Attachments.maxCountError";
   public static final String MAX_COUNT_ERROR_MESSAGE =
       "Cannot upload more than %s attachments as set up by the application";
+  public static final String FETCH_CHANGELOG_ERROR = "Could not fetch the changelog";
 
   // Localized error message keys
   public static final String VERSIONED_REPO_ERROR_MSG = "SDM.Repository.versionedRepoError";

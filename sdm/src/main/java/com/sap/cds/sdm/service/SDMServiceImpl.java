@@ -743,10 +743,18 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getRepos = new HttpGet(sdmUrl);
     String repoId = "";
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepos)) {
-      repoId = getRepositoryId(EntityUtils.toString(response.getEntity()));
+      int responseCode = response.getStatusLine().getStatusCode();
+      String responseString = EntityUtils.toString(response.getEntity());
+      if (responseCode == 403) {
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+      } else if (responseCode != 200) {
+        logger.info(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
+        throw new ServiceException(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
+      }
+      repoId = getRepositoryId(responseString);
     } catch (IOException e) {
-      logger.error("Error in offboarding repository : " + e.getMessage());
-      throw new ServiceException("Error in offboarding ", e.getMessage());
+      logger.info(SDMConstants.REPOSITORY_ERROR + " : " + e.getMessage());
+      throw new ServiceException(SDMConstants.REPOSITORY_ERROR, e);
     }
     sdmUrl =
         sdmUrl
@@ -757,14 +765,19 @@ public class SDMServiceImpl implements SDMService {
 
     HttpGet getChangeLogRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getChangeLogRequest)) {
-      if (response.getStatusLine().getStatusCode() != 200) {
-        return null;
-      }
+      int responseCode = response.getStatusLine().getStatusCode();
       String responseString = EntityUtils.toString(response.getEntity());
+      if (responseCode == 403) {
+        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+      } else if (responseCode == 404) {
+        throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+      } else if (responseCode != 200) {
+        logger.info(SDMConstants.FETCH_CHANGELOG_ERROR + " : " + responseString);
+        throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR);
+      }
       return new JSONObject(responseString);
-
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
+      throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR, e);
     }
   }
 
