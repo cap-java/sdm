@@ -626,7 +626,10 @@ public class AttachmentsHandlerUtils {
    * @throws ServiceException if filename validation fails
    */
   public static void updateFilenameProperty(
-      String fileNameInDB, String filenameInRequest, String fileNameInSDM, Map<String, String> updatedSecondaryProperties)
+      String fileNameInDB,
+      String filenameInRequest,
+      String fileNameInSDM,
+      Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
     if (fileNameInDB == null) {
       if (filenameInRequest != null && (filenameInRequest != fileNameInSDM)) {
@@ -644,18 +647,27 @@ public class AttachmentsHandlerUtils {
   }
 
   public static void updateDescriptionProperty(
-      String descriptionInDB, String descriptionInRequest, String descriptionInSDM, Map<String, String> updatedSecondaryProperties, Boolean isUpdate)
+      String descriptionInDB,
+      String descriptionInRequest,
+      String descriptionInSDM,
+      Map<String, String> updatedSecondaryProperties,
+      Boolean isUpdate)
       throws ServiceException {
-    if (descriptionInDB == null && isUpdate) { // Attachment did not contain description and is being updated now
+    if (descriptionInDB == null
+        && isUpdate) { // Attachment did not contain description and is being updated now
       if (descriptionInRequest != null) {
         updatedSecondaryProperties.put("description", descriptionInRequest);
       }
-    } else if (descriptionInDB == null && !isUpdate) { // Attachment contained description during upload and it was changed before saving or description was added before save handler (create) was called
+    } else if (descriptionInDB == null
+        && !isUpdate) { // Attachment contained description during upload and it was changed before
+      // saving or description was added before save handler (create) was called
       if ((descriptionInRequest != descriptionInSDM)) {
         updatedSecondaryProperties.put("description", descriptionInRequest);
       }
-    } else if ((descriptionInDB != null) && (descriptionInDB != descriptionInRequest)) { // Attachment contained description and is being updated now
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+    } else if ((descriptionInDB != null)
+        && (descriptionInDB
+            != descriptionInRequest)) { // Attachment contained description and is being updated now
+      updatedSecondaryProperties.put("description", descriptionInRequest);
     }
   }
 

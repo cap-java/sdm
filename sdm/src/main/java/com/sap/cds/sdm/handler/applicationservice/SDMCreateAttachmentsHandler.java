@@ -237,7 +237,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
-        descriptionInSDM, descriptionInRequest, descriptionInSDM, updatedSecondaryProperties, false);
+        descriptionInSDM,
+        descriptionInRequest,
+        descriptionInSDM,
+        updatedSecondaryProperties,
+        false);
 
     // Send update to SDM and handle response
     try {
