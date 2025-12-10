@@ -475,7 +475,7 @@ public class SDMCustomServiceHandler {
       failureMap.put(OBJECT_ID_KEY, objectId);
       failureMap.put(
           FAILURE_REASON_KEY, "Database update failed, move rolled back: " + e.getMessage());
-      failureContext.getFailedAttachments().add(failureMap);
+      failureContext.addFailedAttachment(failureMap);
     }
     failureContext
         .getContext()
