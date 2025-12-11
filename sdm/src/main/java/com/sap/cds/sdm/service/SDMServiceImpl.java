@@ -278,10 +278,11 @@ public class SDMServiceImpl implements SDMService {
 
     // Prepare the request body parts
     Map<String, String> updateRequestBody = new HashMap<>();
-    updateRequestBody.put("cmisaction", "update");
 
     boolean isFilenameUpdated = secondaryProperties.containsKey("filename");
-    boolean isSecondaryPropertiesUpdated = secondaryProperties.size() > (isFilenameUpdated ? 1 : 0);
+    boolean isDescriptionUpdated = secondaryProperties.containsKey("description");
+    boolean isSecondaryPropertiesUpdated =
+        secondaryProperties.size() > ((isFilenameUpdated ? 1 : 0) + (isDescriptionUpdated ? 1 : 0));
     if (isSecondaryPropertiesUpdated) {
       updateRequestBody.put(
           "propertyId[0]",
@@ -296,6 +297,12 @@ public class SDMServiceImpl implements SDMService {
 
     SDMUtils.prepareSecondaryProperties(
         updateRequestBody, secondaryProperties, isSecondaryPropertiesUpdated);
+
+    // Only proceed with the update if there are properties to update
+    if (updateRequestBody.isEmpty()) {
+      return 200; // No updates needed, return success
+    }
+
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
@@ -717,18 +724,23 @@ public class SDMServiceImpl implements SDMService {
     ObjectMapper objectMapper = new ObjectMapper();
     try {
       JsonNode rootNode = objectMapper.readTree(jsonString);
-      JsonNode repoInfos = rootNode.path("repoAndConnectionInfos");
+      JsonNode repoInfosNode = rootNode.path("repoAndConnectionInfos");
 
-      // Iterate through the array to find the correct externalId and retrieve the id
+      List<JsonNode> repoInfos = new ArrayList<>();
+      if (repoInfosNode.isArray()) {
+        repoInfosNode.forEach(repoInfos::add);
+      } else if (!repoInfosNode.isMissingNode() && !repoInfosNode.isNull()) {
+        repoInfos.add(repoInfosNode); // wrap single object in a list
+      }
+
       for (JsonNode repoInfo : repoInfos) {
         JsonNode repository = repoInfo.path("repository");
-        if (repository.path("externalId") != null
-            && repository.path("externalId").asText().equals(SDMConstants.REPOSITORY_ID)) {
+        if (repository.path("externalId").asText().equals(SDMConstants.REPOSITORY_ID)) {
           return repository.path("id").asText();
         }
       }
     } catch (Exception e) {
-      throw new ServiceException(String.format(e.getMessage()));
+      throw new ServiceException(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, e);
     }
     return null;
   }

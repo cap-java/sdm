@@ -632,8 +632,10 @@ public class AttachmentsHandlerUtils {
       Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
     if (fileNameInDB == null) {
-      if (filenameInRequest != null && !filenameInRequest.equals(fileNameInSDM)) {
-        updatedSecondaryProperties.put("filename", filenameInRequest);
+      if (filenameInRequest != null) {
+        if (!filenameInRequest.equals(fileNameInSDM)) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        }
       } else {
         throw new ServiceException("Filename cannot be empty");
       }
@@ -653,6 +655,9 @@ public class AttachmentsHandlerUtils {
       Map<String, String> updatedSecondaryProperties,
       Boolean isUpdate)
       throws ServiceException {
+    if (descriptionInRequest == null) {
+      descriptionInRequest = "";
+    }
     if (descriptionInDB == null
         && isUpdate) { // Attachment did not contain description and is being updated now
       if (descriptionInRequest != null) {
