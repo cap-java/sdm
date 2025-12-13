@@ -660,9 +660,7 @@ public class AttachmentsHandlerUtils {
     }
     if (descriptionInDB == null
         && isUpdate) { // Attachment did not contain description and is being updated now
-      if (descriptionInRequest != null) {
         updatedSecondaryProperties.put("description", descriptionInRequest);
-      }
     } else if (descriptionInDB
         == null) { // Attachment contained description during upload and it was changed before
       // saving or description was added before save handler (create) was called
