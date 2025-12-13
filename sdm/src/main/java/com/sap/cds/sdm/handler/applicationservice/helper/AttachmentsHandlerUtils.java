@@ -648,6 +648,31 @@ public class AttachmentsHandlerUtils {
     }
   }
 
+  // public static void updateDescriptionProperty(
+  //     String descriptionInDB,
+  //     String descriptionInRequest,
+  //     String descriptionInSDM,
+  //     Map<String, String> updatedSecondaryProperties,
+  //     Boolean isUpdate)
+  //     throws ServiceException {
+  //   if (descriptionInRequest == null) {
+  //     descriptionInRequest = "";
+  //   }
+  //   if (descriptionInDB == null
+  //       && isUpdate) { // Attachment did not contain description and is being updated now
+  //     updatedSecondaryProperties.put("description", descriptionInRequest);
+  //   } else if (descriptionInDB
+  //       == null) { // Attachment contained description during upload and it was changed before
+  //     // saving or description was added before save handler (create) was called
+  //     if (!(descriptionInRequest.equals(descriptionInSDM))) {
+  //       updatedSecondaryProperties.put("description", descriptionInRequest);
+  //     }
+  //   } else if (!(descriptionInDB.equals(
+  //       descriptionInRequest))) { // Attachment contained description and is being updated now
+  //     updatedSecondaryProperties.put("description", descriptionInRequest);
+  //   }
+  // }
+
   public static void updateDescriptionProperty(
       String descriptionInDB,
       String descriptionInRequest,
@@ -655,21 +680,26 @@ public class AttachmentsHandlerUtils {
       Map<String, String> updatedSecondaryProperties,
       Boolean isUpdate)
       throws ServiceException {
-    if (descriptionInRequest == null) {
-      descriptionInRequest = "";
-    }
+    // Normalize null to empty string for comparison
+    String normalizedRequest = descriptionInRequest == null ? "" : descriptionInRequest;
+    String normalizedDB = descriptionInDB == null ? "" : descriptionInDB;
+    String normalizedSDM = descriptionInSDM == null ? "" : descriptionInSDM;
+
     if (descriptionInDB == null
         && isUpdate) { // Attachment did not contain description and is being updated now
-      updatedSecondaryProperties.put("description", descriptionInRequest);
+      // Only update if the request actually has a value different from what's in SDM
+      if (!normalizedRequest.isEmpty() && !normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
+      }
     } else if (descriptionInDB
         == null) { // Attachment contained description during upload and it was changed before
       // saving or description was added before save handler (create) was called
-      if (!(descriptionInRequest.equals(descriptionInSDM))) {
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+      if (!normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
       }
-    } else if (!(descriptionInDB.equals(
-        descriptionInRequest))) { // Attachment contained description and is being updated now
-      updatedSecondaryProperties.put("description", descriptionInRequest);
+    } else if (!normalizedDB.equals(
+        normalizedRequest)) { // Attachment contained description and is being updated now
+      updatedSecondaryProperties.put("description", normalizedRequest);
     }
   }
 
