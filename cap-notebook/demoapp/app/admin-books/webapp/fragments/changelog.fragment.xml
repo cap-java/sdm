@@ -2,7 +2,7 @@
                          xmlns:uxap="sap.uxap"
                          xmlns="sap.m"                  
 >
-<Dialog title="Change Log" id = "changelogDialog" resizable="true" contentWidth="50%"
+<Dialog id = "changelogDialog" resizable="true" contentWidth="50%"
 contentHeight="50%" draggable="true" class="sapUiSizeCompact" verticalScrolling="false">
   <content>
      
