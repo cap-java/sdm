@@ -1701,7 +1701,9 @@ public class SDMServiceImplTest {
 
       assertTrue(exception.getCause() instanceof ServiceException);
       ServiceException serviceException = (ServiceException) exception.getCause();
-      assertTrue(serviceException.getMessage().contains("Unrecognized token"));
+      assertEquals(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, serviceException.getMessage());
+      assertTrue(
+          serviceException.getCause() instanceof com.fasterxml.jackson.core.JsonParseException);
     } catch (Exception e) {
       fail("Exception occurred: " + e.getMessage());
     }
