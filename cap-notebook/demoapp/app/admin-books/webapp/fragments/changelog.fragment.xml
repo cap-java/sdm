@@ -1,46 +1,44 @@
 <core:FragmentDefinition xmlns:core="sap.ui.core"
                          xmlns:uxap="sap.uxap"
-                         xmlns="sap.m"
-                         xmlns:html="http://www.w3.org/1999/xhtml"
+                         xmlns="sap.m"                  
 >
-<html:style>
-.changelogDialog .sapMDialogScrollCont {
-    background-color: #f5f5f5 !important;
-}
-.changelogDialog .sapMTable {
-    background-color: #f5f5f5 !important;
-}
-.changelogDialog .sapMListTblRow {
-    background-color: white !important;
-}
-</html:style>
-<Dialog id = "changelogDialog" resizable="true" contentWidth="50%"
-contentHeight="50%" draggable="true" class="sapUiSizeCompact changelogDialog" verticalScrolling="false" stretch="true">
+<Dialog title="Change Log" id = "changelogDialog" resizable="true" contentWidth="50%"
+contentHeight="50%" draggable="true" class="sapUiSizeCompact" verticalScrolling="false">
   <content>
-    <Table id="idChangeLogTable" items="{path:'changelog>/', templateShareable:false}"
-        noDataText="{i18n>LoadingData}" width="100%" growing="true" growingScrollToLoad="true">
-     <columns>
-         <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
-             <Text text="Category"/>
-         </Column>
-         <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
-             <Text text="Changed By"/>
-         </Column>
-         <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
-             <Text text="Changed On"/>
-         </Column>
-     </columns>
-     <items>
-         <ColumnListItem>
-             <cells>
-                 <Text text="{changelog>changeType}"/>
-                 <Text text="{changelog>changedBy}"/>
-                 <Text text="{changelog>changedOn}"/>
-             </cells>
-         </ColumnListItem>
-     </items>
-    </Table>
-  </content>
+     
+   <IconTabBar
+        id="idIconTabBarNoIcons"
+         class="mcmPropertiesSections" isChildPage="true" enableLazyLoading="true" upperCaseAnchorBar="false" stretchContentHeight= "true">
+        <items>
+            <IconTabFilter text="Change Log" key="info">
+                <Table id="idChangeLogTable" items="{path:'changelog>/', templateShareable:false}"
+                    noDataText="{i18n>LoadingData}">
+                 <columns>
+                     <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                         <Text text="Category"/>
+                     </Column>
+                     <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                         <Text text="Changed By"/>
+                     </Column>
+                     <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                         <Text text="Changed On"/>
+                     </Column>
+                 </columns>
+                 <items>
+                     <ColumnListItem>
+                         <cells>
+                             <Text text="{changelog>changeType}"/>
+                             <Text text="{changelog>changedBy}"/>
+                             <Text text="{changelog>changedOn}"/>
+                         </cells>
+                     </ColumnListItem>
+                 </items>
+             </Table>
+            </IconTabFilter>
+        </items>
+    </IconTabBar>                 
+                        
+    </content>
         
     <endButton>
         <Button text="Close" press=".close" />
