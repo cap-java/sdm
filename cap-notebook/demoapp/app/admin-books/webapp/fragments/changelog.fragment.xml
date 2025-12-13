@@ -10,7 +10,7 @@ contentHeight="50%" draggable="true" class="sapUiSizeCompact" verticalScrolling=
         id="idIconTabBarNoIcons"
          class="mcmPropertiesSections" isChildPage="true" enableLazyLoading="true" upperCaseAnchorBar="false" stretchContentHeight= "true">
         <items>
-            <IconTabFilter text="Change Log" key="info">
+            <IconTabFilter key="info">
                 <Table id="idChangeLogTable" items="{path:'changelog>/', templateShareable:false}"
                     noDataText="{i18n>LoadingData}">
                  <columns>
