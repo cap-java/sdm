@@ -382,19 +382,19 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
-  public void updateUploadStatusByScanStatus(
+  public Result updateUploadStatusByScanStatus(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String objectId,
       SDMConstants.ScanStatus scanStatus) {
     String uploadStatus = mapScanStatusToUploadStatus(scanStatus);
-
+    System.out.println("STATUS " + uploadStatus + ":" + objectId);
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data("uploadStatus", uploadStatus)
             .where(doc -> doc.get("objectId").eq(objectId));
 
-    persistenceService.run(updateQuery);
+    return persistenceService.run(updateQuery);
   }
 
   /**

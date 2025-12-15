@@ -214,8 +214,10 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               if (scanStatus != null) {
                 SDMConstants.ScanStatus scanStatusEnum =
                     SDMConstants.ScanStatus.fromValue(scanStatus);
-                dbQuery.updateUploadStatusByScanStatus(
-                    attachmentDraftEntity.get(), persistenceService, objectId, scanStatusEnum);
+                Result r =
+                    dbQuery.updateUploadStatusByScanStatus(
+                        attachmentDraftEntity.get(), persistenceService, objectId, scanStatusEnum);
+                System.out.println("Res count " + r.rowCount());
                 logger.info(
                     "Updated uploadStatus for objectId: {} based on scanStatus: {}",
                     objectId,
