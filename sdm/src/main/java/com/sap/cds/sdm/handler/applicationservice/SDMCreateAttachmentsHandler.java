@@ -211,6 +211,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     CmisDocument cmisDocument =
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     fileNameInDB = cmisDocument.getFileName();
+    System.out.println("Upload status in create handler" + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
         && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
       if (cmisDocument

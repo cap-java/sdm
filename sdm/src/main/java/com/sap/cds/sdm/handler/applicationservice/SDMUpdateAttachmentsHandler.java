@@ -225,6 +225,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     fileNameInDB = cmisDocument.getFileName();
+    System.out.println("Upload status in create handler" + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
         && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
       if (cmisDocument

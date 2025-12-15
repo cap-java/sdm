@@ -404,6 +404,7 @@ public class DocumentUploadService {
             uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
             break;
         }
+        System.out.println("Final upload Status " + uploadStatus);
         finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {
