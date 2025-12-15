@@ -251,6 +251,7 @@ public class SDMServiceImpl implements SDMService {
                 Collectors
                     .toSet()); // Adding the properties which are unsupported to a list so that
     // exeception can be thrown
+
     Set<String> keysMap1 = secondaryProperties.keySet();
     for (Map.Entry<String, String> entry :
         secondaryPropertiesWithInvalidDefinitions

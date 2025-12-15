@@ -196,6 +196,7 @@ public class DBQuery {
 
   public CmisDocument getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    System.out.println("ATT ENT " + attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "uploadStatus")
@@ -204,6 +205,7 @@ public class DBQuery {
     CmisDocument cmisDocument = new CmisDocument();
     for (Row row : result.list()) {
       cmisDocument.setFileName(row.get("fileName").toString());
+      System.out.println("UPLOAD STATUS " + row.get("uploadStatus"));
       cmisDocument.setUploadStatus(
           row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }

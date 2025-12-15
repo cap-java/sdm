@@ -25,6 +25,7 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftCreateEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -62,8 +63,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     this.dbQuery = dbQuery;
   }
 
-  @On
-  @HandlerOrder(HandlerOrder.DEFAULT)
+  @Before
+  @HandlerOrder(HandlerOrder.EARLY)
   public void beforeDraftCreateAttachment(DraftCreateEventContext context, CdsData data) {
     // Check if the target entity is an attachment entity
 
@@ -71,7 +72,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       logger.info("Setting uploadStatus for draft attachment (DRAFT CREATE)");
       // Set the default uploadStatus to 'Pending' when creating an attachment
       if (!data.containsKey("uploadStatus") || data.get("uploadStatus") == null) {
-        data.put("uploadStatus", "Upload In Progress");
+        data.put("uploadStatus", SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
         logger.info("Set uploadStatus to IN_PROGRESS for draft attachment");
       }
     }
