@@ -157,13 +157,23 @@ public class SDMConstants {
   public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VirusDetected";
   public static final String UPLOAD_STATUS_IN_PROGRESS = "UploadInProgress";
   public static final String UPLOAD_STATUS_FAILED = "Failed";
+  public static final String UPLOAD_STATUS_SCAN_FAILED = "Failed";
   public static final String VIRUS_SCAN_INPROGRESS = "VirusScanInprogress";
+  
+  // New scan status constants
+  public static final String SCAN_STATUS_PENDING = "PENDING";
+  public static final String SCAN_STATUS_SCANNING = "SCANNING";
+  public static final String SCAN_STATUS_CLEAN = "CLEAN";
+  public static final String SCAN_STATUS_QUARANTINED = "QUARANTINED";
+  public static final String SCAN_STATUS_FAILED = "FAILED";
 
   public enum ScanStatus {
     BLANK(""),
-    IN_PROGRESS("IN_PROGRESS"),
-    UPLOAD_IN_PROGRESS("UPLOAD_IN_PROGRESS"),
-    VIRUS_DETECTED("VIRUS_DETECTED");
+    PENDING("PENDING"),
+    SCANNING("SCANNING"),
+    CLEAN("CLEAN"),
+    QUARANTINED("QUARANTINED"),
+    FAILED("FAILED");
 
     private final String value;
 

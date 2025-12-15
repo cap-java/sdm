@@ -384,11 +384,20 @@ public class DocumentUploadService {
         SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
         String uploadStatus;
         switch (scanStatusEnum) {
-          case IN_PROGRESS:
+          case QUARANTINED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+            break;
+          case PENDING:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+            break;
+          case SCANNING:
             uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
             break;
-          case VIRUS_DETECTED:
-            uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+          case FAILED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SCAN_FAILED;
+            break;
+          case CLEAN:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
             break;
           case BLANK:
           default:

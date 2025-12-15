@@ -428,13 +428,17 @@ public class DBQuery {
 
   private String mapScanStatusToUploadStatus(SDMConstants.ScanStatus scanStatus) {
     switch (scanStatus) {
-      case BLANK:
-        return SDMConstants.UPLOAD_STATUS_SUCCESS;
-      case IN_PROGRESS:
-      case UPLOAD_IN_PROGRESS:
-        return SDMConstants.UPLOAD_STATUS_IN_PROGRESS; // Use UploadInProgress for consistency
-      case VIRUS_DETECTED:
+      case QUARANTINED:
         return SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+      case PENDING:
+        return SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+      case SCANNING:
+        return SDMConstants.VIRUS_SCAN_INPROGRESS;
+      case FAILED:
+        return SDMConstants.UPLOAD_STATUS_SCAN_FAILED;
+      case CLEAN:
+        return SDMConstants.UPLOAD_STATUS_SUCCESS;
+      case BLANK:
       default:
         return SDMConstants.UPLOAD_STATUS_SUCCESS;
     }
