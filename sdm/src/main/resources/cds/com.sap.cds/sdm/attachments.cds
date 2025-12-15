@@ -8,11 +8,11 @@ using {
 
 
 type UploadStatusCode : String(32) enum {
-   "Upload InProgress" ;
-   "Success";
-   "Failed";
-   "Virus Detected";
-   "Virus Scan Inprogress";
+  ![Upload Inprogress]’ ;
+   ![Success]’;
+   ![Failed]’;
+   ![Virus Detected]’ ;
+   ![Virus Scan Inprogress]’ ;
 }
 extend aspect Attachments with {
     folderId : String;
