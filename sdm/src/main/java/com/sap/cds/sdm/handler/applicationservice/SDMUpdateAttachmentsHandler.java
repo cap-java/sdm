@@ -217,8 +217,20 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
 
+    logger.info(
+        "[SecondaryProperties Debug] ====== Processing UPDATE for attachment ID: {} ======", id);
+    logger.info(
+        "[SecondaryProperties Debug] Input - filenameInRequest: {}, descriptionInRequest: {}, objectId: {}",
+        filenameInRequest,
+        descriptionInRequest,
+        objectId);
+    logger.info("[SecondaryProperties Debug] Full attachment object: {}", attachment);
+
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
+    logger.info(
+        "[SecondaryProperties Debug] Secondary type properties from annotations: {}",
+        secondaryTypeProperties);
     String fileNameInDB =
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
@@ -236,13 +248,24 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     Map<String, String> propertiesInDB =
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+    logger.info(
+        "[SecondaryProperties Debug] Fetched properties from DB for attachment ID '{}': {}",
+        id,
+        propertiesInDB);
 
     // Extract note (description) from DB if it exists
     if (propertiesInDB != null && propertiesInDB.containsKey("note")) {
       descriptionInDB = propertiesInDB.get("note");
+      logger.info(
+          "[SecondaryProperties Debug] Extracted descriptionInDB from properties: {}",
+          descriptionInDB);
     }
 
     // Prepare document and updated properties
+    logger.info(
+        "[SecondaryProperties Debug] Calling getUpdatedSecondaryProperties for attachment: {}",
+        attachment);
+
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -250,20 +273,53 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
+
+    logger.info(
+        "[SecondaryProperties Debug] Received updatedSecondaryProperties: {}",
+        updatedSecondaryProperties);
+
     CmisDocument cmisDocument =
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
+    logger.info(
+        "[SecondaryProperties Debug] Prepared CmisDocument with fileName: {}, description: {}, objectId: {}",
+        filenameInRequest,
+        descriptionInRequest,
+        objectId);
 
     // Update filename and description properties
+    logger.info(
+        "[SecondaryProperties Debug] Calling updateFilenameProperty - fileNameInDB: {}, filenameInRequest: {}",
+        fileNameInDB,
+        filenameInRequest);
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, null, updatedSecondaryProperties);
+    logger.info(
+        "[SecondaryProperties Debug] After updateFilenameProperty, updatedSecondaryProperties: {}",
+        updatedSecondaryProperties);
+
+    logger.info(
+        "[SecondaryProperties Debug] Calling updateDescriptionProperty - descriptionInDB: {}, descriptionInRequest: {}",
+        descriptionInDB,
+        descriptionInRequest);
     AttachmentsHandlerUtils.updateDescriptionProperty(
         descriptionInDB, descriptionInRequest, null, updatedSecondaryProperties, true);
+    logger.info(
+        "[SecondaryProperties Debug] After updateDescriptionProperty, updatedSecondaryProperties: {}",
+        updatedSecondaryProperties);
 
     // Send update to SDM only if there are changes
     if (updatedSecondaryProperties.isEmpty()) {
+      logger.info(
+          "[SecondaryProperties Debug] No changes detected, skipping SDM update for attachment ID: {}",
+          id);
       return;
     }
+
+    logger.info(
+        "[SecondaryProperties Debug] Changes detected, sending update to SDM for attachment ID '{}' with properties: {}",
+        id,
+        updatedSecondaryProperties);
 
     try {
       int responseCode =
@@ -273,6 +329,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               updatedSecondaryProperties,
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
+
+      logger.info("[SecondaryProperties Debug] SDM update response code: {}", responseCode);
+      logger.info(
+          "[SecondaryProperties Debug] Calling handleSDMUpdateResponse for attachment ID: {}", id);
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
           attachment,
@@ -284,7 +344,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           noSDMRoles,
           duplicateFileNameList,
           filesNotFound);
+      logger.info(
+          "[SecondaryProperties Debug] ====== Completed UPDATE for attachment ID: {} ======", id);
     } catch (ServiceException e) {
+      logger.error(
+          "[SecondaryProperties Debug] ServiceException occurred for attachment ID '{}': {}",
+          id,
+          e.getMessage());
       AttachmentsHandlerUtils.handleSDMServiceException(
           e,
           attachment,

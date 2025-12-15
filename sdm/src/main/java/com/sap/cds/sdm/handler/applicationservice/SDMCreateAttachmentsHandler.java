@@ -221,6 +221,14 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
+    logger.info(
+        "[SecondaryProperties Debug] CREATE - Fetched properties from DB for attachment ID '{}': {}",
+        id,
+        propertiesInDB);
+    logger.info(
+        "[SecondaryProperties Debug] CREATE - Calling getUpdatedSecondaryProperties for attachment: {}",
+        attachment);
+
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -229,6 +237,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
+
+    logger.info(
+        "[SecondaryProperties Debug] CREATE - Received updatedSecondaryProperties: {}",
+        updatedSecondaryProperties);
     CmisDocument cmisDocument =
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
@@ -244,6 +256,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         false);
 
     // Send update to SDM and handle response
+    logger.info(
+        "[SecondaryProperties Debug] CREATE - Sending update to SDM for attachment ID '{}' with properties: {}",
+        id,
+        updatedSecondaryProperties);
+
     try {
       int responseCode =
           sdmService.updateAttachments(
@@ -252,6 +269,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               updatedSecondaryProperties,
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
+
+      logger.info(
+          "[SecondaryProperties Debug] CREATE - SDM update response code: {}", responseCode);
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
           attachment,

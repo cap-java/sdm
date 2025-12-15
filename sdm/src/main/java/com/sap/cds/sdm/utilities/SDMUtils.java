@@ -335,6 +335,10 @@ public class SDMUtils {
       PersistenceService persistenceService,
       Map<String, String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
+    logger.info("[SecondaryProperties Debug] Starting getUpdatedSecondaryProperties");
+    logger.info("[SecondaryProperties Debug] secondaryTypeProperties: {}", secondaryTypeProperties);
+    logger.info("[SecondaryProperties Debug] propertiesInDB: {}", propertiesInDB);
+
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
@@ -342,23 +346,40 @@ public class SDMUtils {
       String property = entry.getKey();
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
+      logger.info("[SecondaryProperties Debug] Property '{}' from request: {}", property, value);
     }
+
     // Check the value of secondary properties in DB
     for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
       String property = entry.getKey();
       String value = entry.getValue();
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
+
+      logger.info(
+          "[SecondaryProperties Debug] Comparing property '{}': valueInRequest={}, valueInDB={}",
+          property,
+          valueInMap,
+          valueInDB);
+
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
+        logger.info(
+            "[SecondaryProperties Debug] Property '{}' marked for update. Adding to updatedSecondaryProperties",
+            property);
         if (valueInMap != null) {
           updatedSecondaryProperties.put(value, valueInMap.toString());
         } else {
           updatedSecondaryProperties.put(value, null);
         }
+      } else {
+        logger.info("[SecondaryProperties Debug] Property '{}' unchanged, skipping", property);
       }
     }
 
+    logger.info(
+        "[SecondaryProperties Debug] Final updatedSecondaryProperties: {}",
+        updatedSecondaryProperties);
     return updatedSecondaryProperties;
   }
 
