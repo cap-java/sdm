@@ -23,7 +23,7 @@ jobs:
           ls -lart
         shell: bash
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_TOKEN }}
 
