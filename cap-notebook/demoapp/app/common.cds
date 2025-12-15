@@ -65,11 +65,17 @@ annotate my.Books.attachments with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '10%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: statusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '15%'}
+      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
