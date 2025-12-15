@@ -565,6 +565,9 @@
                         <exclude>
                             com/sap/cds/sdm/service/handler/AttachmentCopyEventContext.class
                         </exclude>
+                        <exclude>
+                            com/sap/cds/sdm/service/handler/AttachmentMoveEventContext.class
+                        </exclude>
                     </excludes>
                 </configuration>
                 <executions>
