@@ -397,6 +397,50 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
+  public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("Fetching link URL - This is a :{} flow", grantType);
+    var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+
+    String sdmUrl =
+        sdmCredentials.getUrl()
+            + "browser/"
+            + SDMConstants.REPOSITORY_ID
+            + "/root?objectID="
+            + objectId
+            + "&cmisselector=content";
+
+    HttpGet getContentRequest = new HttpGet(sdmUrl);
+    try (var response = (CloseableHttpResponse) httpClient.execute(getContentRequest)) {
+      int responseCode = response.getStatusLine().getStatusCode();
+      if (responseCode != 200) {
+        logger.warn("Failed to fetch link content for objectId {}: {}", objectId, responseCode);
+        return null;
+      }
+
+      // Read the content which is in format: [InternetShortcut]\nURL=<actual-url>
+      String content = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+
+      // Parse the URL from the content
+      String[] lines = content.split("\n");
+      for (String line : lines) {
+        if (line.startsWith("URL=")) {
+          String url = line.substring(4).trim();
+          logger.info("Extracted link URL for objectId {}: {}", objectId, url);
+          return url;
+        }
+      }
+
+      logger.warn("Could not find URL in link content for objectId {}", objectId);
+      return null;
+    } catch (IOException e) {
+      logger.error("Failed to fetch link URL for objectId {}: {}", objectId, e.getMessage(), e);
+      throw new ServiceException("Failed to fetch link URL", e);
+    }
+  }
+
+  @Override
   public String getFolderId(
       Result result,
       PersistenceService persistenceService,
@@ -826,6 +870,63 @@ public class SDMServiceImpl implements SDMService {
           resultMap.put(customProperty, value != null ? value.toString() : "");
         }
       }
+    }
+  }
+
+  @Override
+  public String moveAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+
+    logger.info("Moving attachment - This is a :{} flow", grantType);
+
+    try {
+      // Use RxJava with retry logic for move operation
+      return io.reactivex.Flowable.fromCallable(
+              () -> {
+                var httpClient =
+                    tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
+                String sdmUrl =
+                    sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+                HttpPost moveFile = new HttpPost(sdmUrl);
+                MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+
+                // Add form fields for move operation
+                builder.addTextBody("cmisaction", "move", ContentType.TEXT_PLAIN);
+                builder.addTextBody("objectId", cmisDocument.getObjectId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody(
+                    "sourceFolderId", cmisDocument.getSourceFolderId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody(
+                    "targetFolderId", cmisDocument.getFolderId(), ContentType.TEXT_PLAIN);
+                builder.addTextBody("succinct", "true");
+                HttpEntity multipart = builder.build();
+                moveFile.setEntity(multipart);
+
+                try (var response = (CloseableHttpResponse) httpClient.execute(moveFile)) {
+                  // Handle response entity
+                  HttpEntity entity = response.getEntity();
+                  String responseBody =
+                      entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+
+                  if (response.getStatusLine().getStatusCode() == 201
+                      || response.getStatusLine().getStatusCode() == 200) {
+                    // Return the SDM response JSON - caller can extract needed properties
+                    return responseBody;
+                  }
+
+                  // On error, throw exception with error information
+                  JSONObject errorJson = new JSONObject(responseBody);
+                  String exceptionType = errorJson.optString("exception");
+                  String errorMessage = errorJson.optString("message");
+                  throw new ServiceException(exceptionType + " : " + errorMessage);
+                }
+              })
+          .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
+          .blockingFirst();
+    } catch (Exception e) {
+      logger.error("Failed to move attachment after retries: {}", e.getMessage(), e);
+      throw new ServiceException(SDMConstants.FAILED_TO_MOVE_ATTACHMENT, e);
     }
   }
 }
