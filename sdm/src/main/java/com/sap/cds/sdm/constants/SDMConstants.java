@@ -159,7 +159,7 @@ public class SDMConstants {
   public static final String UPLOAD_STATUS_FAILED = "Failed";
   public static final String UPLOAD_STATUS_SCAN_FAILED = "Failed";
   public static final String VIRUS_SCAN_INPROGRESS = "VirusScanInprogress";
-  
+
   // New scan status constants
   public static final String SCAN_STATUS_PENDING = "PENDING";
   public static final String SCAN_STATUS_SCANNING = "SCANNING";
