@@ -375,8 +375,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     Optional<CdsEntity> parentEntity =
         parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
-
-    String upID = fetchUPIDFromCQN(select, parentEntity.orElse(null));
+    String upID = SDMUtils.fetchUPIDFromCQN(select, parentEntity.get());
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -593,41 +592,6 @@ public class SDMServiceGenericHandler implements EventHandler {
           logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
-    }
-  }
-
-  private String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
-    try {
-      String upID = null;
-      ObjectMapper mapper = new ObjectMapper();
-      JsonNode root = mapper.readTree(select.toString());
-      JsonNode refArray = root.path("SELECT").path("from").path("ref");
-      JsonNode secondLast = refArray.get(refArray.size() - 2);
-      JsonNode whereArray = secondLast.path("where");
-
-      // Get the actual key field names from the parent entity
-      List<String> keyElementNames = getKeyElementNames(parentEntity);
-
-      for (int i = 0; i < whereArray.size(); i++) {
-        JsonNode node = whereArray.get(i);
-
-        if (node.has("ref") && node.get("ref").isArray()) {
-          String fieldName = node.get("ref").get(0).asText();
-
-          if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
-            JsonNode valNode = whereArray.get(i + 2);
-            upID = valNode.path("val").asText();
-            break;
-          }
-        }
-      }
-      if (upID == null) {
-        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
-      }
-      return upID;
-    } catch (Exception e) {
-      logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
-      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
     }
   }
 }

@@ -11,7 +11,7 @@ public class SDMConstants {
     // Doesn't do anything
   }
 
-  public static final String REPOSITORY_ID = "MY_REPO";
+  public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String MIMETYPE_INTERNET_SHORTCUT = "application/internet-shortcut";
   public static final String SYSTEM_USER = "system-internal";
   public static final String DESTINATION_EXCEPTION =
@@ -154,9 +154,10 @@ public class SDMConstants {
 
   // Upload Status Constants
   public static final String UPLOAD_STATUS_SUCCESS = "Success";
-  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "Virus Detected";
-  public static final String UPLOAD_STATUS_IN_PROGRESS = "Upload InProgress";
-  public static final String VIRUS_SCAN_INPROGRESS = "In progress (Refresh the page)";
+  public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VirusDetected";
+  public static final String UPLOAD_STATUS_IN_PROGRESS = "UploadInProgress";
+  public static final String UPLOAD_STATUS_FAILED = "Failed";
+  public static final String VIRUS_SCAN_INPROGRESS = "VirusScanInprogress";
 
   public enum ScanStatus {
     BLANK(""),

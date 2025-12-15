@@ -10,6 +10,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
+import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.services.cds.ApplicationService;
@@ -52,15 +53,24 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   public void processBefore(CdsReadEventContext context) throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
-      // Fetch all the attachments with uploadStatus VIRUS_SCAN_INPROGRESS and then have a for loop
-      // for those entries  and call getObject for individual attachment and update the attachment
-      // table with getObject Response
-
-      // Update criticality values for all attachments
+      // update the uploadStatus of all blank attachments with success this is for existing
+      // attachments
+      RepoValue repoValue =
+          sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
+      //      if (!repoValue.getIsAsyncVirusScanEnabled()) {
+      //        Optional<CdsEntity> attachmentDraftEntity =
+      //            context.getModel().findEntity(context.getTarget().getQualifiedName() +
+      // "_drafts");
+      //        String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+      //        CqnSelect select = (CqnSelect) context.get("cqn");
+      //        String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+      //        dbQuery.updateNullUploadStatusToSuccess(
+      //            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+      //      }
       processAttachmentCriticality(context);
-
-      processVirusScanInProgressAttachments(context);
-
+      if (repoValue.getIsAsyncVirusScanEnabled()) {
+        processVirusScanInProgressAttachments(context);
+      }
       CqnSelect copy =
           CQL.copy(
               context.getCqn(),
@@ -101,12 +111,9 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           // Calculate criticality based on upload status
           int criticality = getStatusCriticality(uploadStatus);
 
-          // Update the attachment criticality in the database
-          Optional<CdsEntity> attachmentDraftEntity =
-              context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
           if (attachmentId != null) {
             dbQuery.updateAttachmentCriticality(
-                attachmentDraftEntity.get(), persistenceService, attachmentId, criticality);
+                persistenceService, attachmentId, criticality, context);
 
             logger.debug(
                 "Updated attachment ID {} with uploadStatus: {}, criticality: {}",
@@ -165,8 +172,12 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // Get the statuses of existing attachments and assign color code
 
       // Get all attachments with virus scan in progress
+      Optional<CdsEntity> attachmentDraftEntity =
+          context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+
       List<CmisDocument> attachmentsInProgress =
-          dbQuery.getAttachmentsWithVirusScanInProgress(context.getTarget(), persistenceService);
+          dbQuery.getAttachmentsWithVirusScanInProgress(
+              attachmentDraftEntity.get(), persistenceService);
 
       // Get SDM credentials
       var sdmCredentials = tokenHandler.getSDMCredentials();
@@ -190,8 +201,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
               // Extract scanStatus if available
               String scanStatus = null;
-              if (succinctProperties.has("scanStatus")) {
-                scanStatus = succinctProperties.getString("scanStatus");
+              if (succinctProperties.has("sap:virusScanStatus")) {
+                scanStatus = succinctProperties.getString("sap:virusScanStatus");
               }
 
               logger.info(

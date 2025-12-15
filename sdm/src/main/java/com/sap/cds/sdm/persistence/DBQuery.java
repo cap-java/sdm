@@ -357,6 +357,29 @@ public class DBQuery {
     return attachments;
   }
 
+  /**
+   * Updates uploadStatus to 'SUCCESS' for all attachments where uploadStatus is null for a given
+   * up__ID.
+   *
+   * @param attachmentEntity the attachment entity
+   * @param persistenceService the persistence service
+   * @param upID the up__ID to filter attachments
+   * @param upIdKey the key name for up__ID field (e.g., "up__ID")
+   */
+  public void updateNullUploadStatusToSuccess(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
+
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
+            .where(doc -> doc.get(upIdKey).eq(upID).and(doc.get("uploadStatus").isNull()));
+
+    persistenceService.run(updateQuery);
+  }
+
   public void updateUploadStatusByScanStatus(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
@@ -375,19 +398,28 @@ public class DBQuery {
   /**
    * Updates the criticality value for an attachment based on its upload status.
    *
-   * @param attachmentEntity the attachment entity
    * @param persistenceService the persistence service
    * @param attachmentId the attachment ID
    * @param criticality the calculated criticality value
    */
   public void updateAttachmentCriticality(
-      CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String attachmentId,
-      int criticality) {
-
+      int criticality,
+      CdsReadEventContext context) {
+    // Update the attachment criticality in the database for draft table
+    Optional<CdsEntity> attachmentDraftEntity =
+        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
     CqnUpdate updateQuery =
-        Update.entity(attachmentEntity)
+        Update.entity(attachmentDraftEntity.get())
+            .data("statusCriticality", criticality)
+            .where(doc -> doc.get("ID").eq(attachmentId));
+
+    persistenceService.run(updateQuery);
+    Optional<CdsEntity> attachmentEntity =
+        context.getModel().findEntity(context.getTarget().getQualifiedName());
+    updateQuery =
+        Update.entity(attachmentEntity.get())
             .data("statusCriticality", criticality)
             .where(doc -> doc.get("ID").eq(attachmentId));
 
@@ -399,7 +431,8 @@ public class DBQuery {
       case BLANK:
         return SDMConstants.UPLOAD_STATUS_SUCCESS;
       case IN_PROGRESS:
-        return SDMConstants.VIRUS_SCAN_INPROGRESS;
+      case UPLOAD_IN_PROGRESS:
+        return SDMConstants.UPLOAD_STATUS_IN_PROGRESS; // Use UploadInProgress for consistency
       case VIRUS_DETECTED:
         return SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
       default:

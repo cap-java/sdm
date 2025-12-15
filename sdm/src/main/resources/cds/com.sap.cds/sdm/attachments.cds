@@ -2,12 +2,17 @@ namespace sap.attachments;
 
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 
-type UploadStatusCode : String enum {
-    UPLOAD_IN_PROGRESS;
-    VIRUS_SCAN_INPROGRESS;
-    SUCCESS;
-    VIRUS_DETECTED;
-    SCAN_FAILED;
+using {
+  sap.common.CodeList
+} from '@sap/cds/common';
+
+
+type UploadStatusCode : String(32) enum {
+   UploadInProgress;
+   Success;
+   Failed;
+   VirusDetected;
+   VirusScanInprogress;
 }
 extend aspect Attachments with {
     folderId : String;
@@ -15,9 +20,16 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-    uploadStatus: UploadStatusCode @readonly default 'Upload In Progress';
-    statusCriticality: Integer @Core.Computed @odata.Type: 'Edm.Byte' default 5;
-}
+     uploadStatus    : UploadStatusCode ;
+     statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
+      }
+
+     entity ScanStates : CodeList {
+         key code        : UploadStatusCode  @Common.Text: name  @Common.TextArrangement: #TextOnly;
+             name        : localized String(64);
+             criticality : Integer     @UI.Hidden;
+     }
+
 annotate Attachments with @UI: {
 
     HeaderInfo: {
@@ -31,13 +43,17 @@ annotate Attachments with @UI: {
                {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
                {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
                {Value: note, @HTML5.CssDefaults: {width: '25%'}},
-{Value: uploadStatus, @HTML5.CssDefaults: {width: '15%'}, Criticality: statusCriticality},
+{
+        Value             : uploadStatus,
+        Criticality: statusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '15%'}
+      },
     ]
 } {
     note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
     modifiedAt @(odata.etag: null);
-    uploadStatus  @(title: '{i18n>Upload Status}', UI.Criticality: statusCriticality);
     content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
         @(title: '{i18n>Attachment}');

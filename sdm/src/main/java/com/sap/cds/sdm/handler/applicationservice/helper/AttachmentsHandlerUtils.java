@@ -16,6 +16,7 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -611,7 +612,7 @@ public class AttachmentsHandlerUtils {
    * @return a list containing [filename, description]
    * @throws IOException if there's an error fetching from SDM
    */
-  public static List<String> fetchAttachmentDataFromSDM(
+  public static JSONObject fetchAttachmentDataFromSDM(
       SDMService sdmService, String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
     return sdmService.getObject(objectId, sdmCredentials, isSystemUser);

@@ -74,7 +74,7 @@ public class DocumentUploadService {
       CdsModel model = eventContext.getModel();
       Optional<CdsEntity> attachmentDraftEntity =
           model.findEntity(eventContext.getAttachmentEntity() + "_drafts");
-      cmisDocument.setUploadStatus("IN_PROGRESS");
+      cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       if (totalSize <= 400 * 1024 * 1024) {
 
         dbQuery.addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
@@ -253,7 +253,7 @@ public class DocumentUploadService {
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
       logger.info("Response Body: {}", responseBody);
-      cmisDocument.setUploadStatus("IN_PROGRESS");
+      cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       dbQuery.addAttachmentToDraft(entity, persistenceService, cmisDocument);
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
@@ -339,9 +339,10 @@ public class DocumentUploadService {
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
         scanStatus =
-            succinctProperties.has("scanStatus")
-                ? succinctProperties.getString("scanStatus")
+            succinctProperties.has("sap:virusScanStatus")
+                ? succinctProperties.getString("sap:virusScanStatus")
                 : scanStatus;
+        System.out.println("scanStatus in formResponse is " + scanStatus);
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")

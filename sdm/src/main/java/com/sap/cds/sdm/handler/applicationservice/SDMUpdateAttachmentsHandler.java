@@ -23,6 +23,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -236,11 +237,16 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     // Fetch from SDM if not in DB
     String descriptionInDB = null;
     if (fileNameInDB == null) {
-      List<String> sdmAttachmentData =
+      JSONObject sdmAttachmentData =
           AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
               sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
-      fileNameInDB = sdmAttachmentData.get(0);
-      descriptionInDB = sdmAttachmentData.get(1);
+      JSONObject succinctProperties = sdmAttachmentData.getJSONObject("succinctProperties");
+      if (succinctProperties.has("cmis:name")) {
+        fileNameInDB = succinctProperties.getString("cmis:name");
+      }
+      if (succinctProperties.has("cmis:description")) {
+        descriptionInDB = succinctProperties.getString("cmis:description");
+      }
     }
 
     Map<String, String> propertiesInDB =

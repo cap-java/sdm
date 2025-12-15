@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -220,11 +221,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         throw new ServiceException("Virus Scanning is in Progress.");
     }
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    List<String> sdmAttachmentData =
+    String fileNameInSDM = null, descriptionInSDM = null;
+    JSONObject sdmAttachmentData =
         AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
             sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
-    String fileNameInSDM = sdmAttachmentData.get(0);
-    String descriptionInSDM = sdmAttachmentData.get(1);
+    JSONObject succinctProperties = sdmAttachmentData.getJSONObject("succinctProperties");
+    if (succinctProperties.has("cmis:name")) {
+      fileNameInSDM = succinctProperties.getString("cmis:name");
+    }
+    if (succinctProperties.has("cmis:description")) {
+      descriptionInSDM = succinctProperties.getString("cmis:description");
+    }
 
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);

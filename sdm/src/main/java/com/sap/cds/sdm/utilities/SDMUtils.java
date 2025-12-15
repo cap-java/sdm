@@ -1,6 +1,9 @@
 package com.sap.cds.sdm.utilities;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.CdsData;
+import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
@@ -9,6 +12,7 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.AttachmentInfo;
+import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -439,5 +443,81 @@ public class SDMUtils {
         cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
     errormsgAnnotation.ifPresent(
         annotation -> attachmentInfo.setErrorMessage(annotation.getValue().toString()));
+  }
+
+  private static List<String> getKeyElementNames(CdsEntity entity) {
+    return entity.elements().filter(CdsElement::isKey).map(CdsElement::getName).toList();
+  }
+
+  /**
+   * Extracts UP ID from CQN select statement by parsing the JSON representation.
+   *
+   * @param select the CQN select statement
+   * @return the UP ID extracted from the query
+   * @throws com.sap.cds.services.ServiceException if UP ID cannot be extracted
+   */
+  public static String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
+    try {
+      String upID = null;
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode root = mapper.readTree(select.toString());
+      JsonNode refArray = root.path("SELECT").path("from").path("ref");
+
+      JsonNode secondLast = refArray.get(refArray.size() - 2);
+      JsonNode whereArray;
+      if (secondLast != null) {
+        whereArray = secondLast.path("where");
+      } else {
+        whereArray = refArray;
+      }
+
+      // Get the actual key field names from the parent entity
+      List<String> keyElementNames = getKeyElementNames(parentEntity);
+
+      for (int i = 0; i < whereArray.size(); i++) {
+        JsonNode node = whereArray.get(i);
+
+        if (node.has("ref") && node.get("ref").isArray()) {
+          String fieldName = node.get("ref").get(0).asText();
+
+          if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
+            JsonNode valNode = whereArray.get(i + 2);
+            upID = valNode.path("val").asText();
+            break;
+          }
+        }
+      }
+      if (upID == null) {
+        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+      }
+      return upID;
+    } catch (Exception e) {
+      logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+    }
+  }
+
+  /**
+   * Get criticality value based on upload status for UI display
+   *
+   * @param uploadStatus The upload status string
+   * @return Integer criticality value (1=Error/Red, 2=Warning/Yellow, 3=Success/Green,
+   *     0=None/Neutral)
+   */
+  public static Integer getCriticalityForStatus(String uploadStatus) {
+    if (uploadStatus == null) {
+      return 0; // None/Neutral
+    }
+
+    switch (uploadStatus) {
+      case SDMConstants.UPLOAD_STATUS_IN_PROGRESS:
+      case SDMConstants.VIRUS_SCAN_INPROGRESS:
+        return 5; // Warning (yellow)
+      case SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED:
+      case SDMConstants.UPLOAD_STATUS_FAILED:
+        return 1; // Error (red)
+      default:
+        return 0; // None (neutral)
+    }
   }
 }

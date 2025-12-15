@@ -2,8 +2,10 @@ package com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
 
+import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
+import com.sap.cds.feature.attachments.handler.common.ApplicationHandlerHelper;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
@@ -20,7 +22,10 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.draft.DraftCreateEventContext;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -33,7 +38,9 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName(value = "*", type = AttachmentService.class)
+@ServiceName(
+    value = "*",
+    type = {AttachmentService.class, DraftService.class})
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
@@ -55,21 +62,23 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     this.dbQuery = dbQuery;
   }
 
-  //  @Before(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
-  //  @HandlerOrder(TRANSACTION_BEGIN)
-  //  public void beforeAttachment(AttachmentCreateEventContext context) throws IOException {
-  //    System.out.println("Before Attachments");
-  //    CmisDocument cmisDocument = new CmisDocument();
-  //    cmisDocument.setUploadStatus("Upload InProgress");
-  //    Map<String, Object> attachmentIds = context.getAttachmentIds();
-  //    cmisDocument.setAttachmentId((String) attachmentIds.get("ID"));
-  //    dbQuery.addAttachmentToDraft(
-  //        getAttachmentDraftEntity(context), persistenceService, cmisDocument);
-  //  }
+  @On
+  @HandlerOrder(HandlerOrder.DEFAULT)
+  public void beforeDraftCreateAttachment(DraftCreateEventContext context, CdsData data) {
+    // Check if the target entity is an attachment entity
+
+    if (ApplicationHandlerHelper.isMediaEntity(context.getTarget())) {
+      logger.info("Setting uploadStatus for draft attachment (DRAFT CREATE)");
+      // Set the default uploadStatus to 'Pending' when creating an attachment
+      if (!data.containsKey("uploadStatus") || data.get("uploadStatus") == null) {
+        data.put("uploadStatus", "Upload In Progress");
+        logger.info("Set uploadStatus to IN_PROGRESS for draft attachment");
+      }
+    }
+  }
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
-
     logger.info(
         "CREATE_ATTACHMENT Event Received with content length {} At {}",
         (context.getParameterInfo() != null && context.getParameterInfo().getHeaders() != null)
