@@ -791,7 +791,7 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public JSONObject getChangeLog(
-      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);

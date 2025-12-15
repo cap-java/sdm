@@ -76,8 +76,8 @@ public interface SDMService {
       throws IOException;
 
   public JSONObject getChangeLog(
-      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser);
-  
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
+
   public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 }
