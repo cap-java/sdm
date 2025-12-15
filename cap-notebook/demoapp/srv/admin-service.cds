@@ -6,10 +6,24 @@ service AdminService @(requires: ['admin','system-user']) {
   entity Chapters as projection on my.Chapters;
   entity Pages as projection on my.Pages;
 
+  // Define a return type for the action result
+  type MoveAttachmentsResult {
+      failedObjectIds : array of String;
+  }
+
   entity Books.attachments as projection on my.Books.attachments
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -28,6 +42,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -46,6 +69,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -64,6 +96,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -82,7 +123,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
-
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
       in:many $self,
@@ -101,6 +150,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -119,6 +177,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -137,6 +204,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
@@ -156,6 +232,15 @@ service AdminService @(requires: ['admin','system-user']) {
     actions {
     @(Common.SideEffects : {TargetEntities: ['']},)
     action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    // moveAttachments action signature
+    @(Common.SideEffects : {TargetEntities: ['']})
+    action moveAttachments(
+        in: many $self, 
+        up__ID: String, 
+        sourceFolderId: String,
+        objectIds: String,
+        sourceFacet: String,      // Optional: if not provided, no source cleanup
+    ) returns MoveAttachmentsResult;  // Return structured type
 
     @(Common.SideEffects : {TargetEntities: ['']},)
     action createLink(
