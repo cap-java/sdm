@@ -67,7 +67,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       //        dbQuery.updateNullUploadStatusToSuccess(
       //            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       //      }
-      processAttachmentCriticality(context);
       if (repoValue.getIsAsyncVirusScanEnabled()) {
         processVirusScanInProgressAttachments(context);
       }
