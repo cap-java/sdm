@@ -21,7 +21,7 @@ extend aspect Attachments with {
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
      uploadStatus    : UploadStatusCode ;
-     statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
+     statusNav : Association to one ScanStates on statusNav.name = uploadStatus;
       }
 
      entity ScanStates : CodeList {

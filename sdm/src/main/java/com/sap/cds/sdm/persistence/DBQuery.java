@@ -427,6 +427,7 @@ public class DBQuery {
   }
 
   private String mapScanStatusToUploadStatus(SDMConstants.ScanStatus scanStatus) {
+    System.out.println("SCAN status in read handler " + scanStatus);
     switch (scanStatus) {
       case QUARANTINED:
         return SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;

@@ -1,6 +1,6 @@
 code;name;criticality
-UploadInProgress;Upload In Progress;2
+UploadInProgress;Upload In Progress;5
 Success;Success;3
 Failed;Failed;1
 VirusDetected;Virus Detected;1
-VirusScanInprogress;Virus Scan In Progress;2
+VirusScanInprogress;Virus Scan In Progress;5
