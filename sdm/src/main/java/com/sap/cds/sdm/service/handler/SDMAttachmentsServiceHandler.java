@@ -129,12 +129,10 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
+    String entity = contentIdParts[2];
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
     CmisDocument cmisDocument =
-        dbQuery.getuploadStatusForAttachment(
-            attachmentEntity.get().getQualifiedName(), persistenceService, objectId, context);
+        dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
     System.out.println("Upload Status inREAD " + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument

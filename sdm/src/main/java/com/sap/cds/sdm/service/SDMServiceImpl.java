@@ -142,8 +142,9 @@ public class SDMServiceImpl implements SDMService {
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
+      System.out.println("RESPONSE of edit link " + responseString);
       int responseCode = response.getStatusLine().getStatusCode();
-
+      System.out.println("RESPONSE of edit link code" + responseCode);
       if (responseCode == 201 || responseCode == 200) {
         status = "success";
         JSONObject jsonResponse = new JSONObject(responseString);
