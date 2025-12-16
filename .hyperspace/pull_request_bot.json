@@ -12,7 +12,8 @@
     },
     "review": {
       "auto_generate_review": true,
-      "use_custom_review_focus": false
+      "auto_generate_review": true,
+      "use_custom_review_focus": false,
     }
   }
 }
