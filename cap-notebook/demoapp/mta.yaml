@@ -31,7 +31,11 @@ modules:
       - name: demoappjava-hdi-container
       - name: demoappjava-public-uaa
       - name: cf-logging
+<<<<<<< Updated upstream
       - name: sdm
+=======
+      - name: sdmtmtest
+>>>>>>> Stashed changes
     provides:
       - name: srv-api
         properties:
@@ -103,7 +107,11 @@ resources:
     parameters:
       service: application-logs
       service-plan: lite
+<<<<<<< Updated upstream
   - name: sdm
+=======
+  - name: sdmtmtest
+>>>>>>> Stashed changes
     type: org.cloudfoundry.managed-service
     parameters:
       service: sdm
