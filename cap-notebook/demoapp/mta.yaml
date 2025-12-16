@@ -31,7 +31,7 @@ modules:
       - name: demoappjava-hdi-container
       - name: demoappjava-public-uaa
       - name: cf-logging
-      - name: tmtest
+      - name: sdmtmtest
     provides:
       - name: srv-api
         properties:
@@ -103,7 +103,7 @@ resources:
     parameters:
       service: application-logs
       service-plan: lite
-  - name: tmtest
+  - name: sdmtmtest
     type: org.cloudfoundry.managed-service
     parameters:
       service: sdm-us31-local-dev-biswajitm

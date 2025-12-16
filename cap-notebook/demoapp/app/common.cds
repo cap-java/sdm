@@ -74,7 +74,8 @@ annotate my.Books.attachments with @UI: {
         Value             : uploadStatus,
         Criticality: statusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'}
+        @HTML5.CssDefaults: {width: '15%'},
+         ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
       },
     {
       $Type : 'UI.DataFieldForAction',
@@ -121,6 +122,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
+  uploadStatus  @(title: '{i18n>UploadStatus}');
   modifiedAt @(odata.etag: null);
   content
     @Core.ContentDisposition: { Filename: fileName }
