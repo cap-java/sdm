@@ -828,7 +828,6 @@ public class SDMServiceImpl implements SDMService {
       } else if (responseCode == 404) {
         throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
       } else if (responseCode != 200) {
-        logger.info(SDMConstants.FETCH_CHANGELOG_ERROR + " : " + responseString);
         throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR);
       }
       return new JSONObject(responseString);

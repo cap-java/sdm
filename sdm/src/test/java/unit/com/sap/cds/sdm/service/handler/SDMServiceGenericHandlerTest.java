@@ -54,6 +54,7 @@ public class SDMServiceGenericHandlerTest {
   @Mock private DBQuery dbQuery;
   @Mock private TokenHandler tokenHandler;
   @Mock private EventContext mockContext;
+  @Mock private AttachmentMoveRequestContext mockMoveContext;
   @Mock private CdsModel cdsModel;
   @Mock private CqnSelect cqnSelect;
   @Mock private CdsEntity cdsEntity;
@@ -3443,15 +3444,15 @@ public class SDMServiceGenericHandlerTest {
   @Test
   void testMoveAttachments_WithAllParameters_Success() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("123");
-    when(mockContext.get("sourceFolderId")).thenReturn("source-folder-id");
-    when(mockContext.get("objectIds")).thenReturn("obj1, obj2, obj3");
-    when(mockContext.get("sourceFacet")).thenReturn("MyService.SourceEntity.attachments");
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("123");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("source-folder-id");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2, obj3");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("MyService.SourceEntity.attachments");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.TargetEntity.attachments");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3462,7 +3463,7 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    Map<String, Object> result = sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
@@ -3475,22 +3476,22 @@ public class SDMServiceGenericHandlerTest {
     assertEquals(List.of("obj1", "obj2", "obj3"), input.objectIds());
     assertEquals(Optional.of("MyService.SourceEntity.attachments"), input.sourceFacet());
 
-    assertEquals(expectedResult, result);
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setResult(expectedResult);
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_WithoutSourceFacet_Success() throws IOException {
     // Arrange - sourceFacet is null
-    when(mockContext.get("up__ID")).thenReturn("456");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder-123");
-    when(mockContext.get("objectIds")).thenReturn("objA, objB");
-    when(mockContext.get("sourceFacet")).thenReturn(null); // No source facet
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("456");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-123");
+    when(mockMoveContext.get("objectIds")).thenReturn("objA, objB");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null); // No source facet
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.NewEntity.attachments");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(true);
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3500,7 +3501,7 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    Map<String, Object> result = sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
@@ -3513,22 +3514,22 @@ public class SDMServiceGenericHandlerTest {
     assertEquals(List.of("objA", "objB"), input.objectIds());
     assertEquals(Optional.empty(), input.sourceFacet()); // Should be empty when null
 
-    assertEquals(expectedResult, result);
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setResult(expectedResult);
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_WithSingleObjectId_Success() throws IOException {
     // Arrange - single object ID
-    when(mockContext.get("up__ID")).thenReturn("999");
-    when(mockContext.get("sourceFolderId")).thenReturn("src-folder");
-    when(mockContext.get("objectIds")).thenReturn("single-obj-id");
-    when(mockContext.get("sourceFacet")).thenReturn("Source.Entity");
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("999");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("src-folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("single-obj-id");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source.Entity");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target.Entity");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3538,7 +3539,7 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
@@ -3548,21 +3549,21 @@ public class SDMServiceGenericHandlerTest {
     assertEquals(List.of("single-obj-id"), input.objectIds());
     assertEquals(1, input.objectIds().size());
 
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_WithWhitespaceInObjectIds_TrimsCorrectly() throws IOException {
     // Arrange - object IDs with various whitespace
-    when(mockContext.get("up__ID")).thenReturn("100");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder-id");
-    when(mockContext.get("objectIds")).thenReturn("  obj1  ,  obj2  ,obj3,  obj4  ");
-    when(mockContext.get("sourceFacet")).thenReturn(null);
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("100");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-id");
+    when(mockMoveContext.get("objectIds")).thenReturn("  obj1  ,  obj2  ,obj3,  obj4  ");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Entity.attachments");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3570,7 +3571,7 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
@@ -3584,15 +3585,15 @@ public class SDMServiceGenericHandlerTest {
   @Test
   void testMoveAttachments_WithSystemUser_PassesCorrectFlag() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("system-user-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1");
-    when(mockContext.get("sourceFacet")).thenReturn("Source");
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("system-user-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(true); // System user
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3600,25 +3601,25 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     verify(attachmentService, times(1)).moveAttachments(any(MoveAttachmentInput.class), eq(true));
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_WithNonSystemUser_PassesCorrectFlag() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("regular-user-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1");
-    when(mockContext.get("sourceFacet")).thenReturn(null);
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("regular-user-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false); // Non-system user
 
     Map<String, Object> expectedResult = new HashMap<>();
@@ -3626,25 +3627,25 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(expectedResult);
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     verify(attachmentService, times(1)).moveAttachments(any(MoveAttachmentInput.class), eq(false));
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_ReturnsResultFromService() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("result-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1, obj2");
-    when(mockContext.get("sourceFacet")).thenReturn("Source");
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("result-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     Map<String, Object> serviceResult = new HashMap<>();
@@ -3656,27 +3657,25 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(serviceResult);
 
     // Act
-    Map<String, Object> result = sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
-    assertNotNull(result);
-    assertEquals(2, result.get("movedCount"));
-    assertEquals(0, result.get("failedCount"));
-    assertEquals(Collections.emptyList(), result.get("failedAttachments"));
+    verify(mockMoveContext, times(1)).setResult(serviceResult);
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_ThrowsIOException_Propagates() {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("error-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1");
-    when(mockContext.get("sourceFacet")).thenReturn(null);
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("error-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     // Mock attachmentService to throw IOException wrapped in RuntimeException
@@ -3687,55 +3686,56 @@ public class SDMServiceGenericHandlerTest {
             });
 
     // Act & Assert
-    assertThrows(IOException.class, () -> sdmServiceGenericHandler.moveAttachments(mockContext));
+    assertThrows(
+        IOException.class, () -> sdmServiceGenericHandler.moveAttachments(mockMoveContext));
 
-    verify(mockContext, never()).setCompleted(); // Should not be called when exception occurs
+    verify(mockMoveContext, never()).setCompleted(); // Should not be called when exception occurs
   }
 
   @Test
   void testMoveAttachments_ContextSetCompleted_CalledOnce() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("complete-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1");
-    when(mockContext.get("sourceFacet")).thenReturn(null);
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("complete-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
         .thenReturn(new HashMap<>());
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
-    verify(mockContext, times(1)).setCompleted();
+    verify(mockMoveContext, times(1)).setCompleted();
   }
 
   @Test
   void testMoveAttachments_UsesTargetQualifiedName_AsTargetFacet() throws IOException {
     // Arrange
-    when(mockContext.get("up__ID")).thenReturn("qname-test");
-    when(mockContext.get("sourceFolderId")).thenReturn("folder");
-    when(mockContext.get("objectIds")).thenReturn("obj1");
-    when(mockContext.get("sourceFacet")).thenReturn(null);
-    when(mockContext.getTarget()).thenReturn(cdsEntity);
+    when(mockMoveContext.get("up__ID")).thenReturn("qname-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName())
         .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name
 
     UserInfo userInfo = mock(UserInfo.class);
-    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
         .thenReturn(new HashMap<>());
 
     // Act
-    sdmServiceGenericHandler.moveAttachments(mockContext);
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
 
     // Assert
     ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
