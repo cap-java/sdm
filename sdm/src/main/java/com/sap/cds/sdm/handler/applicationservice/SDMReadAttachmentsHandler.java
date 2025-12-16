@@ -169,7 +169,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   private void processVirusScanInProgressAttachments(CdsReadEventContext context) {
     try {
       // Get the statuses of existing attachments and assign color code
-
       // Get all attachments with virus scan in progress
       Optional<CdsEntity> attachmentDraftEntity =
           context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");

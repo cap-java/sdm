@@ -209,19 +209,23 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     // Fetch original data from DB and SDM
     String fileNameInDB;
+    Optional<CdsEntity> attachmentDraftEntity =
+        context.getModel().findEntity(attachmentEntity.get().getQualifiedName() + "_drafts");
     CmisDocument cmisDocument =
-        dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+        dbQuery.getAttachmentForID(
+            attachmentEntity.get(), persistenceService, id, attachmentDraftEntity.get());
+
     fileNameInDB = cmisDocument.getFileName();
     System.out.println("Upload status in create handler" + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
-        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
-      if (cmisDocument
-          .getUploadStatus()
-          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
-        throw new ServiceException("Virus Detected in this file kindly delete it.");
-      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
-        throw new ServiceException("Virus Scanning is in Progress.");
-    }
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+      throw new ServiceException("Virus Detected in this file kindly delete it.");
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      throw new ServiceException(
+          "Virus Scanning is in Progress. Refresh the page to see the effect");
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String fileNameInSDM = null, descriptionInSDM = null;
     JSONObject sdmAttachmentData =

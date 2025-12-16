@@ -90,6 +90,13 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     processEntities(context);
   }
 
+  @Before(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
+  @HandlerOrder(HandlerOrder.EARLY)
+  public void markAttachmentAsDeletedBefore(AttachmentMarkAsDeletedEventContext context) {
+    String[] contextValues = context.getContentId().split(":");
+    System.out.println("Helloooo in before call" + contextValues);
+  }
+
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
   public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
       throws IOException {
@@ -128,15 +135,16 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     CmisDocument cmisDocument =
         dbQuery.getuploadStatusForAttachment(
             attachmentEntity.get().getQualifiedName(), persistenceService, objectId, context);
+    System.out.println("Upload Status inREAD " + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
-        && !cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SUCCESS)) {
-      if (cmisDocument
-          .getUploadStatus()
-          .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
-        throw new ServiceException("Virus Detected in this file kindly delete it.");
-      if (cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
-        throw new ServiceException("Virus Scanning is in Progress.");
-    }
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+      throw new ServiceException("Virus Detected in this file kindly delete it.");
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      throw new ServiceException(
+          "Virus Scanning is in Progress. Refresh the page to see the effect");
     try {
       sdmService.readDocument(objectId, sdmCredentials, context);
     } catch (Exception e) {
