@@ -187,6 +187,7 @@ public class SDMCustomServiceHandler {
       CmisDocument populatedDocument = new CmisDocument();
       populatedDocument.setType(cmisDocument.getType());
       populatedDocument.setUrl(cmisDocument.getUrl());
+      populatedDocument.setUploadStatus(cmisDocument.getUploadStatus());
       populatedDocuments.add(populatedDocument);
 
       try {

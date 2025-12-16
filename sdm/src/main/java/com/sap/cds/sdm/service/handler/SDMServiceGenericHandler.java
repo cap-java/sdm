@@ -580,6 +580,7 @@ public class SDMServiceGenericHandler implements EventHandler {
                 + cmisDocument.getFolderId()
                 + ":"
                 + context.getTarget());
+        updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
 
         try {
           var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);

@@ -148,7 +148,7 @@ public class DBQuery {
     // Search in active entity first
     CqnSelect q =
         Select.from(attachmentEntity.get())
-            .columns("linkUrl", "type")
+            .columns("linkUrl", "type", "uploadStatus")
             .where(doc -> doc.get("objectId").eq(id));
     Result result = persistenceService.run(q);
     Optional<Row> res = result.first();
@@ -158,13 +158,15 @@ public class DBQuery {
       Row row = res.get();
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     } else {
       // Check in draft table as well
       Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentDraftEntity.isPresent()) {
         q =
             Select.from(attachmentDraftEntity.get())
-                .columns("linkUrl", "type")
+                .columns("linkUrl", "type", "uploadStatus")
                 .where(doc -> doc.get("objectId").eq(id));
         result = persistenceService.run(q);
         res = result.first();
@@ -172,6 +174,8 @@ public class DBQuery {
           Row row = res.get();
           cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
           cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+          cmisDocument.setUploadStatus(
+              row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
         }
       }
     }
