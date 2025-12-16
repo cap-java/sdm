@@ -18,7 +18,7 @@ modules:
         SPRING_PROFILES_ACTIVE: cloud,sandbox
         JBP_CONFIG_COMPONENTS: "jres: ['com.sap.xs.java.buildpack.jre.SAPMachineJRE']"
         JBP_CONFIG_SAP_MACHINE_JRE: '{ version: 17.+ }'
-        REPOSITORY_ID: __REPOSITORY_ID__  # Placeholder for REPOSITORY_ID
+        REPOSITORY_ID: 6c173c2a-005d-49b1-8dcf-33038e614e1d  # Placeholder for REPOSITORY_ID
         INCOMING_REQUEST_TIMEOUT: 3600000
         INCOMING_SESSION_TIMEOUT: 3600000
         INCOMING_CONNECTION_TIMEOUT: 3600000
