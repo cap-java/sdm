@@ -43,16 +43,19 @@ annotate Attachments with @UI: {
                {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
                {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
                {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+
 {
         Value             : uploadStatus,
         Criticality: statusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'}
+        @HTML5.CssDefaults: {width: '15%'},
+        ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
       },
     ]
 } {
     note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
+    uploadStatus  @(title: '{i18n>UploadStatus}');
     modifiedAt @(odata.etag: null);
     content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }

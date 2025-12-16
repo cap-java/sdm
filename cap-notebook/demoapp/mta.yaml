@@ -32,7 +32,11 @@ modules:
       - name: demoappjava-public-uaa
       - name: cf-logging
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       - name: sdm
+=======
+      - name: sdmtmtest
+>>>>>>> Stashed changes
 =======
       - name: sdmtmtest
 >>>>>>> Stashed changes
@@ -108,7 +112,11 @@ resources:
       service: application-logs
       service-plan: lite
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   - name: sdm
+=======
+  - name: sdmtmtest
+>>>>>>> Stashed changes
 =======
   - name: sdmtmtest
 >>>>>>> Stashed changes
