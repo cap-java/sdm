@@ -94,7 +94,17 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY)
   public void markAttachmentAsDeletedBefore(AttachmentMarkAsDeletedEventContext context) {
     String[] contextValues = context.getContentId().split(":");
-    System.out.println("Helloooo in before call" + contextValues);
+    if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
+      String objectId = contextValues[0];
+      String entity = contextValues[2];
+      System.out.println("Helloooo in before call" + contextValues[0]);
+      CmisDocument cmisDocument =
+          dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
+      if (cmisDocument.getUploadStatus() != null
+          && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+        throw new ServiceException(
+            "Virus Scanning is in Progress. You can refresh the page to see effect");
+    }
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
@@ -133,7 +143,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     CmisDocument cmisDocument =
         dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
-    System.out.println("Upload Status inREAD " + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument
             .getUploadStatus()

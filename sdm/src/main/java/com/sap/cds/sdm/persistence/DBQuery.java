@@ -253,7 +253,14 @@ public class DBQuery {
     List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
         Select.from(attachmentEntity.get())
-            .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+            .columns(
+                "fileName",
+                "IsActiveEntity",
+                "ID",
+                "folderId",
+                "repositoryId",
+                "objectId",
+                "uploadStatus")
             .where(doc -> doc.get("folderId").eq(folderId));
     Result result = persistenceService.run(q);
     for (Row row : result.list()) {
@@ -263,13 +270,22 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setAttachmentId(row.get("ID").toString());
       cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
       cmisDocuments.add(cmisDocument);
     }
     if (cmisDocuments.isEmpty()) {
       attachmentEntity = context.getModel().findEntity(entity);
       q =
           Select.from(attachmentEntity.get())
-              .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+              .columns(
+                  "fileName",
+                  "IsActiveEntity",
+                  "ID",
+                  "folderId",
+                  "repositoryId",
+                  "objectId",
+                  "uploadStatus")
               .where(doc -> doc.get("folderId").eq(folderId));
       result = persistenceService.run(q);
       for (Row row : result.list()) {
@@ -279,6 +295,8 @@ public class DBQuery {
         cmisDocument.setFileName(row.get("fileName").toString());
         cmisDocument.setAttachmentId(row.get("ID").toString());
         cmisDocument.setObjectId(row.get("objectId").toString());
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
         cmisDocuments.add(cmisDocument);
       }
     }
@@ -311,6 +329,39 @@ public class DBQuery {
       PersistenceService persistenceService,
       String objectId,
       AttachmentReadEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
+    CqnSelect q =
+        Select.from(attachmentEntity.get())
+            .columns("uploadStatus")
+            .where(doc -> doc.get("objectId").eq(objectId));
+    Result result = persistenceService.run(q);
+    CmisDocument cmisDocument = new CmisDocument();
+    boolean isAttachmentFound = false;
+    for (Row row : result.list()) {
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+      isAttachmentFound = true;
+    }
+    if (!isAttachmentFound) {
+      attachmentEntity = context.getModel().findEntity(entity);
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("uploadStatus")
+              .where(doc -> doc.get("objectId").eq(objectId));
+      result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+      }
+    }
+    return cmisDocument;
+  }
+
+  public CmisDocument getuploadStatusForAttachment(
+      String entity,
+      PersistenceService persistenceService,
+      String objectId,
+      AttachmentMarkAsDeletedEventContext context) {
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     CqnSelect q =
         Select.from(attachmentEntity.get())
