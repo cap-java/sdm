@@ -20,6 +20,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
 - Link as attachments: Provides the capability to support link or URL as attachments.
 - Edit Link-type attachments: Provides the capability to update URL of link-type attachments.
+- Move attachments: Provides the capability to move attachments from one entity to another entity.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 ## Table of Contents
 
@@ -33,6 +34,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
+- [Support for Move attachments](#support-for-move-attachments)
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
@@ -567,6 +569,143 @@ This plugin provides capability to copy attachments from one entity to another. 
       "objectIds": "abc","xyz"
    }
    ```
+
+## Support for move attachments
+
+This plugin provides capability to move attachments from one entity to another entity. This capability will move attachments metadata on CAP as well as actual content on the SAP Document Management service repository. The move operation is performed in parallel for optimal performance and includes comprehensive error handling and rollback mechanisms.
+
+### Key Features
+
+- **Parallel Processing**: Move operations are executed in parallel using a thread pool for improved performance.
+- **Custom Properties Support**: Preserves and validates custom properties during the move.
+- **Automatic Rollback**: If database updates fail after a successful SDM move, the operation is automatically rolled back.
+- **Comprehensive Error Handling**: Returns detailed failure information for each attachment that fails to move.
+- **Folder Management**: Automatically creates target folders if they don't exist.
+
+### Usage Methods
+
+1. **A helper method to move attachments from one entity to another**
+   
+   The `AttachmentService` instance can be used to call `moveAttachments` method. This method expects an object of `MoveAttachmentInput` which requires the source folder ID, target entity's ID (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be moved.
+
+   Example usage:
+   ```java
+      String sourceFolderId = "source-folder-id";
+      String up__ID = "123";
+      List<String> objectIds = ["abc", "xyz"];
+      String facet = "AdminService.Books.attachments"
+      boolean isSystemUser = false;
+      
+      var moveEventInput = new MoveAttachmentInput(
+         sourceFolderId,
+         up__ID,
+         facet,
+         objectIds
+      );
+      
+      List<Map<String, String>> failedAttachments = 
+         attachmentService.moveAttachments(moveEventInput, isSystemUser);
+      
+      // Check for failures
+      if (!failedAttachments.isEmpty()) {
+         for (Map<String, String> failure : failedAttachments) {
+            String objectId = failure.get("objectId");
+            String reason = failure.get("failureReason");
+            // Handle failure
+         }
+      }
+   ```
+
+2. **OData API to move attachments from one entity to another**
+   
+   You can also use an OData API call to trigger the move operation.
+   `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.moveAttachments`. This request expects the following request body:
+   ```json
+   {
+      "sourceFolderId": "<source-folder-id>",
+      "up__ID": "<target-up-id>",
+      "facet": "<Service_Name>.<Entity_Name>.attachments",
+      "objectIds": ["abc", "xyz"]
+   }
+   ```
+
+   Example usage:
+   ```
+   HTTP Method: POST
+   Request URL:
+   <app_url>/odata/v4/<Service_Name>/<Entity_Name>(ID=<up__ID>,IsActiveEntity=false)/attachments/<Service_name>.moveAttachments
+   Request Body:
+   {
+      "sourceFolderId": "<source-folder-id>",
+      "up__ID": "<target-up-id>",
+      "facet": "AdminService.Books.attachments",
+      "objectIds": ["abc", "xyz"]
+   }
+   ```
+   
+   Note: The `facet` parameter should be the fully qualified name of the target attachment composition (e.g., `AdminService.Books.attachments`).
+
+### Optional Parameters
+
+When moving attachments, you can provide optional source facet information for proper cleanup:
+
+```java
+var moveEventInput = new MoveAttachmentInput(
+   sourceFolderId,
+   up__ID,
+   facet,
+   objectIds,
+   sourceFacet    // Optional: Full facet path, e.g., "AdminService.Authors.attachments"
+);
+```
+
+If `sourceFacet` is provided, the source entity metadata will be properly cleaned up after the move. If omitted, attachments are moved but source metadata cleanup is skipped.
+
+For OData API calls, you can include the optional `sourceFacet` parameter in the request body:
+```json
+{
+   "sourceFolderId": "<source-folder-id>",
+   "up__ID": "<target-up-id>",
+   "facet": "AdminService.Books.attachments",
+   "objectIds": ["abc", "xyz"],
+   "sourceFacet": "AdminService.Authors.attachments"
+}
+```
+
+### Response Format
+
+The move operation returns a list of failed attachments with detailed failure reasons:
+
+```json
+[
+   {
+      "objectId": "abc",
+      "failureReason": "Attachment abc already exists in Target entity"
+   },
+   {
+      "objectId": "xyz",
+      "failureReason": "Invalid custom properties: customProp1, customProp2. These properties are not supported in the target entity."
+   }
+]
+```
+
+### Common Failure Scenarios
+
+- **MaxCount Exceeded**: Target entity has reached its maximum allowed attachments.
+- **Invalid Custom Properties**: Attachment has custom properties not supported by the target entity.
+- **Permission Denied**: User lacks authorization to move the attachment.
+- **Duplicate File**: File with the same name already exists in the target folder.
+- **Database Update Failed**: Move succeeded in SDM but database update failed (automatic rollback occurs).
+- **Source Not Found**: Source attachment doesn't exist in SDM.
+
+### Best Practices
+
+1. **Always check the returned list of failed attachments** to inform users about partial failures.
+2. **Validate maxCount constraints** before initiating large move operations.
+3. **Ensure custom properties compatibility** between source and target entities.
+5. **Handle rollback scenarios gracefully** - rolled back attachments remain in the source folder.
+
+> **CRITICAL**: To preserve custom properties attached with attachments on UI, ensure these properties are defined in the target entity. If custom properties are not present in the target entity definition, they will be lost after the move and will not be visible on the UI.
 
 ## Support for link type attachments
 

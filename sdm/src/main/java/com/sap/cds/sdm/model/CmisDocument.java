@@ -2,6 +2,7 @@ package com.sap.cds.sdm.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.InputStream;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class CmisDocument {
   private InputStream content;
   private String parentId;
   private String folderId;
+  private String sourceFolderId;
   private String repositoryId;
   private String status;
   private String mimeType;
@@ -28,4 +30,5 @@ public class CmisDocument {
   private String contentId;
   private String type;
   private String description;
+  private Map<String, Object> secondaryProperties;
 }
