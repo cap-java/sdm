@@ -13,6 +13,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.handler.EventHandler;
@@ -57,16 +58,18 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // attachments
       RepoValue repoValue =
           sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
-      //      if (!repoValue.getIsAsyncVirusScanEnabled()) {
-      //        Optional<CdsEntity> attachmentDraftEntity =
-      //            context.getModel().findEntity(context.getTarget().getQualifiedName() +
-      // "_drafts");
-      //        String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-      //        CqnSelect select = (CqnSelect) context.get("cqn");
-      //        String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-      //        dbQuery.updateNullUploadStatusToSuccess(
-      //            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-      //      }
+      if (!repoValue.getIsAsyncVirusScanEnabled()) {
+        Optional<CdsEntity> attachmentDraftEntity =
+            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+        String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+        CqnSelect select = (CqnSelect) context.get("cqn");
+        //        CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(context.getModel());
+        //        Map<String, Object> targetKeys = cqnAnalyzer.analyze(select).targetKeyValues();
+        //        Boolean isActiveEntity = (Boolean) targetKeys.get("IsActiveEntity");
+        String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+        dbQuery.updateInProgressUploadStatusToSuccess(
+            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+      }
       if (repoValue.getIsAsyncVirusScanEnabled()) {
         processVirusScanInProgressAttachments(context);
       }

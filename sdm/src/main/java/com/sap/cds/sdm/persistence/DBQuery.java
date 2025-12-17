@@ -423,15 +423,15 @@ public class DBQuery {
   }
 
   /**
-   * Updates uploadStatus to 'SUCCESS' for all attachments where uploadStatus is null for a given
-   * up__ID.
+   * Updates uploadStatus to 'SUCCESS' for all attachments where uploadStatus is
+   * UPLOAD_STATUS_IN_PROGRESS for a given up__ID.
    *
    * @param attachmentEntity the attachment entity
    * @param persistenceService the persistence service
    * @param upID the up__ID to filter attachments
    * @param upIdKey the key name for up__ID field (e.g., "up__ID")
    */
-  public void updateNullUploadStatusToSuccess(
+  public void updateInProgressUploadStatusToSuccess(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       String upID,
@@ -440,7 +440,11 @@ public class DBQuery {
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
-            .where(doc -> doc.get(upIdKey).eq(upID).and(doc.get("uploadStatus").isNull()));
+            .where(
+                doc ->
+                    doc.get(upIdKey)
+                        .eq(upID)
+                        .and(doc.get("uploadStatus").eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
 
     persistenceService.run(updateQuery);
   }

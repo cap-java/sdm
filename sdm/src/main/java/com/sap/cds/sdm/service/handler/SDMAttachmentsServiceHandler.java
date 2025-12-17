@@ -2,10 +2,8 @@ package com.sap.cds.sdm.service.handler;
 
 import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
 
-import com.sap.cds.CdsData;
 import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.generated.cds4j.sap.attachments.MediaData;
-import com.sap.cds.feature.attachments.handler.common.ApplicationHandlerHelper;
 import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
@@ -22,11 +20,8 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.draft.DraftCreateEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
-import com.sap.cds.services.handler.annotations.Before;
-import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -63,21 +58,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     this.dbQuery = dbQuery;
   }
 
-  @Before
-  @HandlerOrder(HandlerOrder.EARLY)
-  public void beforeDraftCreateAttachment(DraftCreateEventContext context, CdsData data) {
-    // Check if the target entity is an attachment entity
-
-    if (ApplicationHandlerHelper.isMediaEntity(context.getTarget())) {
-      logger.info("Setting uploadStatus for draft attachment (DRAFT CREATE)");
-      // Set the default uploadStatus to 'Pending' when creating an attachment
-      if (!data.containsKey("uploadStatus") || data.get("uploadStatus") == null) {
-        data.put("uploadStatus", SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-        logger.info("Set uploadStatus to IN_PROGRESS for draft attachment");
-      }
-    }
-  }
-
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
     logger.info(
@@ -88,23 +68,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         System.currentTimeMillis());
     validateRepository(context);
     processEntities(context);
-  }
-
-  @Before(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
-  @HandlerOrder(HandlerOrder.EARLY)
-  public void markAttachmentAsDeletedBefore(AttachmentMarkAsDeletedEventContext context) {
-    String[] contextValues = context.getContentId().split(":");
-    if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
-      String objectId = contextValues[0];
-      String entity = contextValues[2];
-      System.out.println("Helloooo in before call" + contextValues[0]);
-      CmisDocument cmisDocument =
-          dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
-      if (cmisDocument.getUploadStatus() != null
-          && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
-        throw new ServiceException(
-            "Virus Scanning is in Progress. You can refresh the page to see effect");
-    }
   }
 
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
