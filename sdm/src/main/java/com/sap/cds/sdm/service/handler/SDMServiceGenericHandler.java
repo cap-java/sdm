@@ -74,6 +74,43 @@ public class SDMServiceGenericHandler implements EventHandler {
     this.tokenHandler = tokenHandler;
   }
 
+  @On(event = "changelog")
+  public void changelog(AttachmentLogContext context) throws IOException {
+    CdsModel cdsModel = context.getModel();
+
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    Optional<CdsEntity> attachmentEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+
+    // get the objectId against the Id
+    String id = targetKeys.get("ID").toString();
+
+    CmisDocument cmisDocument =
+        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+
+    if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
+      // open attachment is triggered on non-draft entity
+      attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
+
+      cmisDocument =
+          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    }
+
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    JSONObject jsonObject =
+        sdmService.getChangeLog(
+            cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+
+    jsonObject.put("filename", cmisDocument.getFileName());
+
+    context.setResult(jsonObject);
+  }
+
   @On(event = "copyAttachments")
   public void copyAttachments(EventContext context) throws IOException {
     String upID = context.get("up__ID").toString();
@@ -90,7 +127,7 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   @On(event = "moveAttachments")
-  public Map<String, Object> moveAttachments(EventContext context) throws IOException {
+  public void moveAttachments(AttachmentMoveRequestContext context) throws IOException {
     String upID = context.get("up__ID").toString();
     String sourceFolderId = context.get("sourceFolderId").toString();
     String objectIdsString = context.get("objectIds").toString();
@@ -109,10 +146,11 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     Map<String, Object> result =
         attachmentService.moveAttachments(moveEventInput, context.getUserInfo().isSystemUser());
-    context.setCompleted();
 
     logger.info("Move operation result: {}", result);
-    return result;
+
+    context.setResult(result);
+    context.setCompleted();
   }
 
   @On(event = "createLink")

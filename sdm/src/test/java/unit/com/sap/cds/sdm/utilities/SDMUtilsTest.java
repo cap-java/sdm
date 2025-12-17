@@ -156,7 +156,7 @@ public class SDMUtilsTest {
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "myfile.txt");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertEquals("cmis:name", requestBody.get("propertyId[1]"));
     assertEquals("myfile.txt", requestBody.get("propertyValue[1]"));
@@ -169,7 +169,7 @@ public class SDMUtilsTest {
     secondaryProperties.put("author", "test user");
     secondaryProperties.put("subject", "JUnit Testing");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertEquals("author", requestBody.get("propertyId[1]"));
     assertEquals("test user", requestBody.get("propertyValue[1]"));
@@ -182,7 +182,7 @@ public class SDMUtilsTest {
     Map<String, String> requestBody = new HashMap<>();
     Map<String, String> secondaryProperties = new HashMap<>();
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertTrue(requestBody.isEmpty());
   }
