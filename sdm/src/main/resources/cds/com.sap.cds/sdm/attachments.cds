@@ -20,7 +20,7 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-     uploadStatus    : UploadStatusCode default 'UploadInProgress' @Common.Text: statusNav.name @Common.TextArrangement: #TextOnly;
+     uploadStatus    : UploadStatusCode default 'UploadInProgress';
      statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
       }
 
@@ -48,8 +48,7 @@ annotate Attachments with @UI: {
         Value             : uploadStatus,
         Criticality: statusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
-        ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
+        @HTML5.CssDefaults: {width: '15%'}
       },
     ]
 } {

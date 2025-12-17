@@ -446,7 +446,8 @@ public class DBQuery {
                         .eq(upID)
                         .and(doc.get("uploadStatus").eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
 
-    persistenceService.run(updateQuery);
+    Result r = persistenceService.run(updateQuery);
+    System.out.println("Result count: " + r.rowCount());
   }
 
   public Result updateUploadStatusByScanStatus(

@@ -58,6 +58,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // attachments
       RepoValue repoValue =
           sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
+      System.out.println(
+          "Repo val "
+              + repoValue.getIsAsyncVirusScanEnabled()
+              + ":"
+              + repoValue.getVirusScanEnabled());
       if (!repoValue.getIsAsyncVirusScanEnabled()) {
         Optional<CdsEntity> attachmentDraftEntity =
             context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
@@ -67,6 +72,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
         //        Map<String, Object> targetKeys = cqnAnalyzer.analyze(select).targetKeyValues();
         //        Boolean isActiveEntity = (Boolean) targetKeys.get("IsActiveEntity");
         String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+        System.out.println("upID : " + upID);
+
         dbQuery.updateInProgressUploadStatusToSuccess(
             attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       }
