@@ -335,10 +335,8 @@ public class SDMUtils {
       PersistenceService persistenceService,
       Map<String, String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
-    logger.info("[SecondaryProperties Debug] Starting getUpdatedSecondaryProperties");
-    logger.info("[SecondaryProperties Debug] secondaryTypeProperties: {}", secondaryTypeProperties);
-    logger.info("[SecondaryProperties Debug] propertiesInDB: {}", propertiesInDB);
-
+    logger.debug(
+        "Comparing secondary properties - properties to check: {}", secondaryTypeProperties.size());
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
@@ -346,7 +344,6 @@ public class SDMUtils {
       String property = entry.getKey();
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
-      logger.info("[SecondaryProperties Debug] Property '{}' from request: {}", property, value);
     }
 
     // Check the value of secondary properties in DB
@@ -356,30 +353,24 @@ public class SDMUtils {
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
 
-      logger.info(
-          "[SecondaryProperties Debug] Comparing property '{}': valueInRequest={}, valueInDB={}",
-          property,
-          valueInMap,
-          valueInDB);
-
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
-        logger.info(
-            "[SecondaryProperties Debug] Property '{}' marked for update. Adding to updatedSecondaryProperties",
-            property);
+        logger.debug(
+            "Property '{}' changed - DB value: {}, Request value: {}",
+            property,
+            valueInDB,
+            valueInMap);
         if (valueInMap != null) {
           updatedSecondaryProperties.put(value, valueInMap.toString());
         } else {
           updatedSecondaryProperties.put(value, null);
         }
-      } else {
-        logger.info("[SecondaryProperties Debug] Property '{}' unchanged, skipping", property);
       }
     }
 
-    logger.info(
-        "[SecondaryProperties Debug] Final updatedSecondaryProperties: {}",
-        updatedSecondaryProperties);
+    logger.debug(
+        "Properties comparison complete - {} properties to update",
+        updatedSecondaryProperties.size());
     return updatedSecondaryProperties;
   }
 

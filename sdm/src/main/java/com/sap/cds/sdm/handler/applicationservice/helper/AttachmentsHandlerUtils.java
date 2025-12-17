@@ -648,31 +648,6 @@ public class AttachmentsHandlerUtils {
     }
   }
 
-  // public static void updateDescriptionProperty(
-  //     String descriptionInDB,
-  //     String descriptionInRequest,
-  //     String descriptionInSDM,
-  //     Map<String, String> updatedSecondaryProperties,
-  //     Boolean isUpdate)
-  //     throws ServiceException {
-  //   if (descriptionInRequest == null) {
-  //     descriptionInRequest = "";
-  //   }
-  //   if (descriptionInDB == null
-  //       && isUpdate) { // Attachment did not contain description and is being updated now
-  //     updatedSecondaryProperties.put("description", descriptionInRequest);
-  //   } else if (descriptionInDB
-  //       == null) { // Attachment contained description during upload and it was changed before
-  //     // saving or description was added before save handler (create) was called
-  //     if (!(descriptionInRequest.equals(descriptionInSDM))) {
-  //       updatedSecondaryProperties.put("description", descriptionInRequest);
-  //     }
-  //   } else if (!(descriptionInDB.equals(
-  //       descriptionInRequest))) { // Attachment contained description and is being updated now
-  //     updatedSecondaryProperties.put("description", descriptionInRequest);
-  //   }
-  // }
-
   public static void updateDescriptionProperty(
       String descriptionInDB,
       String descriptionInRequest,
