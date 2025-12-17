@@ -17,7 +17,7 @@ jobs:
     #needs: blackduck
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_TOKEN }}
 
@@ -28,7 +28,7 @@ jobs:
           maven-version: ${{ env.MAVEN_VERSION }}
 
       - name: Upload Changed Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: root-new-version
           include-hidden-files: true
@@ -40,7 +40,7 @@ jobs:
     needs: update-version
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: root-new-version
 
@@ -51,7 +51,7 @@ jobs:
           maven-version: ${{ env.MAVEN_VERSION }}
 
       - name: Upload Changed Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: root-build
           include-hidden-files: true
@@ -64,7 +64,7 @@ jobs:
     needs: build
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: root-build
 
