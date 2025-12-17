@@ -20,7 +20,7 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-     uploadStatus    : UploadStatusCode default 'Upload In Progress' @Common.Text: statusNav.name;
+     uploadStatus    : UploadStatusCode default 'UploadInProgress';
      statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
       }
 
