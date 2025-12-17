@@ -75,8 +75,7 @@ annotate my.Books.attachments with @UI: {
         Criticality: statusNav.criticality,
         @Common.FieldControl: #ReadOnly,
         @HTML5.CssDefaults: {width: '15%'},
-         ![@UI.Hidden]: {$edmJson: {$Eq: [ {$Path: 'IsActiveEntity'}, true ]}},
-      },
+        @UI.Hidden: IsActiveEntity      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',

@@ -18,7 +18,7 @@ modules:
         SPRING_PROFILES_ACTIVE: cloud,sandbox
         JBP_CONFIG_COMPONENTS: "jres: ['com.sap.xs.java.buildpack.jre.SAPMachineJRE']"
         JBP_CONFIG_SAP_MACHINE_JRE: '{ version: 17.+ }'
-        REPOSITORY_ID: 6c173c2a-005d-49b1-8dcf-33038e614e1d  # Placeholder for REPOSITORY_ID
+        REPOSITORY_ID: 7e4fad32-3fcc-4fc6-b6ba-d50eb6c9f670  # Placeholder for REPOSITORY_ID
         INCOMING_REQUEST_TIMEOUT: 3600000
         INCOMING_SESSION_TIMEOUT: 3600000
         INCOMING_CONNECTION_TIMEOUT: 3600000
@@ -31,7 +31,7 @@ modules:
       - name: demoappjava-hdi-container
       - name: demoappjava-public-uaa
       - name: cf-logging
-      - name: sdmtmtest
+      - name: sdm
     provides:
       - name: srv-api
         properties:
@@ -103,8 +103,8 @@ resources:
     parameters:
       service: application-logs
       service-plan: lite
-  - name: sdmtmtest
+  - name: sdm
     type: org.cloudfoundry.managed-service
     parameters:
-      service: sdm-us31-local-dev-biswajitm
+      service: sdm
       service-plan: standard

@@ -10,3 +10,8 @@ spring:
   data-source:
     auto-config:
       enabled: false
+cds:
+    data-source:
+        csv:
+            paths:
+            - "./src/main/resources/cds/**"      
