@@ -135,6 +135,12 @@ public class SDMCreateAttachmentsHandlerTest {
       CdsEntity targetEntity = mock(CdsEntity.class);
       when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
       when(context.getTarget()).thenReturn(targetEntity);
+
+      // Mock the attachment entity
+      CdsEntity attachmentEntity = mock(CdsEntity.class);
+      when(context.getModel().findEntity("compositionDefinition"))
+          .thenReturn(Optional.of(attachmentEntity));
+
       // Make validateFileName execute its real implementation, and stub helper methods
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
@@ -144,8 +150,11 @@ public class SDMCreateAttachmentsHandlerTest {
               () ->
                   SDMUtils.FileNameContainsRestrictedCharaters(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptyList());
+      sdmUtilsMockedStatic.when(() -> SDMUtils.getUpIdKey(attachmentEntity)).thenReturn("upId");
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "TestEntity"))
+          .when(
+              () ->
+                  SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "TestEntity", "upId"))
           .thenReturn(duplicateFilenames);
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
@@ -181,7 +190,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // Arrange
     List<CdsData> data = new ArrayList<>();
     sdmUtilsMockedStatic
-        .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity"))
+        .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity", "upId"))
         .thenReturn(Collections.emptySet());
 
     // Act
@@ -218,7 +227,7 @@ public class SDMCreateAttachmentsHandlerTest {
 
       // Mock utility methods
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity"))
+          .when(() -> SDMUtils.FileNameDuplicateInDrafts(data, "compositionName", "entity", "upId"))
           .thenReturn(Collections.emptySet());
 
       // Act
@@ -480,7 +489,7 @@ public class SDMCreateAttachmentsHandlerTest {
           .when(
               () ->
                   SDMUtils.FileNameDuplicateInDrafts(
-                      data, "compositionName", "some.qualified.Name"))
+                      data, "compositionName", "some.qualified.Name", "upId"))
           .thenReturn(new HashSet<>());
 
       // Mock AttachmentsHandlerUtils.fetchAttachments to return the attachment with null filename
@@ -636,7 +645,10 @@ public class SDMCreateAttachmentsHandlerTest {
           .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
           .thenReturn(Collections.emptySet());
       sdmUtilsMockedStatic
-          .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+          .when(
+              () ->
+                  SDMUtils.FileNameDuplicateInDrafts(
+                      anyList(), anyString(), anyString(), anyString()))
           .thenReturn(Collections.emptySet());
       sdmUtilsMockedStatic
           .when(

@@ -1492,7 +1492,7 @@ public class SDMServiceImplTest {
     when(entity.getContent()).thenReturn(inputStream);
 
     List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertNull(objectInfo);
+    assertTrue(objectInfo.isEmpty());
   }
 
   @Test
@@ -1653,6 +1653,381 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testGetRepositoryId_Success() {
+    String jsonString =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"other-repo\",\n"
+            + "        \"id\": \"other-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    // Use reflection to call the private method
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertEquals("internal-repo-123", result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_NotFound() {
+    String jsonString =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertNull(result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_EmptyArray() {
+    String jsonString = "{\n" + "  \"repoAndConnectionInfos\": []\n" + "}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+      String result = (String) method.invoke(sdmServiceImpl, jsonString);
+
+      assertNull(result);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetRepositoryId_InvalidJson() {
+    String invalidJsonString = "invalid json";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    try {
+      java.lang.reflect.Method method =
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+      method.setAccessible(true);
+
+      java.lang.reflect.InvocationTargetException exception =
+          assertThrows(
+              java.lang.reflect.InvocationTargetException.class,
+              () -> {
+                method.invoke(sdmServiceImpl, invalidJsonString);
+              });
+
+      assertTrue(exception.getCause() instanceof ServiceException);
+      ServiceException serviceException = (ServiceException) exception.getCause();
+      assertEquals(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, serviceException.getMessage());
+      assertTrue(
+          serviceException.getCause() instanceof com.fasterxml.jackson.core.JsonParseException);
+    } catch (Exception e) {
+      fail("Exception occurred: " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_Success() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    String changeLogResponse =
+        "{\n"
+            + "  \"changeLogs\": [\n"
+            + "    {\n"
+            + "      \"changeType\": \"created\",\n"
+            + "      \"changeTime\": \"2023-01-01T00:00:00Z\",\n"
+            + "      \"user\": \"test-user\"\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    // Mock first call (repository info)
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+
+      assertNotNull(result);
+      assertTrue(result.has("changeLogs"));
+      JSONArray changeLogs = result.getJSONArray("changeLogs");
+      assertEquals(1, changeLogs.length());
+      assertEquals("created", changeLogs.getJSONObject(0).getString("changeType"));
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_RepositoryNotFound() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    String changeLogResponse = "{\n" + "  \"changeLogs\": []\n" + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    HttpEntity changeLogEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogResponse1.getEntity()).thenReturn(changeLogEntity);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+      JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
+
+      assertNotNull(result);
+      assertTrue(result.has("changeLogs"));
+      JSONArray changeLogs = result.getJSONArray("changeLogs");
+      assertEquals(0, changeLogs.length());
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_ChangeLogRequestFails() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    CloseableHttpResponse changeLogResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
+    StatusLine changeLogStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
+
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
+    when(changeLogResponse1.getStatusLine()).thenReturn(changeLogStatusLine);
+    when(changeLogStatusLine.getStatusCode()).thenReturn(404);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
+
+      assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, exception.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetChangeLog_RepositoryIOException() throws IOException {
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
+            });
+
+    assertEquals("Failed to get repository info.", exception.getMessage());
+  }
+
+  @Test
+  public void testGetChangeLog_ChangeLogIOException() throws IOException {
+    String repositoryResponse =
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://test-url/");
+    String objectId = "test-object-id";
+
+    CloseableHttpResponse repositoryResponse1 = mock(CloseableHttpResponse.class);
+    HttpEntity repositoryEntity = mock(HttpEntity.class);
+    StatusLine repositoryStatusLine = mock(StatusLine.class);
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
+        .thenReturn(httpClient);
+
+    when(httpClient.execute(any(HttpGet.class)))
+        .thenReturn(repositoryResponse1)
+        .thenThrow(new IOException("Network error on changelog"));
+
+    when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
+    when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
+    when(repositoryStatusLine.getStatusCode()).thenReturn(200);
+
+    try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
+      entityUtilsMock
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
+
+      SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+      ServiceException exception =
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
+
+      assertEquals(SDMConstants.FETCH_CHANGELOG_ERROR, exception.getMessage());
+    }
+  }
+
+  @Test
   public void testEditLink_technicalUserFlow() throws IOException {
     String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
 
@@ -1712,5 +2087,818 @@ public class SDMServiceImplTest {
     expectedResponse.put("objectId", "objectId");
     expectedResponse.put("status", "success");
     assertEquals(expectedResponse.toString(), actualResponse.toString());
+  }
+
+  @Test
+  public void testMoveAttachment_WithSystemUser_Success() throws IOException {
+    String mockResponseBody =
+        "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals(mockResponseBody, result);
+    verify(httpClient, times(1)).execute(any(HttpPost.class));
+  }
+
+  @Test
+  public void testMoveAttachment_WithNamedUser_Success() throws IOException {
+    String mockResponseBody =
+        "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, false);
+
+    assertNotNull(result);
+    assertEquals(mockResponseBody, result);
+    verify(httpClient, times(1)).execute(any(HttpPost.class));
+  }
+
+  @Test
+  public void testMoveAttachment_WithErrorResponse_ThrowsServiceException() throws IOException {
+    String errorResponseBody =
+        "{\"exception\": \"ObjectNotFoundException\", \"message\": \"Object not found in SDM\"}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(404);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(errorResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+
+    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+  }
+
+  @Test
+  public void testMoveAttachment_WithIOException_ThrowsServiceException() throws IOException {
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+
+    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+  }
+
+  @Test
+  public void testMoveAttachment_VerifyRequestParameters() throws IOException {
+    String mockResponseBody = "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\"}}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("testRepoId");
+    cmisDocument.setObjectId("object123");
+    cmisDocument.setSourceFolderId("sourceFolder456");
+    cmisDocument.setFolderId("targetFolder789");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(201);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true);
+
+    assertNotNull(result);
+    verify(httpClient, times(1)).execute(any(HttpPost.class));
+    verify(tokenHandler, times(1))
+        .getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW));
+  }
+
+  @Test
+  public void testMoveAttachment_WithEmptyResponse_ReturnsEmptyString() throws IOException {
+    String mockResponseBody = "";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("", result);
+  }
+
+  @Test
+  public void testMoveAttachment_WithNullEntity_ReturnsEmptyString() throws IOException {
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(null);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("", result);
+  }
+
+  @Test
+  public void testMoveAttachment_WithBadRequest_ThrowsServiceException() throws IOException {
+    String errorResponseBody =
+        "{\"exception\": \"InvalidArgumentException\", \"message\": \"Invalid folder ID\"}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("invalidFolderId");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(400);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(errorResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+
+    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+  }
+
+  @Test
+  public void testMoveAttachment_WithUnauthorized_ThrowsServiceException() throws IOException {
+    String errorResponseBody =
+        "{\"exception\": \"PermissionDeniedException\", \"message\": \"User not authorized\"}";
+
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setRepositoryId("repositoryId");
+    cmisDocument.setObjectId("objectId123");
+    cmisDocument.setSourceFolderId("sourceFolderId123");
+    cmisDocument.setFolderId("targetFolderId456");
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(403);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(errorResponseBody.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, false));
+
+    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+  }
+
+  @Test
+  void testGetLinkUrl_WithSystemUser_Success() throws IOException {
+    String objectId = "objectId123";
+    String linkContent = "[InternetShortcut]\nURL=https://example.com/document";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("https://example.com/document", result);
+    verify(httpClient, times(1)).execute(any(HttpGet.class));
+  }
+
+  @Test
+  void testGetLinkUrl_WithNamedUser_Success() throws IOException {
+    String objectId = "objectId456";
+    String linkContent = "[InternetShortcut]\nURL=https://external.com/file.pdf";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, false);
+
+    assertNotNull(result);
+    assertEquals("https://external.com/file.pdf", result);
+    verify(tokenHandler, times(1))
+        .getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW));
+  }
+
+  @Test
+  void testGetLinkUrl_WithUrlContainingSpaces_TrimsCorrectly() throws IOException {
+    String objectId = "objectId789";
+    String linkContent = "[InternetShortcut]\nURL=  https://example.com/path  \n";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("https://example.com/path", result);
+  }
+
+  @Test
+  void testGetLinkUrl_WithMultipleLines_ExtractsCorrectUrl() throws IOException {
+    String objectId = "objectId999";
+    String linkContent =
+        "[InternetShortcut]\nURL=https://example.com/document\nIconIndex=0\nIconFile=C:\\Windows\\System32\\shell32.dll";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("https://example.com/document", result);
+  }
+
+  @Test
+  void testGetLinkUrl_WithNon200Response_ReturnsNull() throws IOException {
+    String objectId = "objectId404";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(404);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNull(result);
+    verify(httpClient, times(1)).execute(any(HttpGet.class));
+  }
+
+  @Test
+  void testGetLinkUrl_WithUnauthorizedResponse_ReturnsNull() throws IOException {
+    String objectId = "objectId403";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(403);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, false);
+
+    assertNull(result);
+  }
+
+  @Test
+  void testGetLinkUrl_WithNoUrlInContent_ReturnsNull() throws IOException {
+    String objectId = "objectId555";
+    String linkContent = "[InternetShortcut]\nIconIndex=0\nIconFile=shell32.dll";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNull(result);
+  }
+
+  @Test
+  void testGetLinkUrl_WithEmptyContent_ReturnsNull() throws IOException {
+    String objectId = "objectId888";
+    String linkContent = "";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNull(result);
+  }
+
+  @Test
+  void testGetLinkUrl_WithIOException_ThrowsServiceException() throws IOException {
+    String objectId = "objectIdError";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true));
+
+    assertEquals("Failed to fetch link URL", exception.getMessage());
+  }
+
+  @Test
+  void testGetLinkUrl_VerifyCorrectUrlConstruction() throws IOException {
+    String objectId = "testObjectId";
+    String linkContent = "[InternetShortcut]\nURL=https://test.com";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm-service.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("https://test.com", result);
+    verify(httpClient, times(1)).execute(any(HttpGet.class));
+  }
+
+  @Test
+  void testGetLinkUrl_WithUrlEqualsEmpty_ReturnsEmptyString() throws IOException {
+    String objectId = "objectIdEmpty";
+    String linkContent = "[InternetShortcut]\nURL=";
+
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("https://sdm.example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
+        .thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream(linkContent.getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    String result = sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertEquals("", result);
+  }
+
+  @Test
+  void testExtractCustomProperties_WithValidProperties_ExtractsAll() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("customProp1", "value1");
+    props.put("customProp2", "value2");
+    props.put("customProp3", 123);
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    customPropertiesInSDM.add("customProp1");
+    customPropertiesInSDM.add("customProp2");
+    customPropertiesInSDM.add("customProp3");
+
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
+
+    assertEquals("value1", resultMap.get("customProp1"));
+    assertEquals("value2", resultMap.get("customProp2"));
+    assertEquals("123", resultMap.get("customProp3"));
+  }
+
+  @Test
+  void testExtractCustomProperties_WithNullValue_StoresNullString() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("customProp1", JSONObject.NULL);
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    customPropertiesInSDM.add("customProp1");
+
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
+
+    // JSONObject.NULL.toString() returns "null" string
+    assertEquals("null", resultMap.get("customProp1"));
+  }
+
+  @Test
+  void testExtractCustomProperties_WithNullProps_DoesNothing() throws Exception {
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    customPropertiesInSDM.add("customProp1");
+
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, null, customPropertiesInSDM, resultMap);
+
+    assertTrue(resultMap.isEmpty());
+  }
+
+  @Test
+  void testExtractCustomProperties_WithNullCustomPropertiesSet_DoesNothing() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("customProp1", "value1");
+
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, props, null, resultMap);
+
+    assertTrue(resultMap.isEmpty());
+  }
+
+  @Test
+  void testExtractCustomProperties_WithEmptyCustomPropertiesSet_DoesNothing() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("customProp1", "value1");
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
+
+    assertTrue(resultMap.isEmpty());
+  }
+
+  @Test
+  void testExtractCustomProperties_WithMissingProperty_SkipsIt() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("customProp1", "value1");
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    customPropertiesInSDM.add("customProp1");
+    customPropertiesInSDM.add("customProp2"); // This property doesn't exist in props
+
+    Map<String, String> resultMap = new HashMap<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+    method.setAccessible(true);
+    method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
+
+    assertEquals(1, resultMap.size());
+    assertEquals("value1", resultMap.get("customProp1"));
+    assertNull(resultMap.get("customProp2"));
+  }
+
+  @Test
+  void testExtractProperty_WithNonNullProps_ReturnsFromProps() throws Exception {
+    JSONObject props = new JSONObject();
+    props.put("testProperty", "valueFromProps");
+
+    JSONObject jsonObject = new JSONObject();
+    jsonObject.put("testProperty", "valueFromJsonObject");
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(sdmServiceImpl, props, jsonObject, "testProperty");
+
+    assertEquals("valueFromProps", result);
+  }
+
+  @Test
+  void testExtractProperty_WithNullProps_ReturnsFromJsonObject() throws Exception {
+    JSONObject jsonObject = new JSONObject();
+    jsonObject.put("testProperty", "valueFromJsonObject");
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(sdmServiceImpl, null, jsonObject, "testProperty");
+
+    assertEquals("valueFromJsonObject", result);
+  }
+
+  @Test
+  void testExtractProperty_WithMissingProperty_ReturnsEmptyString() throws Exception {
+    JSONObject props = new JSONObject();
+    JSONObject jsonObject = new JSONObject();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
+    method.setAccessible(true);
+    String result = (String) method.invoke(sdmServiceImpl, props, jsonObject, "missingProperty");
+
+    assertEquals("", result);
+  }
+
+  @Test
+  void testProcessCopyAttachmentResponse_WithAllProperties_ExtractsCorrectly() throws Exception {
+    String responseBody =
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\","
+            + "\"customProp2\": \"customValue2\""
+            + "}}";
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+    customPropertiesInSDM.add("customProp1");
+    customPropertiesInSDM.add("customProp2");
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
+    method.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<String, String> result =
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+
+    assertEquals("test.pdf", result.get("cmis:name"));
+    assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
+    assertEquals("Test document", result.get("cmis:description"));
+    assertEquals("obj123", result.get("cmis:objectId"));
+    assertEquals("customValue1", result.get("customProp1"));
+    assertEquals("customValue2", result.get("customProp2"));
+  }
+
+  @Test
+  void testProcessCopyAttachmentResponse_WithoutSuccinctProperties_UsesRootLevel()
+      throws Exception {
+    String responseBody =
+        "{"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\""
+            + "}";
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
+    method.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<String, String> result =
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+
+    assertEquals("test.pdf", result.get("cmis:name"));
+    assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
+    assertEquals("Test document", result.get("cmis:description"));
+    assertEquals("obj123", result.get("cmis:objectId"));
+  }
+
+  @Test
+  void testProcessCopyAttachmentResponse_WithNullCustomProperties_ExtractsStandardOnly()
+      throws Exception {
+    String responseBody =
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\""
+            + "}}";
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
+    method.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<String, String> result =
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, null);
+
+    assertEquals("test.pdf", result.get("cmis:name"));
+    assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
+    assertEquals("Test document", result.get("cmis:description"));
+    assertEquals("obj123", result.get("cmis:objectId"));
+    assertNull(result.get("customProp1"));
+  }
+
+  @Test
+  void testProcessCopyAttachmentResponse_WithEmptyCustomPropertiesSet_ExtractsStandardOnly()
+      throws Exception {
+    String responseBody =
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\""
+            + "}}";
+
+    Set<String> customPropertiesInSDM = new HashSet<>();
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    java.lang.reflect.Method method =
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
+    method.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<String, String> result =
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+
+    assertEquals(4, result.size());
+    assertEquals("test.pdf", result.get("cmis:name"));
+    assertNull(result.get("customProp1"));
   }
 }

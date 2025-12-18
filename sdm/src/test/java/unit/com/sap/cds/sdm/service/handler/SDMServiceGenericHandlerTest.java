@@ -56,6 +56,7 @@ public class SDMServiceGenericHandlerTest {
   @Mock private DBQuery dbQuery;
   @Mock private TokenHandler tokenHandler;
   @Mock private EventContext mockContext;
+  @Mock private AttachmentMoveRequestContext mockMoveContext;
   @Mock private CdsModel cdsModel;
   @Mock private CqnSelect cqnSelect;
   @Mock private CdsEntity cdsEntity;
@@ -105,6 +106,262 @@ public class SDMServiceGenericHandlerTest {
   void tearDown() {
     cqnAnalyzerMock.close();
     sdmUtilsMock.close();
+  }
+
+  @Test
+  void testChangelogSuccess() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "test-id-123");
+
+    JSONObject mockChangeLogResult = new JSONObject();
+    mockChangeLogResult.put("changes", "change data");
+    mockChangeLogResult.put("version", "1.0");
+
+    cmisDocument.setFileName("test-document.pdf");
+    cmisDocument.setObjectId("object-123");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog("object-123", sdmCredentials, false))
+        .thenReturn(mockChangeLogResult);
+
+    // Act
+    sdmServiceGenericHandler.changelog(mockLogContext);
+
+    // Assert
+    verify(mockLogContext)
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "test-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("changes")
+                      && jsonResult.has("version");
+                }));
+
+    verify(dbQuery).getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123");
+    verify(tokenHandler).getSDMCredentials();
+    verify(sdmService).getChangeLog("object-123", sdmCredentials, false);
+  }
+
+  @Test
+  void testChangelogWithSystemUser() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "system-id-456");
+
+    JSONObject mockChangeLogResult = new JSONObject();
+    mockChangeLogResult.put("systemChanges", "system change data");
+
+    cmisDocument.setFileName("system-document.pdf");
+    cmisDocument.setObjectId("system-object-456");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("SystemService.SystemEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(true);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("SystemService.SystemEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "system-id-456"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
+        .thenReturn(mockChangeLogResult);
+
+    // Act
+    sdmServiceGenericHandler.changelog(mockLogContext);
+
+    // Assert
+    verify(mockLogContext)
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "system-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("systemChanges");
+                }));
+
+    verify(sdmService).getChangeLog("system-object-456", sdmCredentials, true);
+  }
+
+  @Test
+  void testChangelogEntityNotFound() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("NonExistent.Entity.attachments");
+
+    // Mock entity not found
+    when(cdsModel.findEntity("NonExistent.Entity.attachments_drafts")).thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(
+        RuntimeException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
+  }
+
+  @Test
+  void testChangelogServiceException() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "error-id-789");
+
+    cmisDocument.setFileName("error-document.pdf");
+    cmisDocument.setObjectId("error-object-789");
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("ErrorService.ErrorEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("ErrorService.ErrorEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "error-id-789"))
+        .thenReturn(cmisDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service to throw ServiceException (runtime exception)
+    when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
+        .thenThrow(new ServiceException("Network error"));
+
+    // Act & Assert
+    assertThrows(
+        ServiceException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
+
+    verify(sdmService).getChangeLog("error-object-789", sdmCredentials, false);
+  }
+
+  @Test
+  void testChangelogWithNullObjectId() throws IOException {
+    // Arrange
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "null-object-id");
+
+    CmisDocument nullObjectIdDocument = new CmisDocument();
+    nullObjectIdDocument.setFileName("null-object-document.pdf");
+    nullObjectIdDocument.setObjectId(null);
+
+    // Mock the context
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("NullService.NullEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    // Mock the model and entity
+    when(cdsModel.findEntity("NullService.NullEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+
+    // Mock CqnAnalyzer
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    // Mock DB query to return document with null objectId
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "null-object-id"))
+        .thenReturn(nullObjectIdDocument);
+
+    // Mock token handler
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM service
+    when(sdmService.getChangeLog(null, sdmCredentials, false))
+        .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
+
+    // Act & Assert
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
   }
 
   @Test
@@ -167,11 +424,19 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -265,11 +530,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -328,11 +602,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -387,11 +670,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/URL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -450,11 +742,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -517,11 +818,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -590,11 +900,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -663,11 +982,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -734,11 +1062,20 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    // Mock parent entity for key extraction
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    CdsElement mockKeyElement = mock(CdsElement.class);
+    when(mockKeyElement.isKey()).thenReturn(true);
+    when(mockKeyElement.getName()).thenReturn("ID");
+    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
+
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
         .thenReturn(
-            "{\"SELECT\":{\"from\":{\"ref\":[\"entity1\",{\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1154,6 +1491,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1212,6 +1552,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/invalid\\name");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1270,6 +1613,9 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
+    when(cqnSelect.toString())
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1543,10 +1889,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
@@ -1572,6 +1914,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(draftLinksResult)
         .thenReturn(activeResult);
 
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
             "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
@@ -1590,7 +1934,7 @@ public class SDMServiceGenericHandlerTest {
           }
         });
 
-    verify(persistenceService, atLeast(1)).run(any(CqnSelect.class));
+    verify(persistenceService, times(2)).run(any(CqnSelect.class));
     verify(tokenHandler, times(1)).getSDMCredentials();
     verify(context, times(1)).getUserInfo();
   }
@@ -1611,10 +1955,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result emptyResult = mock(Result.class);
     when(emptyResult.iterator()).thenReturn(Collections.emptyIterator());
     when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
@@ -1624,6 +1964,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(true);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
@@ -1664,10 +2006,6 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Attachments_drafts")).thenReturn(Optional.of(draftEntity));
     when(model.findEntity("AdminService.Attachments")).thenReturn(Optional.of(activeEntity));
 
-    CdsElement upElement = mock(CdsElement.class);
-    when(draftEntity.elements()).thenReturn(Stream.of(upElement));
-    when(upElement.getName()).thenReturn("up__ID");
-
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
@@ -1691,6 +2029,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
@@ -1915,6 +2255,13 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(Optional.of(attachmentActiveEntity));
 
     CdsElement upElement = mock(CdsElement.class);
+    CdsElement upAssociation = mock(CdsElement.class);
+    CdsAssociationType upAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(attachmentDraftEntity.findAssociation("up_")).thenReturn(Optional.of(upAssociation));
+    when(upAssociation.getType()).thenReturn(upAssocType);
+    when(upAssocType.refs()).thenReturn(Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
     when(attachmentDraftEntity.elements()).thenReturn(Stream.of(upElement));
     when(upElement.getName()).thenReturn("up__ID");
 
@@ -1926,6 +2273,9 @@ public class SDMServiceGenericHandlerTest {
 
     Result emptyDraftLinksResult = mock(Result.class);
     when(emptyDraftLinksResult.iterator()).thenReturn(Collections.emptyIterator());
+
+    // Mock SDMUtils.getUpIdKey to return non-null value
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(attachmentDraftEntity)).thenReturn("up__ID");
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -2648,6 +2998,20 @@ public class SDMServiceGenericHandlerTest {
     // Mock upId key extraction for attachment entities
     CdsElement upElement1 = mock(CdsElement.class);
     CdsElement upElement2 = mock(CdsElement.class);
+    CdsElement upAssociation1 = mock(CdsElement.class);
+    CdsAssociationType upAssocType1 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef1 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity1.findAssociation("up_")).thenReturn(Optional.of(upAssociation1));
+    when(upAssociation1.getType()).thenReturn(upAssocType1);
+    when(upAssocType1.refs()).thenReturn(Stream.of(mockRef1));
+    when(mockRef1.path()).thenReturn("ID");
+    CdsElement upAssociation2 = mock(CdsElement.class);
+    CdsAssociationType upAssocType2 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef2 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity2.findAssociation("up_")).thenReturn(Optional.of(upAssociation2));
+    when(upAssociation2.getType()).thenReturn(upAssocType2);
+    when(upAssocType2.refs()).thenReturn(Stream.of(mockRef2));
+    when(mockRef2.path()).thenReturn("ID");
     when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
     when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
     when(upElement1.getName()).thenReturn("up__ID");
@@ -2981,6 +3345,27 @@ public class SDMServiceGenericHandlerTest {
     CdsElement upElement1 = mock(CdsElement.class);
     CdsElement upElement2 = mock(CdsElement.class);
     CdsElement upElement3 = mock(CdsElement.class);
+    CdsElement upAssociation1 = mock(CdsElement.class);
+    CdsAssociationType upAssocType1 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef1 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity1.findAssociation("up_")).thenReturn(Optional.of(upAssociation1));
+    when(upAssociation1.getType()).thenReturn(upAssocType1);
+    when(upAssocType1.refs()).thenReturn(Stream.of(mockRef1));
+    when(mockRef1.path()).thenReturn("ID");
+    CdsElement upAssociation2 = mock(CdsElement.class);
+    CdsAssociationType upAssocType2 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef2 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity2.findAssociation("up_")).thenReturn(Optional.of(upAssociation2));
+    when(upAssociation2.getType()).thenReturn(upAssocType2);
+    when(upAssocType2.refs()).thenReturn(Stream.of(mockRef2));
+    when(mockRef2.path()).thenReturn("ID");
+    CdsElement upAssociation3 = mock(CdsElement.class);
+    CdsAssociationType upAssocType3 = mock(CdsAssociationType.class);
+    CqnElementRef mockRef3 = mock(CqnElementRef.class);
+    when(attachmentDraftEntity3.findAssociation("up_")).thenReturn(Optional.of(upAssociation3));
+    when(upAssociation3.getType()).thenReturn(upAssocType3);
+    when(upAssocType3.refs()).thenReturn(Stream.of(mockRef3));
+    when(mockRef3.path()).thenReturn("ID");
     when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
     when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
     when(attachmentDraftEntity3.elements()).thenReturn(Stream.of(upElement3));
@@ -2994,6 +3379,9 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Mock SDMUtils.getUpIdKey to return non-null value for all attachment entities
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any(CdsEntity.class))).thenReturn("up__ID");
 
     // Mock the static method call
     try (var attachmentUtilsMock =
@@ -3059,5 +3447,313 @@ public class SDMServiceGenericHandlerTest {
                   eq(model), eq(targetEntity), eq(persistenceService)),
           times(1));
     }
+  }
+
+  // ============ Unit Tests for moveAttachments Method ============
+
+  @Test
+  void testMoveAttachments_WithAllParameters_Success() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("123");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("source-folder-id");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2, obj3");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("MyService.SourceEntity.attachments");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.TargetEntity.attachments");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    expectedResult.put("movedCount", 3);
+    expectedResult.put("failedCount", 0);
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
+    verify(attachmentService, times(1)).moveAttachments(captor.capture(), eq(false));
+
+    MoveAttachmentInput input = captor.getValue();
+    assertEquals("source-folder-id", input.sourceFolderId());
+    assertEquals("123", input.targetUpId());
+    assertEquals("MyService.TargetEntity.attachments", input.targetFacet());
+    assertEquals(List.of("obj1", "obj2", "obj3"), input.objectIds());
+    assertEquals(Optional.of("MyService.SourceEntity.attachments"), input.sourceFacet());
+
+    verify(mockMoveContext, times(1)).setResult(expectedResult);
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_WithoutSourceFacet_Success() throws IOException {
+    // Arrange - sourceFacet is null
+    when(mockMoveContext.get("up__ID")).thenReturn("456");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-123");
+    when(mockMoveContext.get("objectIds")).thenReturn("objA, objB");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null); // No source facet
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.NewEntity.attachments");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(true);
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    expectedResult.put("movedCount", 2);
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(true)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
+    verify(attachmentService, times(1)).moveAttachments(captor.capture(), eq(true));
+
+    MoveAttachmentInput input = captor.getValue();
+    assertEquals("folder-123", input.sourceFolderId());
+    assertEquals("456", input.targetUpId());
+    assertEquals("MyService.NewEntity.attachments", input.targetFacet());
+    assertEquals(List.of("objA", "objB"), input.objectIds());
+    assertEquals(Optional.empty(), input.sourceFacet()); // Should be empty when null
+
+    verify(mockMoveContext, times(1)).setResult(expectedResult);
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_WithSingleObjectId_Success() throws IOException {
+    // Arrange - single object ID
+    when(mockMoveContext.get("up__ID")).thenReturn("999");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("src-folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("single-obj-id");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source.Entity");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target.Entity");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    expectedResult.put("movedCount", 1);
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
+    verify(attachmentService, times(1)).moveAttachments(captor.capture(), eq(false));
+
+    MoveAttachmentInput input = captor.getValue();
+    assertEquals(List.of("single-obj-id"), input.objectIds());
+    assertEquals(1, input.objectIds().size());
+
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_WithWhitespaceInObjectIds_TrimsCorrectly() throws IOException {
+    // Arrange - object IDs with various whitespace
+    when(mockMoveContext.get("up__ID")).thenReturn("100");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-id");
+    when(mockMoveContext.get("objectIds")).thenReturn("  obj1  ,  obj2  ,obj3,  obj4  ");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Entity.attachments");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
+    verify(attachmentService, times(1)).moveAttachments(captor.capture(), eq(false));
+
+    MoveAttachmentInput input = captor.getValue();
+    // Verify trimming worked correctly
+    assertEquals(List.of("obj1", "obj2", "obj3", "obj4"), input.objectIds());
+  }
+
+  @Test
+  void testMoveAttachments_WithSystemUser_PassesCorrectFlag() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("system-user-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(true); // System user
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(true)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    verify(attachmentService, times(1)).moveAttachments(any(MoveAttachmentInput.class), eq(true));
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_WithNonSystemUser_PassesCorrectFlag() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("regular-user-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false); // Non-system user
+
+    Map<String, Object> expectedResult = new HashMap<>();
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(expectedResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    verify(attachmentService, times(1)).moveAttachments(any(MoveAttachmentInput.class), eq(false));
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_ReturnsResultFromService() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("result-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2");
+    when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    Map<String, Object> serviceResult = new HashMap<>();
+    serviceResult.put("movedCount", 2);
+    serviceResult.put("failedCount", 0);
+    serviceResult.put("failedAttachments", Collections.emptyList());
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(serviceResult);
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    verify(mockMoveContext, times(1)).setResult(serviceResult);
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_ThrowsIOException_Propagates() {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("error-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    // Mock attachmentService to throw IOException wrapped in RuntimeException
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenAnswer(
+            invocation -> {
+              throw new IOException("Move operation failed");
+            });
+
+    // Act & Assert
+    assertThrows(
+        IOException.class, () -> sdmServiceGenericHandler.moveAttachments(mockMoveContext));
+
+    verify(mockMoveContext, never()).setCompleted(); // Should not be called when exception occurs
+  }
+
+  @Test
+  void testMoveAttachments_ContextSetCompleted_CalledOnce() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("complete-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("Target");
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(new HashMap<>());
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    verify(mockMoveContext, times(1)).setCompleted();
+  }
+
+  @Test
+  void testMoveAttachments_UsesTargetQualifiedName_AsTargetFacet() throws IOException {
+    // Arrange
+    when(mockMoveContext.get("up__ID")).thenReturn("qname-test");
+    when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
+    when(mockMoveContext.get("objectIds")).thenReturn("obj1");
+    when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName())
+        .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name
+
+    UserInfo userInfo = mock(UserInfo.class);
+    when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
+        .thenReturn(new HashMap<>());
+
+    // Act
+    sdmServiceGenericHandler.moveAttachments(mockMoveContext);
+
+    // Assert
+    ArgumentCaptor<MoveAttachmentInput> captor = ArgumentCaptor.forClass(MoveAttachmentInput.class);
+    verify(attachmentService, times(1)).moveAttachments(captor.capture(), eq(false));
+
+    MoveAttachmentInput input = captor.getValue();
+    assertEquals(
+        "com.example.MyService.MyEntity.attachments",
+        input.targetFacet()); // Uses full qualified name
   }
 }

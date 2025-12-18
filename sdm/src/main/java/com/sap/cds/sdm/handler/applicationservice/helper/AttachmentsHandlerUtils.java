@@ -559,9 +559,17 @@ public class AttachmentsHandlerUtils {
    * @return true if any validation errors are found, false otherwise
    */
   public static Boolean validateFileNames(
-      EventContext context, List<CdsData> data, String composition, String contextInfo) {
+      EventContext context,
+      List<CdsData> data,
+      String composition,
+      String contextInfo,
+      Optional<CdsEntity> attachmentEntity) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
+    String upIdKey = "";
+    if (attachmentEntity.isPresent()) {
+      upIdKey = SDMUtils.getUpIdKey(attachmentEntity.get());
+    }
 
     // Validation for file names
     Set<String> whitespaceFilenames =
@@ -569,7 +577,7 @@ public class AttachmentsHandlerUtils {
     List<String> restrictedFileNames =
         SDMUtils.FileNameContainsRestrictedCharaters(data, composition, targetEntity);
     Set<String> duplicateFilenames =
-        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity);
+        SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity, upIdKey);
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
@@ -620,11 +628,16 @@ public class AttachmentsHandlerUtils {
    * @throws ServiceException if filename validation fails
    */
   public static void updateFilenameProperty(
-      String fileNameInDB, String filenameInRequest, Map<String, String> updatedSecondaryProperties)
+      String fileNameInDB,
+      String filenameInRequest,
+      String fileNameInSDM,
+      Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
-        updatedSecondaryProperties.put("filename", filenameInRequest);
+        if (!filenameInRequest.equals(fileNameInSDM)) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        }
       } else {
         throw new ServiceException("Filename cannot be empty");
       }
@@ -637,25 +650,33 @@ public class AttachmentsHandlerUtils {
     }
   }
 
-  /**
-   * Updates the description property in the secondary properties map if needed.
-   *
-   * @param descriptionInDB the description currently in the database
-   * @param descriptionInRequest the description from the request
-   * @param updatedSecondaryProperties the map to update
-   */
   public static void updateDescriptionProperty(
       String descriptionInDB,
       String descriptionInRequest,
-      Map<String, String> updatedSecondaryProperties) {
-    if (descriptionInDB == null) {
-      if (descriptionInRequest != null) {
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+      String descriptionInSDM,
+      Map<String, String> updatedSecondaryProperties,
+      Boolean isUpdate)
+      throws ServiceException {
+    // Normalize null to empty string for comparison
+    String normalizedRequest = descriptionInRequest == null ? "" : descriptionInRequest;
+    String normalizedDB = descriptionInDB == null ? "" : descriptionInDB;
+    String normalizedSDM = descriptionInSDM == null ? "" : descriptionInSDM;
+
+    if (descriptionInDB == null
+        && isUpdate) { // Attachment did not contain description and is being updated now
+      // Only update if the request actually has a value different from what's in SDM
+      if (!normalizedRequest.isEmpty() && !normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
       }
-    } else {
-      if (descriptionInRequest != null && !descriptionInDB.equals(descriptionInRequest)) {
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+    } else if (descriptionInDB
+        == null) { // Attachment contained description during upload and it was changed before
+      // saving or description was added before save handler (create) was called
+      if (!normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
       }
+    } else if (!normalizedDB.equals(
+        normalizedRequest)) { // Attachment contained description and is being updated now
+      updatedSecondaryProperties.put("description", normalizedRequest);
     }
   }
 

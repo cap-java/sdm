@@ -179,7 +179,7 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.validateFileNames(
-                      any(), anyList(), anyString(), anyString()))
+                      any(), anyList(), anyString(), anyString(), any()))
           .thenCallRealMethod();
       attachmentsMockedStatic
           .when(
@@ -210,7 +210,10 @@ public class SDMUpdateAttachmentsHandlerTest {
         Set<String> duplicateFiles = new HashSet<>();
         duplicateFiles.add("file1.txt");
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(
+                () ->
+                    SDMUtils.FileNameDuplicateInDrafts(
+                        anyList(), anyString(), anyString(), anyString()))
             .thenReturn(duplicateFiles);
 
         // Call the method under test; validateFileNames will detect duplicates and call
@@ -397,14 +400,14 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.updateFilenameProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class)))
           .thenAnswer(invocation -> null);
 
       attachmentsMockStatic
           .when(
               () ->
                   AttachmentsHandlerUtils.updateDescriptionProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class), any(Boolean.class)))
           .thenAnswer(invocation -> null);
 
       // Mock handleSDMUpdateResponse
@@ -435,7 +438,7 @@ public class SDMUpdateAttachmentsHandlerTest {
             .when(
                 () ->
                     SDMUtils.FileNameDuplicateInDrafts(
-                        any(List.class), eq("compositionName"), anyString()))
+                        any(List.class), eq("compositionName"), anyString(), anyString()))
             .thenReturn(Collections.emptySet());
 
         sdmUtilsMock

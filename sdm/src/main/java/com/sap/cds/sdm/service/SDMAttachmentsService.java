@@ -11,12 +11,17 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRe
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
+import com.sap.cds.sdm.model.MoveAttachmentInput;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,13 +44,15 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     // Parse facet to extract parent entity and composition name
     String[] facetParts = input.facet().split("\\.");
-    if (facetParts.length < 3) {
+    if (facetParts.length < 2) {
       throw new IllegalArgumentException(
           String.format(SDMUtils.getErrorMessage("INVALID_FACET_FORMAT_ERROR"), input.facet()));
     }
 
-    String parentEntity = facetParts[0] + "." + facetParts[1]; // Service.Entity
-    String compositionName = facetParts[2]; // composition name
+    // The last part is the composition name, everything else is the parent entity
+    String compositionName = facetParts[facetParts.length - 1];
+    String parentEntity = input.facet().substring(0, input.facet().lastIndexOf("."));
+    logger.info("Composition Name: {}, Parent Entity: {}", compositionName, parentEntity);
 
     var copyContext = AttachmentCopyEventContext.create();
     copyContext.setUpId(input.upId());
@@ -55,6 +62,81 @@ public class SDMAttachmentsService extends ServiceDelegator
     copyContext.setSystemUser(isSystemUser);
 
     emit(copyContext);
+  }
+
+  @Override
+  public Map<String, Object> moveAttachments(MoveAttachmentInput input, boolean isSystemUser) {
+    logger.info(
+        "Moving attachments from sourceFolderId: {} (sourceFacet: {}) to upId: {}, targetFacet:"
+            + " {}, objectIds: {}, isSystemUser: {}",
+        input.sourceFolderId(),
+        input.sourceFacet(),
+        input.targetUpId(),
+        input.targetFacet(),
+        input.objectIds(),
+        isSystemUser);
+
+    // Parse target facet to extract parent entity and composition name
+    String[] targetFacetParts = input.targetFacet().split("\\.");
+    if (targetFacetParts.length < 2) {
+      throw new IllegalArgumentException(
+          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.targetFacet()));
+    }
+
+    // The last part is the composition name, everything else is the parent entity
+    String targetCompositionName = targetFacetParts[targetFacetParts.length - 1];
+    String targetParentEntity =
+        input.targetFacet().substring(0, input.targetFacet().lastIndexOf("."));
+    logger.info(
+        "Target Composition Name: {}, Target Parent Entity: {}",
+        targetCompositionName,
+        targetParentEntity);
+
+    // Parse source facet to extract source entity information for cleanup
+    String sourceParentEntity = null;
+    String sourceCompositionName = null;
+    if (input.sourceFacet().isPresent()) {
+      String sourceFacetValue = input.sourceFacet().get();
+      String[] sourceFacetParts = sourceFacetValue.split("\\.");
+      if (sourceFacetParts.length >= 2) {
+        sourceCompositionName = sourceFacetParts[sourceFacetParts.length - 1];
+        sourceParentEntity = sourceFacetValue.substring(0, sourceFacetValue.lastIndexOf("."));
+        logger.info(
+            "Source Composition Name: {}, Source Parent Entity: {}",
+            sourceCompositionName,
+            sourceParentEntity);
+      }
+    }
+
+    var moveContext = AttachmentMoveEventContext.create();
+    moveContext.setSourceFolderId(input.sourceFolderId());
+    moveContext.setSourceParentEntity(sourceParentEntity);
+    moveContext.setSourceCompositionName(sourceCompositionName);
+    moveContext.setUpId(input.targetUpId());
+    moveContext.setParentEntity(targetParentEntity);
+    moveContext.setCompositionName(targetCompositionName);
+    moveContext.setObjectIds(input.objectIds());
+    moveContext.setSystemUser(isSystemUser);
+
+    emit(moveContext);
+
+    // Get the failed attachments and return them in a structured format
+    List<Map<String, String>> failedAttachments = moveContext.getFailedAttachments();
+    if (failedAttachments != null && !failedAttachments.isEmpty()) {
+      logger.warn("Move operation completed with {} failed attachments", failedAttachments.size());
+      for (Map<String, String> failure : failedAttachments) {
+        logger.warn(
+            "  - ObjectId: {}, Reason: {}", failure.get("objectId"), failure.get("failureReason"));
+      }
+    } else {
+      logger.info(
+          "Move operation completed successfully for all {} attachments", input.objectIds().size());
+    }
+
+    // Return structured result that OData can serialize
+    Map<String, Object> result = new HashMap<>();
+    result.put("failedAttachments", failedAttachments != null ? failedAttachments : List.of());
+    return result;
   }
 
   @Override
