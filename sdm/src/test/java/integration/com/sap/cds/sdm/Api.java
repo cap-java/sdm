@@ -3,6 +3,7 @@ package integration.com.sap.cds.sdm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import okio.ByteString;
 
@@ -12,39 +13,90 @@ public class Api implements ApiInterface {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
   private final String serviceName;
+  private static final int MAX_RETRIES = 3;
+  private static final int RETRY_DELAY_MS = 1000;
 
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
-    this.httpClient = new OkHttpClient();
+    this.httpClient =
+            new OkHttpClient.Builder()
+                    .connectTimeout(120, TimeUnit.SECONDS)
+                    .writeTimeout(120, TimeUnit.SECONDS)
+                    .readTimeout(120, TimeUnit.SECONDS)
+                    .build();
     this.token = this.config.get("Authorization");
     this.serviceName = this.config.get("serviceName");
   }
 
+  private Response executeWithRetry(Request request) throws IOException {
+    IOException lastException = null;
+    for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        Response response = httpClient.newCall(request).execute();
+        if (response.code() == 502 && attempt < MAX_RETRIES) {
+          System.out.println(
+                  "Received 502 Bad Gateway, retrying... (attempt "
+                          + attempt
+                          + "/"
+                          + MAX_RETRIES
+                          + ")");
+          response.close();
+          Thread.sleep(RETRY_DELAY_MS);
+          continue;
+        }
+        return response;
+      } catch (java.net.SocketTimeoutException e) {
+        lastException = e;
+        if (attempt < MAX_RETRIES) {
+          System.out.println(
+                  "Socket timeout occurred, retrying... (attempt "
+                          + attempt
+                          + "/"
+                          + MAX_RETRIES
+                          + "): "
+                          + e.getMessage());
+          try {
+            Thread.sleep(RETRY_DELAY_MS);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Retry interrupted", ie);
+          }
+        } else {
+          throw e;
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Retry interrupted", e);
+      }
+    }
+    throw lastException;
+  }
+
   public String createEntityDraft(
-      String appUrl, String entityName, String entityName2, String srvpath) {
+          String appUrl, String entityName, String entityName2, String srvpath) {
     MediaType mediaType = MediaType.parse("application/json");
 
     // Creating the Entity (draft)
     RequestBody body =
-        RequestBody.create(
-            mediaType,
-            "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
-                + entityName2
-                + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}");
+            RequestBody.create(
+                    mediaType,
+                    "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+                            + entityName2
+                            + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}");
 
     Request request =
-        new Request.Builder()
-            .url("https://" + appUrl + "/odata/v4/" + serviceName + "/" + entityName)
-            .method("POST", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url("https://" + appUrl + "/odata/v4/" + serviceName + "/" + entityName)
+                    .method("POST", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         if (response.code() == 401) {
           System.out.println(
-              "Create entity failed due to incorrect token. Please check the credentials");
+                  "Create entity failed due to incorrect token. Please check the credentials");
         }
         System.out.println("Create entity failed. Error : " + response.body().string());
         throw new IOException("Could not create entity");
@@ -60,24 +112,24 @@ public class Api implements ApiInterface {
   public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     MediaType mediaType = MediaType.parse("application/json");
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=true)/"
-                    + srvpath
-                    + ".draftEdit")
-            .post(RequestBody.create("{\"PreserveChanges\":true}", mediaType))
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=true)/"
+                                    + srvpath
+                                    + ".draftEdit")
+                    .post(RequestBody.create("{\"PreserveChanges\":true}", mediaType))
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Edit entity failed. Error : " + response.body().string());
         throw new IOException("Could not edit entity");
@@ -91,49 +143,49 @@ public class Api implements ApiInterface {
 
   public String saveEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=false)/"
-                    + srvpath
-                    + ".draftPrepare")
-            .post(
-                RequestBody.create(
-                    "{\"SideEffectsQualifier\":\"\"}", MediaType.parse("application/json")))
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=false)/"
+                                    + srvpath
+                                    + ".draftPrepare")
+                    .post(
+                            RequestBody.create(
+                                    "{\"SideEffectsQualifier\":\"\"}", MediaType.parse("application/json")))
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Save entity failed. Error : " + response.body().string());
         throw new IOException("Could not save entity");
       } else {
         request =
-            new Request.Builder()
-                .url(
-                    "https://"
-                        + appUrl
-                        + "/odata/v4/"
-                        + serviceName
-                        + "/"
-                        + entityName
-                        + "(ID="
-                        + entityID
-                        + ",IsActiveEntity=false)/"
-                        + srvpath
-                        + ".draftActivate")
-                .post(RequestBody.create("", null))
-                .addHeader("Authorization", token)
-                .build();
+                new Request.Builder()
+                        .url(
+                                "https://"
+                                        + appUrl
+                                        + "/odata/v4/"
+                                        + serviceName
+                                        + "/"
+                                        + entityName
+                                        + "(ID="
+                                        + entityID
+                                        + ",IsActiveEntity=false)/"
+                                        + srvpath
+                                        + ".draftActivate")
+                        .post(RequestBody.create("", null))
+                        .addHeader("Authorization", token)
+                        .build();
 
-        try (Response draftResponse = httpClient.newCall(request).execute()) {
+        try (Response draftResponse = executeWithRetry(request)) {
           if (draftResponse.code() != 200) {
             String draftResponseBodyString = draftResponse.body().string();
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
@@ -157,22 +209,22 @@ public class Api implements ApiInterface {
 
   public String deleteEntity(String appUrl, String entityName, String entityID) {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=true)")
-            .delete()
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=true)")
+                    .delete()
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -186,22 +238,22 @@ public class Api implements ApiInterface {
 
   public String deleteEntityDraft(String appUrl, String entityName, String entityID) {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=false)")
-            .delete()
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=false)")
+                    .delete()
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -215,21 +267,21 @@ public class Api implements ApiInterface {
 
   public String checkEntity(String appUrl, String entityName, String entityID) {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=true)")
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=true)")
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response checkResponse = httpClient.newCall(request).execute()) {
+    try (Response checkResponse = executeWithRetry(request)) {
       if (checkResponse.code() != 200) {
         System.out.println("Verify entity failed. Error : " + checkResponse.body().string());
         throw new IOException("Entity doesn't exist");
@@ -243,14 +295,14 @@ public class Api implements ApiInterface {
   }
 
   public List<String> createAttachment(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      String srvpath,
-      Map<String, Object> postData,
-      File file)
-      throws IOException {
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          String srvpath,
+          Map<String, Object> postData,
+          File file)
+          throws IOException {
     String ID;
     String error = "";
 
@@ -259,33 +311,33 @@ public class Api implements ApiInterface {
 
     MediaType mediaType = MediaType.parse("application/json");
     RequestBody body =
-        RequestBody.create(
-            mediaType, ByteString.encodeUtf8("{\n    \"fileName\" : \"" + fileName + "\"\n}"));
+            RequestBody.create(
+                    mediaType, ByteString.encodeUtf8("{\n    \"fileName\" : \"" + fileName + "\"\n}"));
     Request postRequest =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=false)/"
-                    + facetName)
-            .method("POST", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=false)/"
+                                    + facetName)
+                    .method("POST", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
+                    .build();
 
-    try (Response response = httpClient.newCall(postRequest).execute()) {
+    try (Response response = executeWithRetry(postRequest)) {
       if (response.code() != 201) {
         System.out.println(
-            "Create Attachment in the section: "
-                + facetName
-                + " failed. Error : "
-                + response.body().string());
+                "Create Attachment in the section: "
+                        + facetName
+                        + " failed. Error : "
+                        + response.body().string());
         throw new IOException("Could not read Attachment");
       }
       Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
@@ -295,75 +347,75 @@ public class Api implements ApiInterface {
       // Upload file content into the empty attachment
       RequestBody fileBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
       Request fileRequest =
-          new Request.Builder()
-              .url(
-                  "https://"
-                      + appUrl
-                      + "/odata/v4/"
-                      + serviceName
-                      + "/"
-                      + entityName
-                      + "_"
-                      + facetName
-                      + "(up__ID="
-                      + entityID
-                      + ",ID="
-                      + ID
-                      + ",IsActiveEntity=false)/content")
-              .put(fileBody)
-              .addHeader("Authorization", token)
-              .build();
+              new Request.Builder()
+                      .url(
+                              "https://"
+                                      + appUrl
+                                      + "/odata/v4/"
+                                      + serviceName
+                                      + "/"
+                                      + entityName
+                                      + "_"
+                                      + facetName
+                                      + "(up__ID="
+                                      + entityID
+                                      + ",ID="
+                                      + ID
+                                      + ",IsActiveEntity=false)/content")
+                      .put(fileBody)
+                      .addHeader("Authorization", token)
+                      .build();
 
-      try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
+      try (Response fileResponse = executeWithRetry(fileRequest)) {
         if (fileResponse.code() != 204) {
           String responseBodyString = fileResponse.body().string();
           System.out.println(
-              "Create Attachment in the section: "
-                  + facetName
-                  + " failed. Error : "
-                  + responseBodyString);
+                  "Create Attachment in the section: "
+                          + facetName
+                          + " failed. Error : "
+                          + responseBodyString);
           error = responseBodyString;
           Request request =
-              new Request.Builder()
-                  .url(
-                      "https://"
-                          + appUrl
-                          + "/odata/v4/"
-                          + serviceName
-                          + "/"
-                          + entityName
-                          + "_"
-                          + facetName
-                          + "(up__ID="
-                          + entityID
-                          + ",ID="
-                          + ID
-                          + ",IsActiveEntity=false)")
-                  .delete()
-                  .addHeader("Authorization", token)
-                  .build();
+                  new Request.Builder()
+                          .url(
+                                  "https://"
+                                          + appUrl
+                                          + "/odata/v4/"
+                                          + serviceName
+                                          + "/"
+                                          + entityName
+                                          + "_"
+                                          + facetName
+                                          + "(up__ID="
+                                          + entityID
+                                          + ",ID="
+                                          + ID
+                                          + ",IsActiveEntity=false)")
+                          .delete()
+                          .addHeader("Authorization", token)
+                          .build();
 
-          try (Response deleteResponse = httpClient.newCall(request).execute()) {
+          try (Response deleteResponse = executeWithRetry(request)) {
             if (deleteResponse.code() != 204) {
               System.out.println(
-                  "Delete Attachment in section :"
-                      + facetName
-                      + " failed. Error : "
-                      + deleteResponse.body().string());
+                      "Delete Attachment in section :"
+                              + facetName
+                              + " failed. Error : "
+                              + deleteResponse.body().string());
               throw new IOException(
-                  "Attachment was not created in section : "
-                      + facetName
-                      + " and its container was not deleted : ");
+                      "Attachment was not created in section : "
+                              + facetName
+                              + " and its container was not deleted : ");
             }
             List<String> createResponse = new ArrayList<>();
             createResponse.add(error);
             return createResponse;
           } catch (IOException e) {
             System.out.println(
-                "Attachment was not created in section : "
-                    + facetName
-                    + " and its container was not deleted : "
-                    + e);
+                    "Attachment was not created in section : "
+                            + facetName
+                            + " and its container was not deleted : "
+                            + e);
           }
         }
         long endTime = System.nanoTime(); // Record end time
@@ -385,38 +437,38 @@ public class Api implements ApiInterface {
   }
 
   public String readAttachment(
-      String appUrl, String entityName, String facetName, String entityID, String ID)
-      throws IOException {
+          String appUrl, String entityName, String facetName, String entityID, String ID)
+          throws IOException {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "(ID="
-                    + entityID
-                    + ",IsActiveEntity=true)/"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=true)/content")
-            .addHeader("Authorization", token)
-            .get()
-            .build();
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=true)/"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=true)/content")
+                    .addHeader("Authorization", token)
+                    .get()
+                    .build();
 
     try {
-      Response response = httpClient.newCall(request).execute();
+      Response response = executeWithRetry(request);
       if (!response.isSuccessful()) {
         System.out.println(
-            "Read Attachment failed in the "
-                + facetName
-                + " section. Error :"
-                + response.body().string());
+                "Read Attachment failed in the "
+                        + facetName
+                        + " section. Error :"
+                        + response.body().string());
         throw new IOException("Read Attachment failed in the " + facetName + " section");
       }
       return "OK";
@@ -427,12 +479,354 @@ public class Api implements ApiInterface {
   }
 
   public String readAttachmentDraft(
-      String appUrl, String entityName, String facetName, String entityID, String ID)
-      throws IOException {
+          String appUrl, String entityName, String facetName, String entityID, String ID)
+          throws IOException {
     Request request =
-        new Request.Builder()
-            .url(
-                "https://"
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "(ID="
+                                    + entityID
+                                    + ",IsActiveEntity=false)/"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=false)/content")
+                    .addHeader("Authorization", token)
+                    .get()
+                    .build();
+
+    try {
+      Response response = executeWithRetry(request);
+      if (!response.isSuccessful()) {
+        System.out.println("Read draft attachment failed. Error : " + response.body().string());
+        throw new IOException("Could not read attachment");
+      }
+      return "OK";
+    } catch (IOException e) {
+      System.out.println("Could not read Attachment : " + e);
+      return "Could not read Attachment";
+    }
+  }
+
+  public String deleteAttachment(
+          String appUrl, String entityName, String facetName, String entityID, String ID) {
+    Request request =
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "_"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=false)")
+                    .delete()
+                    .addHeader("Authorization", token)
+                    .build();
+
+    try (Response deleteResponse = executeWithRetry(request)) {
+      if (deleteResponse.code() != 204) {
+        System.out.println(
+                "Delete Attachment failed in the "
+                        + facetName
+                        + " section. Error :"
+                        + deleteResponse.body().string());
+        throw new IOException("Attachment was not deleted in section : " + facetName);
+      }
+      return "Deleted";
+    } catch (IOException e) {
+      System.out.println("Could not delete Attachment:" + facetName + " :" + e);
+      return "Could not delete Attachment";
+    }
+  }
+
+  public String renameAttachment(
+          String appUrl, String entityName, String facetName, String entityID, String ID, String name) {
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody body =
+            RequestBody.create(
+                    mediaType, ByteString.encodeUtf8("{\n    \"fileName\" : \"" + name + "\"\n}"));
+    Request request =
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "_"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=false)")
+                    .method("PATCH", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
+                    .build();
+
+    try (Response renameResponse = executeWithRetry(request)) {
+      if (!renameResponse.isSuccessful()) {
+        System.out.println(
+                "Rename Attachment failed in the "
+                        + facetName
+                        + " section. Error : "
+                        + renameResponse.body().string());
+        throw new IOException("Attachment was not renamed in section: " + facetName);
+      }
+      return "Renamed";
+    } catch (IOException e) {
+      System.out.println("Attachment was not renamed in section: " + facetName + " : " + e);
+      return "Attachment was not renamed in section: " + facetName;
+    }
+  }
+
+  public String updateSecondaryProperty(
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          String ID,
+          RequestBody requestBody) {
+
+    Request request =
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "_"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=false)")
+                    .method("PATCH", requestBody)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
+                    .build();
+
+    try (Response updateResponse = executeWithRetry(request)) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+                "Updating secondary property failed. Error: " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated: " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String updateInvalidSecondaryProperty(
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          String ID,
+          String invalidSecondaryProperty) {
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\n    \"customProperty3\": \"" + invalidSecondaryProperty + "\"\n}";
+    RequestBody body = RequestBody.create(mediaType, ByteString.encodeUtf8(jsonPayload));
+    Request request =
+            new Request.Builder()
+                    .url(
+                            "https://"
+                                    + appUrl
+                                    + "/odata/v4/"
+                                    + serviceName
+                                    + "/"
+                                    + entityName
+                                    + "_"
+                                    + facetName
+                                    + "(up__ID="
+                                    + entityID
+                                    + ",ID="
+                                    + ID
+                                    + ",IsActiveEntity=false)")
+                    .method("PATCH", body)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
+                    .build();
+
+    try (Response updateResponse = executeWithRetry(request)) {
+      if (updateResponse.code() != 200) {
+        System.out.println(
+                "Updating secondary property failed. Error : " + updateResponse.body().string());
+        throw new IOException("Secondary Property was not updated");
+      }
+      return "Updated";
+    } catch (IOException e) {
+      System.out.println("Secondary Property was not updated : " + e);
+      return "Secondary Property was not updated";
+    }
+  }
+
+  public String copyAttachment(
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          List<String> sourceObjectIds)
+          throws IOException {
+    String objectIds = String.join(",", sourceObjectIds);
+    String url =
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=false)/"
+                    + facetName
+                    + "/"
+                    + serviceName
+                    + ".copyAttachments";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+            "{" + "\"up__ID\": \"" + entityID + "\"," + "\"objectIds\": \"" + objectIds + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+            new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+                "Could not copy attachments: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachments copied successfully";
+    } catch (IOException e) {
+      System.out.println("Error while copying attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String createLink(
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          String linkName,
+          String linkUrl)
+          throws IOException {
+    String url =
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=false)/"
+                    + facetName
+                    + "/"
+                    + serviceName
+                    + ".createLink";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload =
+            "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+            new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+                "Could not create link: " + response.code() + " - " + response.body().string());
+      }
+      return "Link created successfully";
+    } catch (IOException e) {
+      System.out.println("Error while creating link: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String openAttachment(
+          String appUrl, String entityName, String facetName, String entityID, String ID)
+          throws IOException {
+    String url =
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/Books(ID="
+                    + entityID
+                    + ",IsActiveEntity=true)"
+                    + "/"
+                    + facetName
+                    + "(up__ID="
+                    + entityID
+                    + ",ID="
+                    + ID
+                    + ",IsActiveEntity=true)"
+                    + "/"
+                    + serviceName
+                    + ".openAttachment";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonPayload = "{}";
+
+    RequestBody body = RequestBody.create(mediaType, jsonPayload);
+
+    Request request =
+            new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+                "Could not open attachment: " + response.code() + " - " + response.body().string());
+      }
+      return "Attachment opened successfully";
+    } catch (IOException e) {
+      System.out.println("Error while opening attachment: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  public String editLink(
+          String appUrl,
+          String entityName,
+          String facetName,
+          String entityID,
+          String ID,
+          String linkUrl)
+          throws IOException {
+
+    String url =
+            "https://"
                     + appUrl
                     + "/odata/v4/"
                     + serviceName
@@ -446,351 +840,9 @@ public class Api implements ApiInterface {
                     + entityID
                     + ",ID="
                     + ID
-                    + ",IsActiveEntity=false)/content")
-            .addHeader("Authorization", token)
-            .get()
-            .build();
-
-    try {
-      Response response = httpClient.newCall(request).execute();
-      if (!response.isSuccessful()) {
-        System.out.println("Read draft attachment failed. Error : " + response.body().string());
-        throw new IOException("Could not read attachment");
-      }
-      return "OK";
-    } catch (IOException e) {
-      System.out.println("Could not read Attachment : " + e);
-      return "Could not read Attachment";
-    }
-  }
-
-  public String deleteAttachment(
-      String appUrl, String entityName, String facetName, String entityID, String ID) {
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
+                    + ",IsActiveEntity=false)/"
                     + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .delete()
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response deleteResponse = httpClient.newCall(request).execute()) {
-      if (deleteResponse.code() != 204) {
-        System.out.println(
-            "Delete Attachment failed in the "
-                + facetName
-                + " section. Error :"
-                + deleteResponse.body().string());
-        throw new IOException("Attachment was not deleted in section : " + facetName);
-      }
-      return "Deleted";
-    } catch (IOException e) {
-      System.out.println("Could not delete Attachment:" + facetName + " :" + e);
-      return "Could not delete Attachment";
-    }
-  }
-
-  public String renameAttachment(
-      String appUrl, String entityName, String facetName, String entityID, String ID, String name) {
-    MediaType mediaType = MediaType.parse("application/json");
-    RequestBody body =
-        RequestBody.create(
-            mediaType, ByteString.encodeUtf8("{\n    \"fileName\" : \"" + name + "\"\n}"));
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response renameResponse = httpClient.newCall(request).execute()) {
-      if (renameResponse.code() != 200) {
-        System.out.println(
-            "Rename Attachment failed in the "
-                + facetName
-                + " section. Error : "
-                + renameResponse.body().string());
-        throw new IOException("Attachment was not renamed in section: " + facetName);
-      }
-      return "Renamed";
-    } catch (IOException e) {
-      System.out.println("Attachment was not renamed in section: " + facetName + " : " + e);
-      return "Attachment was not renamed in section: " + facetName;
-    }
-  }
-
-  public String updateSecondaryProperty(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      RequestBody requestBody) {
-
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", requestBody)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
-      if (updateResponse.code() != 200) {
-        System.out.println(
-            "Updating secondary property failed. Error: " + updateResponse.body().string());
-        throw new IOException("Secondary Property was not updated");
-      }
-      return "Updated";
-    } catch (IOException e) {
-      System.out.println("Secondary Property was not updated: " + e);
-      return "Secondary Property was not updated";
-    }
-  }
-
-  public String updateInvalidSecondaryProperty(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      String invalidSecondaryProperty) {
-    MediaType mediaType = MediaType.parse("application/json");
-    String jsonPayload = "{\n    \"customProperty3\": \"" + invalidSecondaryProperty + "\"\n}";
-    RequestBody body = RequestBody.create(mediaType, ByteString.encodeUtf8(jsonPayload));
-    Request request =
-        new Request.Builder()
-            .url(
-                "https://"
-                    + appUrl
-                    + "/odata/v4/"
-                    + serviceName
-                    + "/"
-                    + entityName
-                    + "_"
-                    + facetName
-                    + "(up__ID="
-                    + entityID
-                    + ",ID="
-                    + ID
-                    + ",IsActiveEntity=false)")
-            .method("PATCH", body)
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Authorization", token)
-            .build();
-
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
-      if (updateResponse.code() != 200) {
-        System.out.println(
-            "Updating secondary property failed. Error : " + updateResponse.body().string());
-        throw new IOException("Secondary Property was not updated");
-      }
-      return "Updated";
-    } catch (IOException e) {
-      System.out.println("Secondary Property was not updated : " + e);
-      return "Secondary Property was not updated";
-    }
-  }
-
-  public String copyAttachment(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      List<String> sourceObjectIds)
-      throws IOException {
-    String objectIds = String.join(",", sourceObjectIds);
-    String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "(ID="
-            + entityID
-            + ",IsActiveEntity=false)/"
-            + facetName
-            + "/"
-            + serviceName
-            + ".copyAttachments";
-
-    MediaType mediaType = MediaType.parse("application/json");
-
-    String jsonPayload =
-        "{" + "\"up__ID\": \"" + entityID + "\"," + "\"objectIds\": \"" + objectIds + "\"" + "}";
-
-    RequestBody body = RequestBody.create(mediaType, jsonPayload);
-
-    Request request =
-        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
-
-    try (Response response = httpClient.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        throw new IOException(
-            "Could not copy attachments: " + response.code() + " - " + response.body().string());
-      }
-      return "Attachments copied successfully";
-    } catch (IOException e) {
-      System.out.println("Error while copying attachments: " + e.getMessage());
-      throw new IOException(e);
-    }
-  }
-
-  public String createLink(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      String linkName,
-      String linkUrl)
-      throws IOException {
-    String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "(ID="
-            + entityID
-            + ",IsActiveEntity=false)/"
-            + facetName
-            + "/"
-            + serviceName
-            + ".createLink";
-
-    MediaType mediaType = MediaType.parse("application/json");
-
-    String jsonPayload =
-        "{" + "\"name\": \"" + linkName + "\"," + "\"url\": \"" + linkUrl + "\"" + "}";
-
-    RequestBody body = RequestBody.create(mediaType, jsonPayload);
-
-    Request request =
-        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
-
-    try (Response response = httpClient.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        throw new IOException(
-            "Could not create link: " + response.code() + " - " + response.body().string());
-      }
-      return "Link created successfully";
-    } catch (IOException e) {
-      System.out.println("Error while creating link: " + e.getMessage());
-      throw new IOException(e);
-    }
-  }
-
-  public String openAttachment(
-      String appUrl, String entityName, String facetName, String entityID, String ID)
-      throws IOException {
-    String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/Books(ID="
-            + entityID
-            + ",IsActiveEntity=true)"
-            + "/"
-            + facetName
-            + "(up__ID="
-            + entityID
-            + ",ID="
-            + ID
-            + ",IsActiveEntity=true)"
-            + "/"
-            + serviceName
-            + ".openAttachment";
-
-    MediaType mediaType = MediaType.parse("application/json");
-
-    String jsonPayload = "{}";
-
-    RequestBody body = RequestBody.create(mediaType, jsonPayload);
-
-    Request request =
-        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
-
-    try (Response response = httpClient.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        throw new IOException(
-            "Could not open attachment: " + response.code() + " - " + response.body().string());
-      }
-      return "Attachment opened successfully";
-    } catch (IOException e) {
-      System.out.println("Error while opening attachment: " + e.getMessage());
-      throw new IOException(e);
-    }
-  }
-
-  public String editLink(
-      String appUrl,
-      String entityName,
-      String facetName,
-      String entityID,
-      String ID,
-      String linkUrl)
-      throws IOException {
-
-    String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "(ID="
-            + entityID
-            + ",IsActiveEntity=false)/"
-            + facetName
-            + "(up__ID="
-            + entityID
-            + ",ID="
-            + ID
-            + ",IsActiveEntity=false)/"
-            + serviceName
-            + ".editLink";
+                    + ".editLink";
 
     MediaType mediaType = MediaType.parse("application/json");
 
@@ -799,12 +851,12 @@ public class Api implements ApiInterface {
     RequestBody body = RequestBody.create(mediaType, jsonPayload);
 
     Request request =
-        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+            new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         throw new IOException(
-            "Could not edit link: " + response.code() + " - " + response.body().string());
+                "Could not edit link: " + response.code() + " - " + response.body().string());
       }
       return "Link edited successfully";
     } catch (IOException e) {
@@ -814,170 +866,170 @@ public class Api implements ApiInterface {
   }
 
   public Map<String, Object> fetchMetadata(
-      String appUrl, String entityName, String facetName, String entityID, String ID)
-      throws IOException {
+          String appUrl, String entityName, String facetName, String entityID, String ID)
+          throws IOException {
     // Construct the URL for fetching attachment metadata
     String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "_"
-            + facetName
-            + "(up__ID="
-            + entityID
-            + ",ID="
-            + ID
-            + ",IsActiveEntity=true)";
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
+                    + entityID
+                    + ",ID="
+                    + ID
+                    + ",IsActiveEntity=true)";
 
     // Make a GET request to fetch the attachment metadata
     Request request =
-        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+            new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
-            "Fetch metadata failed for "
-                + facetName
-                + " Section. Error: "
-                + response.body().string());
+                "Fetch metadata failed for "
+                        + facetName
+                        + " Section. Error: "
+                        + response.body().string());
         throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         // Parse the JSON response to extract metadata
         return objectMapper.readValue(
-            response.body().string(),
-            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                response.body().string(),
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
       }
     }
   }
 
   public Map<String, Object> fetchMetadataDraft(
-      String appUrl, String entityName, String facetName, String entityID, String ID)
-      throws IOException {
+          String appUrl, String entityName, String facetName, String entityID, String ID)
+          throws IOException {
     // Construct the URL for fetching attachment metadata
     String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "_"
-            + facetName
-            + "(up__ID="
-            + entityID
-            + ",ID="
-            + ID
-            + ",IsActiveEntity=false)";
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "_"
+                    + facetName
+                    + "(up__ID="
+                    + entityID
+                    + ",ID="
+                    + ID
+                    + ",IsActiveEntity=false)";
 
     // Make a GET request to fetch the attachment metadata
     Request request =
-        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+            new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
-            "Fetch metadata failed for "
-                + facetName
-                + " Section. Error: "
-                + response.body().string());
+                "Fetch metadata failed for "
+                        + facetName
+                        + " Section. Error: "
+                        + response.body().string());
         throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         // Parse the JSON response to extract metadata
         return objectMapper.readValue(
-            response.body().string(),
-            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                response.body().string(),
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
       }
     }
   }
 
   public List<Map<String, Object>> fetchEntityMetadata(
-      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+          String appUrl, String entityName, String facetName, String entityID) throws IOException {
 
     // Construct the URL for fetching attachment metadata
     String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "(ID="
-            + entityID
-            + ",IsActiveEntity=true)/"
-            + facetName;
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=true)/"
+                    + facetName;
 
     // Make a GET request to fetch the attachment metadata
     Request request =
-        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+            new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
-            "Fetch metadata failed for "
-                + facetName
-                + " Section. Error: "
-                + response.body().string());
+                "Fetch metadata failed for "
+                        + facetName
+                        + " Section. Error: "
+                        + response.body().string());
         throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> entityData =
-            objectMapper.readValue(
-                response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                objectMapper.readValue(
+                        response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
         Object value = entityData.get("value");
         List<Map<String, Object>> result =
-            objectMapper.convertValue(
-                value,
-                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+                objectMapper.convertValue(
+                        value,
+                        new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
         return result;
       }
     }
   }
 
   public List<Map<String, Object>> fetchEntityMetadataDraft(
-      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+          String appUrl, String entityName, String facetName, String entityID) throws IOException {
 
     // Construct the URL for fetching attachment metadata
     String url =
-        "https://"
-            + appUrl
-            + "/odata/v4/"
-            + serviceName
-            + "/"
-            + entityName
-            + "(ID="
-            + entityID
-            + ",IsActiveEntity=false)/"
-            + facetName;
+            "https://"
+                    + appUrl
+                    + "/odata/v4/"
+                    + serviceName
+                    + "/"
+                    + entityName
+                    + "(ID="
+                    + entityID
+                    + ",IsActiveEntity=false)/"
+                    + facetName;
 
     // Make a GET request to fetch the attachment metadata
     Request request =
-        new Request.Builder().url(url).get().addHeader("Authorization", token).build();
+            new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
-            "Fetch metadata failed for "
-                + facetName
-                + " Section. Error: "
-                + response.body().string());
+                "Fetch metadata failed for "
+                        + facetName
+                        + " Section. Error: "
+                        + response.body().string());
         throw new IOException("Could not fetch " + facetName + " metadata");
       } else {
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> entityData =
-            objectMapper.readValue(
-                response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                objectMapper.readValue(
+                        response.body().string(), new com.fasterxml.jackson.core.type.TypeReference<>() {});
         Object value = entityData.get("value");
         List<Map<String, Object>> result =
-            objectMapper.convertValue(
-                value,
-                new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+                objectMapper.convertValue(
+                        value,
+                        new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
         return result;
       }
     }
