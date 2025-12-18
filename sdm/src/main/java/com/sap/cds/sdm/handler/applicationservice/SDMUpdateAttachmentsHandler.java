@@ -5,6 +5,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -80,11 +81,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         String[] parts = attachmentCompositionName.split("\\.");
         compositionName = parts[parts.length - 1];
       }
-      String contextInfo =
-          "\n\nTable: "
-              + compositionName
-              + "\nPage: "
-              + (parentTitle != null ? parentTitle : "Unknown");
+
+      String contextInfo = AttachmentsHandlerUtils.getContextInfo(compositionName, parentTitle);
 
       isError =
           AttachmentsHandlerUtils.validateFileNames(
@@ -309,17 +307,19 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
+          .warn(
+              SDMErrorMessages.nameConstraintMessage(fileNameWithRestrictedCharacters)
+                  + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
           .warn(
               String.format(
-                  SDMConstants.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
+                  SDMErrorMessages.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       List<String> invalidPropertyNames = new ArrayList<>();
@@ -337,16 +337,20 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       if (!invalidPropertyNames.isEmpty()) {
         context
             .getMessages()
-            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
+            .warn(
+                SDMErrorMessages.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
     if (!badRequest.isEmpty()) {
-      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "update") + contextInfo);
+          .warn(
+              SDMErrorMessages.noSDMRolesMessage(
+                      noSDMRoles, SDMUtils.getErrorMessage("EVENT_UPDATE"))
+                  + contextInfo);
     }
   }
 }

@@ -4,7 +4,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -90,7 +90,7 @@ public class AttachmentsHandlerUtils {
 
       return pathMapping;
     } catch (Exception e) {
-      logger.error(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.error(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
       return new HashMap<>();
     }
   }
@@ -240,7 +240,7 @@ public class AttachmentsHandlerUtils {
         return entityPath;
       }
     } catch (Exception e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
     return null;
   }
@@ -261,7 +261,7 @@ public class AttachmentsHandlerUtils {
             + attachmentPart;
       }
     } catch (Exception e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
     return null;
   }
@@ -301,7 +301,7 @@ public class AttachmentsHandlerUtils {
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
         result.addAll(attachments);
       } catch (ClassCastException e) {
-        logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+        logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
       }
     }
 
@@ -316,7 +316,7 @@ public class AttachmentsHandlerUtils {
       Map<String, Object> nestedMap = (Map<String, Object>) value;
       result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
     } catch (ClassCastException e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
 
     return result;
@@ -335,7 +335,7 @@ public class AttachmentsHandlerUtils {
         }
       }
     } catch (ClassCastException e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
 
     return result;
@@ -573,19 +573,21 @@ public class AttachmentsHandlerUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE + contextInfo);
+      context
+          .getMessages()
+          .error(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE") + contextInfo);
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
       context
           .getMessages()
-          .error(SDMConstants.nameConstraintMessage(restrictedFileNames) + contextInfo);
+          .error(SDMErrorMessages.nameConstraintMessage(restrictedFileNames) + contextInfo);
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
           String.format(
-              "%s%s", SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
+              "%s%s", SDMErrorMessages.duplicateFilenameFormat(duplicateFilenames), contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }
@@ -703,7 +705,7 @@ public class AttachmentsHandlerUtils {
         // Success cases, do nothing
         break;
       default:
-        throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, (Object[]) null);
+        throw new ServiceException(SDMUtils.getErrorMessage("SDM_SERVER_ERROR"), (Object[]) null);
     }
   }
 
@@ -730,9 +732,11 @@ public class AttachmentsHandlerUtils {
       String descriptionInSDM,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest) {
-    if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
+    if (e.getMessage().startsWith(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES"))) {
       String unsupportedDetails =
-          e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
+          e.getMessage()
+              .substring(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES").length())
+              .trim();
       filesWithUnsupportedProperties.add(unsupportedDetails);
       revertAttachmentProperties(
           attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
@@ -794,5 +798,14 @@ public class AttachmentsHandlerUtils {
     cmisDocument.setDescription(descriptionInRequest);
     cmisDocument.setObjectId(objectId);
     return cmisDocument;
+  }
+
+  public static String getContextInfo(String compositionName, String parentTitle) {
+    String contextInfo =
+        String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
+            + String.format(
+                SDMErrorMessages.CONTEXT_INFO_PAGE,
+                (parentTitle != null ? parentTitle : "Unknown"));
+    return contextInfo;
   }
 }

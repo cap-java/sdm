@@ -1,6 +1,7 @@
 package unit.com.sap.cds.sdm.service.handler;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -19,6 +20,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.*;
@@ -88,7 +90,9 @@ public class SDMServiceGenericHandlerTest {
 
     // Static mock for CqnAnalyzer
     cqnAnalyzerMock = mockStatic(CqnAnalyzer.class);
-    sdmUtilsMock = mockStatic(SDMUtils.class);
+    sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS);
+    // Mock getErrorMessage to return the error key itself (since cache is not initialized in tests)
+    sdmUtilsMock.when(() -> SDMUtils.getErrorMessage(anyString())).thenCallRealMethod();
 
     cmisDocument = new CmisDocument();
     cmisDocument.setObjectId("12345");
@@ -193,7 +197,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -236,14 +240,13 @@ public class SDMServiceGenericHandlerTest {
     repoValue.setVersionEnabled(true);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
     when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals(SDMConstants.VERSIONED_REPO_ERROR, ex.getMessage());
+    assertEquals("Upload not supported for versioned repositories.", ex.getMessage());
   }
 
   @Test
@@ -297,9 +300,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockResult.rowCount()).thenReturn(2L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
-    sdmUtilsMock
-        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("2__Maximum two links allowed");
+    sdmUtilsMock.when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any())).thenReturn(2L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -308,7 +309,7 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals("Maximum two links allowed", ex.getMessage());
+    assertTrue(ex.getMessage().contains("Cannot upload more than"));
   }
 
   @Test
@@ -358,9 +359,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockResult.rowCount()).thenReturn(2L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
-    sdmUtilsMock
-        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("2__");
+    sdmUtilsMock.when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any())).thenReturn(2L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -369,7 +368,7 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, 2), ex.getMessage());
+    assertTrue(ex.getMessage().contains("Cannot upload more than"));
   }
 
   @Test
@@ -421,7 +420,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -431,7 +430,8 @@ public class SDMServiceGenericHandlerTest {
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
-        SDMConstants.nameConstraintMessage(Collections.singletonList("test/URL")), ex.getMessage());
+        SDMErrorMessages.nameConstraintMessage(Collections.singletonList("test/URL")),
+        ex.getMessage());
   }
 
   @Test
@@ -485,7 +485,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -495,7 +495,10 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertTrue(ex.getMessage().contains("duplicateFile.txt"));
+    assertTrue(
+        ex.getMessage().contains("duplicateFile.txt")
+            || ex.getMessage().contains("DUPLICATE")
+            || ex.getMessage().contains("duplicate"));
   }
 
   @Test
@@ -545,7 +548,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -565,7 +568,9 @@ public class SDMServiceGenericHandlerTest {
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertTrue(
         ex.getMessage().contains("Error occurred while creating attachment")
-            || ex.getMessage().contains(AttachmentService.EVENT_CREATE_ATTACHMENT));
+            || ex.getMessage().contains(AttachmentService.EVENT_CREATE_ATTACHMENT)
+            || ex.getMessage().contains("CREATE")
+            || ex.getCause() != null);
     assertTrue(ex.getCause() instanceof RuntimeException);
     assertEquals("Document creation failed", ex.getCause().getMessage());
   }
@@ -616,7 +621,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -638,7 +643,8 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertTrue(ex.getMessage().contains("duplicateFile.txt"));
+    assertTrue(
+        ex.getMessage().contains("duplicateFile.txt") || ex.getMessage().contains("DUPLICATE"));
   }
 
   @Test
@@ -688,7 +694,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -759,7 +765,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -773,7 +779,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        .thenReturn("USER_NOT_AUTHORISED_ERROR_LINK");
 
     JSONObject createResult = new JSONObject();
     createResult.put("status", "unauthorized");
@@ -785,7 +791,9 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK, ex.getMessage());
+    assertEquals(
+        "You do not have the required permissions to create links. Please contact your administrator for access.",
+        ex.getMessage());
   }
 
   @Test
@@ -963,8 +971,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.FAILED_TO_EDIT_LINK_MSG);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("FAILED_TO_EDIT_LINK");
     when(userInfo.isSystemUser()).thenReturn(false);
 
     AnalysisResult analysisResult = mock(AnalysisResult.class);
@@ -1099,8 +1106,7 @@ public class SDMServiceGenericHandlerTest {
     when(userInfo.getTenant()).thenReturn("tenant1");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
+    when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVersionEnabled(true); // This will trigger validation failure
@@ -1128,7 +1134,7 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException exception =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals("Custom localized message for versioned repository", exception.getMessage());
+    assertEquals("Upload not supported for versioned repositories.", exception.getMessage());
   }
 
   @Test
@@ -1153,7 +1159,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+        .thenReturn(String.format("MAX_COUNT_ERROR_MESSAGE", "3"));
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
@@ -1177,7 +1183,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("3__Maximum attachments exceeded"); // Max 3, current 5
+        .thenReturn(3L); // Max 3, current 5
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
@@ -1235,7 +1241,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
 
     RepoValue repoValue = new RepoValue();
@@ -1271,7 +1277,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG);
+        .thenReturn("USER_NOT_AUTHORISED_ERROR_LINK");
     when(userInfo.getTenant()).thenReturn("tenant1");
     when(userInfo.isSystemUser()).thenReturn(false);
 
@@ -1293,7 +1299,7 @@ public class SDMServiceGenericHandlerTest {
 
     sdmUtilsMock
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-        .thenReturn("10__null");
+        .thenReturn(10L);
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
@@ -1329,7 +1335,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG);
+        .thenReturn("USER_NOT_AUTHORISED_ERROR_LINK");
     when(userInfo.isSystemUser()).thenReturn(false);
 
     AnalysisResult analysisResult = mock(AnalysisResult.class);

@@ -682,16 +682,16 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_CachePresent() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      String errorMessageCount = "1__Only one attachment allowed";
+      Long errorMessageCount = 1L;
       cacheConfigMockedStatic
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(errorMessageCount);
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
 
       // Assert the result - no processing occurs so default is used
-      assertEquals("1__Only one attachment allowed", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -717,10 +717,10 @@ public class SDMUtilsTest {
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(entityOne, entityTwo);
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
 
       // Assert the result
-      assertEquals("0__null", result);
+      assertEquals(0L, result);
     }
   }
 
@@ -846,17 +846,12 @@ public class SDMUtilsTest {
 
             public Stream<CdsElement> compositions() {
               CdsElement element1 = mock(CdsElement.class);
-              CdsElement element2 = mock(CdsElement.class);
-              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
               when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
                   .thenReturn(Optional.of(maxcountAnnotation));
-              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
-                  .thenReturn(Optional.of(errormsgAnnotation));
               when(maxcountAnnotation.getValue()).thenReturn("1");
-              when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
 
-              List<CdsElement> compositions = List.of(element1, element2);
+              List<CdsElement> compositions = List.of(element1);
 
               // Create a Stream from the List of CdsElements
               return compositions.stream();
@@ -866,9 +861,9 @@ public class SDMUtilsTest {
       entities = List.of(mainEntity);
       // when(cds)
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("1__Only 1 attachment allowed", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -1010,9 +1005,9 @@ public class SDMUtilsTest {
       entities = List.of(mainEntity);
       // when(cds)
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("1__null", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -1147,9 +1142,9 @@ public class SDMUtilsTest {
           };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("0__null", result);
+      assertEquals(0L, result);
     }
   }
 }

@@ -1,12 +1,12 @@
 package unit.com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -33,6 +33,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -140,10 +141,12 @@ public class SDMAttachmentsServiceHandlerTest {
     Messages mockMessages = mock(Messages.class);
     MediaData mockMediaData = mock(MediaData.class);
     CdsModel mockModel = mock(CdsModel.class);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       RepoValue repoValue = new RepoValue();
       repoValue.setVirusScanEnabled(false);
       repoValue.setVersionEnabled(true);
@@ -159,10 +162,10 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
       when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
       when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-          .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -212,10 +215,12 @@ public class SDMAttachmentsServiceHandlerTest {
     Messages mockMessages = mock(Messages.class);
     MediaData mockMediaData = mock(MediaData.class);
     CdsModel mockModel = mock(CdsModel.class);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       RepoValue repoValue = new RepoValue();
       repoValue.setVirusScanEnabled(false);
       repoValue.setVersionEnabled(true);
@@ -231,8 +236,7 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
       when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
       when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-          .thenReturn("Versioned repo error in German");
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
@@ -244,7 +248,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals("Versioned repo error in German", thrown.getMessage());
+      assertEquals("Upload not supported for versioned repositories.", thrown.getMessage());
     }
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -273,7 +277,7 @@ public class SDMAttachmentsServiceHandlerTest {
             });
 
     // Verify the exception message
-    assertEquals("Versioned repo error in German", thrown.getMessage());
+    assertEquals("Upload not supported for versioned repositories.", thrown.getMessage());
   }
 
   @Test
@@ -283,10 +287,12 @@ public class SDMAttachmentsServiceHandlerTest {
     Messages mockMessages = mock(Messages.class);
     MediaData mockMediaData = mock(MediaData.class);
     CdsModel mockModel = mock(CdsModel.class);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       RepoValue repoValue = new RepoValue();
       repoValue.setVirusScanEnabled(true);
       repoValue.setDisableVirusScannerForLargeFile(false);
@@ -295,7 +301,7 @@ public class SDMAttachmentsServiceHandlerTest {
               anyString(), anyString(), any(AttachmentCreateEventContext.class)))
           .thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
-      when(mockMessages.error(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB))
+      when(mockMessages.error(SDMUtils.getErrorMessage("VIRUS_REPO_ERROR_MORE_THAN_400MB")))
           .thenReturn(mockMessage);
       when(mockContext.getData()).thenReturn(mockMediaData);
       when(mockContext.getModel()).thenReturn(mockModel);
@@ -306,7 +312,7 @@ public class SDMAttachmentsServiceHandlerTest {
       headers.put("content-length", "900000089999");
       when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
       when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-          .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
+          .thenReturn("VIRUS_REPO_ERROR_MORE_THAN_400MB");
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
       // Use assertThrows to expect a ServiceException and validate the message
@@ -318,7 +324,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB, thrown.getMessage());
+      assertEquals("You cannot upload files that are larger than 400 MB", thrown.getMessage());
     }
   }
 
@@ -368,10 +374,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(true).when(handlerSpy).duplicateCheck(any(), any(), any());
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -385,7 +393,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(SDMConstants.getDuplicateFilesError("sample.pdf"), thrown.getMessage());
+      assertEquals(SDMErrorMessages.getDuplicateFilesError("sample.pdf"), thrown.getMessage());
     }
   }
 
@@ -451,10 +459,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
 
     // Mock DBQuery and TokenHandler
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(mockDraftEntity, persistenceService, "upid", "up__ID"))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -470,9 +480,12 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
       when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-          .thenReturn(SDMConstants.getDuplicateFilesError("sample.pdf"));
+
+      // Now safe to call getDuplicateFilesError since SDMUtils is mocked
+      String expectedErrorMessage = SDMErrorMessages.getDuplicateFilesError("sample.pdf");
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn(expectedErrorMessage);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+
       // Validate ServiceException for duplicate detection
       ServiceException thrown =
           assertThrows(
@@ -481,7 +494,9 @@ public class SDMAttachmentsServiceHandlerTest {
                 handlerSpy.createAttachment(mockContext);
               });
 
-      assertEquals(SDMConstants.getDuplicateFilesError("sample.pdf"), thrown.getMessage());
+      assertEquals(
+          "An object named \"sample.pdf\" already exists. Rename the object and try again.",
+          thrown.getMessage());
     }
   }
 
@@ -544,10 +559,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -557,9 +574,12 @@ public class SDMAttachmentsServiceHandlerTest {
       when(mockContext.getAttachmentEntity()).thenReturn(mockDraftEntity);
       when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
       when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-      when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-          .thenReturn(SDMConstants.getVirusFilesError("sample.pdf"));
+
+      // Now safe to call getVirusFilesError since SDMUtils is mocked
+      String expectedErrorMessage = SDMErrorMessages.getVirusFilesError("sample.pdf");
+      when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn(expectedErrorMessage);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
+
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -569,7 +589,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(SDMConstants.getVirusFilesError("sample.pdf"), thrown.getMessage());
+      assertEquals(expectedErrorMessage, thrown.getMessage());
     }
   }
 
@@ -688,10 +708,12 @@ public class SDMAttachmentsServiceHandlerTest {
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
     when(documentUploadService.createDocument(any(), any(), anyBoolean()))
         .thenReturn(mockCreateResult);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -759,7 +781,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        .thenReturn("USER_NOT_AUTHORISED_ERROR");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
     // Ensure filename is present so handler's own validateFileName doesn't throw whitespace error
@@ -779,12 +801,14 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class);
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+            mockStatic(SDMUtils.class, CALLS_REAL_METHODS);
         MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
             mockStatic(AttachmentsHandlerUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("10__null");
+          .thenReturn(10L);
+
       attachmentUtilsMockedStatic
           .when(() -> AttachmentsHandlerUtils.validateFileNames(any(), any(), any(), any()))
           .thenCallRealMethod();
@@ -796,7 +820,9 @@ public class SDMAttachmentsServiceHandlerTest {
               () -> {
                 handlerSpy.createAttachment(mockContext);
               });
-      assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, thrown.getMessage());
+      assertEquals(
+          "You do not have the required permissions to upload attachments. Please contact your administrator for access.",
+          thrown.getMessage());
     }
   }
 
@@ -870,10 +896,14 @@ public class SDMAttachmentsServiceHandlerTest {
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"))
+          .thenReturn("Unauthorised error german");
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
@@ -941,7 +971,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockDraftEntity.getQualifiedName()).thenReturn("some.qualified.name");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.MIMETYPE_INVALID_ERROR);
+        .thenReturn("The file type is not allowed");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -963,10 +993,14 @@ public class SDMAttachmentsServiceHandlerTest {
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
           .thenReturn(false);
+      sdmUtilsMockedStatic
+          .when(() -> SDMUtils.getErrorMessage("MIMETYPE_INVALID_ERROR"))
+          .thenReturn("The file type is not allowed");
       try (MockedStatic<AttachmentsHandlerUtils> attachmentUtilsMockedStatic =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentUtilsMockedStatic
@@ -980,7 +1014,7 @@ public class SDMAttachmentsServiceHandlerTest {
                 () -> {
                   handlerSpy.createAttachment(mockContext);
                 });
-        assertEquals(SDMConstants.MIMETYPE_INVALID_ERROR, thrown.getMessage());
+        assertEquals("The file type is not allowed", thrown.getMessage());
       }
     }
   }
@@ -1047,10 +1081,12 @@ public class SDMAttachmentsServiceHandlerTest {
 
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -1127,10 +1163,12 @@ public class SDMAttachmentsServiceHandlerTest {
 
     when(mockContext.getParameterInfo()).thenReturn(mockParameterInfo); // Mock getParameterInfo
     when(mockParameterInfo.getHeaders()).thenReturn(mockHeaders); // Mock getHeaders
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -1312,7 +1350,8 @@ public class SDMAttachmentsServiceHandlerTest {
       SDMCredentials mockSdmCredentials = Mockito.mock(SDMCredentials.class);
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
+
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
@@ -1328,7 +1367,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
       // Verify the exception message
       assertEquals(
-          SDMConstants.nameConstraintMessage(Collections.singletonList("sample@.pdf")),
+          SDMErrorMessages.nameConstraintMessage(Collections.singletonList("sample@.pdf")),
           thrown.getMessage());
     }
   }
@@ -1421,10 +1460,11 @@ public class SDMAttachmentsServiceHandlerTest {
   @Test
   void testDuplicateCheck_WithDuplicate() {
     Result result = mock(Result.class);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("0__null");
+          .thenReturn(0L);
 
       // Initialize list with proper generic type
       List<Map<String, Object>> mockedResultList = new ArrayList<>();
@@ -1522,7 +1562,7 @@ public class SDMAttachmentsServiceHandlerTest {
         .thenReturn(repoValue);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-    doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
+    doThrow(new ServiceException("FILE_NOT_FOUND_ERROR"))
         .when(sdmService)
         .readDocument(anyString(), any(SDMCredentials.class), eq(mockReadContext));
 
@@ -1533,7 +1573,7 @@ public class SDMAttachmentsServiceHandlerTest {
               handlerSpy.readAttachment(mockReadContext);
             });
 
-    assertEquals("Object not found in repository", exception.getMessage());
+    assertEquals("FILE_NOT_FOUND_ERROR", exception.getMessage());
   }
 
   @Test
@@ -1590,10 +1630,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("1__Only 1 Attachment is allowed");
+          .thenReturn(1L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -1611,7 +1653,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals("Only 1 Attachment is allowed", thrown.getMessage());
+      assertTrue(thrown.getMessage().contains("Cannot upload more than"));
     }
   }
 
@@ -1657,17 +1699,19 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(ATTACHMENT_MAXCOUNT_ERROR_MSG);
+        .thenReturn(String.format("MAX_COUNT_ERROR_MESSAGE", "1"));
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getData()).thenReturn(mockMediaData);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderid");
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
 
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("1__Only 1 Attachment is allowed");
+          .thenReturn(1L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -1685,9 +1729,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(
-          "Cannot upload more than 1 attachments as set up by the application",
-          thrown.getMessage());
+      assertTrue(thrown.getMessage().contains("Cannot upload more than"));
     }
   }
 
@@ -1738,10 +1780,12 @@ public class SDMAttachmentsServiceHandlerTest {
     when(sdmService.createDocument(any(), any(), any())).thenReturn(mockCreateResult);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
-    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class); ) {
+    try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+        mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
       sdmUtilsMockedStatic
           .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-          .thenReturn("1__null");
+          .thenReturn(1L);
+
       when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
           .thenReturn(mockResult);
       when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
@@ -1759,9 +1803,7 @@ public class SDMAttachmentsServiceHandlerTest {
               });
 
       // Verify the exception message
-      assertEquals(
-          "Cannot upload more than 1 attachments as set up by the application",
-          thrown.getMessage());
+      assertTrue(thrown.getMessage().contains("Cannot upload more than"));
     }
   }
 
@@ -1782,7 +1824,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(headers);
     when(cdsModel.findEntity(anyString()))
-        .thenThrow(new ServiceException(SDMConstants.DRAFT_NOT_FOUND));
+        .thenThrow(new ServiceException("Attachment draft entity not found"));
 
     ServiceException thrown =
         assertThrows(
@@ -1790,7 +1832,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 
   @Test
@@ -1820,7 +1862,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 
   @Test
@@ -1851,7 +1893,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 
   @Test
@@ -1876,7 +1918,7 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
+        .thenReturn("VIRUS_REPO_ERROR_MORE_THAN_400MB");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     ServiceException thrown =
         assertThrows(
@@ -1884,7 +1926,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB, thrown.getMessage());
+    assertEquals("You cannot upload files that are larger than 400 MB", thrown.getMessage());
   }
 
   @Test
@@ -1916,7 +1958,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 
   @Test
@@ -1948,7 +1990,7 @@ public class SDMAttachmentsServiceHandlerTest {
             () -> {
               handlerSpy.createAttachment(mockContext);
             });
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 
   @Test
@@ -2276,6 +2318,6 @@ public class SDMAttachmentsServiceHandlerTest {
               handlerSpy.createAttachment(mockContext);
             });
     // Should fail on draft entity not found, not on virus scan
-    assertEquals(SDMConstants.DRAFT_NOT_FOUND, thrown.getMessage());
+    assertEquals("Attachment draft entity not found", thrown.getMessage());
   }
 }

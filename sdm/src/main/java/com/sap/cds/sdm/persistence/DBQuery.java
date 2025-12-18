@@ -14,6 +14,7 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
@@ -79,7 +80,7 @@ public class DBQuery {
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+          String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
 
     // Find the composition element in the parent entity
@@ -87,7 +88,10 @@ public class DBQuery {
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
       throw new ServiceException(
-          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+          String.format(
+              SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
+              compositionName,
+              parentEntity));
     }
 
     // Get the target entity of the composition
@@ -98,7 +102,9 @@ public class DBQuery {
     Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
     if (attachmentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+          String.format(
+              SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
+              targetEntityName));
     }
 
     // Search in active entity first

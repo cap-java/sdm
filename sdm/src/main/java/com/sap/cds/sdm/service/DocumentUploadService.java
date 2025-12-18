@@ -4,9 +4,11 @@ import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
@@ -83,7 +85,7 @@ public class DocumentUploadService {
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e);
     }
   }
 
@@ -347,7 +349,8 @@ public class DocumentUploadService {
         finalResponse.put("mimeType", mimeType);
       }
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
+      throw new ServiceException(
+          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")), e);
     }
   }
 }
