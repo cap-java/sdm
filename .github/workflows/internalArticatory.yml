@@ -7,6 +7,10 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_branch:
+          description: 'Specify the branch foe which snapshot required'
+          required: true
 jobs:
   build-and-deploy-artifactory:
     runs-on: ubuntu-latest
@@ -14,7 +18,9 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.deploy_branch }}
 
       - name: Set up Java ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4

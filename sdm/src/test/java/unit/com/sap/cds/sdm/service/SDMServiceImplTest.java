@@ -79,9 +79,9 @@ public class SDMServiceImplTest {
     repoKey = new RepoKey();
     expected = new JsonObject();
     expected.addProperty(
-            "email", "john.doe@example.com"); // Correct the property name as expected in the method
+        "email", "john.doe@example.com"); // Correct the property name as expected in the method
     expected.addProperty(
-            "exp", "1234567890"); // Correct the property name as expected in the method
+        "exp", "1234567890"); // Correct the property name as expected in the method
     JsonObject jsonObject = new JsonObject();
     jsonObject.addProperty("zdn", "tenant");
     expected.add("ext_attr", jsonObject);
@@ -98,7 +98,7 @@ public class SDMServiceImplTest {
     JSONObject root = new JSONObject();
     root.put(REPO_ID, repoInfo);
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -109,7 +109,7 @@ public class SDMServiceImplTest {
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("test");
     com.sap.cds.sdm.service.SDMService sdmService =
-            new SDMServiceImpl(binding, connectionPool, tokenHandler);
+        new SDMServiceImpl(binding, connectionPool, tokenHandler);
     JSONObject json = sdmService.getRepositoryInfo(sdmCredentials);
 
     JSONObject fetchedRepoInfo = json.getJSONObject(REPO_ID);
@@ -122,21 +122,21 @@ public class SDMServiceImplTest {
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("test");
     com.sap.cds.sdm.service.SDMService sdmService =
-            new SDMServiceImpl(binding, connectionPool, tokenHandler);
+        new SDMServiceImpl(binding, connectionPool, tokenHandler);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     mockSdmCredentials.setUrl("test");
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(500);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> {
-                      sdmService.getRepositoryInfo(sdmCredentials);
-                    });
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmService.getRepositoryInfo(sdmCredentials);
+            });
     assertEquals("Failed to get repository info.", exception.getMessage());
   }
 
@@ -156,8 +156,8 @@ public class SDMServiceImplTest {
 
     // Assert that ServiceException is thrown
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class, () -> sdmServiceImpl.getRepositoryInfo(mockSdmCredentials));
+        assertThrows(
+            ServiceException.class, () -> sdmServiceImpl.getRepositoryInfo(mockSdmCredentials));
 
     assertEquals(SDMConstants.REPOSITORY_ERROR, exception.getMessage());
   }
@@ -167,22 +167,22 @@ public class SDMServiceImplTest {
     String repositoryId = "repo";
     String tenant = "tenant1";
     SDMServiceImpl spySDMService =
-            Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-                 Mockito.mockStatic(CacheConfig.class)) {
+        Mockito.mockStatic(CacheConfig.class)) {
       Cache<RepoKey, String> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test");
       when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-              .thenReturn(httpClient);
+          .thenReturn(httpClient);
       HttpGet getRepoInfoRequest =
-              new HttpGet(
-                      mockSdmCredentials.getUrl()
-                              + "browser/"
-                              + repositoryId
-                              + "?cmisselector=repositoryInfo");
+          new HttpGet(
+              mockSdmCredentials.getUrl()
+                  + "browser/"
+                  + repositoryId
+                  + "?cmisselector=repositoryInfo");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
@@ -190,8 +190,8 @@ public class SDMServiceImplTest {
       when((response.getEntity())).thenReturn(entity);
       JSONObject capabilities = new JSONObject();
       capabilities.put(
-              "capabilityContentStreamUpdatability",
-              "pwconly"); // To match the expected output "Versioned"
+          "capabilityContentStreamUpdatability",
+          "pwconly"); // To match the expected output "Versioned"
       JSONObject featureData = new JSONObject();
       featureData.put("virusScanner", "false");
       featureData.put("disableVirusScannerForLargeFile", "false");
@@ -224,22 +224,22 @@ public class SDMServiceImplTest {
     String repositoryId = "repo";
     String tenant = "tenant1";
     SDMServiceImpl spySDMService =
-            Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-                 Mockito.mockStatic(CacheConfig.class)) {
+        Mockito.mockStatic(CacheConfig.class)) {
       Cache<RepoKey, RepoValue> mockCache = Mockito.mock(Cache.class);
       Mockito.when(mockCache.get(repoKey)).thenReturn(null);
       cacheConfigMockedStatic.when(CacheConfig::getRepoCache).thenReturn(mockCache);
       SDMCredentials mockSdmCredentials = new SDMCredentials();
       mockSdmCredentials.setUrl("test");
       when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-              .thenReturn(httpClient);
+          .thenReturn(httpClient);
       HttpGet getRepoInfoRequest =
-              new HttpGet(
-                      mockSdmCredentials.getUrl()
-                              + "browser/"
-                              + repositoryId
-                              + "?cmisselector=repositoryInfo");
+          new HttpGet(
+              mockSdmCredentials.getUrl()
+                  + "browser/"
+                  + repositoryId
+                  + "?cmisselector=repositoryInfo");
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
@@ -247,8 +247,8 @@ public class SDMServiceImplTest {
 
       JSONObject capabilities = new JSONObject();
       capabilities.put(
-              "capabilityContentStreamUpdatability",
-              "notpwconly"); // To match the expected output "Versioned"
+          "capabilityContentStreamUpdatability",
+          "notpwconly"); // To match the expected output "Versioned"
       JSONObject featureData = new JSONObject();
       featureData.put("virusScanner", "false");
       featureData.put("disableVirusScannerForLargeFile", "false");
@@ -284,9 +284,9 @@ public class SDMServiceImplTest {
     String repositoryId = "repo";
     String tenant = "tenant1";
     SDMServiceImpl spySDMService =
-            Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-                 Mockito.mockStatic(CacheConfig.class)) {
+        Mockito.mockStatic(CacheConfig.class)) {
       RepoKey repoKey = new RepoKey();
       repoKey.setSubdomain(tenant);
       repoKey.setRepoId(repositoryId);
@@ -324,7 +324,7 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     String actualResponse =
-            sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
+        sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
 
     assertEquals(expectedResponse, actualResponse);
   }
@@ -343,21 +343,21 @@ public class SDMServiceImplTest {
     when(statusLine.getStatusCode()).thenReturn(500);
     when(response.getEntity()).thenReturn(entity);
     InputStream inputStream =
-            new ByteArrayInputStream(
-                    "Failed to create folder. Could not upload  the document".getBytes());
+        new ByteArrayInputStream(
+            "Failed to create folder. Could not upload  the document".getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> {
-                      sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
-                    });
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
+            });
     assertEquals(
-            "Failed to create folder. Failed to create folder. Could not upload  the document",
-            exception.getMessage());
+        "Failed to create folder. Failed to create folder. Could not upload  the document",
+        exception.getMessage());
   }
 
   @Test
@@ -376,10 +376,10 @@ public class SDMServiceImplTest {
 
     // Assert that ServiceException is thrown
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () ->
-                            sdmServiceImpl.createFolder("parentId", "repositoryId", mockSdmCredentials, false));
+        assertThrows(
+            ServiceException.class,
+            () ->
+                sdmServiceImpl.createFolder("parentId", "repositoryId", mockSdmCredentials, false));
 
     assertTrue(exception.getMessage().contains("Failed to create folder Network error"));
   }
@@ -390,10 +390,10 @@ public class SDMServiceImplTest {
     mockWebServer.start();
     try {
       mockWebServer.enqueue(
-              new MockResponse()
-                      .setResponseCode(403) // Set HTTP status code to 403
-                      .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
-                      .addHeader("Content-Type", "application/json"));
+          new MockResponse()
+              .setResponseCode(403) // Set HTTP status code to 403
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
+              .addHeader("Content-Type", "application/json"));
       String parentId = "123";
       String repositoryId = "repository_id";
       String mockUrl = mockWebServer.url("/").toString();
@@ -408,16 +408,16 @@ public class SDMServiceImplTest {
       when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
       InputStream inputStream =
-              new ByteArrayInputStream(SDMConstants.USER_NOT_AUTHORISED_ERROR.getBytes());
+          new ByteArrayInputStream(SDMConstants.USER_NOT_AUTHORISED_ERROR.getBytes());
       when(entity.getContent()).thenReturn(inputStream);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.createFolder(parentId, repositoryId, sdmCredentials, false);
+              });
       assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
     } finally {
       mockWebServer.shutdown();
@@ -427,18 +427,18 @@ public class SDMServiceImplTest {
   @Test
   public void testGetFolderIdByPath() throws IOException {
     String expectedResponse =
-            "{"
-                    + "\"properties\": {"
-                    + "\"cmis:objectId\": {"
-                    + "\"id\": \"cmis:objectId\","
-                    + "\"localName\": \"cmis:objectId\","
-                    + "\"displayName\": \"cmis:objectId\","
-                    + "\"queryName\": \"cmis:objectId\","
-                    + "\"type\": \"id\","
-                    + "\"cardinality\": \"single\","
-                    + "\"value\": \"ExpectedFolderId\""
-                    + "}}"
-                    + "}";
+        "{"
+            + "\"properties\": {"
+            + "\"cmis:objectId\": {"
+            + "\"id\": \"cmis:objectId\","
+            + "\"localName\": \"cmis:objectId\","
+            + "\"displayName\": \"cmis:objectId\","
+            + "\"queryName\": \"cmis:objectId\","
+            + "\"type\": \"id\","
+            + "\"cardinality\": \"single\","
+            + "\"value\": \"ExpectedFolderId\""
+            + "}}"
+            + "}";
 
     String parentId = "123";
     String repositoryId = "repository_id";
@@ -458,7 +458,7 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     String actualResponse =
-            sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
+        sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
 
     assertEquals("ExpectedFolderId", actualResponse);
   }
@@ -481,7 +481,7 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     String folderId =
-            sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
+        sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
     assertNull(folderId, "Expected folderId to be null");
   }
 
@@ -501,11 +501,11 @@ public class SDMServiceImplTest {
 
     // Assert that ServiceException is thrown
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () ->
-                            sdmServiceImpl.getFolderIdByPath(
-                                    "parentId", "repositoryId", mockSdmCredentials, false));
+        assertThrows(
+            ServiceException.class,
+            () ->
+                sdmServiceImpl.getFolderIdByPath(
+                    "parentId", "repositoryId", mockSdmCredentials, false));
 
     assertTrue(exception.getMessage().contains(SDMConstants.getGenericError("upload")));
   }
@@ -516,11 +516,11 @@ public class SDMServiceImplTest {
     mockWebServer.start();
     try {
       mockWebServer.enqueue(
-              new MockResponse()
-                      .setResponseCode(403) // Set HTTP status code to 403 for an internal server error
-                      .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
-                      // the body
-                      .addHeader("Content-Type", "application/json"));
+          new MockResponse()
+              .setResponseCode(403) // Set HTTP status code to 403 for an internal server error
+              .setBody("{\"error\":" + SDMConstants.USER_NOT_AUTHORISED_ERROR + "\"}")
+              // the body
+              .addHeader("Content-Type", "application/json"));
       String parentId = "123";
       String repositoryId = "repository_id";
       String mockUrl = mockWebServer.url("/").toString();
@@ -535,17 +535,17 @@ public class SDMServiceImplTest {
       when(statusLine.getStatusCode()).thenReturn(403);
       when(response.getEntity()).thenReturn(entity);
       InputStream inputStream =
-              new ByteArrayInputStream(
-                      "Failed to create folder. Could not upload  the document".getBytes());
+          new ByteArrayInputStream(
+              "Failed to create folder. Could not upload  the document".getBytes());
       when(entity.getContent()).thenReturn(inputStream);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getFolderIdByPath(parentId, repositoryId, sdmCredentials, false);
+              });
       assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR, exception.getMessage());
 
     } finally {
@@ -583,7 +583,7 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     JSONObject actualResponse =
-            sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -597,7 +597,7 @@ public class SDMServiceImplTest {
   @Test
   public void testCreateDocumentFailDuplicate() throws IOException {
     String mockResponseBody =
-            "{\"message\": \"Duplicate document found\", \"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
+        "{\"message\": \"Duplicate document found\", \"succinctProperties\": {\"cmis:objectId\": \"objectId\"}}";
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName("sample.pdf");
     cmisDocument.setAttachmentId("attachmentId");
@@ -623,7 +623,7 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     JSONObject actualResponse =
-            sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -637,7 +637,7 @@ public class SDMServiceImplTest {
   @Test
   public void testCreateDocumentFailVirus() throws IOException {
     String mockResponseBody =
-            "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}, \"message\": \"Malware Service Exception: Virus found in the file!\"}";
+        "{\"succinctProperties\": {\"cmis:objectId\": \"objectId\"}, \"message\": \"Malware Service Exception: Virus found in the file!\"}";
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName("sample.pdf");
     cmisDocument.setAttachmentId("attachmentId");
@@ -664,7 +664,7 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     JSONObject actualResponse =
-            sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -704,7 +704,7 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     JSONObject actualResponse =
-            sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
+        sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken);
 
     JSONObject expectedResponse = new JSONObject();
     expectedResponse.put("name", "sample.pdf");
@@ -736,7 +736,7 @@ public class SDMServiceImplTest {
     when(statusLine.getStatusCode()).thenReturn(500);
     when(response.getEntity()).thenReturn(entity);
     InputStream inputStream =
-            new ByteArrayInputStream("{\"message\":\"Error in setting timeout\"}".getBytes());
+        new ByteArrayInputStream("{\"message\":\"Error in setting timeout\"}".getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
@@ -754,7 +754,7 @@ public class SDMServiceImplTest {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     try {
       SDMCredentials mockSdmCredentials = new SDMCredentials();
@@ -771,8 +771,8 @@ public class SDMServiceImplTest {
       when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
-              sdmServiceImpl.deleteDocument(
-                      "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
+          sdmServiceImpl.deleteDocument(
+              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -784,7 +784,7 @@ public class SDMServiceImplTest {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     try {
       SDMCredentials mockSdmCredentials = new SDMCredentials();
@@ -800,8 +800,8 @@ public class SDMServiceImplTest {
       when(deletionUserInfo.getName()).thenReturn("testUser");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
-              sdmServiceImpl.deleteDocument(
-                      "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
+          sdmServiceImpl.deleteDocument(
+              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -833,12 +833,12 @@ public class SDMServiceImplTest {
     // Use argument matchers to stub methods for any arguments
     SDMServiceImpl spyService = spy(sdmServiceImpl);
     doReturn(null)
-            .when(spyService)
-            .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
+        .when(spyService)
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     doReturn("{\"succinctProperties\":{\"cmis:objectId\":\"newFolderId123\"}}")
-            .when(spyService)
-            .createFolder(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
+        .when(spyService)
+        .createFolder(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     String folderId = spyService.getFolderId(result, persistenceService, up__ID, false);
     assertEquals("newFolderId123", folderId, "Expected folderId from result list");
@@ -848,7 +848,7 @@ public class SDMServiceImplTest {
   public void testDeleteDocument() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     mockWebServer.start();
     try {
@@ -865,8 +865,8 @@ public class SDMServiceImplTest {
       when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
-              sdmServiceImpl.deleteDocument(
-                      "delete", "objectId", mockContext.getDeletionUserInfo().getName());
+          sdmServiceImpl.deleteDocument(
+              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -877,7 +877,7 @@ public class SDMServiceImplTest {
   public void testDeleteDocumentNamedUserFlow() throws IOException {
     MockWebServer mockWebServer = new MockWebServer();
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     mockWebServer.start();
     try {
@@ -893,8 +893,8 @@ public class SDMServiceImplTest {
       when(deletionUserInfo.getName()).thenReturn("testUser");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
-              sdmServiceImpl.deleteDocument(
-                      "delete", "objectId", mockContext.getDeletionUserInfo().getName());
+          sdmServiceImpl.deleteDocument(
+              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -906,7 +906,7 @@ public class SDMServiceImplTest {
     MockWebServer mockWebServer = new MockWebServer();
     mockWebServer.start();
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     try {
       String mockResponseBody = "{\"message\": \"Object Not Found\"}";
@@ -923,8 +923,8 @@ public class SDMServiceImplTest {
       when(deletionUserInfo.getName()).thenReturn("system-internal");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
-              sdmServiceImpl.deleteDocument(
-                      "delete", "ewdwe", mockContext.getDeletionUserInfo().getName());
+          sdmServiceImpl.deleteDocument(
+              "delete", "ewdwe", mockContext.getDeletionUserInfo().getName());
       assertEquals(404, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -944,8 +944,8 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
 
     doReturn("folderByPath123")
-            .when(sdmServiceImpl)
-            .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
+        .when(sdmServiceImpl)
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     mockSdmCredentials.setUrl("mockUrl");
@@ -985,8 +985,8 @@ public class SDMServiceImplTest {
 
     // Mock the getFolderIdByPath method to return null (so that it will try to create a folder)
     doReturn(null)
-            .when(sdmServiceImpl)
-            .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
+        .when(sdmServiceImpl)
+        .getFolderIdByPath(anyString(), anyString(), any(SDMCredentials.class), anyBoolean());
 
     // Mock the TokenHandler static method and SDMCredentials instantiation
     SDMCredentials mockSdmCredentials = new SDMCredentials();
@@ -1018,8 +1018,8 @@ public class SDMServiceImplTest {
     mockWebServer.enqueue(mockResponse1);
 
     doReturn(jsonObject.toString())
-            .when(sdmServiceImpl)
-            .createFolder(any(), any(), any(SDMCredentials.class), anyBoolean());
+        .when(sdmServiceImpl)
+        .createFolder(any(), any(), any(SDMCredentials.class), anyBoolean());
 
     // Invoke the method
     String folderId = sdmServiceImpl.getFolderId(result, persistenceService, up__ID, false);
@@ -1073,11 +1073,11 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> {
-                      sdmServiceImpl.readDocument(objectId, sdmCredentials, mockContext);
-                    });
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.readDocument(objectId, sdmCredentials, mockContext);
+            });
 
     // Check if the exception message contains the expected first part
     String expectedMessagePart1 = "Failed to set document stream in context";
@@ -1108,15 +1108,15 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     doThrow(new RuntimeException("Failed to set document stream in context"))
-            .when(mockData)
-            .setContent(any(InputStream.class));
+        .when(mockData)
+        .setContent(any(InputStream.class));
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> {
-                      sdmServiceImpl.readDocument(objectId, sdmCredentials, mockContext);
-                    });
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.readDocument(objectId, sdmCredentials, mockContext);
+            });
     assertEquals("Failed to set document stream in context", exception.getMessage());
   }
 
@@ -1211,7 +1211,7 @@ public class SDMServiceImplTest {
       when(response.getEntity()).thenReturn(entity);
       String mockErrorJson = "403 : Error";
       InputStream inputStream =
-              new ByteArrayInputStream(mockErrorJson.getBytes(StandardCharsets.UTF_8));
+          new ByteArrayInputStream(mockErrorJson.getBytes(StandardCharsets.UTF_8));
       when(entity.getContent()).thenReturn(inputStream);
       when(entity.getContent()).thenReturn(inputStream);
 
@@ -1224,12 +1224,12 @@ public class SDMServiceImplTest {
 
       // Verify the response code
       int responseCode =
-              sdmServiceImpl.updateAttachments(
-                      mockSdmCredentials,
-                      cmisDocument,
-                      secondaryProperties,
-                      secondaryPropertiesWithInvalidDefinitions,
-                      false);
+          sdmServiceImpl.updateAttachments(
+              mockSdmCredentials,
+              cmisDocument,
+              secondaryProperties,
+              secondaryPropertiesWithInvalidDefinitions,
+              false);
       assertEquals(responseCode, 403);
     } catch (ClientProtocolException e) {
       throw new RuntimeException(e);
@@ -1242,13 +1242,13 @@ public class SDMServiceImplTest {
   public void testDeleteDocumentThrowsServiceExceptionOnHttpClientError() throws IOException {
     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
     AttachmentMarkAsDeletedEventContext mockContext =
-            mock(AttachmentMarkAsDeletedEventContext.class);
+        mock(AttachmentMarkAsDeletedEventContext.class);
     DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
     String grantType = "TECHNICAL_CREDENTIALS_FLOW";
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
 
     when(httpClient.execute(any(HttpPost.class)))
-            .thenThrow(new ServiceException(SDMConstants.getGenericError("delete")));
+        .thenThrow(new ServiceException(SDMConstants.getGenericError("delete")));
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(500);
 
@@ -1259,10 +1259,10 @@ public class SDMServiceImplTest {
     when(deletionUserInfo.getName()).thenReturn("system-internal");
     // Ensure ServiceException is thrown
     assertThrows(
-            ServiceException.class,
-            () ->
-                    sdmServiceImpl.deleteDocument(
-                            "delete", "123", mockContext.getDeletionUserInfo().getName()));
+        ServiceException.class,
+        () ->
+            sdmServiceImpl.deleteDocument(
+                "delete", "123", mockContext.getDeletionUserInfo().getName()));
   }
 
   @Test
@@ -1271,7 +1271,7 @@ public class SDMServiceImplTest {
       SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
       String repositoryId = "repoId";
       List<String> secondaryTypesCached =
-              Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
+          Arrays.asList("Type:1", "Type:2", "Type:3", "Type:3child");
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       Cache mockCache = mock(Cache.class);
@@ -1280,7 +1280,7 @@ public class SDMServiceImplTest {
 
       // Verify the response code
       List<String> secondaryTypes =
-              sdmServiceImpl.getSecondaryTypes(repositoryId, mockSdmCredentials, false);
+          sdmServiceImpl.getSecondaryTypes(repositoryId, mockSdmCredentials, false);
 
       assertEquals(secondaryTypesCached.size(), secondaryTypes.size());
     }
@@ -1311,12 +1311,12 @@ public class SDMServiceImplTest {
 
       // Verify the response code
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.getValidSecondaryProperties(
-                                secondaryTypes, mockSdmCredentials, repositoryId, false);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getValidSecondaryProperties(
+                    secondaryTypes, mockSdmCredentials, repositoryId, false);
+              });
 
       assertTrue(exception.getMessage().contains("Could not update the attachment"));
     }
@@ -1354,31 +1354,31 @@ public class SDMServiceImplTest {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
 
       String jsonResponseTypes =
-              "[{"
-                      + "\"type\": {\"id\": \"cmis:secondary\"},"
-                      + "\"children\": ["
-                      + "{\"type\": {\"id\": \"Type:1\"}},"
-                      + "{\"type\": {\"id\": \"Type:2\"}},"
-                      + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\":{\"id\":\"Type:3child\"}}]}"
-                      + "]}]";
+          "[{"
+              + "\"type\": {\"id\": \"cmis:secondary\"},"
+              + "\"children\": ["
+              + "{\"type\": {\"id\": \"Type:1\"}},"
+              + "{\"type\": {\"id\": \"Type:2\"}},"
+              + "{\"type\": {\"id\": \"Type:3\"}, \"children\": [{\"type\":{\"id\":\"Type:3child\"}}]}"
+              + "]}]";
 
       String jsonResponseProperties =
-              "{"
-                      + "\"id\": \"type:1\","
-                      + "\"propertyDefinitions\": {"
-                      + "\"property1\": {"
-                      + "\"id\": \"property1\","
-                      + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-                      + "},"
-                      + "\"property2\": {"
-                      + "\"id\": \"property2\","
-                      + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
-                      + "}"
-                      + "}}";
+          "{"
+              + "\"id\": \"type:1\","
+              + "\"propertyDefinitions\": {"
+              + "\"property1\": {"
+              + "\"id\": \"property1\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "},"
+              + "\"property2\": {"
+              + "\"id\": \"property2\","
+              + "\"mcm:miscellaneous\": {\"isPartOfTable\": \"true\"}"
+              + "}"
+              + "}}";
 
       inputStream = new ByteArrayInputStream(jsonResponseTypes.getBytes(StandardCharsets.UTF_8));
       InputStream inputStream2 =
-              new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
+          new ByteArrayInputStream(jsonResponseProperties.getBytes(StandardCharsets.UTF_8));
 
       when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
       when(response.getStatusLine()).thenReturn(statusLine);
@@ -1387,16 +1387,16 @@ public class SDMServiceImplTest {
       when(entity.getContent()).thenReturn(inputStream, inputStream2);
 
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.updateAttachments(
-                                mockSdmCredentials,
-                                cmisDocument,
-                                secondaryProperties,
-                                secondaryPropertiesWithInvalidDefinitions,
-                                false);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.updateAttachments(
+                    mockSdmCredentials,
+                    cmisDocument,
+                    secondaryProperties,
+                    secondaryPropertiesWithInvalidDefinitions,
+                    false);
+              });
     }
   }
 
@@ -1405,7 +1405,7 @@ public class SDMServiceImplTest {
     String mockResponseBody = "{\"succinctProperties\": {\"cmis:name\":\"desiredObjectName\"}}";
     String objectId = "objectId";
     SDMServiceImpl sdmServiceImpl =
-            Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     SDMCredentials sdmCredentials = new SDMCredentials();
     String grantType = "TOKEN_EXCHANGE";
 
@@ -1426,7 +1426,7 @@ public class SDMServiceImplTest {
   public void testGetObject_Failure() throws IOException {
     String objectId = "objectId";
     SDMServiceImpl sdmServiceImpl =
-            Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
+        Mockito.spy(new SDMServiceImpl(binding, connectionPool, tokenHandler));
     SDMCredentials sdmCredentials = new SDMCredentials();
     String grantType = "TOKEN_EXCHANGE";
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
@@ -1458,9 +1458,9 @@ public class SDMServiceImplTest {
 
     // Assert that ServiceException is thrown
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.getObject("objectId", mockSdmCredentials, false));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.getObject("objectId", mockSdmCredentials, false));
 
     assertEquals(SDMConstants.ATTACHMENT_NOT_FOUND, exception.getMessage());
     assertTrue(exception.getCause() instanceof IOException);
@@ -1488,18 +1488,18 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     assertThrows(
-            ServiceException.class,
-            () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
+        ServiceException.class,
+        () -> sdmServiceImpl.createDocument(cmisDocument, sdmCredentials, jwtToken));
   }
 
   @Test
   public void testCopyAttachment_Success() throws Exception {
     // Prepare mock response JSON
     String responseBody =
-            "{\"succinctProperties\":{"
-                    + "\"cmis:name\":\"file1.pdf\","
-                    + "\"cmis:contentStreamMimeType\":\"application/pdf\","
-                    + "\"cmis:objectId\":\"obj123\"}}";
+        "{\"succinctProperties\":{"
+            + "\"cmis:name\":\"file1.pdf\","
+            + "\"cmis:contentStreamMimeType\":\"application/pdf\","
+            + "\"cmis:objectId\":\"obj123\"}}";
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("http://test/");
@@ -1515,19 +1515,19 @@ public class SDMServiceImplTest {
     when(statusLine.getStatusCode()).thenReturn(201);
     when(response.getEntity()).thenReturn(entity);
     when(entity.getContent())
-            .thenReturn(new ByteArrayInputStream(responseBody.getBytes(StandardCharsets.UTF_8)));
+        .thenReturn(new ByteArrayInputStream(responseBody.getBytes(StandardCharsets.UTF_8)));
     when(entity.getContentLength()).thenReturn((long) responseBody.length());
 
     // EntityUtils.toString is used in the code, so mock it
     try (MockedStatic<EntityUtils> entityUtilsMockedStatic =
-                 Mockito.mockStatic(EntityUtils.class)) {
+        Mockito.mockStatic(EntityUtils.class)) {
       entityUtilsMockedStatic
-              .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
-              .thenReturn(responseBody);
+          .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
+          .thenReturn(responseBody);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       Map<String, String> result =
-              sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>());
+          sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>());
 
       assertEquals("file1.pdf", result.get("cmis:name"));
       assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
@@ -1554,22 +1554,22 @@ public class SDMServiceImplTest {
     when(statusLine.getStatusCode()).thenReturn(400);
     when(response.getEntity()).thenReturn(entity);
     when(entity.getContent())
-            .thenReturn(new ByteArrayInputStream(errorJson.getBytes(StandardCharsets.UTF_8)));
+        .thenReturn(new ByteArrayInputStream(errorJson.getBytes(StandardCharsets.UTF_8)));
     when(entity.getContentLength()).thenReturn((long) errorJson.length());
 
     try (MockedStatic<EntityUtils> entityUtilsMockedStatic =
-                 Mockito.mockStatic(EntityUtils.class)) {
+        Mockito.mockStatic(EntityUtils.class)) {
       entityUtilsMockedStatic
-              .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
-              .thenReturn(errorJson);
+          .when(() -> EntityUtils.toString(eq(entity), eq(StandardCharsets.UTF_8)))
+          .thenReturn(errorJson);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       ServiceException ex =
-              assertThrows(
-                      ServiceException.class,
-                      () ->
-                              sdmServiceImpl.copyAttachment(
-                                      cmisDocument, sdmCredentials, true, new HashSet<>()));
+          assertThrows(
+              ServiceException.class,
+              () ->
+                  sdmServiceImpl.copyAttachment(
+                      cmisDocument, sdmCredentials, true, new HashSet<>()));
       assertTrue(ex.getMessage().contains("SomeException"));
       assertTrue(ex.getMessage().contains("Something went wrong"));
     }
@@ -1590,10 +1590,10 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     ServiceException ex =
-            assertThrows(
-                    ServiceException.class,
-                    () ->
-                            sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>()));
+        assertThrows(
+            ServiceException.class,
+            () ->
+                sdmServiceImpl.copyAttachment(cmisDocument, sdmCredentials, true, new HashSet<>()));
     assertTrue(ex.getMessage().contains(SDMConstants.FAILED_TO_COPY_ATTACHMENT));
     assertTrue(ex.getCause() instanceof IOException);
   }
@@ -1601,31 +1601,31 @@ public class SDMServiceImplTest {
   @Test
   public void testGetRepositoryId_Success() {
     String jsonString =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \""
-                    + SDMConstants.REPOSITORY_ID
-                    + "\",\n"
-                    + "        \"id\": \"internal-repo-123\"\n"
-                    + "      }\n"
-                    + "    },\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \"other-repo\",\n"
-                    + "        \"id\": \"other-internal-id\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"other-repo\",\n"
+            + "        \"id\": \"other-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     // Use reflection to call the private method
     try {
       java.lang.reflect.Method method =
-              SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
       method.setAccessible(true);
       String result = (String) method.invoke(sdmServiceImpl, jsonString);
 
@@ -1638,22 +1638,22 @@ public class SDMServiceImplTest {
   @Test
   public void testGetRepositoryId_NotFound() {
     String jsonString =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \"different-repo\",\n"
-                    + "        \"id\": \"different-internal-id\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     try {
       java.lang.reflect.Method method =
-              SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
       method.setAccessible(true);
       String result = (String) method.invoke(sdmServiceImpl, jsonString);
 
@@ -1671,7 +1671,7 @@ public class SDMServiceImplTest {
 
     try {
       java.lang.reflect.Method method =
-              SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
       method.setAccessible(true);
       String result = (String) method.invoke(sdmServiceImpl, jsonString);
 
@@ -1689,21 +1689,21 @@ public class SDMServiceImplTest {
 
     try {
       java.lang.reflect.Method method =
-              SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
+          SDMServiceImpl.class.getDeclaredMethod("getRepositoryId", String.class);
       method.setAccessible(true);
 
       java.lang.reflect.InvocationTargetException exception =
-              assertThrows(
-                      java.lang.reflect.InvocationTargetException.class,
-                      () -> {
-                        method.invoke(sdmServiceImpl, invalidJsonString);
-                      });
+          assertThrows(
+              java.lang.reflect.InvocationTargetException.class,
+              () -> {
+                method.invoke(sdmServiceImpl, invalidJsonString);
+              });
 
       assertTrue(exception.getCause() instanceof ServiceException);
       ServiceException serviceException = (ServiceException) exception.getCause();
       assertEquals(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, serviceException.getMessage());
       assertTrue(
-              serviceException.getCause() instanceof com.fasterxml.jackson.core.JsonParseException);
+          serviceException.getCause() instanceof com.fasterxml.jackson.core.JsonParseException);
     } catch (Exception e) {
       fail("Exception occurred: " + e.getMessage());
     }
@@ -1712,29 +1712,29 @@ public class SDMServiceImplTest {
   @Test
   public void testGetChangeLog_Success() throws IOException {
     String repositoryResponse =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \""
-                    + SDMConstants.REPOSITORY_ID
-                    + "\",\n"
-                    + "        \"id\": \"internal-repo-123\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     String changeLogResponse =
-            "{\n"
-                    + "  \"changeLogs\": [\n"
-                    + "    {\n"
-                    + "      \"changeType\": \"created\",\n"
-                    + "      \"changeTime\": \"2023-01-01T00:00:00Z\",\n"
-                    + "      \"user\": \"test-user\"\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"changeLogs\": [\n"
+            + "    {\n"
+            + "      \"changeType\": \"created\",\n"
+            + "      \"changeTime\": \"2023-01-01T00:00:00Z\",\n"
+            + "      \"user\": \"test-user\"\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("http://test-url/");
@@ -1748,12 +1748,12 @@ public class SDMServiceImplTest {
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
 
     // Mock first call (repository info)
     when(httpClient.execute(any(HttpGet.class)))
-            .thenReturn(repositoryResponse1)
-            .thenReturn(changeLogResponse1);
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
 
     when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
@@ -1764,11 +1764,11 @@ public class SDMServiceImplTest {
 
     try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
       entityUtilsMock
-              .when(() -> EntityUtils.toString(repositoryEntity))
-              .thenReturn(repositoryResponse);
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
       entityUtilsMock
-              .when(() -> EntityUtils.toString(changeLogEntity))
-              .thenReturn(changeLogResponse);
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
@@ -1784,16 +1784,16 @@ public class SDMServiceImplTest {
   @Test
   public void testGetChangeLog_RepositoryNotFound() throws IOException {
     String repositoryResponse =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \"different-repo\",\n"
-                    + "        \"id\": \"different-internal-id\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \"different-repo\",\n"
+            + "        \"id\": \"different-internal-id\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     String changeLogResponse = "{\n" + "  \"changeLogs\": []\n" + "}";
 
@@ -1809,11 +1809,11 @@ public class SDMServiceImplTest {
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
 
     when(httpClient.execute(any(HttpGet.class)))
-            .thenReturn(repositoryResponse1)
-            .thenReturn(changeLogResponse1);
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
 
     when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
@@ -1824,11 +1824,11 @@ public class SDMServiceImplTest {
 
     try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
       entityUtilsMock
-              .when(() -> EntityUtils.toString(repositoryEntity))
-              .thenReturn(repositoryResponse);
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
       entityUtilsMock
-              .when(() -> EntityUtils.toString(changeLogEntity))
-              .thenReturn(changeLogResponse);
+          .when(() -> EntityUtils.toString(changeLogEntity))
+          .thenReturn(changeLogResponse);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       JSONObject result = sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
@@ -1843,18 +1843,18 @@ public class SDMServiceImplTest {
   @Test
   public void testGetChangeLog_ChangeLogRequestFails() throws IOException {
     String repositoryResponse =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \""
-                    + SDMConstants.REPOSITORY_ID
-                    + "\",\n"
-                    + "        \"id\": \"internal-repo-123\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("http://test-url/");
@@ -1867,11 +1867,11 @@ public class SDMServiceImplTest {
     StatusLine changeLogStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
 
     when(httpClient.execute(any(HttpGet.class)))
-            .thenReturn(repositoryResponse1)
-            .thenReturn(changeLogResponse1);
+        .thenReturn(repositoryResponse1)
+        .thenReturn(changeLogResponse1);
 
     when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
@@ -1881,17 +1881,17 @@ public class SDMServiceImplTest {
 
     try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
       entityUtilsMock
-              .when(() -> EntityUtils.toString(repositoryEntity))
-              .thenReturn(repositoryResponse);
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
 
       assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, exception.getMessage());
     }
@@ -1904,18 +1904,18 @@ public class SDMServiceImplTest {
     String objectId = "test-object-id";
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TOKEN_EXCHANGE")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
 
     when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> {
-                      sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
-                    });
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              sdmServiceImpl.getChangeLog(objectId, sdmCredentials, false);
+            });
 
     assertEquals("Failed to get repository info.", exception.getMessage());
   }
@@ -1923,18 +1923,18 @@ public class SDMServiceImplTest {
   @Test
   public void testGetChangeLog_ChangeLogIOException() throws IOException {
     String repositoryResponse =
-            "{\n"
-                    + "  \"repoAndConnectionInfos\": [\n"
-                    + "    {\n"
-                    + "      \"repository\": {\n"
-                    + "        \"externalId\": \""
-                    + SDMConstants.REPOSITORY_ID
-                    + "\",\n"
-                    + "        \"id\": \"internal-repo-123\"\n"
-                    + "      }\n"
-                    + "    }\n"
-                    + "  ]\n"
-                    + "}";
+        "{\n"
+            + "  \"repoAndConnectionInfos\": [\n"
+            + "    {\n"
+            + "      \"repository\": {\n"
+            + "        \"externalId\": \""
+            + SDMConstants.REPOSITORY_ID
+            + "\",\n"
+            + "        \"id\": \"internal-repo-123\"\n"
+            + "      }\n"
+            + "    }\n"
+            + "  ]\n"
+            + "}";
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("http://test-url/");
@@ -1945,11 +1945,11 @@ public class SDMServiceImplTest {
     StatusLine repositoryStatusLine = mock(StatusLine.class);
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq("TECHNICAL_CREDENTIALS_FLOW")))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
 
     when(httpClient.execute(any(HttpGet.class)))
-            .thenReturn(repositoryResponse1)
-            .thenThrow(new IOException("Network error on changelog"));
+        .thenReturn(repositoryResponse1)
+        .thenThrow(new IOException("Network error on changelog"));
 
     when(repositoryResponse1.getStatusLine()).thenReturn(repositoryStatusLine);
     when(repositoryResponse1.getEntity()).thenReturn(repositoryEntity);
@@ -1957,17 +1957,17 @@ public class SDMServiceImplTest {
 
     try (MockedStatic<EntityUtils> entityUtilsMock = mockStatic(EntityUtils.class)) {
       entityUtilsMock
-              .when(() -> EntityUtils.toString(repositoryEntity))
-              .thenReturn(repositoryResponse);
+          .when(() -> EntityUtils.toString(repositoryEntity))
+          .thenReturn(repositoryResponse);
 
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
       ServiceException exception =
-              assertThrows(
-                      ServiceException.class,
-                      () -> {
-                        sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
-                      });
+          assertThrows(
+              ServiceException.class,
+              () -> {
+                sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
+              });
 
       assertEquals(SDMConstants.FETCH_CHANGELOG_ERROR, exception.getMessage());
     }
@@ -2038,7 +2038,7 @@ public class SDMServiceImplTest {
   @Test
   public void testMoveAttachment_WithSystemUser_Success() throws IOException {
     String mockResponseBody =
-            "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
+        "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setRepositoryId("repositoryId");
@@ -2050,7 +2050,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(201);
@@ -2069,7 +2069,7 @@ public class SDMServiceImplTest {
   @Test
   public void testMoveAttachment_WithNamedUser_Success() throws IOException {
     String mockResponseBody =
-            "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
+        "{\"succinctProperties\": {\"cmis:objectId\": \"newObjectId\", \"cmis:name\": \"moved-file.txt\"}}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setRepositoryId("repositoryId");
@@ -2081,7 +2081,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2100,7 +2100,7 @@ public class SDMServiceImplTest {
   @Test
   public void testMoveAttachment_WithErrorResponse_ThrowsServiceException() throws IOException {
     String errorResponseBody =
-            "{\"exception\": \"ObjectNotFoundException\", \"message\": \"Object not found in SDM\"}";
+        "{\"exception\": \"ObjectNotFoundException\", \"message\": \"Object not found in SDM\"}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setRepositoryId("repositoryId");
@@ -2112,7 +2112,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(404);
@@ -2123,9 +2123,9 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
     assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
   }
@@ -2142,15 +2142,15 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenThrow(new IOException("Network error"));
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
     assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
   }
@@ -2169,7 +2169,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(201);
@@ -2183,7 +2183,7 @@ public class SDMServiceImplTest {
     assertNotNull(result);
     verify(httpClient, times(1)).execute(any(HttpPost.class));
     verify(tokenHandler, times(1))
-            .getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW));
+        .getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW));
   }
 
   @Test
@@ -2200,7 +2200,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2227,7 +2227,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2243,7 +2243,7 @@ public class SDMServiceImplTest {
   @Test
   public void testMoveAttachment_WithBadRequest_ThrowsServiceException() throws IOException {
     String errorResponseBody =
-            "{\"exception\": \"InvalidArgumentException\", \"message\": \"Invalid folder ID\"}";
+        "{\"exception\": \"InvalidArgumentException\", \"message\": \"Invalid folder ID\"}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setRepositoryId("repositoryId");
@@ -2255,7 +2255,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(400);
@@ -2266,9 +2266,9 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
     assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
   }
@@ -2276,7 +2276,7 @@ public class SDMServiceImplTest {
   @Test
   public void testMoveAttachment_WithUnauthorized_ThrowsServiceException() throws IOException {
     String errorResponseBody =
-            "{\"exception\": \"PermissionDeniedException\", \"message\": \"User not authorized\"}";
+        "{\"exception\": \"PermissionDeniedException\", \"message\": \"User not authorized\"}";
 
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setRepositoryId("repositoryId");
@@ -2288,7 +2288,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(403);
@@ -2299,9 +2299,9 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, false));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, false));
 
     assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
   }
@@ -2315,7 +2315,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2340,7 +2340,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2354,7 +2354,7 @@ public class SDMServiceImplTest {
     assertNotNull(result);
     assertEquals("https://external.com/file.pdf", result);
     verify(tokenHandler, times(1))
-            .getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW));
+        .getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW));
   }
 
   @Test
@@ -2366,7 +2366,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2385,13 +2385,13 @@ public class SDMServiceImplTest {
   void testGetLinkUrl_WithMultipleLines_ExtractsCorrectUrl() throws IOException {
     String objectId = "objectId999";
     String linkContent =
-            "[InternetShortcut]\nURL=https://example.com/document\nIconIndex=0\nIconFile=C:\\Windows\\System32\\shell32.dll";
+        "[InternetShortcut]\nURL=https://example.com/document\nIconIndex=0\nIconFile=C:\\Windows\\System32\\shell32.dll";
 
     SDMCredentials sdmCredentials = new SDMCredentials();
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2414,7 +2414,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(404);
@@ -2434,7 +2434,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.NAMED_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(403);
@@ -2454,7 +2454,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2477,7 +2477,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2499,15 +2499,15 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Network error"));
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
     ServiceException exception =
-            assertThrows(
-                    ServiceException.class,
-                    () -> sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true));
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.getLinkUrl(objectId, sdmCredentials, true));
 
     assertEquals("Failed to fetch link URL", exception.getMessage());
   }
@@ -2521,7 +2521,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm-service.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2546,7 +2546,7 @@ public class SDMServiceImplTest {
     sdmCredentials.setUrl("https://sdm.example.com/");
 
     when(tokenHandler.getHttpClient(any(), any(), any(), eq(SDMConstants.TECHNICAL_USER_FLOW)))
-            .thenReturn(httpClient);
+        .thenReturn(httpClient);
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
     when(statusLine.getStatusCode()).thenReturn(200);
@@ -2577,8 +2577,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
 
@@ -2599,8 +2599,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
 
@@ -2617,8 +2617,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, null, customPropertiesInSDM, resultMap);
 
@@ -2634,8 +2634,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, props, null, resultMap);
 
@@ -2652,8 +2652,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
 
@@ -2673,8 +2673,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractCustomProperties", JSONObject.class, Set.class, Map.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractCustomProperties", JSONObject.class, Set.class, Map.class);
     method.setAccessible(true);
     method.invoke(sdmServiceImpl, props, customPropertiesInSDM, resultMap);
 
@@ -2693,8 +2693,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractProperty", JSONObject.class, JSONObject.class, String.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
     method.setAccessible(true);
     String result = (String) method.invoke(sdmServiceImpl, props, jsonObject, "testProperty");
 
@@ -2708,8 +2708,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractProperty", JSONObject.class, JSONObject.class, String.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
     method.setAccessible(true);
     String result = (String) method.invoke(sdmServiceImpl, null, jsonObject, "testProperty");
 
@@ -2723,8 +2723,8 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "extractProperty", JSONObject.class, JSONObject.class, String.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "extractProperty", JSONObject.class, JSONObject.class, String.class);
     method.setAccessible(true);
     String result = (String) method.invoke(sdmServiceImpl, props, jsonObject, "missingProperty");
 
@@ -2734,14 +2734,14 @@ public class SDMServiceImplTest {
   @Test
   void testProcessCopyAttachmentResponse_WithAllProperties_ExtractsCorrectly() throws Exception {
     String responseBody =
-            "{\"succinctProperties\": {"
-                    + "\"cmis:name\": \"test.pdf\","
-                    + "\"cmis:contentStreamMimeType\": \"application/pdf\","
-                    + "\"cmis:description\": \"Test document\","
-                    + "\"cmis:objectId\": \"obj123\","
-                    + "\"customProp1\": \"customValue1\","
-                    + "\"customProp2\": \"customValue2\""
-                    + "}}";
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\","
+            + "\"customProp2\": \"customValue2\""
+            + "}}";
 
     Set<String> customPropertiesInSDM = new HashSet<>();
     customPropertiesInSDM.add("customProp1");
@@ -2749,12 +2749,12 @@ public class SDMServiceImplTest {
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "processCopyAttachmentResponse", String.class, Set.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
     method.setAccessible(true);
     @SuppressWarnings("unchecked")
     Map<String, String> result =
-            (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
 
     assertEquals("test.pdf", result.get("cmis:name"));
     assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
@@ -2766,25 +2766,25 @@ public class SDMServiceImplTest {
 
   @Test
   void testProcessCopyAttachmentResponse_WithoutSuccinctProperties_UsesRootLevel()
-          throws Exception {
+      throws Exception {
     String responseBody =
-            "{"
-                    + "\"cmis:name\": \"test.pdf\","
-                    + "\"cmis:contentStreamMimeType\": \"application/pdf\","
-                    + "\"cmis:description\": \"Test document\","
-                    + "\"cmis:objectId\": \"obj123\""
-                    + "}";
+        "{"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\""
+            + "}";
 
     Set<String> customPropertiesInSDM = new HashSet<>();
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "processCopyAttachmentResponse", String.class, Set.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
     method.setAccessible(true);
     @SuppressWarnings("unchecked")
     Map<String, String> result =
-            (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
 
     assertEquals("test.pdf", result.get("cmis:name"));
     assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
@@ -2794,24 +2794,24 @@ public class SDMServiceImplTest {
 
   @Test
   void testProcessCopyAttachmentResponse_WithNullCustomProperties_ExtractsStandardOnly()
-          throws Exception {
+      throws Exception {
     String responseBody =
-            "{\"succinctProperties\": {"
-                    + "\"cmis:name\": \"test.pdf\","
-                    + "\"cmis:contentStreamMimeType\": \"application/pdf\","
-                    + "\"cmis:description\": \"Test document\","
-                    + "\"cmis:objectId\": \"obj123\","
-                    + "\"customProp1\": \"customValue1\""
-                    + "}}";
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\""
+            + "}}";
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "processCopyAttachmentResponse", String.class, Set.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
     method.setAccessible(true);
     @SuppressWarnings("unchecked")
     Map<String, String> result =
-            (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, null);
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, null);
 
     assertEquals("test.pdf", result.get("cmis:name"));
     assertEquals("application/pdf", result.get("cmis:contentStreamMimeType"));
@@ -2822,26 +2822,26 @@ public class SDMServiceImplTest {
 
   @Test
   void testProcessCopyAttachmentResponse_WithEmptyCustomPropertiesSet_ExtractsStandardOnly()
-          throws Exception {
+      throws Exception {
     String responseBody =
-            "{\"succinctProperties\": {"
-                    + "\"cmis:name\": \"test.pdf\","
-                    + "\"cmis:contentStreamMimeType\": \"application/pdf\","
-                    + "\"cmis:description\": \"Test document\","
-                    + "\"cmis:objectId\": \"obj123\","
-                    + "\"customProp1\": \"customValue1\""
-                    + "}}";
+        "{\"succinctProperties\": {"
+            + "\"cmis:name\": \"test.pdf\","
+            + "\"cmis:contentStreamMimeType\": \"application/pdf\","
+            + "\"cmis:description\": \"Test document\","
+            + "\"cmis:objectId\": \"obj123\","
+            + "\"customProp1\": \"customValue1\""
+            + "}}";
 
     Set<String> customPropertiesInSDM = new HashSet<>();
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     java.lang.reflect.Method method =
-            SDMServiceImpl.class.getDeclaredMethod(
-                    "processCopyAttachmentResponse", String.class, Set.class);
+        SDMServiceImpl.class.getDeclaredMethod(
+            "processCopyAttachmentResponse", String.class, Set.class);
     method.setAccessible(true);
     @SuppressWarnings("unchecked")
     Map<String, String> result =
-            (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
+        (Map<String, String>) method.invoke(sdmServiceImpl, responseBody, customPropertiesInSDM);
 
     assertEquals(4, result.size());
     assertEquals("test.pdf", result.get("cmis:name"));

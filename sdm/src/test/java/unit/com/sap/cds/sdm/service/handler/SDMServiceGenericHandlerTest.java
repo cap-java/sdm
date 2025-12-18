@@ -78,14 +78,14 @@ public class SDMServiceGenericHandlerTest {
     List<DraftService> draftServiceList = List.of(draftService);
 
     sdmServiceGenericHandler =
-            new SDMServiceGenericHandler(
-                    attachmentService,
-                    persistenceService,
-                    sdmService,
-                    documentService,
-                    draftServiceList,
-                    dbQuery,
-                    tokenHandler);
+        new SDMServiceGenericHandler(
+            attachmentService,
+            persistenceService,
+            sdmService,
+            documentService,
+            draftServiceList,
+            dbQuery,
+            tokenHandler);
 
     // Static mock for CqnAnalyzer
     cqnAnalyzerMock = mockStatic(CqnAnalyzer.class);
@@ -133,7 +133,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the model and entity
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
@@ -142,29 +142,29 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock DB query
     when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123"))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service
     when(sdmService.getChangeLog("object-123", sdmCredentials, false))
-            .thenReturn(mockChangeLogResult);
+        .thenReturn(mockChangeLogResult);
 
     // Act
     sdmServiceGenericHandler.changelog(mockLogContext);
 
     // Assert
     verify(mockLogContext)
-            .setResult(
-                    argThat(
-                            result -> {
-                              JSONObject jsonResult = (JSONObject) result;
-                              return jsonResult.has("filename")
-                                      && "test-document.pdf".equals(jsonResult.getString("filename"))
-                                      && jsonResult.has("changes")
-                                      && jsonResult.has("version");
-                            }));
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "test-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("changes")
+                      && jsonResult.has("version");
+                }));
 
     verify(dbQuery).getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123");
     verify(tokenHandler).getSDMCredentials();
@@ -199,7 +199,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the model and entity
     when(cdsModel.findEntity("SystemService.SystemEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
@@ -208,28 +208,28 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock DB query
     when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "system-id-456"))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service
     when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
-            .thenReturn(mockChangeLogResult);
+        .thenReturn(mockChangeLogResult);
 
     // Act
     sdmServiceGenericHandler.changelog(mockLogContext);
 
     // Assert
     verify(mockLogContext)
-            .setResult(
-                    argThat(
-                            result -> {
-                              JSONObject jsonResult = (JSONObject) result;
-                              return jsonResult.has("filename")
-                                      && "system-document.pdf".equals(jsonResult.getString("filename"))
-                                      && jsonResult.has("systemChanges");
-                            }));
+        .setResult(
+            argThat(
+                result -> {
+                  JSONObject jsonResult = (JSONObject) result;
+                  return jsonResult.has("filename")
+                      && "system-document.pdf".equals(jsonResult.getString("filename"))
+                      && jsonResult.has("systemChanges");
+                }));
 
     verify(sdmService).getChangeLog("system-object-456", sdmCredentials, true);
   }
@@ -249,10 +249,10 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     assertThrows(
-            RuntimeException.class,
-            () -> {
-              sdmServiceGenericHandler.changelog(mockLogContext);
-            });
+        RuntimeException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
   }
 
   @Test
@@ -280,7 +280,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the model and entity
     when(cdsModel.findEntity("ErrorService.ErrorEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
@@ -289,21 +289,21 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock DB query
     when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "error-id-789"))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service to throw ServiceException (runtime exception)
     when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
-            .thenThrow(new ServiceException("Network error"));
+        .thenThrow(new ServiceException("Network error"));
 
     // Act & Assert
     assertThrows(
-            ServiceException.class,
-            () -> {
-              sdmServiceGenericHandler.changelog(mockLogContext);
-            });
+        ServiceException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
 
     verify(sdmService).getChangeLog("error-object-789", sdmCredentials, false);
   }
@@ -334,7 +334,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the model and entity
     when(cdsModel.findEntity("NullService.NullEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
@@ -343,21 +343,21 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock DB query to return document with null objectId
     when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "null-object-id"))
-            .thenReturn(nullObjectIdDocument);
+        .thenReturn(nullObjectIdDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service
     when(sdmService.getChangeLog(null, sdmCredentials, false))
-            .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
+        .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
 
     // Act & Assert
     assertThrows(
-            IllegalArgumentException.class,
-            () -> {
-              sdmServiceGenericHandler.changelog(mockLogContext);
-            });
+        IllegalArgumentException.class,
+        () -> {
+          sdmServiceGenericHandler.changelog(mockLogContext);
+        });
   }
 
   @Test
@@ -392,8 +392,8 @@ public class SDMServiceGenericHandlerTest {
     when(userInfo.isSystemUser()).thenReturn(false);
 
     doThrow(new RuntimeException("IO error"))
-            .when(attachmentService)
-            .copyAttachments(any(CopyAttachmentInput.class), eq(false));
+        .when(attachmentService)
+        .copyAttachments(any(CopyAttachmentInput.class), eq(false));
 
     try {
       sdmServiceGenericHandler.copyAttachments(mockContext);
@@ -417,7 +417,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -431,8 +431,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -452,13 +452,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -502,12 +502,12 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.VERSIONED_REPO_ERROR);
+        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(SDMConstants.VERSIONED_REPO_ERROR, ex.getMessage());
   }
 
@@ -524,7 +524,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -539,8 +539,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -549,7 +549,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn("Maximum two links allowed");
+        .thenReturn("Maximum two links allowed");
     when(userInfo.isSystemUser()).thenReturn(false);
 
     CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
@@ -567,13 +567,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(2L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("2__Maximum two links allowed");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("2__Maximum two links allowed");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -581,7 +581,7 @@ public class SDMServiceGenericHandlerTest {
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals("Maximum two links allowed", ex.getMessage());
   }
 
@@ -598,7 +598,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -613,8 +613,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -637,13 +637,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(2L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("2__");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("2__");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -651,7 +651,7 @@ public class SDMServiceGenericHandlerTest {
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, 2), ex.getMessage());
   }
 
@@ -668,7 +668,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -683,8 +683,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/URL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -707,13 +707,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -721,9 +721,9 @@ public class SDMServiceGenericHandlerTest {
     when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(
-            SDMConstants.nameConstraintMessage(Collections.singletonList("test/URL")), ex.getMessage());
+        SDMConstants.nameConstraintMessage(Collections.singletonList("test/URL")), ex.getMessage());
   }
 
   @Test
@@ -739,7 +739,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -754,8 +754,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -781,12 +781,12 @@ public class SDMServiceGenericHandlerTest {
     when(mockResult.listOf(Map.class)).thenReturn(List.of(duplicateAttachment));
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -795,7 +795,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertTrue(ex.getMessage().contains("duplicateFile.txt"));
   }
 
@@ -812,7 +812,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -827,8 +827,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -849,13 +849,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -868,14 +868,14 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     when(documentService.createDocument(any(), any(), anyBoolean()))
-            .thenThrow(new RuntimeException("Document creation failed"));
+        .thenThrow(new RuntimeException("Document creation failed"));
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertTrue(
-            ex.getMessage().contains("Error occurred while creating attachment")
-                    || ex.getMessage().contains(AttachmentService.EVENT_CREATE_ATTACHMENT));
+        ex.getMessage().contains("Error occurred while creating attachment")
+            || ex.getMessage().contains(AttachmentService.EVENT_CREATE_ATTACHMENT));
     assertTrue(ex.getCause() instanceof RuntimeException);
     assertEquals("Document creation failed", ex.getCause().getMessage());
   }
@@ -892,7 +892,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -907,8 +907,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -929,13 +929,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -956,7 +956,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertTrue(ex.getMessage().contains("duplicateFile.txt"));
   }
 
@@ -973,7 +973,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -988,8 +988,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1010,13 +1010,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -1037,7 +1037,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals("Some error message", ex.getMessage());
   }
 
@@ -1053,7 +1053,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -1068,8 +1068,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("duplicateFile.txt");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1090,13 +1090,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
@@ -1110,7 +1110,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
 
     JSONObject createResult = new JSONObject();
     createResult.put("status", "unauthorized");
@@ -1121,7 +1121,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     ServiceException ex =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK, ex.getMessage());
   }
 
@@ -1146,7 +1146,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock for _drafts entity
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(cdsEntity));
+        .thenReturn(Optional.of(cdsEntity));
 
     // Mock CmisDocument with internet shortcut
     CmisDocument cmisDocument = new CmisDocument();
@@ -1155,7 +1155,7 @@ public class SDMServiceGenericHandlerTest {
     cmisDocument.setUrl("http://shortcut-url");
 
     when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "123"))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1196,10 +1196,10 @@ public class SDMServiceGenericHandlerTest {
     cmisDocument.setUrl("http://file-url");
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(cdsEntity));
+        .thenReturn(Optional.of(cdsEntity));
     when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "123"))
-            .thenReturn(emptyDoc) // first call (draft)
-            .thenReturn(cmisDocument); // second call (non-draft)
+        .thenReturn(emptyDoc) // first call (draft)
+        .thenReturn(cmisDocument); // second call (non-draft)
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
 
@@ -1230,7 +1230,7 @@ public class SDMServiceGenericHandlerTest {
     when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "123"));
 
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(cdsEntity));
+        .thenReturn(Optional.of(cdsEntity));
 
     // Mock CmisDocument with non-internet shortcut mime type
     CmisDocument cmisDocument = new CmisDocument();
@@ -1239,7 +1239,7 @@ public class SDMServiceGenericHandlerTest {
     cmisDocument.setUrl("http://file-url");
 
     when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "123"))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1270,14 +1270,14 @@ public class SDMServiceGenericHandlerTest {
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
 
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
     when(mockContext.get("url")).thenReturn("http://newlink.com");
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
     when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
-            .thenReturn(successResponse);
+        .thenReturn(successResponse);
 
     // Act
     sdmServiceGenericHandler.edit(mockContext);
@@ -1301,7 +1301,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.FAILED_TO_EDIT_LINK_MSG);
+        .thenReturn(SDMConstants.FAILED_TO_EDIT_LINK_MSG);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     AnalysisResult analysisResult = mock(AnalysisResult.class);
@@ -1313,7 +1313,7 @@ public class SDMServiceGenericHandlerTest {
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
 
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
     when(mockContext.get("url")).thenReturn("http://badlink.com");
 
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
@@ -1321,7 +1321,7 @@ public class SDMServiceGenericHandlerTest {
     JSONObject failureResponse = new JSONObject();
     failureResponse.put("status", "error");
     when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
-            .thenReturn(failureResponse);
+        .thenReturn(failureResponse);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));
@@ -1350,7 +1350,7 @@ public class SDMServiceGenericHandlerTest {
     linkDocument.setMimeType("application/internet-shortcut");
     linkDocument.setUrl("http://test.com");
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(linkDocument);
+        .thenReturn(linkDocument);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1379,7 +1379,7 @@ public class SDMServiceGenericHandlerTest {
     regularDocument.setFileName("test.pdf");
     regularDocument.setMimeType("application/pdf");
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(regularDocument);
+        .thenReturn(regularDocument);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1409,7 +1409,7 @@ public class SDMServiceGenericHandlerTest {
     CmisDocument emptyDocument = new CmisDocument();
     emptyDocument.setFileName("");
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(emptyDocument);
+        .thenReturn(emptyDocument);
 
     // Second call returns proper document
     CmisDocument properDocument = new CmisDocument();
@@ -1417,7 +1417,7 @@ public class SDMServiceGenericHandlerTest {
     properDocument.setMimeType("application/internet-shortcut");
     properDocument.setUrl("http://fallback.com");
     when(dbQuery.getObjectIdForAttachmentID(eq(cdsEntity), eq(persistenceService), eq("123")))
-            .thenReturn(properDocument);
+        .thenReturn(properDocument);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1437,7 +1437,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
+        .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVersionEnabled(true); // This will trigger validation failure
@@ -1456,7 +1456,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn("Custom localized message for versioned repository");
+        .thenReturn("Custom localized message for versioned repository");
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVersionEnabled(true);
@@ -1464,7 +1464,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Act & Assert
     ServiceException exception =
-            assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
+        assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
     assertEquals("Custom localized message for versioned repository", exception.getMessage());
   }
 
@@ -1481,19 +1481,19 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
+        .thenReturn(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
@@ -1511,13 +1511,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(5L); // Exceeds limit
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("3__Maximum attachments exceeded"); // Max 3, current 5
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("3__Maximum attachments exceeded"); // Max 3, current 5
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
@@ -1542,13 +1542,13 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("test/invalid\\name");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1568,13 +1568,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(true);
 
     RepoValue repoValue = new RepoValue();
@@ -1599,13 +1599,13 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getTarget()).thenReturn(draftEntity);
     when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
-            .thenReturn(Optional.of(draftEntity));
+        .thenReturn(Optional.of(draftEntity));
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
-            .thenReturn(
-                    "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
+        .thenReturn(
+            "{\"SELECT\":{\"from\":{\"ref\":[{\"id\":\"MyService.MyEntity\",\"where\":[{\"ref\":[\"ID\"]},\"=\",{\"val\":\"123\"}]},\"entity2\"]}}}");
     when(mockContext.get("cqn")).thenReturn(cqnSelect);
     when(mockContext.get("name")).thenReturn("testURL");
     when(mockContext.get("url")).thenReturn("http://test-url");
@@ -1613,7 +1613,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG);
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG);
     when(userInfo.getTenant()).thenReturn("tenant1");
     when(userInfo.isSystemUser()).thenReturn(false);
 
@@ -1629,13 +1629,13 @@ public class SDMServiceGenericHandlerTest {
 
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
     when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), any(), any()))
-            .thenReturn(mockResult);
+        .thenReturn(mockResult);
     when(mockResult.rowCount()).thenReturn(0L);
     when(mockResult.listOf(Map.class)).thenReturn(Collections.emptyList());
 
     sdmUtilsMock
-            .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
-            .thenReturn("10__null");
+        .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+        .thenReturn("10__null");
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
 
     RepoValue repoValue = new RepoValue();
@@ -1652,7 +1652,7 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("status", "unauthorized");
     when(documentService.createDocument(
             any(CmisDocument.class), any(SDMCredentials.class), anyBoolean()))
-            .thenReturn(createResult);
+        .thenReturn(createResult);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -1671,7 +1671,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-            .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG);
+        .thenReturn(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     AnalysisResult analysisResult = mock(AnalysisResult.class);
@@ -1683,7 +1683,7 @@ public class SDMServiceGenericHandlerTest {
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
 
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
-            .thenReturn(cmisDocument);
+        .thenReturn(cmisDocument);
     when(mockContext.get("url")).thenReturn("http://newlink.com");
 
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
@@ -1691,7 +1691,7 @@ public class SDMServiceGenericHandlerTest {
     JSONObject unauthorizedResponse = new JSONObject();
     unauthorizedResponse.put("status", "unauthorized");
     when(sdmService.editLink(any(CmisDocument.class), any(SDMCredentials.class), eq(false)))
-            .thenReturn(unauthorizedResponse);
+        .thenReturn(unauthorizedResponse);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.edit(mockContext));
@@ -1719,14 +1719,14 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
-                                      .getAttachmentPathMapping(any(), any(), any()))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
 
       when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
       when(cdsModel.findEntity("AdminService.Pages_drafts")).thenReturn(Optional.empty());
@@ -1758,14 +1758,14 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
-                                      .getAttachmentPathMapping(any(), any(), any()))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
 
       assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
       verify(cdsModel, never()).findEntity("AdminService.Chapters_drafts");
@@ -1794,14 +1794,14 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
-                                      .getAttachmentPathMapping(any(), any(), any()))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
 
       // Mock dynamic compositions for parentDraftEntity
       CdsElement mockComposition1 = mock(CdsElement.class);
@@ -1811,7 +1811,7 @@ public class SDMServiceGenericHandlerTest {
       CdsEntity mockTargetEntity1 = mock(CdsEntity.class);
       CdsEntity mockTargetEntity2 = mock(CdsEntity.class);
       when(parentDraftEntity.compositions())
-              .thenReturn(Stream.of(mockComposition1, mockComposition2));
+          .thenReturn(Stream.of(mockComposition1, mockComposition2));
       when(mockComposition1.getType()).thenReturn(mockAssociationType1);
       when(mockComposition2.getType()).thenReturn(mockAssociationType2);
       when(mockAssociationType1.getTarget()).thenReturn(mockTargetEntity1);
@@ -1846,21 +1846,21 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
-                                      .getAttachmentPathMapping(any(), any(), any()))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils
+                      .getAttachmentPathMapping(any(), any(), any()))
+          .thenReturn(new HashMap<>());
 
       when(cdsModel.findEntity("AdminService.Books"))
-              .thenThrow(new RuntimeException("Database error"));
+          .thenThrow(new RuntimeException("Database error"));
 
       assertThrows(
-              RuntimeException.class,
-              () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+          RuntimeException.class,
+          () -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
     }
   }
 
@@ -1901,28 +1901,28 @@ public class SDMServiceGenericHandlerTest {
     when(activeRow.get("linkUrl")).thenReturn("http://original-url.com");
 
     when(persistenceService.run(any(CqnSelect.class)))
-            .thenReturn(draftLinksResult)
-            .thenReturn(activeResult);
+        .thenReturn(draftLinksResult)
+        .thenReturn(activeResult);
 
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     verify(persistenceService, times(2)).run(any(CqnSelect.class));
     verify(tokenHandler, times(1)).getSDMCredentials();
@@ -1958,22 +1958,22 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
     verify(tokenHandler, times(1)).getSDMCredentials();
@@ -2011,8 +2011,8 @@ public class SDMServiceGenericHandlerTest {
     when(activeRow.get("linkUrl")).thenReturn("http://same-url.com");
 
     when(persistenceService.run(any(CqnSelect.class)))
-            .thenReturn(draftLinksResult)
-            .thenReturn(activeResult);
+        .thenReturn(draftLinksResult)
+        .thenReturn(activeResult);
 
     SDMCredentials sdmCredentials = mock(SDMCredentials.class);
     UserInfo userInfo = mock(UserInfo.class);
@@ -2023,22 +2023,22 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
 
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinksForComposition", DraftCancelEventContext.class, Map.class, String.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler, context, parentKeys, attachmentCompositionDefinition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     verify(persistenceService, times(2)).run(any(CqnSelect.class));
     verify(tokenHandler, times(1)).getSDMCredentials();
@@ -2076,9 +2076,9 @@ public class SDMServiceGenericHandlerTest {
     CdsEntity nestedDraftEntity1 = mock(CdsEntity.class);
     CdsEntity nestedDraftEntity2 = mock(CdsEntity.class);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity1));
+        .thenReturn(Optional.of(nestedDraftEntity1));
     when(model.findEntity("AdminService.Reviews_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity2));
+        .thenReturn(Optional.of(nestedDraftEntity2));
 
     Result emptyResult1 = mock(Result.class);
     Result emptyResult2 = mock(Result.class);
@@ -2086,53 +2086,53 @@ public class SDMServiceGenericHandlerTest {
     when(emptyResult2.iterator()).thenReturn(Collections.emptyIterator());
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
 
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity1), eq(persistenceService)))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity1), eq(persistenceService)))
+          .thenReturn(new HashMap<>());
 
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity2), eq(persistenceService)))
-              .thenReturn(new HashMap<>());
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity2), eq(persistenceService)))
+          .thenReturn(new HashMap<>());
 
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "revertNestedEntityLinks", DraftCancelEventContext.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "revertNestedEntityLinks", DraftCancelEventContext.class);
       method.setAccessible(true);
 
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       verify(parentDraftEntity).getQualifiedName();
       verify(model).findEntity("AdminService.Books");
       verify(parentActiveEntity).compositions();
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity1), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity1), eq(persistenceService)),
+          times(1));
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity2), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity2), eq(persistenceService)),
+          times(1));
     }
   }
 
@@ -2148,21 +2148,21 @@ public class SDMServiceGenericHandlerTest {
     when(model.findEntity("AdminService.Books")).thenReturn(Optional.empty());
 
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertNestedEntityLinks", DraftCancelEventContext.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(sdmServiceGenericHandler, context);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     verify(parentDraftEntity).getQualifiedName();
     verify(model).findEntity("AdminService.Books");
@@ -2182,21 +2182,21 @@ public class SDMServiceGenericHandlerTest {
     when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
 
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertNestedEntityLinks", DraftCancelEventContext.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(sdmServiceGenericHandler, context);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     verify(parentDraftEntity).getQualifiedName();
     verify(model).findEntity("AdminService.Books");
@@ -2226,7 +2226,7 @@ public class SDMServiceGenericHandlerTest {
 
     CdsEntity nestedDraftEntity = mock(CdsEntity.class);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity));
+        .thenReturn(Optional.of(nestedDraftEntity));
 
     Result nestedRecordsResult = mock(Result.class);
     Row nestedRecord = mock(Row.class);
@@ -2240,9 +2240,9 @@ public class SDMServiceGenericHandlerTest {
     CdsEntity attachmentActiveEntity = mock(CdsEntity.class);
 
     when(model.findEntity("AdminService.Attachments_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity));
+        .thenReturn(Optional.of(attachmentDraftEntity));
     when(model.findEntity("AdminService.Attachments"))
-            .thenReturn(Optional.of(attachmentActiveEntity));
+        .thenReturn(Optional.of(attachmentActiveEntity));
 
     CdsElement upElement = mock(CdsElement.class);
     CdsElement upAssociation = mock(CdsElement.class);
@@ -2268,36 +2268,36 @@ public class SDMServiceGenericHandlerTest {
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(attachmentDraftEntity)).thenReturn("up__ID");
 
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
 
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity), eq(persistenceService)))
-              .thenReturn(attachmentMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
 
       when(persistenceService.run(any(CqnSelect.class)))
-              .thenReturn(nestedRecordsResult)
-              .thenReturn(emptyDraftLinksResult);
+          .thenReturn(nestedRecordsResult)
+          .thenReturn(emptyDraftLinksResult);
 
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "revertNestedEntityLinks", DraftCancelEventContext.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "revertNestedEntityLinks", DraftCancelEventContext.class);
       method.setAccessible(true);
 
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       // Verify interactions
       verify(parentDraftEntity).getQualifiedName();
@@ -2305,10 +2305,10 @@ public class SDMServiceGenericHandlerTest {
       verify(parentActiveEntity).compositions();
       verify(persistenceService, times(2)).run(any(CqnSelect.class));
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
     }
   }
 
@@ -2332,23 +2332,23 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertNestedEntityLinks", DraftCancelEventContext.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertNestedEntityLinks", DraftCancelEventContext.class);
     method.setAccessible(true);
 
     // Execute the test and expect RuntimeException to be thrown
     assertThrows(
-            RuntimeException.class,
-            () -> {
-              try {
-                method.invoke(sdmServiceGenericHandler, context);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        RuntimeException.class,
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
   }
 
   @Test
@@ -2364,42 +2364,42 @@ public class SDMServiceGenericHandlerTest {
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
     when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
-            .thenReturn(successResponse);
+        .thenReturn(successResponse);
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinkInSDM",
-                    String.class,
-                    String.class,
-                    String.class,
-                    SDMCredentials.class,
-                    Boolean.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler,
-                        objectId,
-                        filename,
-                        originalUrl,
-                        sdmCredentials,
-                        isSystemUser);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify interactions
     ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
     verify(sdmService, times(1))
-            .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
 
     // Verify the CmisDocument properties
     CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
@@ -2422,42 +2422,42 @@ public class SDMServiceGenericHandlerTest {
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
     when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
-            .thenReturn(successResponse);
+        .thenReturn(successResponse);
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinkInSDM",
-                    String.class,
-                    String.class,
-                    String.class,
-                    SDMCredentials.class,
-                    Boolean.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler,
-                        objectId,
-                        filename,
-                        originalUrl,
-                        sdmCredentials,
-                        isSystemUser);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify interactions
     ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
     verify(sdmService, times(1))
-            .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
 
     // Verify the CmisDocument properties
     CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
@@ -2480,42 +2480,42 @@ public class SDMServiceGenericHandlerTest {
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
     when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
-            .thenReturn(successResponse);
+        .thenReturn(successResponse);
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinkInSDM",
-                    String.class,
-                    String.class,
-                    String.class,
-                    SDMCredentials.class,
-                    Boolean.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler,
-                        objectId,
-                        filename,
-                        originalUrl,
-                        sdmCredentials,
-                        isSystemUser);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify interactions
     ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
     verify(sdmService, times(1))
-            .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(isSystemUser));
 
     // Verify the CmisDocument properties
     CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
@@ -2536,42 +2536,42 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the SDM service to throw an exception
     when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
-            .thenThrow(new IOException("Service unavailable"));
+        .thenThrow(new IOException("Service unavailable"));
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinkInSDM",
-                    String.class,
-                    String.class,
-                    String.class,
-                    SDMCredentials.class,
-                    Boolean.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
     method.setAccessible(true);
 
     // Execute the test and expect IOException to be thrown
     assertThrows(
-            IOException.class,
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler,
-                        objectId,
-                        filename,
-                        originalUrl,
-                        sdmCredentials,
-                        isSystemUser);
-              } catch (Exception e) {
-                if (e.getCause() instanceof IOException) {
-                  throw (IOException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        IOException.class,
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof IOException) {
+              throw (IOException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify the service was called
     verify(sdmService, times(1))
-            .editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser));
+        .editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser));
   }
 
   @Test
@@ -2587,42 +2587,42 @@ public class SDMServiceGenericHandlerTest {
     JSONObject successResponse = new JSONObject();
     successResponse.put("status", "success");
     when(sdmService.editLink(any(CmisDocument.class), eq(sdmCredentials), eq(isSystemUser)))
-            .thenReturn(successResponse);
+        .thenReturn(successResponse);
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "revertLinkInSDM",
-                    String.class,
-                    String.class,
-                    String.class,
-                    SDMCredentials.class,
-                    Boolean.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "revertLinkInSDM",
+            String.class,
+            String.class,
+            String.class,
+            SDMCredentials.class,
+            Boolean.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(
-                        sdmServiceGenericHandler,
-                        objectId,
-                        filename,
-                        originalUrl,
-                        sdmCredentials,
-                        isSystemUser);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(
+                sdmServiceGenericHandler,
+                objectId,
+                filename,
+                originalUrl,
+                sdmCredentials,
+                isSystemUser);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify interactions with system user flag
     ArgumentCaptor<CmisDocument> cmisDocumentCaptor = ArgumentCaptor.forClass(CmisDocument.class);
     verify(sdmService, times(1))
-            .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(true));
+        .editLink(cmisDocumentCaptor.capture(), eq(sdmCredentials), eq(true));
 
     // Verify the CmisDocument properties
     CmisDocument capturedDoc = cmisDocumentCaptor.getValue();
@@ -2653,30 +2653,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertEquals("https://example.com/original-link", url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://example.com/original-link", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify persistence service was called
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2702,30 +2702,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertNull(url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertNull(url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify persistence service was called
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2754,30 +2754,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertNull(url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertNull(url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify interactions
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2807,30 +2807,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertEquals("https://different-url.com", url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://different-url.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify persistence service was called
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2857,30 +2857,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertEquals("https://numeric-parent.com", url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://numeric-parent.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify persistence service was called
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2907,30 +2907,30 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "getOriginalUrlFromActiveTable",
-                    CdsEntity.class,
-                    String.class,
-                    Object.class,
-                    String.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "getOriginalUrlFromActiveTable",
+            CdsEntity.class,
+            String.class,
+            Object.class,
+            String.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                String url =
-                        (String)
-                                method.invoke(
-                                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
-                assertEquals("https://first-result.com", url);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            String url =
+                (String)
+                    method.invoke(
+                        sdmServiceGenericHandler, activeEntity, attachmentId, parentId, upIdKey);
+            assertEquals("https://first-result.com", url);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify persistence service was called
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
@@ -2954,14 +2954,14 @@ public class SDMServiceGenericHandlerTest {
     when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
     when(context.getModel()).thenReturn(model);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity));
+        .thenReturn(Optional.of(nestedDraftEntity));
 
     // Mock nested records
     Result nestedRecordsResult = mock(Result.class);
     Row nestedRecord1 = mock(Row.class);
     Row nestedRecord2 = mock(Row.class);
     when(nestedRecordsResult.iterator())
-            .thenReturn(Arrays.asList(nestedRecord1, nestedRecord2).iterator());
+        .thenReturn(Arrays.asList(nestedRecord1, nestedRecord2).iterator());
     when(nestedRecord1.get("ID")).thenReturn("chapter1");
     when(nestedRecord2.get("ID")).thenReturn("chapter2");
 
@@ -2977,13 +2977,13 @@ public class SDMServiceGenericHandlerTest {
     CdsEntity attachmentActiveEntity2 = mock(CdsEntity.class);
 
     when(model.findEntity("AdminService.Attachments1_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity1));
+        .thenReturn(Optional.of(attachmentDraftEntity1));
     when(model.findEntity("AdminService.Attachments1"))
-            .thenReturn(Optional.of(attachmentActiveEntity1));
+        .thenReturn(Optional.of(attachmentActiveEntity1));
     when(model.findEntity("AdminService.Attachments2_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity2));
+        .thenReturn(Optional.of(attachmentDraftEntity2));
     when(model.findEntity("AdminService.Attachments2"))
-            .thenReturn(Optional.of(attachmentActiveEntity2));
+        .thenReturn(Optional.of(attachmentActiveEntity2));
 
     // Mock upId key extraction for attachment entities
     CdsElement upElement1 = mock(CdsElement.class);
@@ -3016,14 +3016,14 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the static method call
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity), eq(persistenceService)))
-              .thenReturn(attachmentMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
 
       // Mock draft links result for revertLinksForComposition calls
       Result emptyDraftLinksResult1 = mock(Result.class);
@@ -3037,38 +3037,38 @@ public class SDMServiceGenericHandlerTest {
 
       // Mock persistence service calls
       when(persistenceService.run(any(CqnSelect.class)))
-              .thenReturn(nestedRecordsResult) // First call for nested records
-              .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
-              .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
-              .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
-              .thenReturn(emptyDraftLinksResult4); // revertLinksForComposition call 4
+          .thenReturn(nestedRecordsResult) // First call for nested records
+          .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
+          .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
+          .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
+          .thenReturn(emptyDraftLinksResult4); // revertLinksForComposition call 4
 
       // Use reflection to invoke the private method
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context, composition);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       // Verify interactions
       verify(persistenceService, atLeast(1)).run(any(CqnSelect.class));
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
     }
   }
 
@@ -3090,22 +3090,22 @@ public class SDMServiceGenericHandlerTest {
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
-            () -> {
-              try {
-                method.invoke(sdmServiceGenericHandler, context, composition);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context, composition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
 
     // Verify no persistence calls were made since no draft entity exists
     verify(persistenceService, never()).run(any(CqnSelect.class));
@@ -3127,47 +3127,47 @@ public class SDMServiceGenericHandlerTest {
     when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
     when(context.getModel()).thenReturn(model);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity));
+        .thenReturn(Optional.of(nestedDraftEntity));
 
     // Mock empty attachment path mapping
     Map<String, String> emptyAttachmentMapping = new HashMap<>();
 
     // Mock the static method call
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity), eq(persistenceService)))
-              .thenReturn(emptyAttachmentMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(emptyAttachmentMapping);
 
       // Use reflection to invoke the private method
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context, composition);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       // Verify interactions
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
       // No persistence calls for nested records since mapping is empty
       verify(persistenceService, never()).run(any(CqnSelect.class));
     }
@@ -3189,7 +3189,7 @@ public class SDMServiceGenericHandlerTest {
     when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
     when(context.getModel()).thenReturn(model);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity));
+        .thenReturn(Optional.of(nestedDraftEntity));
 
     // Mock empty nested records result
     Result emptyResult = mock(Result.class);
@@ -3201,44 +3201,44 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the static method call
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity), eq(persistenceService)))
-              .thenReturn(attachmentMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
 
       when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
 
       // Use reflection to invoke the private method
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context, composition);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       // Verify interactions
       verify(persistenceService, times(1))
-              .run(any(CqnSelect.class)); // Only one call for nested records
+          .run(any(CqnSelect.class)); // Only one call for nested records
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
     }
   }
 
@@ -3257,27 +3257,27 @@ public class SDMServiceGenericHandlerTest {
     when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
     when(context.getModel()).thenReturn(model);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenThrow(new RuntimeException("Database error"));
+        .thenThrow(new RuntimeException("Database error"));
 
     // Use reflection to invoke the private method
     Method method =
-            SDMServiceGenericHandler.class.getDeclaredMethod(
-                    "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+        SDMServiceGenericHandler.class.getDeclaredMethod(
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
     method.setAccessible(true);
 
     // Execute the test and expect exception
     assertThrows(
-            RuntimeException.class,
-            () -> {
-              try {
-                method.invoke(sdmServiceGenericHandler, context, composition);
-              } catch (Exception e) {
-                if (e.getCause() instanceof RuntimeException) {
-                  throw (RuntimeException) e.getCause();
-                }
-                throw new RuntimeException(e);
-              }
-            });
+        RuntimeException.class,
+        () -> {
+          try {
+            method.invoke(sdmServiceGenericHandler, context, composition);
+          } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException) e.getCause();
+            }
+            throw new RuntimeException(e);
+          }
+        });
   }
 
   @Test
@@ -3296,7 +3296,7 @@ public class SDMServiceGenericHandlerTest {
     when(targetEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
     when(context.getModel()).thenReturn(model);
     when(model.findEntity("AdminService.Chapters_drafts"))
-            .thenReturn(Optional.of(nestedDraftEntity));
+        .thenReturn(Optional.of(nestedDraftEntity));
 
     // Mock nested records with single record
     Result nestedRecordsResult = mock(Result.class);
@@ -3319,17 +3319,17 @@ public class SDMServiceGenericHandlerTest {
     CdsEntity attachmentActiveEntity3 = mock(CdsEntity.class);
 
     when(model.findEntity("AdminService.ChapterAttachments_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity1));
+        .thenReturn(Optional.of(attachmentDraftEntity1));
     when(model.findEntity("AdminService.ChapterAttachments"))
-            .thenReturn(Optional.of(attachmentActiveEntity1));
+        .thenReturn(Optional.of(attachmentActiveEntity1));
     when(model.findEntity("AdminService.ChapterDocuments_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity2));
+        .thenReturn(Optional.of(attachmentDraftEntity2));
     when(model.findEntity("AdminService.ChapterDocuments"))
-            .thenReturn(Optional.of(attachmentActiveEntity2));
+        .thenReturn(Optional.of(attachmentActiveEntity2));
     when(model.findEntity("AdminService.ChapterImages_drafts"))
-            .thenReturn(Optional.of(attachmentDraftEntity3));
+        .thenReturn(Optional.of(attachmentDraftEntity3));
     when(model.findEntity("AdminService.ChapterImages"))
-            .thenReturn(Optional.of(attachmentActiveEntity3));
+        .thenReturn(Optional.of(attachmentActiveEntity3));
 
     // Mock upId key extraction for attachment entities
     CdsElement upElement1 = mock(CdsElement.class);
@@ -3375,14 +3375,14 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock the static method call
     try (var attachmentUtilsMock =
-                 mockStatic(
-                         com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
       attachmentUtilsMock
-              .when(
-                      () ->
-                              AttachmentsHandlerUtils.getAttachmentPathMapping(
-                                      eq(model), eq(targetEntity), eq(persistenceService)))
-              .thenReturn(attachmentMapping);
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.getAttachmentPathMapping(
+                      eq(model), eq(targetEntity), eq(persistenceService)))
+          .thenReturn(attachmentMapping);
 
       // Mock draft links result for revertLinksForComposition calls
       Result emptyDraftLinksResult1 = mock(Result.class);
@@ -3401,41 +3401,41 @@ public class SDMServiceGenericHandlerTest {
       // Mock persistence service calls - first for nested records, then for each
       // revertLinksForComposition call
       when(persistenceService.run(any(CqnSelect.class)))
-              .thenReturn(nestedRecordsResult) // First call for nested records
-              .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
-              .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
-              .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
-              .thenReturn(emptyDraftLinksResult4) // revertLinksForComposition call 4
-              .thenReturn(emptyDraftLinksResult5) // revertLinksForComposition call 5
-              .thenReturn(emptyDraftLinksResult6); // revertLinksForComposition call 6
+          .thenReturn(nestedRecordsResult) // First call for nested records
+          .thenReturn(emptyDraftLinksResult1) // revertLinksForComposition call 1
+          .thenReturn(emptyDraftLinksResult2) // revertLinksForComposition call 2
+          .thenReturn(emptyDraftLinksResult3) // revertLinksForComposition call 3
+          .thenReturn(emptyDraftLinksResult4) // revertLinksForComposition call 4
+          .thenReturn(emptyDraftLinksResult5) // revertLinksForComposition call 5
+          .thenReturn(emptyDraftLinksResult6); // revertLinksForComposition call 6
 
       // Use reflection to invoke the private method
       Method method =
-              SDMServiceGenericHandler.class.getDeclaredMethod(
-                      "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+          SDMServiceGenericHandler.class.getDeclaredMethod(
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
-              () -> {
-                try {
-                  method.invoke(sdmServiceGenericHandler, context, composition);
-                } catch (Exception e) {
-                  if (e.getCause() instanceof RuntimeException) {
-                    throw (RuntimeException) e.getCause();
-                  }
-                  throw new RuntimeException(e);
-                }
-              });
+          () -> {
+            try {
+              method.invoke(sdmServiceGenericHandler, context, composition);
+            } catch (Exception e) {
+              if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+              }
+              throw new RuntimeException(e);
+            }
+          });
 
       // Verify interactions
       verify(persistenceService, atLeast(4))
-              .run(any(CqnSelect.class)); // 1 for nested records + 3 for attachment paths
+          .run(any(CqnSelect.class)); // 1 for nested records + 3 for attachment paths
       attachmentUtilsMock.verify(
-              () ->
-                      AttachmentsHandlerUtils.getAttachmentPathMapping(
-                              eq(model), eq(targetEntity), eq(persistenceService)),
-              times(1));
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(model), eq(targetEntity), eq(persistenceService)),
+          times(1));
     }
   }
 
@@ -3460,7 +3460,7 @@ public class SDMServiceGenericHandlerTest {
     expectedResult.put("failedCount", 0);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3498,7 +3498,7 @@ public class SDMServiceGenericHandlerTest {
     expectedResult.put("movedCount", 2);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(true)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3536,7 +3536,7 @@ public class SDMServiceGenericHandlerTest {
     expectedResult.put("movedCount", 1);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3568,7 +3568,7 @@ public class SDMServiceGenericHandlerTest {
 
     Map<String, Object> expectedResult = new HashMap<>();
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3598,7 +3598,7 @@ public class SDMServiceGenericHandlerTest {
 
     Map<String, Object> expectedResult = new HashMap<>();
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(true)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3624,7 +3624,7 @@ public class SDMServiceGenericHandlerTest {
 
     Map<String, Object> expectedResult = new HashMap<>();
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(expectedResult);
+        .thenReturn(expectedResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3654,7 +3654,7 @@ public class SDMServiceGenericHandlerTest {
     serviceResult.put("failedAttachments", Collections.emptyList());
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(serviceResult);
+        .thenReturn(serviceResult);
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3680,14 +3680,14 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock attachmentService to throw IOException wrapped in RuntimeException
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenAnswer(
-                    invocation -> {
-                      throw new IOException("Move operation failed");
-                    });
+        .thenAnswer(
+            invocation -> {
+              throw new IOException("Move operation failed");
+            });
 
     // Act & Assert
     assertThrows(
-            IOException.class, () -> sdmServiceGenericHandler.moveAttachments(mockMoveContext));
+        IOException.class, () -> sdmServiceGenericHandler.moveAttachments(mockMoveContext));
 
     verify(mockMoveContext, never()).setCompleted(); // Should not be called when exception occurs
   }
@@ -3707,7 +3707,7 @@ public class SDMServiceGenericHandlerTest {
     when(userInfo.isSystemUser()).thenReturn(false);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(new HashMap<>());
+        .thenReturn(new HashMap<>());
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3725,14 +3725,14 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName())
-            .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name
+        .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name
 
     UserInfo userInfo = mock(UserInfo.class);
     when(mockMoveContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
     when(attachmentService.moveAttachments(any(MoveAttachmentInput.class), eq(false)))
-            .thenReturn(new HashMap<>());
+        .thenReturn(new HashMap<>());
 
     // Act
     sdmServiceGenericHandler.moveAttachments(mockMoveContext);
@@ -3743,7 +3743,7 @@ public class SDMServiceGenericHandlerTest {
 
     MoveAttachmentInput input = captor.getValue();
     assertEquals(
-            "com.example.MyService.MyEntity.attachments",
-            input.targetFacet()); // Uses full qualified name
+        "com.example.MyService.MyEntity.attachments",
+        input.targetFacet()); // Uses full qualified name
   }
 }

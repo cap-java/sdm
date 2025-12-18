@@ -67,7 +67,17 @@ public interface SDMService {
       Set<String> customPropertiesInSDM)
       throws IOException;
 
+  public String moveAttachment(
+      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
+
   public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
+
+  public JSONObject getChangeLog(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
+
+  public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 }

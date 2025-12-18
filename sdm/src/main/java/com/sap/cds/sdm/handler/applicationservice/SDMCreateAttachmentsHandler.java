@@ -245,6 +245,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
+    logger.debug("Processing attachment creation - ID: {}, objectId: {}", id, objectId);
+
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -259,11 +261,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, updatedSecondaryProperties);
+        fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
-        descriptionInSDM, descriptionInRequest, updatedSecondaryProperties);
+        descriptionInSDM,
+        descriptionInRequest,
+        descriptionInSDM,
+        updatedSecondaryProperties,
+        false);
 
     // Send update to SDM and handle response
+    logger.debug(
+        "Creating attachment in SDM - ID: {}, properties count: {}",
+        id,
+        updatedSecondaryProperties.size());
+
     try {
       int responseCode =
           sdmService.updateAttachments(
@@ -272,6 +283,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               updatedSecondaryProperties,
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
+
+      logger.debug("SDM create response code: {} for attachment ID: {}", responseCode, id);
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
           attachment,

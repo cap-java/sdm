@@ -4,6 +4,7 @@ import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
+import com.sap.cds.ql.Delete;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -15,14 +16,19 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
+import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
+import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DBQuery {
 
   private static DBQuery dbQueryInstance = new DBQuery();
+  private static final Logger logger = LoggerFactory.getLogger(DBQuery.class);
 
   private DBQuery() {
     // Singleton pattern
@@ -182,6 +188,162 @@ public class DBQuery {
     return cmisDocument;
   }
 
+  /**
+   * Retrieves valid secondary properties for the target attachment entity. Used to determine which
+   * properties from SDM should be persisted to the database.
+   *
+   * @param context The move event context containing target entity information
+   * @return Map of DB field name to SDM property name for properties annotated
+   *     with @SDM.Attachments.AdditionalProperty
+   */
+  public Map<String, String> getValidSecondaryPropertiesForMove(
+      AttachmentMoveEventContext context) {
+    // Use target entity to determine which secondary properties are valid
+    String parentEntity = context.getParentEntity();
+    String compositionName = context.getCompositionName();
+    CdsModel model = context.getModel();
+
+    // Find the parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      throw new ServiceException(
+          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+    }
+
+    // Find the composition element in the parent entity
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      throw new ServiceException(
+          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+    }
+
+    // Get the target entity of the composition
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    // Find the target attachment entity (check both draft and non-draft)
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isEmpty()) {
+      // Try with _drafts suffix
+      attachmentEntity = model.findEntity(targetEntityName + "_drafts");
+      if (attachmentEntity.isEmpty()) {
+        throw new ServiceException(
+            String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+      }
+    }
+
+    // Manually iterate over all elements to find those with @SDM.Attachments.AdditionalProperty
+    // annotation
+    Map<String, String> secondaryProperties = new HashMap<>();
+    CdsEntity entity = attachmentEntity.get();
+
+    entity
+        .elements()
+        .forEach(
+            element -> {
+              // Check for @SDM.Attachments.AdditionalProperty annotation
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> annotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> nameAnnotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
+
+              if (annotation.isPresent()) {
+                // Old annotation style: use element name as SDM property name
+                secondaryProperties.put(element.getName(), element.getName());
+                logger.debug(
+                    "Found secondary property (old style): DB field '{}' -> SDM property '{}'",
+                    element.getName(),
+                    element.getName());
+              } else if (nameAnnotation.isPresent()) {
+                // New annotation style: use specified SDM property name
+                String sdmPropertyName = nameAnnotation.get().getValue().toString();
+                secondaryProperties.put(element.getName(), sdmPropertyName);
+                logger.debug(
+                    "Found secondary property (new style): DB field '{}' -> SDM property '{}'",
+                    element.getName(),
+                    sdmPropertyName);
+              }
+            });
+
+    logger.info(
+        "Resolved {} secondary properties from target entity '{}': {}",
+        secondaryProperties.size(),
+        targetEntityName,
+        secondaryProperties);
+
+    return secondaryProperties;
+  }
+
+  /**
+   * Retrieves valid secondary properties and the target entity for the move operation.
+   *
+   * @param context The move event context containing target entity information
+   * @return Object array with [0] = Map of DB field to SDM property, [1] = CdsEntity
+   */
+  public Object[] getValidSecondaryPropertiesWithEntity(AttachmentMoveEventContext context) {
+    String parentEntity = context.getParentEntity();
+    String compositionName = context.getCompositionName();
+    CdsModel model = context.getModel();
+
+    // Find the parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      throw new ServiceException(
+          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+    }
+
+    // Find the composition element
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      throw new ServiceException(
+          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+    }
+
+    // Get the target entity
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    // Find the target attachment entity
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isEmpty()) {
+      attachmentEntity = model.findEntity(targetEntityName + "_drafts");
+      if (attachmentEntity.isEmpty()) {
+        throw new ServiceException(
+            String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+      }
+    }
+
+    CdsEntity entity = attachmentEntity.get();
+
+    // Get secondary properties annotations
+    Map<String, String> secondaryProperties = new HashMap<>();
+    entity
+        .elements()
+        .forEach(
+            element -> {
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> annotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY);
+              Optional<com.sap.cds.reflect.CdsAnnotation<Object>> nameAnnotation =
+                  element.findAnnotation(SDMConstants.SDM_ANNOTATION_ADDITIONALPROPERTY_NAME);
+
+              if (annotation.isPresent()) {
+                secondaryProperties.put(element.getName(), element.getName());
+              } else if (nameAnnotation.isPresent()) {
+                String sdmPropertyName = nameAnnotation.get().getValue().toString();
+                secondaryProperties.put(element.getName(), sdmPropertyName);
+              }
+            });
+
+    logger.info(
+        "Resolved {} secondary properties from target entity '{}'",
+        secondaryProperties.size(),
+        targetEntityName);
+
+    return new Object[] {secondaryProperties, entity};
+  }
+
   public Result getAttachmentsForUPIDAndRepository(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
@@ -323,7 +485,7 @@ public class DBQuery {
     }
     return propertyValueMap;
   }
-
+  
   public CmisDocument getuploadStatusForAttachment(
       String entity,
       PersistenceService persistenceService,
@@ -513,5 +675,243 @@ public class DBQuery {
       default:
         return SDMConstants.UPLOAD_STATUS_SUCCESS;
     }
+  }
+  /**
+   * Deletes attachment metadata from the source entity (both draft and non-draft tables) for the
+   * given list of object IDs. This is used to clean up source entity after successful moves.
+   *
+   * @param persistenceService The persistence service to execute the delete
+   * @param objectIds The list of object IDs to delete
+   * @param sourceUpId The up__ID of the source entity to filter deletions (critical when source and
+   *     target are same entity type)
+   * @param context The move event context containing source entity information
+   * @return The number of records deleted
+   */
+  public long deleteAttachmentsByObjectIds(
+      PersistenceService persistenceService,
+      List<String> objectIds,
+      String sourceUpId,
+      AttachmentMoveEventContext context) {
+    if (objectIds == null || objectIds.isEmpty()) {
+      return 0;
+    }
+
+    String sourceParentEntity = context.getSourceParentEntity();
+    String sourceCompositionName = context.getSourceCompositionName();
+
+    // If source entity info is not provided, skip cleanup
+    if (sourceParentEntity == null || sourceCompositionName == null) {
+      logger.warn(
+          "Source entity information not provided. Skipping metadata cleanup for {} attachments.",
+          objectIds.size());
+      return 0;
+    }
+
+    CdsModel model = context.getModel();
+
+    // Find the source parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(sourceParentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      logger.error(
+          "Unable to find source parent entity: {}. Skipping cleanup.", sourceParentEntity);
+      return 0;
+    }
+
+    // Find the composition element in the source parent entity
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(sourceCompositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error(
+          "Unable to find composition '{}' in source entity: {}. Skipping cleanup.",
+          sourceCompositionName,
+          sourceParentEntity);
+      return 0;
+    }
+
+    // Get the target entity of the composition (this is the SOURCE attachment entity)
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String sourceAttachmentEntityName = assocType.getTarget().getQualifiedName();
+
+    long deletedCount = 0;
+
+    // Resolve the up__ID key name
+    String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
+    if (upIdKey == null) {
+      logger.error(
+          "Unable to resolve up__ID key for source entity: {}. Skipping cleanup.",
+          sourceParentEntity);
+      return 0;
+    }
+
+    // Try deleting from draft table first
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(sourceAttachmentEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      var deleteQuery =
+          Delete.from(attachmentDraftEntity.get())
+              .where(
+                  doc ->
+                      doc.get("objectId")
+                          .in(objectIds.toArray())
+                          .and(doc.get(upIdKey).eq(sourceUpId)));
+      Result result = persistenceService.run(deleteQuery);
+      deletedCount += result.rowCount();
+      logger.info(
+          "Deleted {} attachment records from SOURCE draft table '{}' for objectIds: {}",
+          result.rowCount(),
+          sourceAttachmentEntityName + "_drafts",
+          objectIds);
+    }
+
+    // Try deleting from non-draft table
+    Optional<CdsEntity> attachmentEntity = model.findEntity(sourceAttachmentEntityName);
+    if (attachmentEntity.isPresent()) {
+      var deleteQuery =
+          Delete.from(attachmentEntity.get())
+              .where(
+                  doc ->
+                      doc.get("objectId")
+                          .in(objectIds.toArray())
+                          .and(doc.get(upIdKey).eq(sourceUpId)));
+      Result result = persistenceService.run(deleteQuery);
+      deletedCount += result.rowCount();
+      logger.info(
+          "Deleted {} attachment records from SOURCE table '{}' for objectIds: {}",
+          result.rowCount(),
+          sourceAttachmentEntityName,
+          objectIds);
+    }
+
+    if (deletedCount == 0) {
+      logger.warn(
+          "No attachment metadata found in source entity '{}' for objectIds: {}. This may indicate"
+              + " the records were already cleaned up.",
+          sourceAttachmentEntityName,
+          objectIds);
+    }
+
+    return deletedCount;
+  }
+
+  /**
+   * Queries the source entity's up__ID from the database using the given objectIds. This is used to
+   * identify which source entity instance owns the attachments before cleanup.
+   *
+   * @param persistenceService The persistence service to execute the query
+   * @param objectIds The list of object IDs to query
+   * @param context The move event context containing source entity information
+   * @return The up__ID of the source entity, or null if not found
+   */
+  public String getSourceUpIdForObjectIds(
+      PersistenceService persistenceService,
+      List<String> objectIds,
+      AttachmentMoveEventContext context) {
+    if (objectIds == null || objectIds.isEmpty()) {
+      return null;
+    }
+
+    String sourceParentEntity = context.getSourceParentEntity();
+    String sourceCompositionName = context.getSourceCompositionName();
+
+    if (sourceParentEntity == null || sourceCompositionName == null) {
+      return null;
+    }
+
+    CdsModel model = context.getModel();
+
+    // Find the source parent entity
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(sourceParentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      return null;
+    }
+
+    // Find the composition element
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(sourceCompositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      return null;
+    }
+
+    // Get the source attachment entity
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String sourceAttachmentEntityName = assocType.getTarget().getQualifiedName();
+
+    // Resolve the up__ID key name
+    String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
+    if (upIdKey == null) {
+      return null;
+    }
+
+    // Query from draft table first (most likely to have the records)
+    Optional<CdsEntity> attachmentDraftEntity =
+        model.findEntity(sourceAttachmentEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      CqnSelect q =
+          Select.from(attachmentDraftEntity.get())
+              .columns(upIdKey)
+              .where(doc -> doc.get("objectId").eq(objectIds.get(0)));
+      Result result = persistenceService.run(q);
+      Optional<Row> res = result.first();
+      if (res.isPresent()) {
+        Object upIdValue = res.get().get(upIdKey);
+        return upIdValue != null ? upIdValue.toString() : null;
+      }
+    }
+
+    // Try non-draft table
+    Optional<CdsEntity> attachmentEntity = model.findEntity(sourceAttachmentEntityName);
+    if (attachmentEntity.isPresent()) {
+      CqnSelect q =
+          Select.from(attachmentEntity.get())
+              .columns(upIdKey)
+              .where(doc -> doc.get("objectId").eq(objectIds.get(0)));
+      Result result = persistenceService.run(q);
+      Optional<Row> res = result.first();
+      if (res.isPresent()) {
+        Object upIdValue = res.get().get(upIdKey);
+        return upIdValue != null ? upIdValue.toString() : null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolves the up__ID key name for the given entity and composition.
+   *
+   * @param model The CDS model
+   * @param parentEntity The qualified name of the parent entity
+   * @param compositionName The name of the composition
+   * @return The up__ID key name, or null if not found
+   */
+  private String resolveUpIdKey(CdsModel model, String parentEntity, String compositionName) {
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      return null;
+    }
+
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      return null;
+    }
+
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
+
+    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+    if (attachmentDraftEntity.isPresent()) {
+      Optional<CdsElement> upAssociation = attachmentDraftEntity.get().findAssociation("up_");
+      if (upAssociation.isPresent()) {
+        CdsElement association = upAssociation.get();
+        CdsAssociationType upAssocType = association.getType();
+        List<String> fkElements = upAssocType.refs().map(ref -> "up__" + ref.path()).toList();
+        if (!fkElements.isEmpty()) {
+          return fkElements.get(0);
+        }
+      }
+    }
+
+    return null;
   }
 }

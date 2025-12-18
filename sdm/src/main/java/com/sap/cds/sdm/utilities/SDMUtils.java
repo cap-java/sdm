@@ -120,10 +120,12 @@ public class SDMUtils {
   }
 
   public static void prepareSecondaryProperties(
-      Map<String, String> requestBody, Map<String, String> secondaryProperties) {
+      Map<String, String> requestBody,
+      Map<String, String> secondaryProperties,
+      boolean isSecondaryPropertiesUpdated) {
     Iterator<Map.Entry<String, String>> iterator = secondaryProperties.entrySet().iterator();
 
-    int index = 1;
+    int index = isSecondaryPropertiesUpdated ? 1 : 0;
     while (iterator.hasNext()) {
       Map.Entry<String, String> entry = iterator.next();
       if ("filename".equals(entry.getKey())) {
@@ -337,6 +339,8 @@ public class SDMUtils {
       PersistenceService persistenceService,
       Map<String, String> secondaryTypeProperties,
       Map<String, String> propertiesInDB) {
+    logger.debug(
+        "Comparing secondary properties - properties to check: {}", secondaryTypeProperties.size());
     Map<String, String> updatedSecondaryProperties = new HashMap<>();
     // Checking and storing the modified values of the secondary type properties
     Map<String, Object> propertiesMap = new HashMap<>();
@@ -345,14 +349,21 @@ public class SDMUtils {
       Object value = attachment.get(property);
       propertiesMap.put(property, value);
     }
+
     // Check the value of secondary properties in DB
     for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
       String property = entry.getKey();
       String value = entry.getValue();
       String valueInDB = propertiesInDB.get(property);
       Object valueInMap = propertiesMap.get(property);
+
       if ((valueInMap == null && valueInDB != null)
           || (valueInMap != null && !valueInMap.equals(valueInDB))) {
+        logger.debug(
+            "Property '{}' changed - DB value: {}, Request value: {}",
+            property,
+            valueInDB,
+            valueInMap);
         if (valueInMap != null) {
           updatedSecondaryProperties.put(value, valueInMap.toString());
         } else {
@@ -361,6 +372,9 @@ public class SDMUtils {
       }
     }
 
+    logger.debug(
+        "Properties comparison complete - {} properties to update",
+        updatedSecondaryProperties.size());
     return updatedSecondaryProperties;
   }
 
