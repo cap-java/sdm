@@ -17,6 +17,7 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.caching.RepoKey;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -1755,7 +1756,9 @@ public class SDMServiceImplTest {
 
       assertTrue(exception.getCause() instanceof ServiceException);
       ServiceException serviceException = (ServiceException) exception.getCause();
-      assertEquals(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, serviceException.getMessage());
+      assertEquals(
+          SDMUtils.getErrorMessage("FAILED_TO_PARSE_REPOSITORY_RESPONSE"),
+          serviceException.getMessage());
       assertTrue(
           serviceException.getCause() instanceof com.fasterxml.jackson.core.JsonParseException);
     } catch (Exception e) {
@@ -1947,7 +1950,7 @@ public class SDMServiceImplTest {
                 sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
               });
 
-      assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, exception.getMessage());
+      assertEquals(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"), exception.getMessage());
     }
   }
 
@@ -2023,7 +2026,7 @@ public class SDMServiceImplTest {
                 sdmServiceImpl.getChangeLog(objectId, sdmCredentials, true);
               });
 
-      assertEquals(SDMConstants.FETCH_CHANGELOG_ERROR, exception.getMessage());
+      assertEquals(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"), exception.getMessage());
     }
   }
 
@@ -2181,7 +2184,8 @@ public class SDMServiceImplTest {
             ServiceException.class,
             () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
-    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+    assertTrue(
+        exception.getMessage().contains(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT")));
   }
 
   @Test
@@ -2206,7 +2210,8 @@ public class SDMServiceImplTest {
             ServiceException.class,
             () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
-    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+    assertTrue(
+        exception.getMessage().contains(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT")));
   }
 
   @Test
@@ -2324,7 +2329,8 @@ public class SDMServiceImplTest {
             ServiceException.class,
             () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, true));
 
-    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+    assertTrue(
+        exception.getMessage().contains(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT")));
   }
 
   @Test
@@ -2357,7 +2363,8 @@ public class SDMServiceImplTest {
             ServiceException.class,
             () -> sdmServiceImpl.moveAttachment(cmisDocument, sdmCredentials, false));
 
-    assertTrue(exception.getMessage().contains(SDMConstants.FAILED_TO_MOVE_ATTACHMENT));
+    assertTrue(
+        exception.getMessage().contains(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT")));
   }
 
   @Test

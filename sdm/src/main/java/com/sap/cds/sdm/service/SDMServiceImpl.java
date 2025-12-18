@@ -787,7 +787,8 @@ public class SDMServiceImpl implements SDMService {
         }
       }
     } catch (Exception e) {
-      throw new ServiceException(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, e);
+      throw new ServiceException(
+          SDMUtils.getErrorMessage("FAILED_TO_PARSE_REPOSITORY_RESPONSE"), e);
     }
     return null;
   }
@@ -805,15 +806,16 @@ public class SDMServiceImpl implements SDMService {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseString = EntityUtils.toString(response.getEntity());
       if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else if (responseCode != 200) {
-        logger.info(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
-        throw new ServiceException(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
+        logger.info(SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + responseString);
+        throw new ServiceException(
+            SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + responseString);
       }
       repoId = getRepositoryId(responseString);
     } catch (IOException e) {
-      logger.info(SDMConstants.REPOSITORY_ERROR + " : " + e.getMessage());
-      throw new ServiceException(SDMConstants.REPOSITORY_ERROR, e);
+      logger.info(SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + e.getMessage());
+      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
     }
     sdmUrl =
         sdmUrl
@@ -827,15 +829,15 @@ public class SDMServiceImpl implements SDMService {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseString = EntityUtils.toString(response.getEntity());
       if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else if (responseCode == 404) {
-        throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
       } else if (responseCode != 200) {
-        throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"));
       }
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"), e);
     }
   }
 
@@ -928,7 +930,7 @@ public class SDMServiceImpl implements SDMService {
           .blockingFirst();
     } catch (Exception e) {
       logger.error("Failed to move attachment after retries: {}", e.getMessage(), e);
-      throw new ServiceException(SDMConstants.FAILED_TO_MOVE_ATTACHMENT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT"), e);
     }
   }
 }

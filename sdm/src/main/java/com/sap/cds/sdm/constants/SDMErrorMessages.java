@@ -117,6 +117,13 @@ public class SDMErrorMessages {
   public static final String UNSUPPORTED_PROPERTIES_SUFFIX =
       "\nPlease contact your administrator for assistance with any necessary adjustments.";
   public static final String MAX_COUNT_ERROR_MESSAGE = "Cannot upload more than %s attachments.";
+  public static final String FETCH_CHANGELOG_ERROR = "Could not fetch the changelog";
+  public static final String FAILED_TO_MOVE_ATTACHMENT = "Failed to move attachment";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX =
+      "Invalid secondary properties detected: ";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX =
+      ". Attachment rolled back to source.";
+  public static final String SDM_MOVE_OPERATION_FAILED = "SDM move operation failed";
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(

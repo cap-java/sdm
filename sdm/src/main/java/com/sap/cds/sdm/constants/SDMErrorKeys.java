@@ -98,6 +98,13 @@ public class SDMErrorKeys {
   public static final String UNSUPPORTED_PROPERTIES_PREFIX_KEY = "SDM.unsupportedPropertiesPrefix";
   public static final String UNSUPPORTED_PROPERTIES_SUFFIX_KEY = "SDM.unsupportedPropertiesSuffix";
   public static final String MAX_COUNT_ERROR_MESSAGE_KEY = "SDM.maxCountErrorMessage";
+  public static final String FETCH_CHANGELOG_ERROR_KEY = "SDM.fetchChangelogError";
+  public static final String FAILED_TO_MOVE_ATTACHMENT_KEY = "SDM.failedToMoveAttachment";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX_KEY =
+      "SDM.invalidSecondaryPropertiesForMovePrefix";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX_KEY =
+      "SDM.invalidSecondaryPropertiesForMoveSuffix";
+  public static final String SDM_MOVE_OPERATION_FAILED_KEY = "SDM.sdmMoveOperationFailed";
 
   // public static final String FILENAME_EMPTY_ERROR_MSG = "SDM.File.filenameEmptyError";
   // public static final String SDM_ROLES_ERROR_MSG = "SDM.Authorization.sdmRolesError";

@@ -162,7 +162,7 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(
                 () ->
                     AttachmentsHandlerUtils.validateFileNames(
-                        any(), anyList(), anyString(), anyString()))
+                        any(), anyList(), anyString(), anyString(), any()))
             .thenAnswer(
                 invocation -> {
                   Messages msgs = invocation.getArgument(0);
@@ -505,7 +505,7 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(
                 () ->
                     AttachmentsHandlerUtils.validateFileNames(
-                        any(), anyList(), anyString(), anyString()))
+                        any(), anyList(), anyString(), anyString(), any()))
             .thenAnswer(
                 invocation -> {
                   Messages msgs = invocation.getArgument(0);
@@ -585,7 +585,10 @@ public class SDMCreateAttachmentsHandlerTest {
                         anyList(), anyString(), anyString()))
             .thenReturn(new ArrayList<>());
         sdmUtilsMockedStatic
-            .when(() -> SDMUtils.FileNameDuplicateInDrafts(anyList(), anyString(), anyString()))
+            .when(
+                () ->
+                    SDMUtils.FileNameDuplicateInDrafts(
+                        anyList(), anyString(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
 
         // Act
@@ -675,7 +678,7 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(
                 () ->
                     AttachmentsHandlerUtils.validateFileNames(
-                        any(), anyList(), anyString(), anyString()))
+                        any(), anyList(), anyString(), anyString(), any()))
             .thenAnswer(
                 invocation -> {
                   Messages msgs = invocation.getArgument(0);

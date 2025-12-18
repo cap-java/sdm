@@ -3003,14 +3003,14 @@ public class SDMServiceGenericHandlerTest {
     CqnElementRef mockRef1 = mock(CqnElementRef.class);
     when(attachmentDraftEntity1.findAssociation("up_")).thenReturn(Optional.of(upAssociation1));
     when(upAssociation1.getType()).thenReturn(upAssocType1);
-    when(upAssocType1.refs()).thenReturn(Stream.of(mockRef1));
+    when(upAssocType1.refs()).thenAnswer(invocation -> Stream.of(mockRef1));
     when(mockRef1.path()).thenReturn("ID");
     CdsElement upAssociation2 = mock(CdsElement.class);
     CdsAssociationType upAssocType2 = mock(CdsAssociationType.class);
     CqnElementRef mockRef2 = mock(CqnElementRef.class);
     when(attachmentDraftEntity2.findAssociation("up_")).thenReturn(Optional.of(upAssociation2));
     when(upAssociation2.getType()).thenReturn(upAssocType2);
-    when(upAssocType2.refs()).thenReturn(Stream.of(mockRef2));
+    when(upAssocType2.refs()).thenAnswer(invocation -> Stream.of(mockRef2));
     when(mockRef2.path()).thenReturn("ID");
     when(attachmentDraftEntity1.elements()).thenReturn(Stream.of(upElement1));
     when(attachmentDraftEntity2.elements()).thenReturn(Stream.of(upElement2));
