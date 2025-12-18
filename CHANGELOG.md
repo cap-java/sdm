@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.6.2
+
+### Fixed
+- Deep copying of custom properties and notes when copying attachments
+- Dynamic primary key extraction from entity schema
+- Facet parsing for parent entity and composition extraction during attachment copy
+- Draft discard operation with attachments
+- Service namespace support in createLink feature
+
 ## Version 1.6.1
 
 ### Fixed
