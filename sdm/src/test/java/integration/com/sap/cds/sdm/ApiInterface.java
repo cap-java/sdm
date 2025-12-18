@@ -103,4 +103,8 @@ public interface ApiInterface {
       throws IOException;
 
   String deleteEntityDraft(String appUrl, String entityName, String entityID);
+
+  public Map<String, Object> fetchChangelog(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
 }
