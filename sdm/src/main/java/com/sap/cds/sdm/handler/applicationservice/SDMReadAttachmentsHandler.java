@@ -68,9 +68,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
         String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
         CqnSelect select = (CqnSelect) context.get("cqn");
-        //        CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(context.getModel());
-        //        Map<String, Object> targetKeys = cqnAnalyzer.analyze(select).targetKeyValues();
-        //        Boolean isActiveEntity = (Boolean) targetKeys.get("IsActiveEntity");
         String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
         System.out.println("upID : " + upID);
 

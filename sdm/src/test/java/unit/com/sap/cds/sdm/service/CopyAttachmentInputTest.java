@@ -2,6 +2,7 @@ package unit.com.sap.cds.sdm.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -61,5 +62,34 @@ public class CopyAttachmentInputTest {
     String[] parts = invalidFacet.split("\\.");
 
     assertTrue(parts.length < 3, "Should detect invalid facet format");
+  }
+
+  @Test
+  void testVirusScanStatusEnum() {
+    // Test virus scan status enum values
+    assertEquals("", SDMConstants.ScanStatus.BLANK.getValue());
+    assertEquals("PENDING", SDMConstants.ScanStatus.PENDING.getValue());
+    assertEquals("SCANNING", SDMConstants.ScanStatus.SCANNING.getValue());
+    assertEquals("CLEAN", SDMConstants.ScanStatus.CLEAN.getValue());
+    assertEquals("QUARANTINED", SDMConstants.ScanStatus.QUARANTINED.getValue());
+    assertEquals("FAILED", SDMConstants.ScanStatus.FAILED.getValue());
+  }
+
+  @Test
+  void testVirusScanStatusFromValue() {
+    // Test fromValue method
+    assertEquals(SDMConstants.ScanStatus.PENDING, SDMConstants.ScanStatus.fromValue("PENDING"));
+    assertEquals(SDMConstants.ScanStatus.SCANNING, SDMConstants.ScanStatus.fromValue("SCANNING"));
+    assertEquals(SDMConstants.ScanStatus.CLEAN, SDMConstants.ScanStatus.fromValue("CLEAN"));
+    assertEquals(SDMConstants.ScanStatus.QUARANTINED, SDMConstants.ScanStatus.fromValue("QUARANTINED"));
+    assertEquals(SDMConstants.ScanStatus.FAILED, SDMConstants.ScanStatus.fromValue("FAILED"));
+  }
+
+  @Test
+  void testVirusScanStatusFromInvalidValue() {
+    // Test fromValue with invalid value returns BLANK (not null)
+    assertEquals(SDMConstants.ScanStatus.BLANK, SDMConstants.ScanStatus.fromValue("INVALID"));
+    assertEquals(SDMConstants.ScanStatus.BLANK, SDMConstants.ScanStatus.fromValue(null));
+    assertEquals(SDMConstants.ScanStatus.BLANK, SDMConstants.ScanStatus.fromValue(""));
   }
 }
