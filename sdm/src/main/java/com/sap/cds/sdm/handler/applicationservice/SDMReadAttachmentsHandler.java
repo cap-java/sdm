@@ -1,7 +1,6 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.Result;
-import com.sap.cds.Row;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Predicate;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -100,79 +99,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
    *
    * @param context the CDS read event context containing attachment data
    */
-  private void processAttachmentCriticality(CdsReadEventContext context) {
-    try {
-      Result allAttachments = dbQuery.getAllAttachments(context, persistenceService);
-
-      // Process each attachment to add criticality values
-      if (allAttachments != null && !allAttachments.list().isEmpty()) {
-        for (Row attachment : allAttachments.list()) {
-          String uploadStatus =
-              attachment.get("uploadStatus") != null
-                  ? attachment.get("uploadStatus").toString()
-                  : null;
-          String attachmentId =
-              attachment.get("ID") != null ? attachment.get("ID").toString() : null;
-
-          // Calculate criticality based on upload status
-          int criticality = getStatusCriticality(uploadStatus);
-
-          if (attachmentId != null) {
-            dbQuery.updateAttachmentCriticality(
-                persistenceService, attachmentId, criticality, context);
-
-            logger.debug(
-                "Updated attachment ID {} with uploadStatus: {}, criticality: {}",
-                attachmentId,
-                uploadStatus,
-                criticality);
-          }
-        }
-      }
-    } catch (Exception e) {
-      // Log error but don't break the read operation
-      logger.error("Error processing attachment criticality: {}", e.getMessage(), e);
-    }
-  }
-
-  /**
-   * Maps upload status to criticality values using the same logic as frontend.
-   *
-   * @param uploadStatus the upload status string
-   * @return criticality value (0-5)
-   */
-  public int getStatusCriticalityMapping(String uploadStatus) {
-    if (uploadStatus == null) {
-      return 0;
-    }
-
-    switch (uploadStatus.trim()) {
-      case "Clean":
-      case "Success":
-      case "SUCCESS":
-        return 5; // Same as 'Clean' in frontend
-
-      case "Unscanned":
-      case "Scanning":
-      case "UPLOAD_IN_PROGRESS":
-      case "Upload InProgress":
-      case "VIRUS_SCAN_INPROGRESS":
-      case "In progress (Refresh the page)":
-      case "IN_PROGRESS":
-        return 0; // Same as 'Unscanned'/'Scanning' in frontend
-
-      case "Infected":
-      case "VIRUS_DETECTED":
-      case "Virus Detected":
-      case "Failed":
-      case "SCAN_FAILED":
-        return 1; // Same as 'Infected'/'Failed' in frontend
-
-      default:
-        return 0; // Default fallback
-    }
-  }
-
   private void processVirusScanInProgressAttachments(CdsReadEventContext context) {
     try {
       // Get the statuses of existing attachments and assign color code
@@ -256,42 +182,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
     } catch (Exception e) {
       logger.error("Error processing virus scan in progress attachments: {}", e.getMessage());
-    }
-  }
-
-  /**
-   * Maps uploadStatus values to statusCriticality values for UI display.
-   *
-   * @param uploadStatus the upload status string
-   * @return integer representing criticality level: 0 = Neutral (Grey) - for null/empty/unknown
-   *     status 1 = Negative (Red) - for failed/virus detected status 2 = Critical (Orange/Yellow) -
-   *     not used in current mapping 3 = Positive (Green) - for successful uploads 5 = New Item
-   *     (Blue) - for in-progress uploads
-   */
-  public int getStatusCriticality(String uploadStatus) {
-    if (uploadStatus == null || uploadStatus.trim().isEmpty()) {
-      return 0; // Neutral (Grey) for null/empty status
-    }
-
-    switch (uploadStatus.trim()) {
-      case "Success":
-      case "SUCCESS":
-        return 3; // Positive (Green)
-
-      case "VIRUS_DETECTED":
-      case "Virus Detected":
-      case "SCAN_FAILED":
-        return 1; // Negative (Red)
-
-      case "UPLOAD_IN_PROGRESS":
-      case "Upload InProgress":
-      case "VIRUS_SCAN_INPROGRESS":
-      case "In progress (Refresh the page)":
-      case "IN_PROGRESS":
-        return 5; // New Item (Blue)
-
-      default:
-        return 0; // Neutral (Grey) for unknown status
     }
   }
 }

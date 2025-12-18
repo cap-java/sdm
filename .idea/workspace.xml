@@ -5,22 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="17e45f53-0cfd-4423-9929-c8405952177e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/configuration/Registration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/constants/SDMConstants.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/TokenHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/TokenHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/CmisDocument.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/RepoValue.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/model/RepoValue.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/persistence/DBQuery.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/DocumentUploadService.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/DocumentUploadService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/SDMServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMServiceGenericHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdm/src/main/resources/cds/com.sap.cds/sdm/attachments.cds" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/resources/cds/com.sap.cds/sdm/attachments.cds" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMCustomServiceHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/service/handler/SDMCustomServiceHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/integration/com/sap/cds/sdm/Api.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/integration/com/sap/cds/sdm/Api.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/configuration/RegistrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/configuration/RegistrationTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/TokenHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/TokenHandlerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMCreateAttachmentsHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMUpdateAttachmentsHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/CopyAttachmentInputTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/CopyAttachmentInputTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/SDMServiceImplTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/SDMServiceImplTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMAttachmentsServiceHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMCustomServiceHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMCustomServiceHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMServiceGenericHandlerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/service/handler/SDMServiceGenericHandlerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/utilities/SDMUtilsTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/utilities/SDMUtilsTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,18 +55,93 @@
     &quot;last_opened_file_path&quot;: &quot;/Users/I324829/Desktop/CAP/sdm&quot;
   }
 }</component>
-  <component name="RunManager">
-    <configuration default="true" type="JetRunConfigurationType">
+  <component name="RunManager" selected="JUnit.SDMAttachmentsServiceHandlerTest.testCreateNonVersionedDISuccess">
+    <configuration name="SDMAttachmentsServiceHandlerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandlerTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <option name="filePath" />
+    <configuration name="SDMAttachmentsServiceHandlerTest.testCreateNonVersionedDISuccess" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandlerTest" />
+      <option name="METHOD_NAME" value="testCreateNonVersionedDISuccess" />
+      <option name="TEST_OBJECT" value="method" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="SDMCustomServiceHandlerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.service.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.service.handler" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.service.handler.SDMCustomServiceHandlerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMReadAttachmentsHandlerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.handler.applicationservice.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.handler.applicationservice" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandlerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SDMReadAttachmentsHandlerTest.testModifyCqnForAttachmentsEntity_Success_TMCheck" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="sdm" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="unit.com.sap.cds.sdm.handler.applicationservice.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="unit.com.sap.cds.sdm.handler.applicationservice" />
+      <option name="MAIN_CLASS_NAME" value="unit.com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandlerTest" />
+      <option name="METHOD_NAME" value="testModifyCqnForAttachmentsEntity_Success_TMCheck" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.SDMAttachmentsServiceHandlerTest.testCreateNonVersionedDISuccess" />
+        <item itemvalue="JUnit.SDMAttachmentsServiceHandlerTest" />
+        <item itemvalue="JUnit.SDMCustomServiceHandlerTest" />
+        <item itemvalue="JUnit.SDMReadAttachmentsHandlerTest" />
+        <item itemvalue="JUnit.SDMReadAttachmentsHandlerTest.testModifyCqnForAttachmentsEntity_Success_TMCheck" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -75,5 +153,41 @@
       <updated>1763445716498</updated>
     </task>
     <servers />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java</url>
+          <line>57</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java</url>
+          <line>64</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java</url>
+          <line>72</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java</url>
+          <line>54</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/test/java/unit/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandlerTest.java</url>
+          <line>103</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/sdm/src/main/java/com/sap/cds/sdm/handler/applicationservice/SDMReadAttachmentsHandler.java</url>
+          <line>105</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

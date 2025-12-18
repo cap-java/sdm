@@ -102,7 +102,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   public void readAttachment(AttachmentReadEventContext context) throws IOException {
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
-    String entity = contentIdParts[2];
+    String entity = contentIdParts.length > 2 ? contentIdParts[2] : contentIdParts[0];
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     CmisDocument cmisDocument =
         dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);

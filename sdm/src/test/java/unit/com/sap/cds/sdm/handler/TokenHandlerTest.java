@@ -29,204 +29,204 @@ import org.junit.jupiter.api.Test;
 import org.mockito.*;
 
 public class TokenHandlerTest {
-    private String email = "email-value";
-    private String subdomain = "subdomain-value";
-    private static final String SDM_TOKEN_ENDPOINT = "url";
-    private static final String SDM_URL = "uri";
+  private String email = "email-value";
+  private String subdomain = "subdomain-value";
+  private static final String SDM_TOKEN_ENDPOINT = "url";
+  private static final String SDM_URL = "uri";
 
-    private static final String CLIENT_ID = "clientid";
-    private static final String CLIENT_SECRET = "clientsecret";
-    @Mock private ServiceBinding binding;
+  private static final String CLIENT_ID = "clientid";
+  private static final String CLIENT_SECRET = "clientsecret";
+  @Mock private ServiceBinding binding;
 
-    @Mock private CdsProperties.ConnectionPool connectionPoolConfig;
+  @Mock private CdsProperties.ConnectionPool connectionPoolConfig;
 
-    @Mock private DefaultHttpClientFactory factory;
+  @Mock private DefaultHttpClientFactory factory;
 
-    @Mock private CloseableHttpClient httpClient;
-    private Map<String, Object> uaaCredentials;
-    private Map<String, Object> uaa;
+  @Mock private CloseableHttpClient httpClient;
+  private Map<String, Object> uaaCredentials;
+  private Map<String, Object> uaa;
 
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
+  @BeforeEach
+  public void setUp() {
+    MockitoAnnotations.openMocks(this);
 
-        uaaCredentials = new HashMap<>();
-        uaa = new HashMap<>();
+    uaaCredentials = new HashMap<>();
+    uaa = new HashMap<>();
 
-        uaa.put(CLIENT_ID, "test-client-id");
-        uaa.put(CLIENT_SECRET, "test-client-secret");
-        uaa.put(SDM_TOKEN_ENDPOINT, "https://test-token-url.com");
+    uaa.put(CLIENT_ID, "test-client-id");
+    uaa.put(CLIENT_SECRET, "test-client-secret");
+    uaa.put(SDM_TOKEN_ENDPOINT, "https://test-token-url.com");
 
-        uaaCredentials.put("uaa", uaa);
-        uaaCredentials.put(SDM_URL, "https://example.com");
+    uaaCredentials.put("uaa", uaa);
+    uaaCredentials.put(SDM_URL, "https://example.com");
 
-        when(binding.getCredentials()).thenReturn(uaaCredentials);
-        when(connectionPoolConfig.getTimeout()).thenReturn(Duration.ofMillis(1000));
-        when(connectionPoolConfig.getMaxConnectionsPerRoute()).thenReturn(10);
-        when(connectionPoolConfig.getMaxConnections()).thenReturn(100);
+    when(binding.getCredentials()).thenReturn(uaaCredentials);
+    when(connectionPoolConfig.getTimeout()).thenReturn(Duration.ofMillis(1000));
+    when(connectionPoolConfig.getMaxConnectionsPerRoute()).thenReturn(10);
+    when(connectionPoolConfig.getMaxConnections()).thenReturn(100);
 
-        // Instantiate and mock the factory
-        when(factory.createHttpClient(any(DefaultHttpDestination.class))).thenReturn(httpClient);
+    // Instantiate and mock the factory
+    when(factory.createHttpClient(any(DefaultHttpDestination.class))).thenReturn(httpClient);
 
-        // Mock the cache to return the expected value
-        Cache<String, String> mockCache = Mockito.mock(Cache.class);
-        Mockito.when(mockCache.get(any())).thenReturn("cachedToken");
-        try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
-                     Mockito.mockStatic(CacheConfig.class)) {
-            cacheConfigMockedStatic.when(CacheConfig::getUserTokenCache).thenReturn(mockCache);
-        }
+    // Mock the cache to return the expected value
+    Cache<String, String> mockCache = Mockito.mock(Cache.class);
+    Mockito.when(mockCache.get(any())).thenReturn("cachedToken");
+    try (MockedStatic<CacheConfig> cacheConfigMockedStatic =
+        Mockito.mockStatic(CacheConfig.class)) {
+      cacheConfigMockedStatic.when(CacheConfig::getUserTokenCache).thenReturn(mockCache);
     }
+  }
 
-    @Test
-    public void testGetHttpClientForTokenExchange() {
-        HttpClient client =
-                TokenHandler.getTokenHandlerInstance()
-                        .getHttpClient(binding, connectionPoolConfig, "subdomain", "TOKEN_EXCHANGE");
+  @Test
+  public void testGetHttpClientForTokenExchange() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "subdomain", "TOKEN_EXCHANGE");
 
-        assertNotNull(client);
+    assertNotNull(client);
+  }
+
+  @Test
+  public void testGetHttpClientForTechnicalUser() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "subdomain", "TECHNICAL_USER");
+
+    assertNotNull(client);
+  }
+
+  @Test
+  public void testGetHttpClientForAuthorities() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClientForAuthoritiesFlow(connectionPoolConfig, "testUser");
+    assertNull(client);
+  }
+
+  @Test
+  public void testGetHttpClientWithNullSubdomain() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, null, "TOKEN_EXCHANGE");
+
+    assertNotNull(client);
+  }
+
+  @Test
+  public void testGetHttpClientWithEmptySubdomain() {
+    HttpClient client =
+        TokenHandler.getTokenHandlerInstance()
+            .getHttpClient(binding, connectionPoolConfig, "", "TOKEN_EXCHANGE");
+
+    assertNotNull(client);
+  }
+
+  @Test
+  public void testGetSDMCredentials() {
+    ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
+    try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
+        Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
+      accessorMockedStatic
+          .when(DefaultServiceBindingAccessor::getInstance)
+          .thenReturn(mockAccessor);
+
+      ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
+
+      Map<String, Object> mockCredentials = new HashMap<>();
+      Map<String, Object> mockUaa = new HashMap<>();
+      mockUaa.put("url", "https://mock.uaa.url");
+      mockUaa.put("clientid", "mockClientId");
+      mockUaa.put("clientsecret", "mockClientSecret");
+      mockCredentials.put("uaa", mockUaa);
+      mockCredentials.put("uri", "https://mock.service.url");
+
+      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
+
+      List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
+      Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
+
+      SDMCredentials result = TokenHandler.getTokenHandlerInstance().getSDMCredentials();
+
+      assertNotNull(result);
+      assertEquals("https://mock.uaa.url", result.getBaseTokenUrl());
+      assertEquals("https://mock.service.url", result.getUrl());
+      assertEquals("mockClientId", result.getClientId());
+      assertEquals("mockClientSecret", result.getClientSecret());
     }
+  }
 
-    @Test
-    public void testGetHttpClientForTechnicalUser() {
-        HttpClient client =
-                TokenHandler.getTokenHandlerInstance()
-                        .getHttpClient(binding, connectionPoolConfig, "subdomain", "TECHNICAL_USER");
+  // @Test
+  // void testPrivateConstructor() {
+  //   // Use reflection to access the private constructor
+  //   Constructor<TokenHandler> constructor = null;
+  //   try {
+  //     constructor = TokenHandler.class.getDeclaredConstructor();
+  //     constructor.setAccessible(true);
+  //     assertThrows(InvocationTargetException.class, constructor::newInstance);
+  //   } catch (NoSuchMethodException e) {
+  //     fail("Exception occurred during test: " + e.getMessage());
+  //   }
+  // }
 
-        assertNotNull(client);
+  @Test
+  void testToString() {
+    byte[] input = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+    String expected = new String(input, StandardCharsets.UTF_8);
+    String actual = TokenHandler.getTokenHandlerInstance().toString(input);
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  void testToStringWithNullInput() {
+    assertThrows(
+        NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toString(null));
+  }
+
+  @Test
+  public void testGetHttpClientForOnboardFlow() {
+    ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
+    try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
+        Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
+      accessorMockedStatic
+          .when(DefaultServiceBindingAccessor::getInstance)
+          .thenReturn(mockAccessor);
+
+      ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
+
+      Map<String, Object> mockCredentials = new HashMap<>();
+      Map<String, Object> mockUaa = new HashMap<>();
+      mockUaa.put("url", "https://mock.uaa.url");
+      mockUaa.put("clientid", "mockClientId");
+      mockUaa.put("clientsecret", "mockClientSecret");
+      mockCredentials.put("uaa", mockUaa);
+      mockCredentials.put("uri", "https://mock.service.url");
+
+      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
+
+      List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
+      Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
+
+      HttpClient client =
+          TokenHandler.getTokenHandlerInstance()
+              .getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
+
+      assertNotNull(client);
     }
+  }
 
-    @Test
-    public void testGetHttpClientForAuthorities() {
-        HttpClient client =
-                TokenHandler.getTokenHandlerInstance()
-                        .getHttpClientForAuthoritiesFlow(connectionPoolConfig, "testUser");
-        assertNull(client);
-    }
+  @Test
+  public void testToBytes() {
+    String input = "Hello, World!";
+    byte[] expected = input.getBytes(StandardCharsets.UTF_8);
+    byte[] actual = TokenHandler.getTokenHandlerInstance().toBytes(input);
+    assertArrayEquals(expected, actual);
+  }
 
-    @Test
-    public void testGetHttpClientWithNullSubdomain() {
-        HttpClient client =
-                TokenHandler.getTokenHandlerInstance()
-                        .getHttpClient(binding, connectionPoolConfig, null, "TOKEN_EXCHANGE");
-
-        assertNotNull(client);
-    }
-
-    @Test
-    public void testGetHttpClientWithEmptySubdomain() {
-        HttpClient client =
-                TokenHandler.getTokenHandlerInstance()
-                        .getHttpClient(binding, connectionPoolConfig, "", "TOKEN_EXCHANGE");
-
-        assertNotNull(client);
-    }
-
-    @Test
-    public void testGetSDMCredentials() {
-        ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
-        try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
-                     Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
-            accessorMockedStatic
-                    .when(DefaultServiceBindingAccessor::getInstance)
-                    .thenReturn(mockAccessor);
-
-            ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
-
-            Map<String, Object> mockCredentials = new HashMap<>();
-            Map<String, Object> mockUaa = new HashMap<>();
-            mockUaa.put("url", "https://mock.uaa.url");
-            mockUaa.put("clientid", "mockClientId");
-            mockUaa.put("clientsecret", "mockClientSecret");
-            mockCredentials.put("uaa", mockUaa);
-            mockCredentials.put("uri", "https://mock.service.url");
-
-            Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
-            Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
-
-            List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
-            Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
-
-            SDMCredentials result = TokenHandler.getTokenHandlerInstance().getSDMCredentials();
-
-            assertNotNull(result);
-            assertEquals("https://mock.uaa.url", result.getBaseTokenUrl());
-            assertEquals("https://mock.service.url", result.getUrl());
-            assertEquals("mockClientId", result.getClientId());
-            assertEquals("mockClientSecret", result.getClientSecret());
-        }
-    }
-
-    // @Test
-    // void testPrivateConstructor() {
-    //   // Use reflection to access the private constructor
-    //   Constructor<TokenHandler> constructor = null;
-    //   try {
-    //     constructor = TokenHandler.class.getDeclaredConstructor();
-    //     constructor.setAccessible(true);
-    //     assertThrows(InvocationTargetException.class, constructor::newInstance);
-    //   } catch (NoSuchMethodException e) {
-    //     fail("Exception occurred during test: " + e.getMessage());
-    //   }
-    // }
-
-    @Test
-    void testToString() {
-        byte[] input = "Hello, World!".getBytes(StandardCharsets.UTF_8);
-        String expected = new String(input, StandardCharsets.UTF_8);
-        String actual = TokenHandler.getTokenHandlerInstance().toString(input);
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    void testToStringWithNullInput() {
-        assertThrows(
-                NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toString(null));
-    }
-
-    @Test
-    public void testGetHttpClientForOnboardFlow() {
-        ServiceBindingAccessor mockAccessor = Mockito.mock(ServiceBindingAccessor.class);
-        try (MockedStatic<DefaultServiceBindingAccessor> accessorMockedStatic =
-                     Mockito.mockStatic(DefaultServiceBindingAccessor.class)) {
-            accessorMockedStatic
-                    .when(DefaultServiceBindingAccessor::getInstance)
-                    .thenReturn(mockAccessor);
-
-            ServiceBinding mockServiceBinding = Mockito.mock(ServiceBinding.class);
-
-            Map<String, Object> mockCredentials = new HashMap<>();
-            Map<String, Object> mockUaa = new HashMap<>();
-            mockUaa.put("url", "https://mock.uaa.url");
-            mockUaa.put("clientid", "mockClientId");
-            mockUaa.put("clientsecret", "mockClientSecret");
-            mockCredentials.put("uaa", mockUaa);
-            mockCredentials.put("uri", "https://mock.service.url");
-
-            Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
-            Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
-
-            List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
-            Mockito.when(mockAccessor.getServiceBindings()).thenReturn(mockServiceBindings);
-
-            HttpClient client =
-                    TokenHandler.getTokenHandlerInstance()
-                            .getHttpClient(null, null, "subdomain", "TECHNICAL_CREDENTIALS_FLOW");
-
-            assertNotNull(client);
-        }
-    }
-
-    @Test
-    public void testToBytes() {
-        String input = "Hello, World!";
-        byte[] expected = input.getBytes(StandardCharsets.UTF_8);
-        byte[] actual = TokenHandler.getTokenHandlerInstance().toBytes(input);
-        assertArrayEquals(expected, actual);
-    }
-
-    @Test
-    public void testToBytesWithNullInput() {
-        assertThrows(
-                NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toBytes(null));
-    }
+  @Test
+  public void testToBytesWithNullInput() {
+    assertThrows(
+        NullPointerException.class, () -> TokenHandler.getTokenHandlerInstance().toBytes(null));
+  }
 }

@@ -3,7 +3,6 @@ package integration.com.sap.cds.sdm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import okio.ByteString;
 
@@ -13,63 +12,12 @@ public class Api implements ApiInterface {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
   private final String serviceName;
-  private static final int MAX_RETRIES = 3;
-  private static final int RETRY_DELAY_MS = 1000;
 
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
-    this.httpClient =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(120, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .build();
+    this.httpClient = new OkHttpClient();
     this.token = this.config.get("Authorization");
     this.serviceName = this.config.get("serviceName");
-  }
-
-  private Response executeWithRetry(Request request) throws IOException {
-    IOException lastException = null;
-    for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        Response response = httpClient.newCall(request).execute();
-        if (response.code() == 502 && attempt < MAX_RETRIES) {
-          System.out.println(
-              "Received 502 Bad Gateway, retrying... (attempt "
-                  + attempt
-                  + "/"
-                  + MAX_RETRIES
-                  + ")");
-          response.close();
-          Thread.sleep(RETRY_DELAY_MS);
-          continue;
-        }
-        return response;
-      } catch (java.net.SocketTimeoutException e) {
-        lastException = e;
-        if (attempt < MAX_RETRIES) {
-          System.out.println(
-              "Socket timeout occurred, retrying... (attempt "
-                  + attempt
-                  + "/"
-                  + MAX_RETRIES
-                  + "): "
-                  + e.getMessage());
-          try {
-            Thread.sleep(RETRY_DELAY_MS);
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Retry interrupted", ie);
-          }
-        } else {
-          throw e;
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new IOException("Retry interrupted", e);
-      }
-    }
-    throw lastException;
   }
 
   public String createEntityDraft(
@@ -92,7 +40,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         if (response.code() == 401) {
           System.out.println(
@@ -129,7 +77,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Edit entity failed. Error : " + response.body().string());
         throw new IOException("Could not edit entity");
@@ -162,7 +110,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Save entity failed. Error : " + response.body().string());
         throw new IOException("Could not save entity");
@@ -185,7 +133,7 @@ public class Api implements ApiInterface {
                 .addHeader("Authorization", token)
                 .build();
 
-        try (Response draftResponse = executeWithRetry(request)) {
+        try (Response draftResponse = httpClient.newCall(request).execute()) {
           if (draftResponse.code() != 200) {
             String draftResponseBodyString = draftResponse.body().string();
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
@@ -224,7 +172,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -253,7 +201,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -281,7 +229,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response checkResponse = executeWithRetry(request)) {
+    try (Response checkResponse = httpClient.newCall(request).execute()) {
       if (checkResponse.code() != 200) {
         System.out.println("Verify entity failed. Error : " + checkResponse.body().string());
         throw new IOException("Entity doesn't exist");
@@ -331,7 +279,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = executeWithRetry(postRequest)) {
+    try (Response response = httpClient.newCall(postRequest).execute()) {
       if (response.code() != 201) {
         System.out.println(
             "Create Attachment in the section: "
@@ -366,7 +314,7 @@ public class Api implements ApiInterface {
               .addHeader("Authorization", token)
               .build();
 
-      try (Response fileResponse = executeWithRetry(fileRequest)) {
+      try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
         if (fileResponse.code() != 204) {
           String responseBodyString = fileResponse.body().string();
           System.out.println(
@@ -395,7 +343,7 @@ public class Api implements ApiInterface {
                   .addHeader("Authorization", token)
                   .build();
 
-          try (Response deleteResponse = executeWithRetry(request)) {
+          try (Response deleteResponse = httpClient.newCall(request).execute()) {
             if (deleteResponse.code() != 204) {
               System.out.println(
                   "Delete Attachment in section :"
@@ -462,7 +410,7 @@ public class Api implements ApiInterface {
             .build();
 
     try {
-      Response response = executeWithRetry(request);
+      Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
         System.out.println(
             "Read Attachment failed in the "
@@ -504,7 +452,7 @@ public class Api implements ApiInterface {
             .build();
 
     try {
-      Response response = executeWithRetry(request);
+      Response response = httpClient.newCall(request).execute();
       if (!response.isSuccessful()) {
         System.out.println("Read draft attachment failed. Error : " + response.body().string());
         throw new IOException("Could not read attachment");
@@ -538,7 +486,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response deleteResponse = executeWithRetry(request)) {
+    try (Response deleteResponse = httpClient.newCall(request).execute()) {
       if (deleteResponse.code() != 204) {
         System.out.println(
             "Delete Attachment failed in the "
@@ -581,8 +529,8 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response renameResponse = executeWithRetry(request)) {
-      if (!renameResponse.isSuccessful()) {
+    try (Response renameResponse = httpClient.newCall(request).execute()) {
+      if (renameResponse.code() != 200) {
         System.out.println(
             "Rename Attachment failed in the "
                 + facetName
@@ -626,7 +574,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response updateResponse = executeWithRetry(request)) {
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
       if (updateResponse.code() != 200) {
         System.out.println(
             "Updating secondary property failed. Error: " + updateResponse.body().string());
@@ -670,7 +618,7 @@ public class Api implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response updateResponse = executeWithRetry(request)) {
+    try (Response updateResponse = httpClient.newCall(request).execute()) {
       if (updateResponse.code() != 200) {
         System.out.println(
             "Updating secondary property failed. Error : " + updateResponse.body().string());
@@ -716,7 +664,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not copy attachments: " + response.code() + " - " + response.body().string());
@@ -761,7 +709,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not create link: " + response.code() + " - " + response.body().string());
@@ -804,7 +752,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not open attachment: " + response.code() + " - " + response.body().string());
@@ -853,7 +801,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not edit link: " + response.code() + " - " + response.body().string());
@@ -888,7 +836,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -929,7 +877,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -967,7 +915,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -1011,7 +959,7 @@ public class Api implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = executeWithRetry(request)) {
+    try (Response response = httpClient.newCall(request).execute()) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(

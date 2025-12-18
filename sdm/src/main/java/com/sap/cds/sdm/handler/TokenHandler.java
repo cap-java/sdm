@@ -71,10 +71,7 @@ public class TokenHandler {
         DefaultServiceBindingAccessor.getInstance().getServiceBindings();
     ServiceBinding sdmBinding =
         allServiceBindings.stream()
-            .filter(
-                binding ->
-                    "sdm-us31-local-dev-biswajitm"
-                        .equalsIgnoreCase(binding.getServiceName().orElse(null)))
+            .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("SDM binding not found"));
     return sdmBinding.getCredentials();

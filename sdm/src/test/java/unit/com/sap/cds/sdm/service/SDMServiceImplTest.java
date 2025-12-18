@@ -1418,8 +1418,9 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream(mockResponseBody.getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertEquals("desiredObjectName", objectInfo.get(0));
+    JSONObject objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    assertEquals(
+        "desiredObjectName", objectInfo.getJSONObject("succinctProperties").getString("cmis:name"));
   }
 
   @Test
@@ -1438,8 +1439,8 @@ public class SDMServiceImplTest {
     InputStream inputStream = new ByteArrayInputStream("".getBytes());
     when(entity.getContent()).thenReturn(inputStream);
 
-    List<String> objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
-    assertTrue(objectInfo.isEmpty());
+    JSONObject objectInfo = sdmServiceImpl.getObject(objectId, sdmCredentials, false);
+    assertNull(objectInfo);
   }
 
   @Test

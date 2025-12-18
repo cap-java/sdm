@@ -485,45 +485,12 @@ public class DBQuery {
     }
     return propertyValueMap;
   }
-  
-  public CmisDocument getuploadStatusForAttachment(
-      String entity,
-      PersistenceService persistenceService,
-      String objectId,
-      AttachmentReadEventContext context) {
-    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
-    CqnSelect q =
-        Select.from(attachmentEntity.get())
-            .columns("uploadStatus")
-            .where(doc -> doc.get("objectId").eq(objectId));
-    Result result = persistenceService.run(q);
-    CmisDocument cmisDocument = new CmisDocument();
-    boolean isAttachmentFound = false;
-    for (Row row : result.list()) {
-      cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
-      isAttachmentFound = true;
-    }
-    if (!isAttachmentFound) {
-      attachmentEntity = context.getModel().findEntity(entity);
-      q =
-          Select.from(attachmentEntity.get())
-              .columns("uploadStatus")
-              .where(doc -> doc.get("objectId").eq(objectId));
-      result = persistenceService.run(q);
-      for (Row row : result.list()) {
-        cmisDocument.setUploadStatus(
-            row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
-      }
-    }
-    return cmisDocument;
-  }
 
   public CmisDocument getuploadStatusForAttachment(
       String entity,
       PersistenceService persistenceService,
       String objectId,
-      AttachmentMarkAsDeletedEventContext context) {
+      AttachmentReadEventContext context) {
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     CqnSelect q =
         Select.from(attachmentEntity.get())
@@ -627,37 +594,6 @@ public class DBQuery {
     return persistenceService.run(updateQuery);
   }
 
-  /**
-   * Updates the criticality value for an attachment based on its upload status.
-   *
-   * @param persistenceService the persistence service
-   * @param attachmentId the attachment ID
-   * @param criticality the calculated criticality value
-   */
-  public void updateAttachmentCriticality(
-      PersistenceService persistenceService,
-      String attachmentId,
-      int criticality,
-      CdsReadEventContext context) {
-    // Update the attachment criticality in the database for draft table
-    Optional<CdsEntity> attachmentDraftEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-    CqnUpdate updateQuery =
-        Update.entity(attachmentDraftEntity.get())
-            .data("statusCriticality", criticality)
-            .where(doc -> doc.get("ID").eq(attachmentId));
-
-    persistenceService.run(updateQuery);
-    Optional<CdsEntity> attachmentEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName());
-    updateQuery =
-        Update.entity(attachmentEntity.get())
-            .data("statusCriticality", criticality)
-            .where(doc -> doc.get("ID").eq(attachmentId));
-
-    persistenceService.run(updateQuery);
-  }
-
   private String mapScanStatusToUploadStatus(SDMConstants.ScanStatus scanStatus) {
     System.out.println("SCAN status in read handler " + scanStatus);
     switch (scanStatus) {
@@ -676,6 +612,7 @@ public class DBQuery {
         return SDMConstants.UPLOAD_STATUS_SUCCESS;
     }
   }
+
   /**
    * Deletes attachment metadata from the source entity (both draft and non-draft tables) for the
    * given list of object IDs. This is used to clean up source entity after successful moves.

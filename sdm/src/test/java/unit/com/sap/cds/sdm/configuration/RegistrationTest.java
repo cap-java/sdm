@@ -48,9 +48,9 @@ public class RegistrationTest {
     // Create a stream of bindings to be returned by environment.getServiceBindings()
     Stream<ServiceBinding> bindingsStream = Stream.of(binding1, binding2, binding3);
     when(environment.getProperty("cds.attachments.sdm.http.timeout", Integer.class, 1200))
-            .thenReturn(1800);
+        .thenReturn(1800);
     when(environment.getProperty("cds.attachments.sdm.http.maxConnections", Integer.class, 100))
-            .thenReturn(200);
+        .thenReturn(200);
 
     persistenceService = mock(PersistenceService.class);
     attachmentService = mock(AttachmentService.class);
@@ -71,7 +71,7 @@ public class RegistrationTest {
     // Perform the property reading
 
     var attachmentServiceFound =
-            services.stream().anyMatch(service -> service instanceof AttachmentService);
+        services.stream().anyMatch(service -> service instanceof AttachmentService);
 
     assertThat(attachmentServiceFound).isTrue();
   }
@@ -79,9 +79,9 @@ public class RegistrationTest {
   @Test
   void handlersAreRegistered() {
     when(serviceCatalog.getService(PersistenceService.class, PersistenceService.DEFAULT_NAME))
-            .thenReturn(persistenceService);
+        .thenReturn(persistenceService);
     when(serviceCatalog.getService(OutboxService.class, OutboxService.PERSISTENT_UNORDERED_NAME))
-            .thenReturn(outboxService);
+        .thenReturn(outboxService);
 
     registration.eventHandlers(configurer);
 
@@ -93,9 +93,9 @@ public class RegistrationTest {
   }
 
   private void isHandlerForClassIncluded(
-          List<EventHandler> handlers, Class<? extends EventHandler> includedClass) {
+      List<EventHandler> handlers, Class<? extends EventHandler> includedClass) {
     var isHandlerIncluded =
-            handlers.stream().anyMatch(handler -> handler.getClass() == includedClass);
+        handlers.stream().anyMatch(handler -> handler.getClass() == includedClass);
     assertThat(isHandlerIncluded).isTrue();
   }
 }

@@ -980,7 +980,7 @@ public class SDMCustomServiceHandler {
    */
   private CmisDocument fetchAttachmentMetadataFromSDM(AttachmentMoveContext moveContext) {
     try {
-      List<String> sdmMetadata =
+      JSONObject sdmMetadata =
           sdmService.getObject(
               moveContext.getObjectId(),
               moveContext.getRequest().getSdmCredentials(),
@@ -992,9 +992,13 @@ public class SDMCustomServiceHandler {
 
       // Create CmisDocument with metadata from SDM
       CmisDocument cmisDocument = new CmisDocument();
-      cmisDocument.setFileName(sdmMetadata.get(0)); // cmis:name
-      if (sdmMetadata.size() > 1) {
-        cmisDocument.setDescription(sdmMetadata.get(1)); // cmis:description
+      JSONObject succinctProperties = sdmMetadata.optJSONObject("succinctProperties");
+      if (succinctProperties != null) {
+        cmisDocument.setFileName(succinctProperties.optString("cmis:name")); // cmis:name
+        String description = succinctProperties.optString("cmis:description");
+        if (description != null && !description.isEmpty()) {
+          cmisDocument.setDescription(description); // cmis:description
+        }
       }
       // Type and URL will be null for non-link attachments (which is fine for move)
       return cmisDocument;

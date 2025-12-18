@@ -333,14 +333,25 @@ public class SDMUpdateAttachmentsHandlerTest {
       when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
       when(model.findEntity("compositionDefinition"))
           .thenReturn(Optional.of(attachmentDraftEntity));
+      // Mock the draft entity lookup that the handler expects
+      when(model.findEntity("some.qualified.Name_drafts"))
+          .thenReturn(Optional.of(attachmentDraftEntity));
       when(context.getMessages()).thenReturn(messages);
       UserInfo userInfo = Mockito.mock(UserInfo.class);
       when(context.getUserInfo()).thenReturn(userInfo);
       when(userInfo.isSystemUser()).thenReturn(false);
       when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+
+      // Mock CmisDocument with filename to avoid fetching from SDM
+      CmisDocument mockCmisDoc = mock(CmisDocument.class);
+      when(mockCmisDoc.getFileName()).thenReturn("file1.txt");
+      when(mockCmisDoc.getUploadStatus()).thenReturn("success");
       when(dbQuery.getAttachmentForID(
-              any(CdsEntity.class), any(PersistenceService.class), anyString()))
-          .thenReturn("file123.txt");
+              any(CdsEntity.class),
+              any(PersistenceService.class),
+              anyString(),
+              any(CdsEntity.class)))
+          .thenReturn(mockCmisDoc);
 
       when(dbQuery.getPropertiesForID(
               any(CdsEntity.class), any(PersistenceService.class), anyString(), any(Map.class)))

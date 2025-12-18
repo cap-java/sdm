@@ -475,14 +475,15 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "ok");
-    when(documentService.createDocument(any(), any(), anyBoolean())).thenReturn(createResult);
+    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(createResult);
 
     // Act
     sdmServiceGenericHandler.create(mockContext);
 
     // Assert
     verify(sdmService).checkRepositoryType(anyString(), anyString());
-    verify(documentService).createDocument(any(), any(), anyBoolean());
+    verify(documentService).createDocument(any(), any(), anyBoolean(), any(), any());
     verify(draftService).newDraft(any(Insert.class));
     verify(mockContext).setCompleted();
   }
@@ -867,7 +868,7 @@ public class SDMServiceGenericHandlerTest {
     sdmCredentials.setUrl("http://test-url");
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-    when(documentService.createDocument(any(), any(), anyBoolean()))
+    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
         .thenThrow(new RuntimeException("Document creation failed"));
 
     // Act & Assert
@@ -952,7 +953,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Duplicate file");
-    when(documentService.createDocument(any(), any(), anyBoolean())).thenReturn(createResult);
+    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(createResult);
 
     // Act & Assert
     ServiceException ex =
@@ -1033,7 +1035,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Some error message");
-    when(documentService.createDocument(any(), any(), anyBoolean())).thenReturn(createResult);
+    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(createResult);
 
     // Act & Assert
     ServiceException ex =
@@ -1117,7 +1120,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Unauthorized");
-    when(documentService.createDocument(any(), any(), anyBoolean())).thenReturn(createResult);
+    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+        .thenReturn(createResult);
 
     // Act & Assert
     ServiceException ex =
@@ -1129,6 +1133,9 @@ public class SDMServiceGenericHandlerTest {
   void testOpenAttachment_InternetShortcut() throws Exception {
     // Arrange
     AttachmentReadContext context = mock(AttachmentReadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
     CdsModel cdsModel = mock(CdsModel.class);
     CdsEntity cdsEntity = mock(CdsEntity.class);
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -1153,9 +1160,17 @@ public class SDMServiceGenericHandlerTest {
     cmisDocument.setFileName("file.url");
     cmisDocument.setMimeType("application/internet-shortcut");
     cmisDocument.setUrl("http://shortcut-url");
+    cmisDocument.setObjectId("object-123");
 
     when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "123"))
         .thenReturn(cmisDocument);
+
+    // Mock token handler and SDM service object check to pass
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+    JSONObject objResp = new JSONObject();
+    objResp.put("status", "success");
+    when(sdmService.getObject(eq("object-123"), eq(creds), eq(false))).thenReturn(objResp);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1333,6 +1348,9 @@ public class SDMServiceGenericHandlerTest {
   void testOpenAttachment_WithLinkFile() throws Exception {
     // Arrange
     AttachmentReadContext context = mock(AttachmentReadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
     when(context.getModel()).thenReturn(cdsModel);
     when(context.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
@@ -1349,8 +1367,18 @@ public class SDMServiceGenericHandlerTest {
     linkDocument.setFileName("test.url");
     linkDocument.setMimeType("application/internet-shortcut");
     linkDocument.setUrl("http://test.com");
+    linkDocument.setObjectId("object123");
     when(dbQuery.getObjectIdForAttachmentID(eq(draftEntity), eq(persistenceService), eq("123")))
         .thenReturn(linkDocument);
+
+    // Mock token handler and SDM service for internet shortcut verification
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    JSONObject objectResponse = new JSONObject();
+    objectResponse.put("status", "success");
+    when(sdmService.getObject(eq("object123"), eq(sdmCredentials), eq(false)))
+        .thenReturn(objectResponse);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1392,6 +1420,9 @@ public class SDMServiceGenericHandlerTest {
   void testOpenAttachment_FallbackToNonDraftEntity() throws Exception {
     // Arrange
     AttachmentReadContext context = mock(AttachmentReadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
     when(context.getModel()).thenReturn(cdsModel);
     when(context.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyEntity");
@@ -1416,8 +1447,16 @@ public class SDMServiceGenericHandlerTest {
     properDocument.setFileName("test.url");
     properDocument.setMimeType("application/internet-shortcut");
     properDocument.setUrl("http://fallback.com");
+    properDocument.setObjectId("object-456");
     when(dbQuery.getObjectIdForAttachmentID(eq(cdsEntity), eq(persistenceService), eq("123")))
         .thenReturn(properDocument);
+
+    // Mock token handler and SDM service object check to pass
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+    JSONObject objResp = new JSONObject();
+    objResp.put("status", "success");
+    when(sdmService.getObject(eq("object-456"), eq(creds), eq(false))).thenReturn(objResp);
 
     // Act
     sdmServiceGenericHandler.openAttachment(context);
@@ -1506,6 +1545,8 @@ public class SDMServiceGenericHandlerTest {
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.getTarget()).thenReturn(cdsEntity);
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(cdsEntity));
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
 
@@ -1544,6 +1585,7 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
@@ -1563,6 +1605,7 @@ public class SDMServiceGenericHandlerTest {
     when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "123"));
     when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
     when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.getTarget()).thenReturn(cdsEntity);
     when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
     when(mockCqnElementRef.path()).thenReturn("ID");
 
@@ -1601,6 +1644,7 @@ public class SDMServiceGenericHandlerTest {
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
     when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(cdsEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
     when(cqnSelect.toString())
@@ -1651,7 +1695,7 @@ public class SDMServiceGenericHandlerTest {
     JSONObject createResult = new JSONObject();
     createResult.put("status", "unauthorized");
     when(documentService.createDocument(
-            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean()))
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any(), any()))
         .thenReturn(createResult);
 
     // Act & Assert
