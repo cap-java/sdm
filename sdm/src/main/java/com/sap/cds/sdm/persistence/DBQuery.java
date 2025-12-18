@@ -203,7 +203,7 @@ public class DBQuery {
       PersistenceService persistenceService,
       String id,
       CdsEntity attachmentDraftEntity) {
-    System.out.println("ATT ENT " + attachmentEntity.getQualifiedName());
+    System.out.println("ATT ENT in dbquery" + attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity).columns("fileName").where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
@@ -217,7 +217,7 @@ public class DBQuery {
             .where(doc -> doc.get("ID").eq(id));
     result = persistenceService.run(q);
     for (Row row : result.list()) {
-      System.out.println("UPLOAD STATUS " + row.get("uploadStatus") + ":" + id);
+      System.out.println("UPLOAD STATUS results" + row.get("uploadStatus") + ":" + id);
       cmisDocument.setUploadStatus(
           row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }
