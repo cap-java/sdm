@@ -47,7 +47,7 @@ public class SDMReadAttachmentsHandlerTest {
     when(context.getCqn()).thenReturn(select);
     RepoValue repoValue = new RepoValue();
     repoValue.setIsAsyncVirusScanEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
 
@@ -87,18 +87,30 @@ public class SDMReadAttachmentsHandlerTest {
     when(context.getCqn()).thenReturn(select);
     RepoValue repoValue = new RepoValue();
     repoValue.setIsAsyncVirusScanEnabled(true);
-    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    CdsEntity attachmentDraftEntity = Mockito.mock(CdsEntity.class);
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity(anyString())).thenReturn(Optional.of(attachmentDraftEntity));
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
-
+    when(context.get("cqn")).thenReturn(select);
     // Act
-    sdmReadAttachmentsHandler.processBefore(context);
+    try (MockedStatic<SDMUtils> sdmUtilsMock = Mockito.mockStatic(SDMUtils.class)) {
+      sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any())).thenReturn("mockUpIdKey");
+      sdmUtilsMock.when(() -> SDMUtils.fetchUPIDFromCQN(any(), any())).thenReturn("mockUpID");
 
-    // Assert
-    verify(context).setCqn(any(CqnSelect.class));
-    // When async virus scan is enabled, updateInProgressUploadStatusToSuccess is NOT called
-    verify(dbQuery, never())
-        .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+      // Act
+      sdmReadAttachmentsHandler.processBefore(context);
+
+      // Assert
+      // Assert
+      verify(context).setCqn(any(CqnSelect.class));
+      // When async virus scan is enabled, updateInProgressUploadStatusToSuccess is NOT called
+      verify(dbQuery, never())
+          .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+    }
   }
 
   @Test

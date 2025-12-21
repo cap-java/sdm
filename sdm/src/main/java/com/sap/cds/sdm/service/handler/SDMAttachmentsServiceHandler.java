@@ -20,7 +20,6 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -36,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 @ServiceName(
     value = "*",
-    type = {AttachmentService.class, DraftService.class})
+    type = {AttachmentService.class})
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;

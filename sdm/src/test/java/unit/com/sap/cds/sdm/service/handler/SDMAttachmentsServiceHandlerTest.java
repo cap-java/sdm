@@ -147,7 +147,9 @@ public class SDMAttachmentsServiceHandlerTest {
       repoValue.setVirusScanEnabled(false);
       repoValue.setVersionEnabled(true);
       repoValue.setIsAsyncVirusScanEnabled(false);
-      when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
+      when(mockContext.getUserInfo()).thenReturn(userInfo);
+      when(userInfo.getTenant()).thenReturn("tenant1");
+      when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error("Upload not supported for versioned repositories."))
           .thenReturn(mockMessage);
@@ -161,6 +163,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn(SDMConstants.VERSIONED_REPO_ERROR_MSG);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
+      when(parameterInfo.getLocale()).thenReturn(java.util.Locale.getDefault());
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -217,7 +220,9 @@ public class SDMAttachmentsServiceHandlerTest {
       repoValue.setVirusScanEnabled(false);
       repoValue.setVersionEnabled(true);
       repoValue.setIsAsyncVirusScanEnabled(false);
-      when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
+      when(mockContext.getUserInfo()).thenReturn(userInfo);
+      when(userInfo.getTenant()).thenReturn("tenant1");
+      when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error("Upload not supported for versioned repositories."))
           .thenReturn(mockMessage);
@@ -231,6 +236,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn("Versioned repo error in German");
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
+      when(parameterInfo.getLocale()).thenReturn(java.util.Locale.getDefault());
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -287,7 +293,9 @@ public class SDMAttachmentsServiceHandlerTest {
       repoValue.setDisableVirusScannerForLargeFile(false);
       repoValue.setVersionEnabled(false);
       repoValue.setIsAsyncVirusScanEnabled(false);
-      when(sdmService.checkRepositoryType(anyString(), any())).thenReturn(repoValue);
+      when(mockContext.getUserInfo()).thenReturn(userInfo);
+      when(userInfo.getTenant()).thenReturn("tenant1");
+      when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB))
           .thenReturn(mockMessage);
@@ -303,6 +311,7 @@ public class SDMAttachmentsServiceHandlerTest {
           .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
       when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
       when(parameterInfo.getHeaders()).thenReturn(headers);
+      when(parameterInfo.getLocale()).thenReturn(java.util.Locale.getDefault());
       // Use assertThrows to expect a ServiceException and validate the message
       ServiceException thrown =
           assertThrows(
@@ -995,7 +1004,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
     mockCreateResult.put("mimeType", "application/pdf");
-    mockCreateResult.put("uploadStatus", "success");
+    mockCreateResult.put("uploadStatus", "Clean");
 
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
@@ -1023,6 +1032,7 @@ public class SDMAttachmentsServiceHandlerTest {
     JSONObject mockResponse = new JSONObject();
     mockResponse.put("status", "success");
     mockResponse.put("objectId", "123");
+    mockResponse.put("uploadStatus", "Clean");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
     when(documentUploadService.createDocument(any(), any(), anyBoolean(), any(), any()))
@@ -1075,7 +1085,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
     mockCreateResult.put("mimeType", "application/pdf");
-    mockCreateResult.put("uploadStatus", "success");
+    mockCreateResult.put("uploadStatus", "Clean");
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getModel()).thenReturn(cdsModel);
@@ -1488,11 +1498,10 @@ public class SDMAttachmentsServiceHandlerTest {
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
-    // Mock CmisDocument to avoid null pointer
     CmisDocument mockCmisDocument = new CmisDocument();
-    mockCmisDocument.setUploadStatus("success");
+    mockCmisDocument.setUploadStatus("Clean");
     when(dbQuery.getuploadStatusForAttachment(
-            anyString(), eq(persistenceService), anyString(), eq(mockReadContext)))
+            eq("objectId"), eq(persistenceService), eq("objectId"), eq(mockReadContext)))
         .thenReturn(mockCmisDocument);
 
     handlerSpy.readAttachment(mockReadContext);
@@ -1515,11 +1524,10 @@ public class SDMAttachmentsServiceHandlerTest {
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
-    // Mock CmisDocument to avoid null pointer
     CmisDocument mockCmisDocument = new CmisDocument();
-    mockCmisDocument.setUploadStatus("success");
+    mockCmisDocument.setUploadStatus("Clean");
     when(dbQuery.getuploadStatusForAttachment(
-            anyString(), eq(persistenceService), anyString(), eq(mockReadContext)))
+            eq("objectId"), eq(persistenceService), eq("objectId"), eq(mockReadContext)))
         .thenReturn(mockCmisDocument);
 
     doThrow(new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR))
@@ -1863,13 +1871,16 @@ public class SDMAttachmentsServiceHandlerTest {
     largeFileHeaders.put("content-length", String.valueOf(500 * 1024 * 1024L)); // 500MB
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(parameterInfo.getHeaders()).thenReturn(largeFileHeaders);
+    when(parameterInfo.getLocale()).thenReturn(java.util.Locale.getDefault());
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(cdsModel.findEntity(anyString())).thenReturn(Optional.empty());
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
     when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
-    when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
+    when(cdsRuntime.getLocalizedMessage(
+            eq(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE), isNull(), any()))
         .thenReturn(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE);
-    when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     ServiceException thrown =
         assertThrows(
             ServiceException.class,
@@ -2065,11 +2076,10 @@ public class SDMAttachmentsServiceHandlerTest {
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
-    // Mock CmisDocument to avoid null pointer
     CmisDocument mockCmisDocument = new CmisDocument();
-    mockCmisDocument.setUploadStatus("success");
+    mockCmisDocument.setUploadStatus("Clean");
     when(dbQuery.getuploadStatusForAttachment(
-            anyString(), eq(persistenceService), anyString(), eq(readContext)))
+            eq("entity"), eq(persistenceService), eq("objectId"), eq(readContext)))
         .thenReturn(mockCmisDocument);
 
     handlerSpy.readAttachment(readContext);
@@ -2185,11 +2195,10 @@ public class SDMAttachmentsServiceHandlerTest {
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
-    // Mock CmisDocument to avoid null pointer
     CmisDocument mockCmisDocument = new CmisDocument();
-    mockCmisDocument.setUploadStatus("success");
+    mockCmisDocument.setUploadStatus("Clean");
     when(dbQuery.getuploadStatusForAttachment(
-            anyString(), eq(persistenceService), anyString(), eq(readContext)))
+            eq("objectId"), eq(persistenceService), eq("objectId"), eq(readContext)))
         .thenReturn(mockCmisDocument);
 
     // Mock service to throw exception
@@ -2220,11 +2229,10 @@ public class SDMAttachmentsServiceHandlerTest {
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
 
-    // Mock CmisDocument to avoid null pointer
     CmisDocument mockCmisDocument = new CmisDocument();
-    mockCmisDocument.setUploadStatus("success");
+    mockCmisDocument.setUploadStatus("Clean");
     when(dbQuery.getuploadStatusForAttachment(
-            anyString(), eq(persistenceService), anyString(), eq(readContext)))
+            eq("singleObjectId"), eq(persistenceService), eq("singleObjectId"), eq(readContext)))
         .thenReturn(mockCmisDocument);
 
     handlerSpy.readAttachment(readContext);

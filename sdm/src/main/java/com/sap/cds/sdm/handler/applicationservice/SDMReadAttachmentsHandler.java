@@ -62,19 +62,18 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               + repoValue.getIsAsyncVirusScanEnabled()
               + ":"
               + repoValue.getVirusScanEnabled());
+      Optional<CdsEntity> attachmentDraftEntity =
+          context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+      String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+      CqnSelect select = (CqnSelect) context.get("cqn");
+      String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
       if (!repoValue.getIsAsyncVirusScanEnabled()) {
-        Optional<CdsEntity> attachmentDraftEntity =
-            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-        String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-        CqnSelect select = (CqnSelect) context.get("cqn");
-        String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-        System.out.println("upID : " + upID);
 
         dbQuery.updateInProgressUploadStatusToSuccess(
             attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
       }
       if (repoValue.getIsAsyncVirusScanEnabled()) {
-        processVirusScanInProgressAttachments(context);
+        processVirusScanInProgressAttachments(context, upID, upIdKey);
       }
       CqnSelect copy =
           CQL.copy(
@@ -99,7 +98,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
    *
    * @param context the CDS read event context containing attachment data
    */
-  private void processVirusScanInProgressAttachments(CdsReadEventContext context) {
+  private void processVirusScanInProgressAttachments(
+      CdsReadEventContext context, String upID, String upIDkey) {
     try {
       // Get the statuses of existing attachments and assign color code
       // Get all attachments with virus scan in progress
@@ -108,7 +108,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
       List<CmisDocument> attachmentsInProgress =
           dbQuery.getAttachmentsWithVirusScanInProgress(
-              attachmentDraftEntity.get(), persistenceService);
+              attachmentDraftEntity.get(), persistenceService, upID, upIDkey);
 
       // Get SDM credentials
       var sdmCredentials = tokenHandler.getSDMCredentials();
@@ -149,7 +149,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                 Result r =
                     dbQuery.updateUploadStatusByScanStatus(
                         attachmentDraftEntity.get(), persistenceService, objectId, scanStatusEnum);
-                System.out.println("Res count " + r.rowCount());
                 logger.info(
                     "Updated uploadStatus for objectId: {} based on scanStatus: {}",
                     objectId,
@@ -184,4 +183,81 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       logger.error("Error processing virus scan in progress attachments: {}", e.getMessage());
     }
   }
+
+  //  @After
+  //  @HandlerOrder(HandlerOrder.DEFAULT)
+  //  public void processAfter(CdsReadEventContext context) {
+  //    try {
+  //      if (!context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+  // {
+  //        return;
+  //      }
+  //
+  //      // Enhance read response with statusNav.criticality for UI
+  //      Result result = context.getResult();
+  //      if (result == null) {
+  //        return;
+  //      }
+  //
+  //      // Resolve entity and UP ID key used for counting attachments per parent
+  //      Optional<CdsEntity> attachmentDraftEntity =
+  //          context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+  //      CdsEntity attachmentEntityForCount = attachmentDraftEntity.orElse(context.getTarget());
+  //      String upIdKey =
+  //          attachmentDraftEntity.isPresent()
+  //              ? com.sap.cds.sdm.utilities.SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+  //              : "up__ID";
+  //
+  //      java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+  //      for (java.util.Map<?, ?> rawRow : result.listOf(java.util.Map.class)) {
+  //        java.util.Map<String, Object> row = new java.util.HashMap<>();
+  //        for (java.util.Map.Entry<?, ?> e : rawRow.entrySet()) {
+  //          if (e.getKey() != null) {
+  //            row.put(String.valueOf(e.getKey()), e.getValue());
+  //          }
+  //        }
+  //        rows.add(row);
+  //      }
+  //      for (java.util.Map<String, Object> row : rows) {
+  //        Object statusObj = row.get("uploadStatus");
+  //        String uploadStatus = statusObj != null ? statusObj.toString() : null;
+  //        Integer criticality =
+  //            com.sap.cds.sdm.utilities.SDMUtils.getCriticalityForStatus(uploadStatus);
+  //
+  //        // Build/merge statusNav expansion payload
+  //        Object statusNavObj = row.get("statusNav");
+  //        java.util.Map<String, Object> statusNavMap = new java.util.HashMap<>();
+  //        if (statusNavObj instanceof java.util.Map) {
+  //          java.util.Map<?, ?> existing = (java.util.Map<?, ?>) statusNavObj;
+  //          Object existingCrit = existing.get("criticality");
+  //          if (existingCrit != null) {
+  //            statusNavMap.put("criticality", existingCrit);
+  //          }
+  //          Object existingCode = existing.get("code");
+  //          if (existingCode != null) {
+  //            statusNavMap.put("code", existingCode);
+  //          }
+  //        }
+  //        statusNavMap.put("criticality", criticality);
+  //
+  //        // Compute and attach count of attachments for the same parent (UP ID)
+  //        Object upIdVal = row.get(upIdKey);
+  //        if (upIdVal != null) {
+  //          Result countRes =
+  //              dbQuery.getAttachmentsForUPIDAndRepository(
+  //                  attachmentEntityForCount, persistenceService, String.valueOf(upIdVal),
+  // upIdKey);
+  //          long count = countRes != null ? countRes.rowCount() : 0L;
+  //          statusNavMap.put("count", count);
+  //          row.put("count", (int) count);
+  //        }
+  //        row.put("statusNav", statusNavMap);
+  //      }
+  //
+  //      // Replace the result with enriched rows
+  //      context.setResult(rows);
+  //    } catch (Exception e) {
+  //      logger.error("Error enhancing read response with criticality: {}", e.getMessage());
+  //    }
+  //  }
 }

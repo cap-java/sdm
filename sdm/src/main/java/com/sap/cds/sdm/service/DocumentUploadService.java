@@ -113,7 +113,7 @@ public class DocumentUploadService {
   /*
    * CMIS call to appending content stream
    */
-  private void appendContentStream(
+  private JSONObject appendContentStream(
       CmisDocument cmisDocument,
       String sdmUrl,
       byte[] chunkBuffer,
@@ -152,7 +152,7 @@ public class DocumentUploadService {
     try {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
       cmisDocument.setMimeType(finalResponse.get("mimeType"));
-
+      return new JSONObject(finalResponse);
     } catch (Exception e) {
       logger.error("Error in appending content: {}", e.getMessage());
       throw new IOException("Error in appending content: " + e.getMessage(), e);
@@ -253,8 +253,6 @@ public class DocumentUploadService {
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
       logger.info("Response Body: {}", responseBody);
-      cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      dbQuery.addAttachmentToDraft(entity, persistenceService, cmisDocument);
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
       logger.info("objectId of empty doc is {}", objectId);
@@ -296,8 +294,15 @@ public class DocumentUploadService {
 
         // Step 7: Append Chunk. Call cmis api to append content stream
         if (bytesRead > 0) {
-          appendContentStream(
-              cmisDocument, sdmUrl, chunkBuffer, bytesRead, isLastChunk, chunkIndex, isSystemUser);
+          responseBody =
+              appendContentStream(
+                  cmisDocument,
+                  sdmUrl,
+                  chunkBuffer,
+                  bytesRead,
+                  isLastChunk,
+                  chunkIndex,
+                  isSystemUser);
         }
 
         long endChunkUploadTime = System.currentTimeMillis();
@@ -341,8 +346,7 @@ public class DocumentUploadService {
         scanStatus =
             succinctProperties.has("sap:virusScanStatus")
                 ? succinctProperties.getString("sap:virusScanStatus")
-                : scanStatus;
-        System.out.println("scanStatus in formResponse is " + scanStatus);
+                : null;
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
@@ -387,9 +391,6 @@ public class DocumentUploadService {
           case QUARANTINED:
             uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
             break;
-          case PENDING:
-            uploadStatus = SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
-            break;
           case SCANNING:
             uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
             break;
@@ -399,12 +400,14 @@ public class DocumentUploadService {
           case CLEAN:
             uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
             break;
+          case PENDING:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+            break;
           case BLANK:
           default:
             uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
             break;
         }
-        System.out.println("Final upload Status " + uploadStatus);
         finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {

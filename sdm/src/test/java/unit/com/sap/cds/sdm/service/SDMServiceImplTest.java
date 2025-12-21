@@ -195,6 +195,7 @@ public class SDMServiceImplTest {
       JSONObject featureData = new JSONObject();
       featureData.put("virusScanner", "false");
       featureData.put("disableVirusScannerForLargeFile", "false");
+      featureData.put("isAsyncVirusScanEnabled", "false");
       // Create a JSON object representing an 'extendedFeature' entry with 'featureData'
       JSONObject extendedFeatureWithVirusScanner = new JSONObject();
       extendedFeatureWithVirusScanner.put("id", "ecmRepoInfo");
@@ -252,6 +253,7 @@ public class SDMServiceImplTest {
       JSONObject featureData = new JSONObject();
       featureData.put("virusScanner", "false");
       featureData.put("disableVirusScannerForLargeFile", "false");
+      featureData.put("isAsyncVirusScanEnabled", "false");
 
       // Create a JSON object representing an 'extendedFeature' entry with 'featureData'
       JSONObject extendedFeatureWithVirusScanner = new JSONObject();

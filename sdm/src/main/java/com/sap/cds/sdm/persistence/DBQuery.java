@@ -520,7 +520,10 @@ public class DBQuery {
   }
 
   public List<CmisDocument> getAttachmentsWithVirusScanInProgress(
-      CdsEntity attachmentEntity, PersistenceService persistenceService) {
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIDkey) {
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns(
@@ -531,7 +534,12 @@ public class DBQuery {
                 "repositoryId",
                 "mimeType",
                 "uploadStatus")
-            .where(doc -> doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS));
+            .where(
+                doc ->
+                    doc.get(upIDkey)
+                        .eq(upID)
+                        .and(doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS)));
+
     Result result = persistenceService.run(q);
 
     List<CmisDocument> attachments = new ArrayList<>();
@@ -565,18 +573,31 @@ public class DBQuery {
       PersistenceService persistenceService,
       String upID,
       String upIdKey) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("objectId", "uploadStatus")
+            .where(doc -> doc.get(upIdKey).eq(upID));
+    Result selectRes = persistenceService.run(q);
+    for (Row row : selectRes.list()) {
+      if (row.get("uploadStatus") != null
+          && row.get("uploadStatus")
+              .toString()
+              .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)
+          && row.get("objectId") != null) {
+        CqnUpdate updateQuery =
+            Update.entity(attachmentEntity)
+                .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
+                .where(
+                    doc ->
+                        doc.get(upIdKey)
+                            .eq(upID)
+                            .and(
+                                doc.get("uploadStatus")
+                                    .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
 
-    CqnUpdate updateQuery =
-        Update.entity(attachmentEntity)
-            .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
-            .where(
-                doc ->
-                    doc.get(upIdKey)
-                        .eq(upID)
-                        .and(doc.get("uploadStatus").eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
-
-    Result r = persistenceService.run(updateQuery);
-    System.out.println("Result count: " + r.rowCount());
+        Result r = persistenceService.run(updateQuery);
+      }
+    }
   }
 
   public Result updateUploadStatusByScanStatus(

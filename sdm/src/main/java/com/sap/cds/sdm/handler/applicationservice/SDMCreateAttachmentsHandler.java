@@ -202,7 +202,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles)
       throws IOException {
     String id = (String) attachment.get("ID");
-    System.out.println("Attachment ID in read " + id);
     String filenameInRequest = (String) attachment.get("fileName");
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
@@ -216,7 +215,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachmentEntity.get(), persistenceService, id, attachmentDraftEntity.get());
 
     fileNameInDB = cmisDocument.getFileName();
-    System.out.println("Upload status in create handler" + cmisDocument.getUploadStatus());
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument
             .getUploadStatus()
