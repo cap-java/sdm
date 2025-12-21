@@ -334,18 +334,13 @@ public class SDMUpdateAttachmentsHandlerTest {
       when(attachmentDraftEntity.getQualifiedName()).thenReturn("some.qualified.Name");
       when(model.findEntity("compositionDefinition"))
           .thenReturn(Optional.of(attachmentDraftEntity));
-      when(model.findEntity("some.qualified.Name_drafts"))
-          .thenReturn(Optional.of(mock(CdsEntity.class)));
       when(context.getMessages()).thenReturn(messages);
       UserInfo userInfo = Mockito.mock(UserInfo.class);
       when(context.getUserInfo()).thenReturn(userInfo);
       when(userInfo.isSystemUser()).thenReturn(false);
       when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
       when(dbQuery.getAttachmentForID(
-              any(CdsEntity.class),
-              any(PersistenceService.class),
-              anyString(),
-              any(CdsEntity.class)))
+              any(CdsEntity.class), any(PersistenceService.class), anyString()))
           .thenReturn(mock(CmisDocument.class));
 
       when(dbQuery.getPropertiesForID(

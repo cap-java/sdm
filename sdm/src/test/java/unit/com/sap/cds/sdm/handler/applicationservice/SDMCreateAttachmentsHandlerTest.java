@@ -555,8 +555,7 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(() -> SDMUtils.hasRestrictedCharactersInName("fileNameInRequest"))
             .thenReturn(false);
 
-        when(dbQuery.getAttachmentForID(
-                attachmentDraftEntity, persistenceService, "test-id", attachmentDraftEntity))
+        when(dbQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
             .thenReturn(null);
 
         // When getPropertiesForID is called
@@ -784,5 +783,4 @@ public class SDMCreateAttachmentsHandlerTest {
   //     verify(attachment2).replace("fileName", "file2_sdm.txt"); // This one has restricted chars
   //     verify(attachment3).replace("fileName", "file3_sdm.txt"); // This one had a conflict
   //   }
-
 }
