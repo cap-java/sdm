@@ -20,6 +20,7 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory;
 
 @ServiceName(
     value = "*",
-    type = {AttachmentService.class})
+    type = {AttachmentService.class, DraftService.class})
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
@@ -174,22 +175,21 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
     String len = eventContext.getParameterInfo().getHeaders().get("content-length");
     long contentLen = !StringUtils.isEmpty(len) ? Long.parseLong(len) : -1;
-    if (!repoValue.getIsAsyncVirusScanEnabled()) {
-      // Check if repository is virus scanned
-      if (repoValue.getVirusScanEnabled()
-          && contentLen > 400 * 1024 * 1024
-          && !repoValue.getDisableVirusScannerForLargeFile()) {
-        String errorMessage =
-            eventContext
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
-                    null,
-                    eventContext.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE))
-          throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
-        throw new ServiceException(errorMessage);
-      }
+    // Check if repository is virus scanned
+    if (!repoValue.getIsAsyncVirusScanEnabled()
+        && repoValue.getVirusScanEnabled()
+        && contentLen > 400 * 1024 * 1024
+        && !repoValue.getDisableVirusScannerForLargeFile()) {
+      String errorMessage =
+          eventContext
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE,
+                  null,
+                  eventContext.getParameterInfo().getLocale());
+      if (errorMessage.equalsIgnoreCase(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB_MESSAGE))
+        throw new ServiceException(SDMConstants.VIRUS_REPO_ERROR_MORE_THAN_400MB);
+      throw new ServiceException(errorMessage);
     }
   }
 
