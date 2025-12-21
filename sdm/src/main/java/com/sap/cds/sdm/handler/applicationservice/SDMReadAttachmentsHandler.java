@@ -10,6 +10,7 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.RepoValue;
+import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
@@ -57,11 +58,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // attachments
       RepoValue repoValue =
           sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
-      System.out.println(
-          "Repo val "
-              + repoValue.getIsAsyncVirusScanEnabled()
-              + ":"
-              + repoValue.getVirusScanEnabled());
       Optional<CdsEntity> attachmentDraftEntity =
           context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
       String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
@@ -115,63 +111,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
       // Iterate through each attachment and call getObject
       for (CmisDocument attachment : attachmentsInProgress) {
-        try {
-          String objectId = attachment.getObjectId();
-          if (objectId != null && !objectId.isEmpty()) {
-            logger.info(
-                "Processing attachment with objectId: {} and filename: {}",
-                objectId,
-                attachment.getFileName());
-
-            // Call getObject to check the current state
-            JSONObject objectResponse = sdmService.getObject(objectId, sdmCredentials, false);
-
-            if (objectResponse != null) {
-              JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
-              String currentFileName = succinctProperties.getString("cmis:name");
-
-              // Extract scanStatus if available
-              String scanStatus = null;
-              if (succinctProperties.has("sap:virusScanStatus")) {
-                scanStatus = succinctProperties.getString("sap:virusScanStatus");
-              }
-
-              logger.info(
-                  "Successfully retrieved object for attachmentId: {}, filename: {}, scanStatus: {}",
-                  attachment.getAttachmentId(),
-                  currentFileName,
-                  scanStatus);
-
-              // Update the uploadStatus based on the scan status
-              if (scanStatus != null) {
-                SDMConstants.ScanStatus scanStatusEnum =
-                    SDMConstants.ScanStatus.fromValue(scanStatus);
-                Result r =
-                    dbQuery.updateUploadStatusByScanStatus(
-                        attachmentDraftEntity.get(), persistenceService, objectId, scanStatusEnum);
-                logger.info(
-                    "Updated uploadStatus for objectId: {} based on scanStatus: {}",
-                    objectId,
-                    scanStatus);
-              }
-            } else {
-              logger.warn(
-                  "Object not found for attachmentId: {}, objectId: {}",
-                  attachment.getAttachmentId(),
-                  objectId);
-            }
-          }
-        } catch (IOException e) {
-          logger.error(
-              "Error processing attachment with objectId: {}, error: {}",
-              attachment.getObjectId(),
-              e.getMessage());
-        } catch (Exception e) {
-          logger.error(
-              "Unexpected error processing attachment with objectId: {}, error: {}",
-              attachment.getObjectId(),
-              e.getMessage());
-        }
+        processAttachmentVirusScanStatus(
+            attachment, sdmCredentials, attachmentDraftEntity.get(), persistenceService);
       }
 
       if (!attachmentsInProgress.isEmpty()) {
@@ -184,80 +125,74 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     }
   }
 
-  //  @After
-  //  @HandlerOrder(HandlerOrder.DEFAULT)
-  //  public void processAfter(CdsReadEventContext context) {
-  //    try {
-  //      if (!context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
-  // {
-  //        return;
-  //      }
-  //
-  //      // Enhance read response with statusNav.criticality for UI
-  //      Result result = context.getResult();
-  //      if (result == null) {
-  //        return;
-  //      }
-  //
-  //      // Resolve entity and UP ID key used for counting attachments per parent
-  //      Optional<CdsEntity> attachmentDraftEntity =
-  //          context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-  //      CdsEntity attachmentEntityForCount = attachmentDraftEntity.orElse(context.getTarget());
-  //      String upIdKey =
-  //          attachmentDraftEntity.isPresent()
-  //              ? com.sap.cds.sdm.utilities.SDMUtils.getUpIdKey(attachmentDraftEntity.get())
-  //              : "up__ID";
-  //
-  //      java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-  //      for (java.util.Map<?, ?> rawRow : result.listOf(java.util.Map.class)) {
-  //        java.util.Map<String, Object> row = new java.util.HashMap<>();
-  //        for (java.util.Map.Entry<?, ?> e : rawRow.entrySet()) {
-  //          if (e.getKey() != null) {
-  //            row.put(String.valueOf(e.getKey()), e.getValue());
-  //          }
-  //        }
-  //        rows.add(row);
-  //      }
-  //      for (java.util.Map<String, Object> row : rows) {
-  //        Object statusObj = row.get("uploadStatus");
-  //        String uploadStatus = statusObj != null ? statusObj.toString() : null;
-  //        Integer criticality =
-  //            com.sap.cds.sdm.utilities.SDMUtils.getCriticalityForStatus(uploadStatus);
-  //
-  //        // Build/merge statusNav expansion payload
-  //        Object statusNavObj = row.get("statusNav");
-  //        java.util.Map<String, Object> statusNavMap = new java.util.HashMap<>();
-  //        if (statusNavObj instanceof java.util.Map) {
-  //          java.util.Map<?, ?> existing = (java.util.Map<?, ?>) statusNavObj;
-  //          Object existingCrit = existing.get("criticality");
-  //          if (existingCrit != null) {
-  //            statusNavMap.put("criticality", existingCrit);
-  //          }
-  //          Object existingCode = existing.get("code");
-  //          if (existingCode != null) {
-  //            statusNavMap.put("code", existingCode);
-  //          }
-  //        }
-  //        statusNavMap.put("criticality", criticality);
-  //
-  //        // Compute and attach count of attachments for the same parent (UP ID)
-  //        Object upIdVal = row.get(upIdKey);
-  //        if (upIdVal != null) {
-  //          Result countRes =
-  //              dbQuery.getAttachmentsForUPIDAndRepository(
-  //                  attachmentEntityForCount, persistenceService, String.valueOf(upIdVal),
-  // upIdKey);
-  //          long count = countRes != null ? countRes.rowCount() : 0L;
-  //          statusNavMap.put("count", count);
-  //          row.put("count", (int) count);
-  //        }
-  //        row.put("statusNav", statusNavMap);
-  //      }
-  //
-  //      // Replace the result with enriched rows
-  //      context.setResult(rows);
-  //    } catch (Exception e) {
-  //      logger.error("Error enhancing read response with criticality: {}", e.getMessage());
-  //    }
-  //  }
+  /**
+   * Processes a single attachment to check and update its virus scan status.
+   *
+   * @param attachment the attachment document to process
+   * @param sdmCredentials the SDM credentials for API calls
+   * @param attachmentDraftEntity the draft entity for the attachment
+   * @param persistenceService the persistence service for database operations
+   */
+  private void processAttachmentVirusScanStatus(
+      CmisDocument attachment,
+      SDMCredentials sdmCredentials,
+      CdsEntity attachmentDraftEntity,
+      PersistenceService persistenceService) {
+    try {
+      String objectId = attachment.getObjectId();
+      if (objectId != null && !objectId.isEmpty()) {
+        logger.info(
+            "Processing attachment with objectId: {} and filename: {}",
+            objectId,
+            attachment.getFileName());
+
+        // Call getObject to check the current state
+        JSONObject objectResponse = sdmService.getObject(objectId, sdmCredentials, false);
+
+        if (objectResponse != null) {
+          JSONObject succinctProperties = objectResponse.getJSONObject("succinctProperties");
+          String currentFileName = succinctProperties.getString("cmis:name");
+
+          // Extract scanStatus if available
+          String scanStatus = null;
+          if (succinctProperties.has("sap:virusScanStatus")) {
+            scanStatus = succinctProperties.getString("sap:virusScanStatus");
+          }
+
+          logger.info(
+              "Successfully retrieved object for attachmentId: {}, filename: {}, scanStatus: {}",
+              attachment.getAttachmentId(),
+              currentFileName,
+              scanStatus);
+
+          // Update the uploadStatus based on the scan status
+          if (scanStatus != null) {
+            SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
+            Result r =
+                dbQuery.updateUploadStatusByScanStatus(
+                    attachmentDraftEntity, persistenceService, objectId, scanStatusEnum);
+            logger.info(
+                "Updated uploadStatus for objectId: {} based on scanStatus: {}",
+                objectId,
+                scanStatus);
+          }
+        } else {
+          logger.warn(
+              "Object not found for attachmentId: {}, objectId: {}",
+              attachment.getAttachmentId(),
+              objectId);
+        }
+      }
+    } catch (IOException e) {
+      logger.error(
+          "Error processing attachment with objectId: {}, error: {}",
+          attachment.getObjectId(),
+          e.getMessage());
+    } catch (Exception e) {
+      logger.error(
+          "Unexpected error processing attachment with objectId: {}, error: {}",
+          attachment.getObjectId(),
+          e.getMessage());
+    }
+  }
 }
