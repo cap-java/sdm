@@ -20,13 +20,16 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-     uploadStatus    : UploadStatusCode default 'Upload InProgress';
+     uploadStatus    : UploadStatusCode default 'UploadInProgress' @(
+         Common.Text: statusNav.name,
+         Common.TextArrangement: #TextOnly
+     );
      statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
       }
 
      entity ScanStates : CodeList {
          key code        : UploadStatusCode  @Common.Text: name  @Common.TextArrangement: #TextOnly;
-             name        : localized String(64)  @Common.Label: '{i18n>Status}';
+             name        : String(64)  @Common.Label: '{i18n>Status}';
              criticality : Integer     @UI.Hidden;
      }
 

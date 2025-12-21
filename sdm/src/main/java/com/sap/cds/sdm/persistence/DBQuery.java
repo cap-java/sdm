@@ -388,25 +388,13 @@ public class DBQuery {
   }
 
   public CmisDocument getAttachmentForID(
-      CdsEntity attachmentEntity,
-      PersistenceService persistenceService,
-      String id,
-      CdsEntity attachmentDraftEntity) {
+      CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity).columns("fileName").where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     CmisDocument cmisDocument = new CmisDocument();
     for (Row row : result.list()) {
       cmisDocument.setFileName(row.get("fileName").toString());
-    }
-    q =
-        Select.from(attachmentDraftEntity)
-            .columns("uploadStatus")
-            .where(doc -> doc.get("ID").eq(id));
-    result = persistenceService.run(q);
-    for (Row row : result.list()) {
-      cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }
     return cmisDocument;
   }

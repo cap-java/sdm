@@ -178,6 +178,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
+    List<String> virusDetectedFiles = new ArrayList<>();
+    List<String> virusScanInProgressFiles = new ArrayList<>();
+
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
       Map<String, Object> attachment = iterator.next();
@@ -191,8 +194,32 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filesWithUnsupportedProperties,
           badRequest,
           secondaryPropertiesWithInvalidDefinitions,
-          noSDMRoles);
+          noSDMRoles,
+          virusDetectedFiles,
+          virusScanInProgressFiles);
     }
+
+    // Throw exception if any files failed virus scan
+    if (!virusDetectedFiles.isEmpty() || !virusScanInProgressFiles.isEmpty()) {
+      StringBuilder errorMessage = new StringBuilder();
+      if (!virusDetectedFiles.isEmpty()) {
+        errorMessage
+            .append("Virus detected in the following file(s): ")
+            .append(String.join(", ", virusDetectedFiles))
+            .append(". Please delete them.");
+      }
+      if (!virusScanInProgressFiles.isEmpty()) {
+        if (errorMessage.length() > 0) {
+          errorMessage.append(" ");
+        }
+        errorMessage
+            .append("Virus scanning is in progress for the following file(s): ")
+            .append(String.join(", ", virusScanInProgressFiles))
+            .append(". Please refresh the page to see the effect.");
+      }
+      throw new ServiceException(errorMessage.toString());
+    }
+
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
     Cache<SecondaryPropertiesKey, ?> cache = CacheConfig.getSecondaryPropertiesCache();
@@ -211,7 +238,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      List<String> virusDetectedFiles,
+      List<String> virusScanInProgressFiles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
@@ -223,22 +252,23 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     String fileNameInDB;
-    Optional<CdsEntity> attachmentDraftEntity =
-        context.getModel().findEntity(attachmentEntity.get().getQualifiedName() + "_drafts");
     CmisDocument cmisDocument =
-        dbQuery.getAttachmentForID(
-            attachmentEntity.get(), persistenceService, id, attachmentDraftEntity.get());
+        dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     fileNameInDB = cmisDocument.getFileName();
-    if (cmisDocument.getUploadStatus() != null
-        && cmisDocument
-            .getUploadStatus()
-            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
-      throw new ServiceException("Virus Detected in this file kindly delete it.");
-    if (cmisDocument.getUploadStatus() != null
-        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
-      throw new ServiceException(
-          "Virus Scanning is in Progress. Refresh the page to see the effect");
+
+    // Collect files with virus-related upload statuses
+    if (attachment.get("uploadStatus") != null) {
+      String uploadStatus = attachment.get("uploadStatus").toString();
+      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
+        virusDetectedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
+        return; // Skip further processing for this attachment
+      }
+      if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
+        virusScanInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
+        return; // Skip further processing for this attachment
+      }
+    }
 
     // Fetch from SDM if not in DB
     String descriptionInDB = null;
