@@ -1499,7 +1499,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(String.format(SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"), "3"));
+        .thenReturn("Cannot upload more than 3 attachments.");
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
@@ -1525,6 +1525,9 @@ public class SDMServiceGenericHandlerTest {
         .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
         .thenReturn(3L); // Max 3, current 5
     sdmUtilsMock.when(() -> SDMUtils.hasRestrictedCharactersInName(anyString())).thenReturn(false);
+    sdmUtilsMock
+        .when(() -> SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"))
+        .thenReturn("Cannot upload more than %s attachments.");
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);

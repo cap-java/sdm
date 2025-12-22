@@ -19,7 +19,6 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
-import com.sap.cds.services.EventContext;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -549,8 +548,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public RepoValue checkRepositoryType(
-      String repositoryId, String tenant) {
+  public RepoValue checkRepositoryType(String repositoryId, String tenant) {
     RepoKey repoKey = new RepoKey();
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
@@ -570,8 +568,7 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public JSONObject getRepositoryInfo(
-      SDMCredentials sdmCredentials) {
+  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 

@@ -140,7 +140,9 @@ public class SDMErrorMessages {
   public static String nameConstraintMessage(List<String> invalidFileNames) {
     // if only 1 restricted character is there in file, so different error will throw
     if (invalidFileNames.size() == 1) {
-      return String.format(SDMUtils.getErrorMessage("SINGLE_RESTRICTED_CHARACTER_IN_FILE"), invalidFileNames.iterator().next());
+      return String.format(
+          SDMUtils.getErrorMessage("SINGLE_RESTRICTED_CHARACTER_IN_FILE"),
+          invalidFileNames.iterator().next());
     }
     StringBuilder prefix = new StringBuilder();
     prefix.append(SDMUtils.getErrorMessage("RESTRICTED_CHARACTERS_IN_MULTIPLE_FILES"));

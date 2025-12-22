@@ -7,7 +7,6 @@ import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
-import com.sap.cds.services.EventContext;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +29,9 @@ public interface SDMService {
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
-  public RepoValue checkRepositoryType(
-      String repositoryId, String tenant)
-      throws IOException;
+  public RepoValue checkRepositoryType(String repositoryId, String tenant) throws IOException;
 
-  public JSONObject getRepositoryInfo(
-      SDMCredentials sdmCredentials) throws IOException;
+  public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) throws IOException;
 
   public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
 

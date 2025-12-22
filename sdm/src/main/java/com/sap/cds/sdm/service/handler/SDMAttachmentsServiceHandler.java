@@ -144,8 +144,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       throws ServiceException, IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     RepoValue repoValue =
-        sdmService.checkRepositoryType(
-            repositoryId, eventContext.getUserInfo().getTenant());
+        sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
       throw new ServiceException(SDMUtils.getErrorMessage("VERSIONED_REPO_ERROR"));
     }
@@ -204,10 +203,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
   }
 
-  private void validateFileName(
-      String filename,
-      Result result,
-      Map<String, Object> attachmentIds)
+  private void validateFileName(String filename, Result result, Map<String, Object> attachmentIds)
       throws ServiceException {
     if (filename == null || filename.isBlank()) {
       throw new ServiceException(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE"));
