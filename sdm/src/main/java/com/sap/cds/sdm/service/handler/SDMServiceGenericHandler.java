@@ -374,7 +374,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     RepoValue repoValue =
         sdmService.checkRepositoryType(
-            repositoryId, eventContext.getUserInfo().getTenant(), eventContext);
+            repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
       throw new ServiceException(SDMUtils.getErrorMessage("VERSIONED_REPO_ERROR"));
     }
@@ -413,7 +413,7 @@ public class SDMServiceGenericHandler implements EventHandler {
             attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
 
     checkAttachmentConstraints(context, attachmentDraftEntity.get(), upID, upIdKey);
-    validateLinkName(filenameInRequest, result, context);
+    validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
     String[] parts = context.getTarget().getQualifiedName().split("\\.");
@@ -508,7 +508,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
   }
 
-  private void validateLinkName(String filename, Result result, EventContext context)
+  private void validateLinkName(String filename, Result result)
       throws ServiceException {
     if (filename == null || filename.isBlank()) {
       throw new ServiceException(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE"));

@@ -467,7 +467,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -485,7 +485,7 @@ public class SDMServiceGenericHandlerTest {
     sdmServiceGenericHandler.create(mockContext);
 
     // Assert
-    verify(sdmService).checkRepositoryType(anyString(), anyString(), any());
+    verify(sdmService).checkRepositoryType(anyString(), anyString());
     verify(documentService).createDocument(any(), any(), anyBoolean());
     verify(draftService).newDraft(any(Insert.class));
     verify(mockContext).setCompleted();
@@ -506,7 +506,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any())).thenReturn("VERSIONED_REPO_ERROR");
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -579,7 +579,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -647,7 +647,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -717,7 +717,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -791,7 +791,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException ex =
@@ -863,7 +863,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -945,7 +945,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -1027,7 +1027,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -1107,7 +1107,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();
@@ -1447,7 +1447,7 @@ public class SDMServiceGenericHandlerTest {
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVersionEnabled(true); // This will trigger validation failure
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -1466,7 +1466,7 @@ public class SDMServiceGenericHandlerTest {
 
     RepoValue repoValue = new RepoValue();
     repoValue.setVersionEnabled(true);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     ServiceException exception =
@@ -1499,7 +1499,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("url")).thenReturn("http://test-url");
     when(mockContext.getCdsRuntime()).thenReturn(cdsRuntime);
     when(cdsRuntime.getLocalizedMessage(any(), any(), any()))
-        .thenReturn(String.format("MAX_COUNT_ERROR_MESSAGE", "3"));
+        .thenReturn(String.format(SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"), "3"));
     when(mockContext.getParameterInfo()).thenReturn(parameterInfo);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("tenant1");
@@ -1529,7 +1529,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -1590,7 +1590,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Act & Assert
     assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
@@ -1651,7 +1651,7 @@ public class SDMServiceGenericHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
-    when(sdmService.checkRepositoryType(anyString(), anyString(), any())).thenReturn(repoValue);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderId123");
 
     SDMCredentials sdmCredentials = new SDMCredentials();

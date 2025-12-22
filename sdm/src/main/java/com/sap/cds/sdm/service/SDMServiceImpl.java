@@ -19,6 +19,7 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
+import com.sap.cds.services.EventContext;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -549,14 +550,14 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public RepoValue checkRepositoryType(
-      String repositoryId, String tenant, com.sap.cds.services.EventContext context) {
+      String repositoryId, String tenant) {
     RepoKey repoKey = new RepoKey();
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
     RepoValue repoValue = CacheConfig.getRepoCache().get(repoKey);
     if (repoValue == null) {
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-      JSONObject repoInfo = getRepositoryInfo(sdmCredentials, context);
+      JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
       Map<String, RepoValue> repoValueMap = fetchRepositoryData(repoInfo, repositoryId);
       repoKey = new RepoKey();
       repoKey.setSubdomain(tenant);
@@ -568,8 +569,9 @@ public class SDMServiceImpl implements SDMService {
     return repoValue;
   }
 
+  @Override
   public JSONObject getRepositoryInfo(
-      SDMCredentials sdmCredentials, com.sap.cds.services.EventContext context) {
+      SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
