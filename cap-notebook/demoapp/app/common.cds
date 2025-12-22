@@ -69,7 +69,14 @@ annotate my.Books.attachments with @UI: {
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+{
+        Value             : uploadStatus,
+        Criticality: statusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'},
+        @UI.Hidden: IsActiveEntity
+      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
