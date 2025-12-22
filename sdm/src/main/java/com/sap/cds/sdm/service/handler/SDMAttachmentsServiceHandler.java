@@ -386,7 +386,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         cmisDocument.setUploadStatus(
             (createResult.get("uploadStatus") != null)
                 ? createResult.get("uploadStatus").toString()
-                : null);
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
         dbQuery.addAttachmentToDraft(
             getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
         finalizeContext(eventContext, cmisDocument);

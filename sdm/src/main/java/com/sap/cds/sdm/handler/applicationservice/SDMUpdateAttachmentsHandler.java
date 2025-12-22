@@ -180,6 +180,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       throws IOException {
     List<String> virusDetectedFiles = new ArrayList<>();
     List<String> virusScanInProgressFiles = new ArrayList<>();
+    List<String> scanFailedFiles = new ArrayList<>();
 
     Iterator<Map<String, Object>> iterator = attachments.iterator();
     while (iterator.hasNext()) {
@@ -196,11 +197,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           secondaryPropertiesWithInvalidDefinitions,
           noSDMRoles,
           virusDetectedFiles,
-          virusScanInProgressFiles);
+          virusScanInProgressFiles,
+          scanFailedFiles);
     }
 
-    // Throw exception if any files failed virus scan
-    if (!virusDetectedFiles.isEmpty() || !virusScanInProgressFiles.isEmpty()) {
+    // Throw exception if any files failed virus scan or scan failed
+    if (!virusDetectedFiles.isEmpty()
+        || !virusScanInProgressFiles.isEmpty()
+        || !scanFailedFiles.isEmpty()) {
       StringBuilder errorMessage = new StringBuilder();
       if (!virusDetectedFiles.isEmpty()) {
         errorMessage
@@ -217,9 +221,17 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             .append(String.join(", ", virusScanInProgressFiles))
             .append(". Please refresh the page to see the effect.");
       }
+      if (!scanFailedFiles.isEmpty()) {
+        if (errorMessage.length() > 0) {
+          errorMessage.append(" ");
+        }
+        errorMessage
+            .append("Scan failed for the following file(s): ")
+            .append(String.join(", ", scanFailedFiles))
+            .append(". Please delete the files and retry.");
+      }
       throw new ServiceException(errorMessage.toString());
     }
-
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
     Cache<SecondaryPropertiesKey, ?> cache = CacheConfig.getSecondaryPropertiesCache();
@@ -240,7 +252,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles,
       List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles)
+      List<String> virusScanInProgressFiles,
+      List<String> scanFailedFiles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
@@ -266,6 +279,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
       if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
         virusScanInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
+        return; // Skip further processing for this attachment
+      }
+      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+        scanFailedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
         return; // Skip further processing for this attachment
       }
     }

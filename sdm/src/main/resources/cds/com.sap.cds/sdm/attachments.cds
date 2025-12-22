@@ -20,18 +20,16 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-     uploadStatus    : UploadStatusCode default 'UploadInProgress' @(
-         Common.Text: statusNav.name,
-         Common.TextArrangement: #TextOnly
-     );
-     statusNav : Association to one ScanStates on statusNav.code = uploadStatus;
-      }
+    uploadStatus : UploadStatusCode default 'UploadInProgress';
+    uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
+}
 
-     entity ScanStates : CodeList {
+     entity UploadScanStates : CodeList {
          key code        : UploadStatusCode  @Common.Text: name  @Common.TextArrangement: #TextOnly;
-             name        : String(64)  @Common.Label: '{i18n>Status}';
+             name        : localized String(64) ;
              criticality : Integer     @UI.Hidden;
      }
+
 
 annotate Attachments with @UI: {
 
@@ -45,20 +43,20 @@ annotate Attachments with @UI: {
                {Value: content, @HTML5.CssDefaults: {width: '0%'}},
                {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
                {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
-               {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+               {Value: note, @HTML5.CssDefaults: {width: '20%'}},
 
 {
         Value             : uploadStatus,
-        Criticality: statusNav.criticality,
+        Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
+        @HTML5.CssDefaults: {width: '20%'},
         @UI.Hidden: IsActiveEntity
       },
     ]
 } {
     note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
-    uploadStatus  @(title: '{i18n>UploadStatus}');
+    uploadStatus @(title: '{i18n>attachment_status}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
     modifiedAt @(odata.etag: null);
     content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
@@ -73,4 +71,4 @@ annotate Attachments with @UI: {
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
     SourceProperties: [content],
     TargetProperties: ['status']
-}}{};
+}};
