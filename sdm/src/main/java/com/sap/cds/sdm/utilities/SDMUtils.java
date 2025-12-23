@@ -241,8 +241,7 @@ public class SDMUtils {
       try {
         java.lang.reflect.Field field = SDMErrorMessages.class.getDeclaredField(errorKey);
         Object value = field.get(null);
-        String result = value != null ? value.toString() : errorKey;
-        return result;
+        return value != null ? value.toString() : errorKey;
       } catch (NoSuchFieldException | IllegalAccessException e) {
         return errorKey;
       }

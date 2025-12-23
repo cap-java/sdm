@@ -63,7 +63,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     String cacheValue = errorMessageCache.get(cacheCheckKey);
 
     if ("true".equals(cacheValue)) {
-      System.out.println("Localized error messages already cached.");
       return; // Skip processing if already cached
     }
 

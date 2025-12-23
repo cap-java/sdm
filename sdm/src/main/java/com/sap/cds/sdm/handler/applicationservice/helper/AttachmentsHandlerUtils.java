@@ -822,11 +822,8 @@ public class AttachmentsHandlerUtils {
   }
 
   public static String getContextInfo(String compositionName, String parentTitle) {
-    String contextInfo =
-        String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
-            + String.format(
-                SDMErrorMessages.CONTEXT_INFO_PAGE,
-                (parentTitle != null ? parentTitle : "Unknown"));
-    return contextInfo;
+    return String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
+        + String.format(
+            SDMErrorMessages.CONTEXT_INFO_PAGE, (parentTitle != null ? parentTitle : "Unknown"));
   }
 }
