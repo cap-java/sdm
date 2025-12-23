@@ -1,6 +1,7 @@
 package com.sap.cds.sdm.constants;
 
 import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
@@ -26,7 +27,6 @@ public class SDMErrorMessages {
   public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
       "You cannot upload files that are larger than 400 MB";
   public static final String VIRUS_ERROR = "%s contains potential malware and cannot be uploaded.";
-  // public static final String SDM_DUPLICATE_ATTACHMENT = "SDM.DuplicateAttachment";
   public static final String REPOSITORY_ERROR = "Failed to get repository info.";
   public static final String SDM_MISSING_ROLES_EXCEPTION =
       "You do not have the required permissions to update attachments. Kindly contact the admin";
@@ -124,6 +124,10 @@ public class SDMErrorMessages {
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX =
       ". Attachment rolled back to source.";
   public static final String SDM_MOVE_OPERATION_FAILED = "SDM move operation failed";
+  public static final String FAILED_TO_ACCESS_ERROR_KEY_FIELDS =
+      "Failed to access SDM error key fields";
+  public static final String FAILED_TO_ACCESS_ERROR_MESSAGES_FIELDS =
+      "Failed to access SDM error messages fields";
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(
@@ -255,6 +259,8 @@ public class SDMErrorMessages {
         try {
           out.put(f.getName(), f.get(null));
         } catch (IllegalAccessException ignored) {
+          throw new ServiceException(
+              SDMUtils.getErrorMessage("FAILED_TO_ACCESS_ERROR_MESSAGES_FIELDS"), ignored);
         }
       }
     }

@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.constants;
 
+import com.sap.cds.sdm.utilities.SDMUtils;
+import com.sap.cds.services.ServiceException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collections;
@@ -20,7 +22,6 @@ public class SDMErrorKeys {
   public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB_KEY =
       "SDM.virusRepoErrorMoreThan400MB";
   public static final String VIRUS_ERROR_KEY = "SDM.virusError";
-  public static final String SDM_DUPLICATE_ATTACHMENT_KEY = "SDM.sdmDuplicateAttachment";
   public static final String REPOSITORY_ERROR_KEY = "SDM.repositoryError";
   public static final String SDM_MISSING_ROLES_EXCEPTION_KEY = "SDM.sdmMissingRolesException";
   public static final String SDM_SERVER_ERROR_KEY = "SDM.sdmServerError";
@@ -105,12 +106,10 @@ public class SDMErrorKeys {
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX_KEY =
       "SDM.invalidSecondaryPropertiesForMoveSuffix";
   public static final String SDM_MOVE_OPERATION_FAILED_KEY = "SDM.sdmMoveOperationFailed";
-
-  // public static final String FILENAME_EMPTY_ERROR_MSG = "SDM.File.filenameEmptyError";
-  // public static final String SDM_ROLES_ERROR_MSG = "SDM.Authorization.sdmRolesError";
-  // public static final String USER_NOT_AUTHORISED_ERROR_OPEN_ATTACHMENT_MSG =
-  //     "SDM.Authorization.userNotAuthorizedAttachmentError";
-  // public static final String FAILED_TO_FETCH_FACET_MSG = "SDM.Facet.failedToFetchFacetError";
+  public static final String FAILED_TO_ACCESS_ERROR_KEY_FIELDS_KEY =
+      "SDM.failedToAccessErrorKeyFields";
+  public static final String FAILED_TO_ACCESS_ERROR_MESSAGES_FIELDS_KEY =
+      "SDM.failedToAccessErrorMessagesFields";
 
   public static Map<String, Object> getAllErrorKeys() {
     Map<String, Object> out = new LinkedHashMap<>();
@@ -120,6 +119,8 @@ public class SDMErrorKeys {
         try {
           out.put(f.getName(), f.get(null));
         } catch (IllegalAccessException ignored) {
+          throw new ServiceException(
+              SDMUtils.getErrorMessage("FAILED_TO_ACCESS_ERROR_KEY_FIELDS"), ignored);
         }
       }
     }

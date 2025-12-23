@@ -63,6 +63,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     String cacheValue = errorMessageCache.get(cacheCheckKey);
 
     if ("true".equals(cacheValue)) {
+      System.out.println("Localized error messages already cached.");
       return; // Skip processing if already cached
     }
 
@@ -70,7 +71,9 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     Map<String, Object> errorKeys = SDMErrorKeys.getAllErrorKeys();
     String localizedMessage;
     String localizedErrorMessageKey;
-    for (String errorMessage : errorMessages.keySet()) {
+    for (Map.Entry<String, Object> entry : errorMessages.entrySet()) {
+      String errorMessage = entry.getKey();
+      Object errorValue = entry.getValue();
       localizedErrorMessageKey = String.valueOf(errorKeys.get(errorMessage + "_KEY"));
       localizedMessage =
           context
@@ -82,7 +85,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       errorMessageCache.put(
           errorMessageKey,
           java.util.Objects.equals(localizedMessage, localizedErrorMessageKey)
-              ? String.valueOf(errorMessages.get(errorMessage))
+              ? String.valueOf(errorValue)
               : localizedMessage);
     }
 
