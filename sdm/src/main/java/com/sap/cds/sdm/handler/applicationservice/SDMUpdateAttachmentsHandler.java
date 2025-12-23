@@ -225,25 +225,27 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
-    // Fetch from SDM if not in DB
-    String descriptionInDB = null;
-    if (fileNameInDB == null) {
+    String fileNameInSDM = null;
+    String descriptionInSDM = null;
+
+    if (fileNameInDB == null || descriptionInRequest != null) {
       List<String> sdmAttachmentData =
           AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
               sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
-      fileNameInDB = sdmAttachmentData.get(0);
-      descriptionInDB = sdmAttachmentData.get(1);
+
+      if (sdmAttachmentData != null && sdmAttachmentData.size() >= 2) {
+        fileNameInSDM = sdmAttachmentData.get(0);
+        descriptionInSDM = sdmAttachmentData.get(1);
+      }
+
+      if (fileNameInDB == null) {
+        fileNameInDB = fileNameInSDM;
+      }
     }
 
     Map<String, String> propertiesInDB =
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
-
-    // Extract note (description) from DB if it exists
-    if (propertiesInDB != null && propertiesInDB.containsKey("note")) {
-      descriptionInDB = propertiesInDB.get("note");
-    }
-
     // Prepare document and updated properties
 
     Map<String, String> updatedSecondaryProperties =
@@ -260,10 +262,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, null, updatedSecondaryProperties);
+        fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
 
     AttachmentsHandlerUtils.updateDescriptionProperty(
-        descriptionInDB, descriptionInRequest, null, updatedSecondaryProperties, true);
+        null, descriptionInRequest, descriptionInSDM, updatedSecondaryProperties, true);
 
     // Send update to SDM only if there are changes
     if (updatedSecondaryProperties.isEmpty()) {
@@ -294,7 +296,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filenameInRequest,
           propertiesInDB,
           secondaryTypeProperties,
-          descriptionInDB,
+          descriptionInSDM,
           noSDMRoles,
           duplicateFileNameList,
           filesNotFound);
@@ -310,7 +312,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           filenameInRequest,
           propertiesInDB,
           secondaryTypeProperties,
-          descriptionInDB,
+          descriptionInSDM,
           filesWithUnsupportedProperties,
           badRequest);
     }

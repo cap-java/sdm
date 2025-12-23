@@ -350,21 +350,15 @@ public class SDMUtils {
     for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
       String property = entry.getKey();
       String value = entry.getValue();
-      String valueInDB = propertiesInDB.get(property);
+      String valueInDB = propertiesInDB.get(value);
       Object valueInMap = propertiesMap.get(property);
 
-      if ((valueInMap == null && valueInDB != null)
-          || (valueInMap != null && !valueInMap.equals(valueInDB))) {
-        logger.debug(
-            "Property '{}' changed - DB value: {}, Request value: {}",
-            property,
-            valueInDB,
-            valueInMap);
-        if (valueInMap != null) {
-          updatedSecondaryProperties.put(value, valueInMap.toString());
-        } else {
-          updatedSecondaryProperties.put(value, null);
-        }
+      // Convert valueInMap to String for proper comparison
+      String valueInMapAsString = valueInMap != null ? valueInMap.toString() : null;
+
+      if ((valueInMapAsString == null && valueInDB != null)
+          || (valueInMapAsString != null && !valueInMapAsString.equals(valueInDB))) {
+        updatedSecondaryProperties.put(value, valueInMapAsString);
       }
     }
 
