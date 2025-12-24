@@ -1,0 +1,23 @@
+{
+  "name": "github-ai-review-bot",
+  "version": "1.0.0",
+  "description": "GitHub Actions script for AI-powered code review using SAP AI Core",
+  "main": "review.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "github",
+    "actions",
+    "ai",
+    "code-review",
+    "sap-ai-core"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/github": "^6.0.0",
+    "@sap-ai-sdk/orchestration": "^2.4.0",
+    "@sap-ai-sdk/foundation-models": "^2.4.0"
+  }
+}

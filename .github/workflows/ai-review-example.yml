@@ -1,0 +1,44 @@
+name: AI Code Review with SAP AI Core
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          cd .github/scripts
+          npm install
+      
+      - name: Run AI Review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AICORE_SERVICE_KEY: ${{ secrets.AICORE_SERVICE_KEY }}
+          # Optional: Configure retry and chunking parameters
+          MAX_RETRIES: 5
+          INITIAL_DELAY_MS: 1000
+          MAX_CHUNK_TOKENS: 10000
+          MAX_SEMANTIC_ISSUES: 150
+        run: |
+          cd .github/scripts
+          node review.js

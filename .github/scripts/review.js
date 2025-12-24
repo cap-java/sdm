@@ -1,5 +1,6 @@
 const { context, getOctokit } = require("@actions/github");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { OrchestrationClient } = require("@sap-ai-sdk/orchestration");
+const { AzureOpenAiChatClient, AzureOpenAiEmbeddingClient } = require("@sap-ai-sdk/foundation-models");
 const fs = require("fs");
 const path = require("path");
 
@@ -58,28 +59,25 @@ async function getDiff(octokit, owner, repo, pull_number) {
     return pullRequest;
 }
 
-async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
+async function splitDiffIntoTokens(aiClient, diff, maxTokens = MAX_CHUNK_TOKENS) {
     if (!diff || diff.length === 0) {
         return [];
     }
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Simple character-based chunking as SAP AI Core SDK doesn't expose token counting
+    // Approximate: 1 token ≈ 4 characters
+    const maxChars = maxTokens * 4;
     const lines = diff.split('\n');
     const chunks = [];
     let currentChunk = '';
 
     for (const line of lines) {
         const tempChunk = currentChunk + line + '\n';
-        try {
-            const tokenCount = (await model.countTokens(tempChunk)).totalTokens;
-            if (tokenCount < maxTokens) {
-                currentChunk = tempChunk;
-            } else {
+        if (tempChunk.length < maxChars) {
+            currentChunk = tempChunk;
+        } else {
+            if (currentChunk.length > 0) {
                 chunks.push(currentChunk);
-                currentChunk = line + '\n';
             }
-        } catch (error) {
-            console.error("Error counting tokens. Skipping chunking for this line. Details:", error);
-            chunks.push(currentChunk);
             currentChunk = line + '\n';
         }
     }
@@ -156,9 +154,8 @@ async function createFeatureDocument(octokit, owner, repo, title, aiGeneratedCon
     }
 }
 
-async function performPRReview(octokit, diffContent, pull_number, genAI) {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const chunks = await splitDiffIntoTokens(genAI, diffContent);
+async function performPRReview(octokit, diffContent, pull_number, aiClient) {
+    const chunks = await splitDiffIntoTokens(aiClient, diffContent);
     const chunkReviews = [];
 
     if (chunks.length === 0) {
@@ -171,8 +168,7 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         
-        // --- PROMPT: Instructing for point-by-point, structured feedback with code ---
-        const chunkPrompt = `You are a helpful and expert AI code reviewer named Gemini. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
+            const chunkPrompt = `You are a helpful and expert AI code reviewer. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
 
         For each issue found, format your finding with a clear bullet point and, if the fix is simple, provide the recommended code change directly beneath it in a code block.
 
@@ -189,18 +185,19 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         
         Provide only the structured list of findings and nothing else.
         `;
-        // --- END PROMPT ---
 
         try {
-            const result = await fetchWithBackoff(() => model.generateContent(chunkPrompt));
-            chunkReviews.push(result.response.text());
+            const result = await fetchWithBackoff(() => aiClient.chatCompletion({
+                messagesHistory: [{ role: 'user', content: chunkPrompt }]
+            }));
+            chunkReviews.push(result.getContent());
             console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
         } catch (error) {
             // Fatal error occurred, stop processing chunks
             console.error(`Fatal error encountered during review chunk processing. Aborting review.`);
             
             // Post a single error message and return immediately
-            const errorMessage = `❌ **Gemini Review Failed** ❌\n\nA critical error occurred during the review process (likely due to an incorrect model configuration, API key issue, or a malformed request). The first error encountered was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model name, API key, and retry the review.`;
+            const errorMessage = `❌ **AI Review Failed** ❌\n\nA critical error occurred during the review process (likely due to an incorrect model configuration, service key issue, or a malformed request). The first error encountered was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration, service key, and retry the review.`;
             await octokit.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -211,13 +208,12 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         }
     }
 
-    // --- PROMPT: Instructing for highly actionable synthesis with code snippets ---
-    const synthesisPrompt = `You are a helpful and expert AI code reviewer named Gemini. Synthesize the following partial code reviews into a single, cohesive, and highly actionable final review. The partial reviews already contain point-by-point findings and recommended code changes.
+    const synthesisPrompt = `You are a helpful and expert AI code reviewer. Synthesize the following partial code reviews into a single, cohesive, and highly actionable final review. The partial reviews already contain point-by-point findings and recommended code changes.
 
     Your review must strictly follow this exact markdown format and content. Prioritize clear, point-by-point feedback. Ensure the Recommendations section includes the actual code snippets gathered from the partial reviews, not just descriptions.
 
     ######
-    **Gemini Automated Review**
+    **AI Automated Review**
     **Summary of Changes**
     [A brief, high-level summary of all the changes across the PR.]
     **Best Practices Review** 💡
@@ -235,13 +231,14 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
     Partial Reviews to Synthesize:
     ${chunkReviews.join('\n\n---\n\n')}
     `;
-    // --- END PROMPT ---
     
     let reviewBody = "Review generation failed.";
     try {
-        const finalReviewResult = await fetchWithBackoff(() => model.generateContent(synthesisPrompt));
-        reviewBody = finalReviewResult.response.text();
-        console.log("Gemini's final review generated successfully.");
+        const finalReviewResult = await fetchWithBackoff(() => aiClient.chatCompletion({
+            messagesHistory: [{ role: 'user', content: synthesisPrompt }]
+        }));
+        reviewBody = finalReviewResult.getContent();
+        console.log("AI review generated successfully.");
     } catch (error) {
         console.error(`Error synthesizing final review. Details:`, error);
         reviewBody = `An error occurred while synthesizing the final review. Please check the partial reviews below for details:\n\n${chunkReviews.join('\n\n---\n\n')}`;
@@ -259,8 +256,10 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
 
     let readmeContent = 'NO_UPDATE';
     try {
-        const readmeResult = await fetchWithBackoff(() => model.generateContent(readmePrompt));
-        readmeContent = readmeResult.response.text().trim();
+        const readmeResult = await fetchWithBackoff(() => aiClient.chatCompletion({
+            messagesHistory: [{ role: 'user', content: readmePrompt }]
+        }));
+        readmeContent = readmeResult.getContent().trim();
         if (readmeContent !== 'NO_UPDATE') {
             await updateReadme(octokit, context.repo.owner, context.repo.repo, readmeContent, pull_number);
         }
@@ -279,8 +278,10 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         \`\`\`
         `;
         try {
-            const featureDocResult = await fetchWithBackoff(() => model.generateContent(featureDocPrompt));
-            const featureDocContent = featureDocResult.response.text();
+            const featureDocResult = await fetchWithBackoff(() => aiClient.chatCompletion({
+                messagesHistory: [{ role: 'user', content: featureDocPrompt }]
+            }));
+            const featureDocContent = featureDocResult.getContent();
             await createFeatureDocument(octokit, context.repo.owner, context.repo.repo, context.payload.pull_request.title, featureDocContent);
         } catch (error) {
             console.error("Failed to create feature document. Details:", error);
@@ -293,12 +294,12 @@ async function performPRReview(octokit, diffContent, pull_number, genAI) {
         issue_number: pull_number,
         body: reviewBody,
     });
-    console.log("Gemini's final review posted successfully.");
+    console.log("AI review posted successfully.");
 }
 
-async function handleCommentResponse(octokit, commentBody, number, genAI) {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const userQuestion = commentBody.replace("Hey Gemini,", "").trim();
+async function handleCommentResponse(octokit, commentBody, number, aiClient) {
+    // Support both "Hey Gemini" and "Hey AI" triggers
+    const userQuestion = commentBody.replace(/Hey (Gemini|AI),/i, "").trim();
     let prompt;
 
     // Check if the comment is on a pull request (context.payload.issue.pull_request will be set)
@@ -335,13 +336,15 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
 
     let response = "Error: Could not generate a response to your comment.";
     try {
-        const result = await fetchWithBackoff(() => model.generateContent(prompt));
-        response = result.response.text();
-        console.log("Gemini's response generated successfully.");
+        const result = await fetchWithBackoff(() => aiClient.chatCompletion({
+            messagesHistory: [{ role: 'user', content: prompt }]
+        }));
+        response = result.getContent();
+        console.log("AI response generated successfully.");
     } catch (error) {
         console.error(`Error generating response to comment. Details:`, error);
         // Post a single error message for the comment response
-        response = `❌ **Gemini Response Failed** ❌\n\nA critical error occurred while generating a response (likely due to an incorrect model configuration, API key issue, or a malformed request). The error was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration and API key.`;
+        response = `❌ **AI Response Failed** ❌\n\nA critical error occurred while generating a response (likely due to an incorrect model configuration, service key issue, or a malformed request). The error was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration and service key.`;
     }
 
     if (response) {
@@ -349,22 +352,20 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: number,
-            body: `## Gemini's Response\n\n${response}`
+            body: `## AI Response\n\n${response}`
         });
-        console.log("Gemini's response posted successfully.");
+        console.log("AI response posted successfully.");
     }
 }
 
-async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
+async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, aiClient) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
-    // Primary lightweight model for generation
-    const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Fetch historical issues (open + closed) excluding current
     const pastIssues = await fetchPastIssues(octokit, owner, repo, issueNumber);
 
     // Perform semantic + lexical similarity search
-    const similar = await findSimilarIssueSemantic(issueTitle, issueBody, pastIssues, genAI);
+    const similar = await findSimilarIssueSemantic(issueTitle, issueBody, pastIssues, aiClient);
     if (similar) {
         console.log(`Semantic similar issue found: #${similar.number} (score=${(similar.score || 0).toFixed(3)})`);
         await ensureLabel(octokit, owner, repo, "duplicate", { description: "Indicates this issue duplicates an existing one", color: "d73a4a" });
@@ -372,11 +373,7 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
         const status = similar.state === "closed" ? "closed" : "in progress";
         const resolution = extractResolution(similar.body);
         
-        // --- UPDATED COMMENT TO REFLECT CONTENT CHECK ---
-        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nBased on **issue context and body**, a related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;
-        // --- END UPDATED COMMENT ---
-
-        await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
+        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nBased on **issue context and body**, a related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;        await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
         return;
     }
 
@@ -385,7 +382,6 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
     const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
     
-    // --- DETAILED PROMPT FIX (from previous request) ---
     const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a detailed, prioritized remediation checklist. Your output must strictly follow the required markdown structure below.
 
     Crucially, for the most likely and actionable remediation steps, you **must include the exact code snippet** showing the required change in a markdown code block. Do not just describe the fix—show the code.
@@ -425,16 +421,17 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     Relevant Code Contexts (truncated):
     ${truncate(joinedContexts, 12000)}
     `;
-    // --- END DETAILED PROMPT FIX ---
     
     let recommendations = "Failed to generate recommendations.";
     try {
-        const recResult = await fetchWithBackoff(() => flashModel.generateContent(recPrompt));
-        recommendations = recResult.response.text();
+        const recResult = await fetchWithBackoff(() => aiClient.chatCompletion({
+            messagesHistory: [{ role: 'user', content: recPrompt }]
+        }));
+        recommendations = recResult.getContent();
     } catch (error) {
         console.error("Error generating remediation recommendations", error);
         // Post a single error message for the issue handler
-        recommendations = `❌ **Gemini Analysis Failed** ❌\n\nA critical error occurred while generating the initial analysis (likely due to an incorrect model configuration, API key issue, or a malformed request). The error was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration and API key.`;
+        recommendations = `❌ **AI Analysis Failed** ❌\n\nA critical error occurred while generating the initial analysis (likely due to an incorrect model configuration, service key issue, or a malformed request). The error was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration and service key.`;
     }
     
     await ensureLabel(octokit, owner, repo, "awaiting-confirmation", { description: "Pending maintainer confirmation for remediation", color: "5319e7" });
@@ -482,10 +479,16 @@ function lexicalSimilarityCandidate(newTitleTokens, newBodyTokens, issue) {
     return (titleScore * 0.7) + (bodyScore * 0.3);
 }
 
-async function findSimilarIssueSemantic(title, body, pastIssues, genAI) {
+async function findSimilarIssueSemantic(title, body, pastIssues, aiClient) {
     const MAX_EMBED_ISSUES = safeParseInt(process.env.MAX_SEMANTIC_ISSUES, 150);
-    let embeddingModel;
-    try { embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" }); } catch { embeddingModel = null; }
+    // SAP AI SDK embeddings client
+    let embeddingModel = null;
+    try { 
+        embeddingModel = new AzureOpenAiEmbeddingClient({ modelName: 'text-embedding-ada-002' }); 
+    } catch (e) { 
+        console.warn("Embedding model initialization failed", e.message);
+        embeddingModel = null; 
+    }
     const newTitleTokens = tokenize(title); const newBodyTokens = tokenize(body);
     const newText = `${title}\n${body}`;
     let newEmbedding = null;
@@ -511,9 +514,10 @@ async function findSimilarIssueSemantic(title, body, pastIssues, genAI) {
     const lexicalBest = scored[0];
     if (lexicalBest && lexicalBest.score >= 0.5) {
         try {
-            const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             const similarityPrompt = `Determine if Issue A duplicates Issue B based on the **full context (title and body)**. Respond only with YES or NO.\nIssue A Title: ${title}\nIssue A Body: ${truncate(body, 1000)}\nIssue B Title: ${lexicalBest.issue.title}\nIssue B Body: ${truncate(lexicalBest.issue.body, 1000)}\n`;
-            const res = await fetchWithBackoff(() => flashModel.generateContent(similarityPrompt));
+            const res = await fetchWithBackoff(() => aiClient.chatCompletion({
+                messagesHistory: [{ role: 'user', content: similarityPrompt }]
+            }));
             if (/YES/.test(res.response.text().trim().toUpperCase())) return { ...lexicalBest.issue, score: lexicalBest.score };
         } catch (e) { console.warn("LLM similarity refinement failed", e.message); }
     }
@@ -521,8 +525,8 @@ async function findSimilarIssueSemantic(title, body, pastIssues, genAI) {
 }
 
 async function getEmbeddingSafe(embeddingModel, text) {
-    const result = await fetchWithBackoff(() => embeddingModel.embedContent(text));
-    const vector = result.embedding?.values || result.embedding || result?.data || [];
+    const result = await fetchWithBackoff(() => embeddingModel.run({ input: text }));
+    const vector = result.getEmbedding() || [];
     if (!Array.isArray(vector) || vector.length === 0) throw new Error("Empty embedding vector");
     return vector;
 }
@@ -594,7 +598,18 @@ async function ensureLabel(octokit, owner, repo, name, meta) {
 async function run() {
     try {
         const octokit = getOctokit(process.env.GITHUB_TOKEN);
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        
+        // Initialize SAP AI Core SDK client
+        // The SDK will automatically read AICORE_SERVICE_KEY from environment
+        const aiClient = new OrchestrationClient({
+            llm: {
+                modelName: 'gpt-4o',
+                modelParams: {
+                    max_tokens: 4096,
+                    temperature: 0.7
+                }
+            }
+        });
         
         const { owner, repo } = context.repo;
 
@@ -624,16 +639,16 @@ async function run() {
                 context.payload.pull_request = pullRequest; // Attach full PR object to context
                 
                 // 1. Check for explicit review command
-                if (commentBody.includes('review this pr') || commentBody.includes('gemini review')) {
+                if (commentBody.includes('review this pr') || commentBody.includes('gemini review') || commentBody.includes('ai review')) {
                     console.log(`Explicit review command detected on PR #${number}. Initiating full review.`);
                     
                     const diffContent = await getDiff(octokit, owner, repo, number);
-                    await performPRReview(octokit, diffContent, number, genAI);
+                    await performPRReview(octokit, diffContent, number, aiClient);
                     
-                // 2. Check for general "Hey Gemini" question
-                } else if (commentBody.startsWith("hey gemini,")) { 
-                    console.log(`"Hey Gemini," question detected on PR #${number}. Initiating response.`);
-                    await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
+                // 2. Check for general "Hey AI" question
+                } else if (commentBody.startsWith("hey gemini,") || commentBody.startsWith("hey ai,")) { 
+                    console.log(`"Hey AI," question detected on PR #${number}. Initiating response.`);
+                    await handleCommentResponse(octokit, context.payload.comment.body, number, aiClient);
                 } else {
                     console.log(`Comment on PR #${number} did not contain a review or question command. No action taken.`);
                 }
@@ -658,14 +673,14 @@ async function run() {
                     console.log('Refine analysis requested.');
                     const issueTitle = context.payload.issue.title;
                     const issueBody = context.payload.issue.body;
-                    await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI); // Re-run with fresh model pass
+                    await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, aiClient); // Re-run with fresh model pass
                 } else if (commentBody === 'discard recommendations') {
                     console.log('Discard recommendations requested.');
                     try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
                     await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '🗑️ Recommendations discarded. Provide new details or ask for re-analysis if needed.' });
-                } else if (commentBody.startsWith("hey gemini,")) {
-                    console.log(`"Hey Gemini," comment detected on Issue #${number}. Initiating response.`);
-                    await handleCommentResponse(octokit, context.payload.comment.body, number, genAI);
+                } else if (commentBody.startsWith("hey gemini,") || commentBody.startsWith("hey ai,")) {
+                    console.log(`"Hey AI," comment detected on Issue #${number}. Initiating response.`);
+                    await handleCommentResponse(octokit, context.payload.comment.body, number, aiClient);
                 } else {
                     console.log(`Comment on Issue #${number} did not contain a question command. No action taken.`);
                 }
@@ -676,7 +691,7 @@ async function run() {
             console.log(`New Issue event detected for #${number}. Generating summary.`);
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
-            await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
+            await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, aiClient);
         } else {
             console.log(`Event '${context.eventName}' did not match any triggers. No action taken.`);
         }
