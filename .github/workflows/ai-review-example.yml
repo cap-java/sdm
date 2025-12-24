@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize]
     branches: [sap-ai-core-review]
+  push:
+    branches: [sap-ai-core-review]
   issue_comment:
     types: [created]
   issues:
