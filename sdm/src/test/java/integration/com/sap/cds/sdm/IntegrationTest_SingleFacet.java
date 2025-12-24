@@ -53,6 +53,8 @@ class IntegrationTest_SingleFacet {
   private static String attachmentID8 = "";
   private static String attachmentID9 = "";
   private static String attachmentID10 = "";
+  private static String changelogEntityID = "";
+  private static String changelogAttachmentID = "";
   private static String copyAttachmentSourceEntity;
   private static String copyAttachmentTargetEntity;
   private static String copyAttachmentTargetEntityEmpty;
@@ -4172,5 +4174,406 @@ class IntegrationTest_SingleFacet {
     } else {
       fail("Could not create entities");
     }
+  }
+
+  @Test
+  @Order(60)
+  void testViewChangelogForNewlyCreatedAttachment() throws IOException {
+    System.out.println("Test (60): View changelog for newly created attachment");
+
+    // Create a new entity for changelog test
+    changelogEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotNull(changelogEntityID, "Failed to create changelog test entity");
+    assertNotEquals("Could not create entity", changelogEntityID);
+
+    // Prepare a sample file to upload
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.txt").getFile());
+    assertTrue(file.exists(), "Sample file should exist");
+
+    // Create attachment
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", changelogEntityID);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, changelogEntityID, srvpath, postData, file);
+
+    assertEquals(2, createResponse.size(), "Should return status and attachment ID");
+    String status = createResponse.get(0);
+    changelogAttachmentID = createResponse.get(1);
+
+    assertEquals("Attachment created", status, "Attachment should be created successfully");
+    assertNotNull(changelogAttachmentID, "Attachment ID should not be null");
+    assertNotEquals("", changelogAttachmentID, "Attachment ID should not be empty");
+
+    // Fetch changelog for the newly created attachment
+    Map<String, Object> changelogResponse =
+        api.fetchChangelog(appUrl, entityName, facetName, changelogEntityID, changelogAttachmentID);
+
+    assertNotNull(changelogResponse, "Changelog response should not be null");
+
+    // Verify changelog structure
+    assertEquals(false, changelogResponse.get("hasMoreItems"), "hasMoreItems should be false");
+    assertEquals(
+        "sample.txt", changelogResponse.get("filename"), "Filename should match uploaded file");
+    assertNotNull(changelogResponse.get("objectId"), "ObjectId should not be null");
+    assertEquals(1, changelogResponse.get("numItems"), "Should have 1 changelog entry");
+
+    // Verify the changelog entry
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogs =
+        (List<Map<String, Object>>) changelogResponse.get("changeLogs");
+    assertEquals(1, changeLogs.size(), "Should have exactly 1 changelog entry");
+
+    Map<String, Object> logEntry = changeLogs.get(0);
+    assertEquals("created", logEntry.get("operation"), "Operation should be 'created'");
+    assertNotNull(logEntry.get("time"), "Time should not be null");
+    assertNotNull(logEntry.get("user"), "User should not be null");
+    assertFalse(
+        logEntry.containsKey("changeDetail"), "Created operation should not have changeDetail");
+  }
+
+  @Test
+  @Order(61)
+  void testChangelogAfterModifyingNoteAndCustomProperty() throws IOException {
+    System.out.println(
+        "Test (61): Modify note field and custom property, then verify changelog shows created + 3 updated entries");
+
+    // Update attachment with notes field (entity is already in draft mode from test 60)
+    String notesValue = "Test note for changelog verification";
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+    RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
+
+    String updateNotesResponse =
+        api.updateSecondaryProperty(
+            appUrl,
+            entityName,
+            facetName,
+            changelogEntityID,
+            changelogAttachmentID,
+            updateNotesBody);
+    assertEquals("Updated", updateNotesResponse, "Should successfully update notes field");
+
+    // Update attachment with custom property
+    Integer customProperty2Value = 12345;
+    RequestBody bodyInt =
+        RequestBody.create(
+            "{\"customProperty2\": " + customProperty2Value + "}",
+            MediaType.parse("application/json"));
+    String updateCustomPropertyResponse =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, changelogEntityID, changelogAttachmentID, bodyInt);
+    assertEquals(
+        "Updated", updateCustomPropertyResponse, "Should successfully update custom property");
+
+    // Save the entity
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully");
+
+    // Edit entity again to fetch changelog
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Fetch changelog after modifications
+    Map<String, Object> changelogResponse =
+        api.fetchChangelog(appUrl, entityName, facetName, changelogEntityID, changelogAttachmentID);
+
+    assertNotNull(changelogResponse, "Changelog response should not be null");
+
+    // Verify changelog content - should have 1 created + 3 updated (note, customProperty2, and
+    // internal update)
+    assertEquals(false, changelogResponse.get("hasMoreItems"), "hasMoreItems should be false");
+    assertEquals(
+        4,
+        changelogResponse.get("numItems"),
+        "Should have 4 changelog entries (1 created + 3 updated)");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogs =
+        (List<Map<String, Object>>) changelogResponse.get("changeLogs");
+    assertEquals(4, changeLogs.size(), "Should have exactly 4 changelog entries");
+
+    // Verify first entry is 'created'
+    Map<String, Object> createdEntry = changeLogs.get(0);
+    assertEquals(
+        "created", createdEntry.get("operation"), "First entry should be 'created' operation");
+
+    // Verify remaining entries are 'updated'
+    long updatedCount =
+        changeLogs.stream().filter(log -> "updated".equals(log.get("operation"))).count();
+    assertEquals(3, updatedCount, "Should have 3 'updated' operations");
+
+    // Verify that changeDetail exists in updated entries for note field
+    boolean hasNoteUpdate =
+        changeLogs.stream()
+            .filter(log -> "updated".equals(log.get("operation")))
+            .anyMatch(
+                log -> {
+                  @SuppressWarnings("unchecked")
+                  Map<String, Object> changeDetail = (Map<String, Object>) log.get("changeDetail");
+                  return changeDetail != null
+                      && "cmis:description".equals(changeDetail.get("field"));
+                });
+    assertTrue(hasNoteUpdate, "Should have an update entry for note field (cmis:description)");
+    assertTrue(hasNoteUpdate, "Should have an update entry for note field (cmis:description)");
+
+    // Save the entity so test 62 can edit it
+    String saveResponseFinal = api.saveEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Saved", saveResponseFinal, "Entity should be saved successfully");
+  }
+
+  @Test
+  @Order(62)
+  void testChangelogAfterRenamingAttachment() throws IOException {
+    System.out.println(
+        "Test (62): Rename attachment and verify changelog increases with rename entry");
+
+    // Edit entity to put it in draft mode (entity was saved at end of test 61)
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Rename the attachment
+    String newFileName = "renamed_sample.txt";
+    String renameResponse =
+        api.renameAttachment(
+            appUrl, entityName, facetName, changelogEntityID, changelogAttachmentID, newFileName);
+    assertEquals("Renamed", renameResponse, "Should successfully rename attachment");
+
+    // Save entity after rename
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully after rename");
+
+    // Edit entity again and fetch changelog
+    editResponse = api.editEntityDraft(appUrl, entityName, srvpath, changelogEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Fetch changelog after rename
+    Map<String, Object> changelogAfterRename =
+        api.fetchChangelog(appUrl, entityName, facetName, changelogEntityID, changelogAttachmentID);
+
+    assertNotNull(changelogAfterRename, "Changelog response should not be null after rename");
+
+    // Verify changelog has increased (rename operation adds 1 entry for cmis:name change)
+    // Expected: 1 created + 3 initial updates + 1 rename update = 5 total
+    assertEquals(
+        5, changelogAfterRename.get("numItems"), "Should have 5 changelog entries after rename");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogsAfterRename =
+        (List<Map<String, Object>>) changelogAfterRename.get("changeLogs");
+    assertEquals(
+        5, changeLogsAfterRename.size(), "Should have exactly 5 changelog entries after rename");
+
+    // Verify updated count is 4 (3 initial + 1 from rename operation)
+    long updatedCountAfterRename =
+        changeLogsAfterRename.stream()
+            .filter(log -> "updated".equals(log.get("operation")))
+            .count();
+    assertEquals(4, updatedCountAfterRename, "Should have 4 'updated' operations after rename");
+
+    // Verify filename change in changelog
+    boolean hasFilenameUpdate =
+        changeLogsAfterRename.stream()
+            .filter(log -> "updated".equals(log.get("operation")))
+            .anyMatch(
+                log -> {
+                  @SuppressWarnings("unchecked")
+                  Map<String, Object> changeDetail = (Map<String, Object>) log.get("changeDetail");
+                  return changeDetail != null && "cmis:name".equals(changeDetail.get("field"));
+                });
+    assertTrue(hasFilenameUpdate, "Should have an update entry for filename (cmis:name)");
+
+    // Cleanup - entity was saved after rename, so delete the active entity
+    api.deleteEntity(appUrl, entityName, changelogEntityID);
+  }
+
+  @Test
+  @Order(63)
+  void testChangelogWithCustomPropertyEditSave() throws IOException {
+    System.out.println(
+        "Test (63): Create entity with custom property, save, edit and save again - verify changelog remains at 3 entries");
+
+    // Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotNull(newEntityID, "Failed to create new entity");
+    assertNotEquals("Could not create entity", newEntityID);
+
+    // Prepare a sample file to upload
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+    assertTrue(file.exists(), "Sample file should exist");
+
+    // Create attachment
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", newEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, newEntityID, srvpath, postData, file);
+
+    assertEquals(2, createResponse.size(), "Should return status and attachment ID");
+    String status = createResponse.get(0);
+    String attachmentID = createResponse.get(1);
+
+    assertEquals("Attachment created", status, "Attachment should be created successfully");
+    assertNotNull(attachmentID, "Attachment ID should not be null");
+    assertNotEquals("", attachmentID, "Attachment ID should not be empty");
+
+    // Add a custom property
+    Integer customPropertyValue = 99999;
+    RequestBody bodyInt =
+        RequestBody.create(
+            "{\"customProperty2\": " + customPropertyValue + "}",
+            MediaType.parse("application/json"));
+    String updateCustomPropertyResponse =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, newEntityID, attachmentID, bodyInt);
+    assertEquals(
+        "Updated", updateCustomPropertyResponse, "Should successfully update custom property");
+
+    // Save the entity
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully");
+
+    // Edit entity to fetch initial changelog
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Fetch changelog after initial save
+    Map<String, Object> changelogResponse =
+        api.fetchChangelog(appUrl, entityName, facetName, newEntityID, attachmentID);
+
+    assertNotNull(changelogResponse, "Changelog response should not be null");
+
+    // Verify changelog has 3 entries: 1 created + 2 updated (cmis:secondaryObjectTypeIds +
+    // customProperty2)
+    assertEquals(3, changelogResponse.get("numItems"), "Should have 3 changelog entries initially");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogs =
+        (List<Map<String, Object>>) changelogResponse.get("changeLogs");
+    assertEquals(3, changeLogs.size(), "Should have exactly 3 changelog entries");
+
+    // Save entity again without any modifications
+    saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully again");
+
+    // Edit entity again and fetch changelog
+    editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Fetch changelog after second save
+    Map<String, Object> changelogAfterSecondSave =
+        api.fetchChangelog(appUrl, entityName, facetName, newEntityID, attachmentID);
+
+    assertNotNull(
+        changelogAfterSecondSave, "Changelog response should not be null after second save");
+
+    // Verify changelog still has only 3 entries (no new entries added)
+    assertEquals(
+        3,
+        changelogAfterSecondSave.get("numItems"),
+        "Should still have only 3 changelog entries after edit-save without modifications");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogsAfterSecondSave =
+        (List<Map<String, Object>>) changelogAfterSecondSave.get("changeLogs");
+    assertEquals(
+        3,
+        changeLogsAfterSecondSave.size(),
+        "Should still have exactly 3 changelog entries after second save");
+
+    // Clean up the entity
+    api.deleteEntity(appUrl, entityName, newEntityID);
+  }
+
+  @Test
+  @Order(64)
+  void testChangelogForSavedAttachmentWithoutModification() throws IOException {
+    System.out.println(
+        "Test (64): Create entity, upload attachment, save, edit and save again - verify changelog still has only 'created' entry");
+
+    // Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotNull(newEntityID, "Failed to create new entity");
+    assertNotEquals("Could not create entity", newEntityID);
+
+    // Prepare a sample file to upload
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+    assertTrue(file.exists(), "Sample file should exist");
+
+    // Create attachment
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", newEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, newEntityID, srvpath, postData, file);
+
+    assertEquals(2, createResponse.size(), "Should return status and attachment ID");
+    String status = createResponse.get(0);
+    String newAttachmentID = createResponse.get(1);
+
+    assertEquals("Attachment created", status, "Attachment should be created successfully");
+    assertNotNull(newAttachmentID, "Attachment ID should not be null");
+    assertNotEquals("", newAttachmentID, "Attachment ID should not be empty");
+
+    // Save the entity immediately without any modifications
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully");
+
+    // Edit entity again without making any changes to the attachment
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Save entity again without modifying the attachment
+    saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Saved", saveResponse, "Entity should be saved successfully again");
+
+    // Edit entity to fetch changelog
+    editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertEquals("Entity in draft mode", editResponse, "Entity should be in draft mode");
+
+    // Fetch changelog for the attachment
+    Map<String, Object> changelogResponse =
+        api.fetchChangelog(appUrl, entityName, facetName, newEntityID, newAttachmentID);
+
+    assertNotNull(changelogResponse, "Changelog response should not be null");
+
+    // Verify changelog content - should only have 'created' entry even after edit and save
+    assertEquals(false, changelogResponse.get("hasMoreItems"), "hasMoreItems should be false");
+    assertEquals(
+        "sample.pdf", changelogResponse.get("filename"), "Filename should match uploaded file");
+    assertNotNull(changelogResponse.get("objectId"), "ObjectId should not be null");
+    assertEquals(1, changelogResponse.get("numItems"), "Should have only 1 changelog entry");
+
+    // Verify the changelog entry
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> changeLogs =
+        (List<Map<String, Object>>) changelogResponse.get("changeLogs");
+    assertEquals(1, changeLogs.size(), "Should have exactly 1 changelog entry");
+
+    Map<String, Object> logEntry = changeLogs.get(0);
+    assertEquals("created", logEntry.get("operation"), "Operation should be 'created'");
+    assertNotNull(logEntry.get("time"), "Time should not be null");
+    assertNotNull(logEntry.get("user"), "User should not be null");
+    assertFalse(
+        logEntry.containsKey("changeDetail"), "Created operation should not have changeDetail");
+
+    // Clean up the new entity
+    api.deleteEntity(appUrl, entityName, newEntityID);
   }
 }
