@@ -33,7 +33,11 @@ jobs:
       - name: Run AI Review
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AICORE_SERVICE_KEY: ${{ secrets.AICORE_SERVICE_KEY }}
+          AICORE_AUTH_URL: ${{ secrets.AICORE_AUTH_URL }}
+          AICORE_CLIENT_ID: ${{ secrets.AICORE_CLIENT_ID }}
+          AICORE_CLIENT_SECRET: ${{ secrets.AICORE_CLIENT_SECRET }}
+          AICORE_RESOURCE_GROUP: "default"
+          AICORE_BASE_URL: ${{ secrets.AICORE_BASE_URL }}
           # Optional: Configure retry and chunking parameters
           MAX_RETRIES: 5
           INITIAL_DELAY_MS: 1000
