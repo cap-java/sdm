@@ -303,7 +303,7 @@ async function handleCommentResponse(octokit, commentBody, number, aiClient) {
     let prompt;
 
     // Check if the comment is on a pull request (context.payload.issue.pull_request will be set)
-    if (context.payload.issue.pull_request) {
+    if (!context.payload.issue.pull_request) {
         // This is a comment on a PR, so we can get the diff
         const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, number);
         prompt = `A user has a question about a pull request. The pull request diff is below, followed by the user's question. Please provide a clear and concise answer.
