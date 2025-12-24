@@ -24,10 +24,14 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install @actions/github @google/generative-ai @octokit/core
+        run: |
+          cd .github/scripts
+          npm install
 
-      - name: Run Gemini Responder Script
+      - name: Run AI Responder Script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: node .github/scripts/review.js
+          AICORE_SERVICE_KEY: ${{ secrets.AICORE_SERVICE_KEY }}
+        run: |
+          cd .github/scripts
+          node review.js

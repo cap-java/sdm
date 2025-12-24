@@ -187,8 +187,8 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
         `;
 
         try {
-            const result = await fetchWithBackoff(() => aiClient.chatCompletion({
-                messagesHistory: [{ role: 'user', content: chunkPrompt }]
+            const result = await fetchWithBackoff(() => aiClient.run({
+                messages: [{ role: 'user', content: chunkPrompt }]
             }));
             chunkReviews.push(result.getContent());
             console.log(`Review for chunk ${i + 1} of ${chunks.length} generated.`);
@@ -234,8 +234,8 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
 
     let reviewBody = "Review generation failed.";
     try {
-        const finalReviewResult = await fetchWithBackoff(() => aiClient.chatCompletion({
-            messagesHistory: [{ role: 'user', content: synthesisPrompt }]
+        const finalReviewResult = await fetchWithBackoff(() => aiClient.run({
+            messages: [{ role: 'user', content: synthesisPrompt }]
         }));
         reviewBody = finalReviewResult.getContent();
         console.log("AI review generated successfully.");
@@ -256,8 +256,8 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
 
     let readmeContent = 'NO_UPDATE';
     try {
-        const readmeResult = await fetchWithBackoff(() => aiClient.chatCompletion({
-            messagesHistory: [{ role: 'user', content: readmePrompt }]
+        const readmeResult = await fetchWithBackoff(() => aiClient.run({
+            messages: [{ role: 'user', content: readmePrompt }]
         }));
         readmeContent = readmeResult.getContent().trim();
         if (readmeContent !== 'NO_UPDATE') {
@@ -278,8 +278,8 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
         \`\`\`
         `;
         try {
-            const featureDocResult = await fetchWithBackoff(() => aiClient.chatCompletion({
-                messagesHistory: [{ role: 'user', content: featureDocPrompt }]
+            const featureDocResult = await fetchWithBackoff(() => aiClient.run({
+                messages: [{ role: 'user', content: featureDocPrompt }]
             }));
             const featureDocContent = featureDocResult.getContent();
             await createFeatureDocument(octokit, context.repo.owner, context.repo.repo, context.payload.pull_request.title, featureDocContent);
@@ -303,7 +303,7 @@ async function handleCommentResponse(octokit, commentBody, number, aiClient) {
     let prompt;
 
     // Check if the comment is on a pull request (context.payload.issue.pull_request will be set)
-    if (!context.payload.issue.pull_request) {
+    if (context.payload.issue.pull_request) {
         // This is a comment on a PR, so we can get the diff
         const diffContent = await getDiff(octokit, context.repo.owner, context.repo.repo, number);
         prompt = `A user has a question about a pull request. The pull request diff is below, followed by the user's question. Please provide a clear and concise answer.
@@ -336,8 +336,8 @@ async function handleCommentResponse(octokit, commentBody, number, aiClient) {
 
     let response = "Error: Could not generate a response to your comment.";
     try {
-        const result = await fetchWithBackoff(() => aiClient.chatCompletion({
-            messagesHistory: [{ role: 'user', content: prompt }]
+        const result = await fetchWithBackoff(() => aiClient.run({
+            messages: [{ role: 'user', content: prompt }]
         }));
         response = result.getContent();
         console.log("AI response generated successfully.");
@@ -424,8 +424,8 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
 
     let recommendations = "Failed to generate recommendations.";
     try {
-        const recResult = await fetchWithBackoff(() => aiClient.chatCompletion({
-            messagesHistory: [{ role: 'user', content: recPrompt }]
+        const recResult = await fetchWithBackoff(() => aiClient.run({
+            messages: [{ role: 'user', content: recPrompt }]
         }));
         recommendations = recResult.getContent();
     } catch (error) {
@@ -515,10 +515,10 @@ async function findSimilarIssueSemantic(title, body, pastIssues, aiClient) {
     if (lexicalBest && lexicalBest.score >= 0.5) {
         try {
             const similarityPrompt = `Determine if Issue A duplicates Issue B based on the **full context (title and body)**. Respond only with YES or NO.\nIssue A Title: ${title}\nIssue A Body: ${truncate(body, 1000)}\nIssue B Title: ${lexicalBest.issue.title}\nIssue B Body: ${truncate(lexicalBest.issue.body, 1000)}\n`;
-            const res = await fetchWithBackoff(() => aiClient.chatCompletion({
-                messagesHistory: [{ role: 'user', content: similarityPrompt }]
+            const res = await fetchWithBackoff(() => aiClient.run({
+                messages: [{ role: 'user', content: similarityPrompt }]
             }));
-            if (/YES/.test(res.response.text().trim().toUpperCase())) return { ...lexicalBest.issue, score: lexicalBest.score };
+            if (/YES/.test(res.getContent().trim().toUpperCase())) return { ...lexicalBest.issue, score: lexicalBest.score };
         } catch (e) { console.warn("LLM similarity refinement failed", e.message); }
     }
     return null;
@@ -600,20 +600,10 @@ async function run() {
         const octokit = getOctokit(process.env.GITHUB_TOKEN);
 
         // Initialize SAP AI Core SDK client
-        // The SDK will automatically read AICORE_SERVICE_KEY from environment
-        const aiClient = new OrchestrationClient({
-            llm: {
-                modelName: 'gpt-4o',
-                modelParams: {
-                    max_tokens: 4096,
-                    temperature: 0.7
-                }
-            },
-            templating: {
-                template: [
-                    { role: 'user', content: '{{?content}}' }
-                ]
-            }
+        // Using AzureOpenAiChatClient for direct chat completion without orchestration templating
+        const aiClient = new AzureOpenAiChatClient({
+            modelName: 'gpt-4o',
+            modelVersion: 'latest'
         });
 
         const { owner, repo } = context.repo;
