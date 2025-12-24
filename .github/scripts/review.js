@@ -27,7 +27,7 @@ async function fetchWithBackoff(func, maxRetries = MAX_RETRIES, initialDelay = I
             // These should not be retried as the input/model is fundamentally wrong.
             if (error.status === 400 || error.status === 404) {
                 console.error(`Fatal error (${error.status}) encountered. Aborting immediately.`);
-                throw error; 
+                throw error;
             }
 
             // Check for transient errors (e.g., 429 Rate Limit, 5xx Server Error)
@@ -93,10 +93,10 @@ async function splitDiffIntoTokens(aiClient, diff, maxTokens = MAX_CHUNK_TOKENS)
 async function updateReadme(octokit, owner, repo, aiGeneratedContent, pull_number) {
     const readmePath = "README.md";
     let readmeSha;
-    
+
     // context.payload.pull_request is guaranteed to exist here
     const headRef = context.payload.pull_request.head.ref;
-    
+
     console.log("Attempting to read existing README.md...");
     try {
         const { data } = await octokit.rest.repos.getContents({
@@ -167,8 +167,8 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
 
     for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        
-            const chunkPrompt = `You are a helpful and expert AI code reviewer. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
+
+        const chunkPrompt = `You are a helpful and expert AI code reviewer. Analyze the following Git diff chunk. Your response must be highly structured and strictly focused on identifying issues and providing solutions.
 
         For each issue found, format your finding with a clear bullet point and, if the fix is simple, provide the recommended code change directly beneath it in a code block.
 
@@ -195,7 +195,7 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
         } catch (error) {
             // Fatal error occurred, stop processing chunks
             console.error(`Fatal error encountered during review chunk processing. Aborting review.`);
-            
+
             // Post a single error message and return immediately
             const errorMessage = `❌ **AI Review Failed** ❌\n\nA critical error occurred during the review process (likely due to an incorrect model configuration, service key issue, or a malformed request). The first error encountered was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration, service key, and retry the review.`;
             await octokit.rest.issues.createComment({
@@ -231,7 +231,7 @@ async function performPRReview(octokit, diffContent, pull_number, aiClient) {
     Partial Reviews to Synthesize:
     ${chunkReviews.join('\n\n---\n\n')}
     `;
-    
+
     let reviewBody = "Review generation failed.";
     try {
         const finalReviewResult = await fetchWithBackoff(() => aiClient.chatCompletion({
@@ -372,8 +372,8 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
         await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["duplicate"] });
         const status = similar.state === "closed" ? "closed" : "in progress";
         const resolution = extractResolution(similar.body);
-        
-        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nBased on **issue context and body**, a related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`;        await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
+
+        const duplicateComment = `### 🔁 Potential Duplicate Detected (Semantic Match)\nBased on **issue context and body**, a related issue appears to already exist: **#${similar.number} - ${similar.title}** (${status}).\n\n**Link:** ${similar.html_url}\n\n**Summary (Truncated):**\n${truncate(similar.body || '(no body)', 800)}\n\n${resolution ? `**Extracted Resolution / Status Notes:**\n${resolution}\n\n` : ''}If this is a duplicate, please consolidate discussion there and consider closing this one. If not, comment with \`not a duplicate\` and I will proceed with fresh root-cause analysis.`; await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: duplicateComment });
         return;
     }
 
@@ -381,7 +381,7 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     const repoScan = scanRepositoryForIssue(issueTitle, issueBody, process.cwd());
     console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
     const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
-    
+
     const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a detailed, prioritized remediation checklist. Your output must strictly follow the required markdown structure below.
 
     Crucially, for the most likely and actionable remediation steps, you **must include the exact code snippet** showing the required change in a markdown code block. Do not just describe the fix—show the code.
@@ -421,7 +421,7 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
     Relevant Code Contexts (truncated):
     ${truncate(joinedContexts, 12000)}
     `;
-    
+
     let recommendations = "Failed to generate recommendations.";
     try {
         const recResult = await fetchWithBackoff(() => aiClient.chatCompletion({
@@ -433,7 +433,7 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
         // Post a single error message for the issue handler
         recommendations = `❌ **AI Analysis Failed** ❌\n\nA critical error occurred while generating the initial analysis (likely due to an incorrect model configuration, service key issue, or a malformed request). The error was:\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Action Required:** Please check the model configuration and service key.`;
     }
-    
+
     await ensureLabel(octokit, owner, repo, "awaiting-confirmation", { description: "Pending maintainer confirmation for remediation", color: "5319e7" });
     await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: ["awaiting-confirmation"] });
     const confirmComment = `${recommendations}\n\n**Next Step:** Reply with \`confirm remediation\` to approve moving forward (e.g., drafting a PR or creating task list). Reply with \`refine analysis\` for a deeper pass, or \`discard recommendations\` to remove them.`;
@@ -483,11 +483,11 @@ async function findSimilarIssueSemantic(title, body, pastIssues, aiClient) {
     const MAX_EMBED_ISSUES = safeParseInt(process.env.MAX_SEMANTIC_ISSUES, 150);
     // SAP AI SDK embeddings client
     let embeddingModel = null;
-    try { 
-        embeddingModel = new AzureOpenAiEmbeddingClient({ modelName: 'text-embedding-ada-002' }); 
-    } catch (e) { 
+    try {
+        embeddingModel = new AzureOpenAiEmbeddingClient({ modelName: 'text-embedding-ada-002' });
+    } catch (e) {
         console.warn("Embedding model initialization failed", e.message);
-        embeddingModel = null; 
+        embeddingModel = null;
     }
     const newTitleTokens = tokenize(title); const newBodyTokens = tokenize(body);
     const newText = `${title}\n${body}`;
@@ -496,20 +496,20 @@ async function findSimilarIssueSemantic(title, body, pastIssues, aiClient) {
         try { newEmbedding = await getEmbeddingSafe(embeddingModel, newText); } catch (e) { console.warn("New issue embedding failed", e.message); }
     }
     const scored = pastIssues.map(i => ({ issue: i, score: lexicalSimilarityCandidate(newTitleTokens, newBodyTokens, i) }))
-        .sort((a,b)=>b.score-a.score).slice(0, MAX_EMBED_ISSUES);
+        .sort((a, b) => b.score - a.score).slice(0, MAX_EMBED_ISSUES);
     let best = null;
     if (newEmbedding) {
         for (const candidate of scored) {
             let emb; try { emb = await getEmbeddingSafe(embeddingModel, `${candidate.issue.title}\n${candidate.issue.body}`); } catch { continue; }
             const cosine = cosineSimilarity(newEmbedding, emb);
             // Semantic match is weighted much higher here for better accuracy based on content
-            const combined = (cosine * 0.85) + (candidate.score * 0.15); 
+            const combined = (cosine * 0.85) + (candidate.score * 0.15);
             if (!best || combined > best.score) best = { ...candidate.issue, score: combined };
         }
         // Higher threshold for semantic duplicate since it's based on content vectors
-        if (best && best.score >= 0.78) return best; 
+        if (best && best.score >= 0.78) return best;
     }
-    
+
     // Fallback: If no embedding model or no strong semantic match, use LLM for refinement on best lexical match
     const lexicalBest = scored[0];
     if (lexicalBest && lexicalBest.score >= 0.5) {
@@ -531,15 +531,15 @@ async function getEmbeddingSafe(embeddingModel, text) {
     return vector;
 }
 
-function cosineSimilarity(a,b){
-    if(!a||!b||a.length!==b.length) return 0;
-    let dot=0; let na=0; let nb=0;
-    for(let i=0;i<a.length;i++){
-        dot += a[i]*b[i];
-        na += a[i]*a[i];
-        nb += b[i]*b[i];
+function cosineSimilarity(a, b) {
+    if (!a || !b || a.length !== b.length) return 0;
+    let dot = 0; let na = 0; let nb = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        na += a[i] * a[i];
+        nb += b[i] * b[i];
     }
-    return dot/((Math.sqrt(na)*Math.sqrt(nb))||1);
+    return dot / ((Math.sqrt(na) * Math.sqrt(nb)) || 1);
 }
 /**
  * Scan the repository for lines possibly related to an issue by keyword intersection.
@@ -598,7 +598,7 @@ async function ensureLabel(octokit, owner, repo, name, meta) {
 async function run() {
     try {
         const octokit = getOctokit(process.env.GITHUB_TOKEN);
-        
+
         // Initialize SAP AI Core SDK client
         // The SDK will automatically read AICORE_SERVICE_KEY from environment
         const aiClient = new OrchestrationClient({
@@ -608,9 +608,14 @@ async function run() {
                     max_tokens: 4096,
                     temperature: 0.7
                 }
+            },
+            templating: {
+                template: [
+                    { role: 'user', content: '{{?content}}' }
+                ]
             }
         });
-        
+
         const { owner, repo } = context.repo;
 
         // Determine the number based on the event payload (only issue number is available from comment event)
@@ -629,7 +634,7 @@ async function run() {
 
             if (context.payload.issue.pull_request) {
                 // This is a comment on a Pull Request (PR)
-                
+
                 // CRITICAL FIX: Fetch the full PR object for use in subsequent functions (labels, head.ref)
                 const { data: pullRequest } = await octokit.rest.pulls.get({
                     owner,
@@ -637,25 +642,25 @@ async function run() {
                     pull_number: number,
                 });
                 context.payload.pull_request = pullRequest; // Attach full PR object to context
-                
+
                 // 1. Check for explicit review command
                 if (commentBody.includes('review this pr') || commentBody.includes('gemini review') || commentBody.includes('ai review')) {
                     console.log(`Explicit review command detected on PR #${number}. Initiating full review.`);
-                    
+
                     const diffContent = await getDiff(octokit, owner, repo, number);
                     await performPRReview(octokit, diffContent, number, aiClient);
-                    
-                // 2. Check for general "Hey AI" question
-                } else if (commentBody.startsWith("hey gemini,") || commentBody.startsWith("hey ai,")) { 
+
+                    // 2. Check for general "Hey AI" question
+                } else if (commentBody.startsWith("hey gemini,") || commentBody.startsWith("hey ai,")) {
                     console.log(`"Hey AI," question detected on PR #${number}. Initiating response.`);
                     await handleCommentResponse(octokit, context.payload.comment.body, number, aiClient);
                 } else {
                     console.log(`Comment on PR #${number} did not contain a review or question command. No action taken.`);
                 }
-                
+
             } else {
                 // This is a comment on a regular Issue
-                 if (commentBody === 'confirm remediation') {
+                if (commentBody === 'confirm remediation') {
                     // Maintainer confirmation flow
                     const issueLabels = context.payload.issue.labels.map(l => l.name);
                     if (issueLabels.includes('awaiting-confirmation')) {
@@ -664,8 +669,8 @@ async function run() {
                         await octokit.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['remediation-approved'] });
                         // Remove awaiting-confirmation label
                         const remaining = issueLabels.filter(l => l !== 'awaiting-confirmation');
-                        try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
-                        await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '✅ Remediation confirmed. Automated follow-up actions may proceed (none implemented yet).'});
+                        try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch { }
+                        await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '✅ Remediation confirmed. Automated follow-up actions may proceed (none implemented yet).' });
                     } else {
                         console.log('Confirmation comment received but issue not in awaiting-confirmation state.');
                     }
@@ -676,7 +681,7 @@ async function run() {
                     await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, aiClient); // Re-run with fresh model pass
                 } else if (commentBody === 'discard recommendations') {
                     console.log('Discard recommendations requested.');
-                    try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
+                    try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch { }
                     await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '🗑️ Recommendations discarded. Provide new details or ask for re-analysis if needed.' });
                 } else if (commentBody.startsWith("hey gemini,") || commentBody.startsWith("hey ai,")) {
                     console.log(`"Hey AI," comment detected on Issue #${number}. Initiating response.`);
@@ -685,7 +690,7 @@ async function run() {
                     console.log(`Comment on Issue #${number} did not contain a question command. No action taken.`);
                 }
             }
-            
+
         } else if (context.eventName === 'issues' && context.payload.action === 'opened') {
             // New Issue Handling 
             console.log(`New Issue event detected for #${number}. Generating summary.`);
