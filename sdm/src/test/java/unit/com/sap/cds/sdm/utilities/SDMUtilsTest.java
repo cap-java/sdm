@@ -1485,9 +1485,9 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop3", "Property 3");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "oldValue1");
-    propertiesInDB.put("prop2", "oldValue2");
-    propertiesInDB.put("prop3", "unchangedValue");
+    propertiesInDB.put("Property 1", "oldValue1");
+    propertiesInDB.put("Property 2", "oldValue2");
+    propertiesInDB.put("Property 3", "unchangedValue");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1512,7 +1512,7 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop1", "Property 1");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "oldValue");
+    propertiesInDB.put("Property 1", "oldValue");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1535,7 +1535,7 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop1", "Property 1");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", null);
+    propertiesInDB.put("Property 1", null);
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1560,8 +1560,8 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop2", "Property 2");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "sameValue1");
-    propertiesInDB.put("prop2", "sameValue2");
+    propertiesInDB.put("Property 1", "sameValue1");
+    propertiesInDB.put("Property 2", "sameValue2");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1631,10 +1631,10 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop4", "Property 4");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "old1");
-    propertiesInDB.put("prop2", "old2");
-    propertiesInDB.put("prop3", null);
-    propertiesInDB.put("prop4", "same4");
+    propertiesInDB.put("Property 1", "old1");
+    propertiesInDB.put("Property 2", "old2");
+    propertiesInDB.put("Property 3", null);
+    propertiesInDB.put("Property 4", "same4");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
