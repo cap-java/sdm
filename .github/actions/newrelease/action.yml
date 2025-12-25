@@ -29,7 +29,7 @@ runs:
       run: |
         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
         echo $VERSION > cap-notebook/version.txt
-        mvn --no-transfer-progress versions:set-property -Dproperty=revision -DnewVersion=$VERSION
+        ./mvnw --no-transfer-progress versions:set-property -Dproperty=revision -DnewVersion=$VERSION
         #chmod +x ensure-license.sh
         #./ensure-license.sh
         git config --global user.name 'github-actions[bot]'

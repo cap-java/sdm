@@ -33,7 +33,7 @@ jobs:
       - name: Build and package 📦
         run: |
             echo "🔨 Building and packaging..."
-            mvn clean install -P unit-tests -DskipIntegrationTests
+            ./mvnw clean install -P unit-tests -DskipIntegrationTests
             echo "✅ Build completed successfully!"
 
       - name: Setup Node.js 🟢
@@ -75,8 +75,8 @@ jobs:
             fi
           done
 
-          echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
-          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "\nResolving effective value BEFORE override via ./mvnw help:evaluate ..."
+          RESOLVED_BEFORE=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
           if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "NOTE: Effective value already equals target; files will still be normalized to target string."
@@ -91,8 +91,8 @@ jobs:
           echo "\nRaw occurrences AFTER override:"
           grep -R "<cds.services.version>" $FILES || true
 
-          echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
-          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "\nResolving effective value AFTER override via ./mvnw help:evaluate ..."
+          RESOLVED_AFTER=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
           if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
@@ -321,8 +321,8 @@ jobs:
           EOL
 
           echo "🎯 Running Maven integration tests"
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+          ./mvnw clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests
+          ./mvnw clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT1 -DskipUnitTests 
+          ./mvnw clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
+          ./mvnw clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=TENANT2 -DskipUnitTests
           echo "✅ Integration tests completed!"

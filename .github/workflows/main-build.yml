@@ -52,7 +52,7 @@ jobs:
       - name: Get Revision
         id: get-revision
         run: |
-          current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          current_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "Current version: $current_version"
           echo "REVISION=$current_version" >> $GITHUB_ENV
         shell: bash
@@ -84,7 +84,7 @@ jobs:
             echo "Current version already contains -SNAPSHOT, no update needed."
           fi
           # Export the updated or original version
-          updated_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          updated_version=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "UPDATED_VERSION=$updated_version" >> $GITHUB_ENV
         shell: bash
 
@@ -96,7 +96,7 @@ jobs:
       - name: Deploy snapshot
         if: ${{ endsWith(env.UPDATED_VERSION, '-SNAPSHOT') }}
         run: |
-          mvn -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/cap-java/sdm deploy
+          ./mvnw -B -ntp -fae -Dmaven.install.skip=true -Dmaven.test.skip=true -DdeployAtEnd=true -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/cap-java/sdm deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         shell: bash

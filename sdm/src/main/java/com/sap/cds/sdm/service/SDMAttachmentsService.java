@@ -46,7 +46,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     String[] facetParts = input.facet().split("\\.");
     if (facetParts.length < 2) {
       throw new IllegalArgumentException(
-          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
+          SDMConstants.INVALID_FACET_FORMAT_ERROR.formatted(input.facet()));
     }
 
     // The last part is the composition name, everything else is the parent entity

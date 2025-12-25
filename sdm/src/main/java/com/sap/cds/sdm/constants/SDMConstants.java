@@ -169,7 +169,7 @@ public class SDMConstants {
   public static String buildErrorMessage(
       Collection<String> filenames, StringBuilder prefixTemplate, String closingRemark) {
     for (String file : filenames) {
-      prefixTemplate.append(String.format("\t• %s%n", file));
+      prefixTemplate.append("\t• %s%n".formatted(file));
     }
     if (closingRemark != null && !closingRemark.isEmpty())
       prefixTemplate.append("\n ").append(closingRemark);
@@ -180,7 +180,7 @@ public class SDMConstants {
   public static String nameConstraintMessage(List<String> invalidFileNames) {
     // if only 1 restricted character is there in file, so different error will throw
     if (invalidFileNames.size() == 1) {
-      return String.format(SINGLE_RESTRICTED_CHARACTER_IN_FILE, invalidFileNames.iterator().next());
+      return SINGLE_RESTRICTED_CHARACTER_IN_FILE.formatted(invalidFileNames.iterator().next());
     }
     StringBuilder prefix = new StringBuilder();
     prefix.append(
@@ -192,7 +192,7 @@ public class SDMConstants {
   public static String duplicateFilenameFormat(Collection<String> duplicateFileNames) {
     // if only 1 duplicate file, so different error will throw
     if (duplicateFileNames.size() == 1) {
-      return String.format(SINGLE_DUPLICATE_FILENAME, duplicateFileNames.iterator().next());
+      return SINGLE_DUPLICATE_FILENAME.formatted(duplicateFileNames.iterator().next());
     }
     StringBuilder prefix = new StringBuilder();
     prefix.append("Objects with the following names already exist:\n\n");
@@ -206,14 +206,14 @@ public class SDMConstants {
         "Update unsuccessful. The following filename(s) could not be updated as they do not exist. \n\n";
 
     // Create the formatted prefix message
-    String formattedPrefixMessage = String.format(prefixMessage);
+    String formattedPrefixMessage = prefixMessage.formatted();
 
     // Initialize the StringBuilder with the formatted message prefix
     StringBuilder bulletPoints = new StringBuilder(formattedPrefixMessage);
 
     // Append each unsupported file name to the StringBuilder
     for (String file : fileNameNotFound) {
-      bulletPoints.append(String.format("\t• %s%n", file));
+      bulletPoints.append("\t• %s%n".formatted(file));
     }
     bulletPoints.append("\nDelete and upload the files again.");
     return bulletPoints.toString();
@@ -228,7 +228,7 @@ public class SDMConstants {
 
     // Append each file name and its error message to the StringBuilder
     for (Map.Entry<String, String> entry : badRequest.entrySet()) {
-      bulletPoints.append(String.format("\t• %s : %s%n", entry.getKey(), entry.getValue()));
+      bulletPoints.append("\t• %s : %s%n".formatted(entry.getKey(), entry.getValue()));
     }
     bulletPoints.append("\nPlease try again.");
     return bulletPoints.toString();
@@ -243,7 +243,7 @@ public class SDMConstants {
 
     // Append each file name and its error message to the StringBuilder
     for (String item : files) {
-      bulletPoints.append(String.format("\t• %s%n", item));
+      bulletPoints.append("\t• %s%n".formatted(item));
     }
     bulletPoints.append(System.lineSeparator());
     if (operation.equals("create")) {
@@ -264,7 +264,7 @@ public class SDMConstants {
 
     // Append each unsupported file name to the StringBuilder
     for (String file : propertiesList) {
-      bulletPoints.append(String.format("\t• %s%n", file));
+      bulletPoints.append("\t• %s%n".formatted(file));
     }
     bulletPoints.append(
         "\nPlease contact your administrator for assistance with any necessary adjustments.");
@@ -278,10 +278,10 @@ public class SDMConstants {
   }
 
   public static String getGenericError(String event) {
-    return String.format(GENERIC_ERROR, event);
+    return GENERIC_ERROR.formatted(event);
   }
 
   public static String getVirusFilesError(String filename) {
-    return String.format(VIRUS_ERROR, filename);
+    return VIRUS_ERROR.formatted(filename);
   }
 }

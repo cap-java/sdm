@@ -652,7 +652,7 @@ public class SDMServiceGenericHandlerTest {
     // Act & Assert
     ServiceException ex =
         assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.create(mockContext));
-    assertEquals(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, 2), ex.getMessage());
+    assertEquals(SDMConstants.MAX_COUNT_ERROR_MESSAGE.formatted(2), ex.getMessage());
   }
 
   @Test

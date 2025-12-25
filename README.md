@@ -121,7 +121,7 @@ To use a development version of the SDM CAP plugin, follow these steps. This is 
 2. Install the plugin in the root folder after switiching to the branch you want to use:
 
 ```sh
-   mvn clean install
+   ./mvnw clean install
 ```
 The plugin is now added to your local .m2 repository, giving it priority over the version available in the central Maven repository during the application build.
 

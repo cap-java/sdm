@@ -50,7 +50,7 @@ runs:
 
     - name: Deploy
       run: >
-        mvn -B -ntp --fae --show-version
+        ./mvnw -B -ntp --fae --show-version
         -DaltDeploymentRepository=${{inputs.server-id}}::default::${{inputs.repository-url}}
         -Dmaven.install.skip=true
         -Dmaven.test.skip=true

@@ -129,5 +129,5 @@ jobs:
           EOL
           echo "🎯 Running Maven integration tests..."
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Named User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Technical User Flow"; exit 1; }
+          ./mvnw clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Named User Flow"; exit 1; }
+          ./mvnw clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "❌ Maven tests failed for Technical User Flow"; exit 1; }

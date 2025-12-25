@@ -306,7 +306,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       context
           .getMessages()
           .warn(
-              String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList))
+              SDMConstants.duplicateFilenameFormat(duplicateFileNameList).formatted()
                   + contextInfo);
     }
     if (!filesNotFound.isEmpty()) {

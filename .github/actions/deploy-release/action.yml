@@ -58,7 +58,7 @@ runs:
 
     - name: Deploy to Maven Central
       run: >
-        mvn -B -ntp --show-version
+        ./mvnw -B -ntp --show-version
         -Dmaven.install.skip=true
         -Dmaven.test.skip=true
         -Dgpg.passphrase="$GPG_PASSPHRASE"
@@ -74,7 +74,7 @@ runs:
     # - name: "Deploy Locally"
     #   run: |
     #     echo "Deploying artifacts locally..."
-    #     mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
+    #     ./mvnw --batch-mode --no-transfer-progress --fail-at-end --show-version \
     #       -Durl=file:./temp_local_repo \
     #       -Dmaven.install.skip=true \
     #       -Dmaven.test.skip=true \
@@ -98,7 +98,7 @@ runs:
 
     # - name: "Deploy Staging"
     #   run: |
-    #     mvn --batch-mode --no-transfer-progress --fail-at-end --show-version \
+    #     ./mvnw --batch-mode --no-transfer-progress --fail-at-end --show-version \
     #       org.sonatype.plugins:nexus-staging-maven-plugin:1.6.13:deploy-staged-repository \
     #       -DserverId=ossrh \
     #       -DnexusUrl=https://oss.sonatype.org \

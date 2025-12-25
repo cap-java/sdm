@@ -64,8 +64,8 @@ jobs:
             fi
           done
 
-          echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
-          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "\nResolving effective value BEFORE override via ./mvnw help:evaluate ..."
+          RESOLVED_BEFORE=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
           if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "NOTE: Effective value already equals target; files will still be normalized to target string."
@@ -80,8 +80,8 @@ jobs:
           echo "\nRaw occurrences AFTER override:"
           grep -R "<cds.services.version>" $FILES || true
 
-          echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
-          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          echo "\nResolving effective value AFTER override via ./mvnw help:evaluate ..."
+          RESOLVED_AFTER=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
           if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
@@ -117,8 +117,8 @@ jobs:
 
       # - name: Consume GitHub Packages (com.sap.cds.sdm-root and com.sap.cds.sdm)
       #   run: |
-      #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
-      #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      #     ./mvnw dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
+      #     ./mvnw dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
@@ -259,7 +259,7 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
           # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          ./mvnw clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
+          ./mvnw clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
     
     

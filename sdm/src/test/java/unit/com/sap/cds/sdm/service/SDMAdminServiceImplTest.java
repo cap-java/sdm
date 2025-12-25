@@ -212,8 +212,7 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockDeleteEntity = mock(HttpEntity.class);
 
     String json =
-        String.format(
-            """
+        """
 {
   "repoAndConnectionInfos": [
     {
@@ -224,8 +223,8 @@ public class SDMAdminServiceImplTest {
     }
   ]
 }
-""",
-            SDMConstants.REPOSITORY_ID);
+"""
+            .formatted(SDMConstants.REPOSITORY_ID);
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
     InputStream deleteInputStream =
@@ -396,8 +395,7 @@ public class SDMAdminServiceImplTest {
     HttpEntity mockGetEntity = mock(HttpEntity.class);
 
     String json =
-        String.format(
-            """
+        """
         {
           "repoAndConnectionInfos": [
             {
@@ -408,8 +406,8 @@ public class SDMAdminServiceImplTest {
             }
           ]
         }
-        """,
-            SDMConstants.REPOSITORY_ID);
+        """
+            .formatted(SDMConstants.REPOSITORY_ID);
 
     InputStream getInputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
 
