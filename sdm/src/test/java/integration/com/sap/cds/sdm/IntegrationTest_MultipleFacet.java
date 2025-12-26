@@ -3644,7 +3644,7 @@ class IntegrationTest_MultipleFacet {
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
         if (facetName.equals("references")) {
-          assertEquals("Cannot upload more than 4 attachments.", errorMessage);
+          assertEquals("Cannot upload more than 5 attachments.", errorMessage);
         } else if (facetName.equals("attachments")) {
           assertEquals("Cannot upload more than 4 attachments.", errorMessage);
         }
