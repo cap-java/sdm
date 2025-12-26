@@ -103,10 +103,12 @@ public class SDMServiceGenericHandler implements EventHandler {
 
   @Before(event = DraftService.EVENT_DRAFT_CANCEL)
   public void handleDraftDiscardForLinks(DraftCancelEventContext context) throws IOException {
+    logger.info("Handling draft cancel for entity: " + context.getTarget().getQualifiedName());
     CdsEntity parentDraftEntity = context.getTarget();
     CqnAnalyzer analyzer = CqnAnalyzer.create(context.getModel());
     Map<String, Object> parentKeys = analyzer.analyze(context.getCqn()).rootKeys();
     String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
+    logger.info("Parent Entity Name: " + parentEntityName);
 
     Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
     Map<String, String> compositionPathMapping =
@@ -193,9 +195,11 @@ public class SDMServiceGenericHandler implements EventHandler {
       Map<String, Object> parentKeys,
       String attachmentCompositionDefinition)
       throws IOException {
-
+    logger.info("Reverting links for composition: " + attachmentCompositionDefinition);
     CdsModel model = context.getModel();
+    logger.info("Model : " + model.entities().map(CdsEntity::getName).toList());
     String draftEntityName = attachmentCompositionDefinition + "_drafts";
+    logger.info("Reverting links for draft entity: " + draftEntityName);
     CdsEntity draftEntity = model.findEntity(draftEntityName).get();
     CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
 
