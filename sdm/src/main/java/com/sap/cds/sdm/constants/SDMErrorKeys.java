@@ -98,7 +98,7 @@ public class SDMErrorKeys {
   public static final String CONTEXT_INFO_PAGE = "SDM.contextInfoPage";
   public static final String UNSUPPORTED_PROPERTIES_PREFIX_KEY = "SDM.unsupportedPropertiesPrefix";
   public static final String UNSUPPORTED_PROPERTIES_SUFFIX_KEY = "SDM.unsupportedPropertiesSuffix";
-  public static final String MAX_COUNT_ERROR_MESSAGE_KEY = "SDM.Attachments.maxCountError";
+  public static final String MAX_COUNT_ERROR_MESSAGE_KEY = "SDM.maxCountErrorMessage";
   public static final String FETCH_CHANGELOG_ERROR_KEY = "SDM.fetchChangelogError";
   public static final String FAILED_TO_MOVE_ATTACHMENT_KEY = "SDM.failedToMoveAttachment";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX_KEY =

@@ -473,12 +473,12 @@ Refer the following example from a sample Bookshop app:
 To customize the error message displayed when the upload limit is exceeded, add the following key to your `messages_[languagecode].properties` file under `srv/src/main/resources`:
 
 ```properties
-SDM.Attachments.maxCountError = Maximum number of attachments reached
+SDM.maxCountErrorMessage = Maximum number of attachments reached
 ```
 
 Example for German language in `messages_de.properties`:
 ```properties
-SDM.Attachments.maxCountError = Maximale Anzahl von Anhängen erreicht
+SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 ```
 
    > **Note**
@@ -1264,7 +1264,7 @@ Example `messages_de.properties` for German language:
 SDM.virusRepoErrorMoreThan400MB=Sie können keine Dateien hochladen, die größer als 400 MB sind
 SDM.userNotAuthorisedError=Sie verfügen nicht über die erforderlichen Berechtigungen zum Hochladen von Anhängen
 SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
-SDM.Attachments.maxCountError=Maximale Anzahl von Anhängen erreicht
+SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 ```
 
 ## Known Restrictions
