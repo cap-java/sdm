@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.service.handler;
 
-import static com.sap.cds.sdm.constants.SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
@@ -17,6 +15,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.*;
@@ -376,16 +375,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      String errorMessage =
-          eventContext
-              .getCdsRuntime()
-              .getLocalizedMessage(
-                  "SDM.Repository.versionedRepoError",
-                  null,
-                  eventContext.getParameterInfo().getLocale());
-      if (errorMessage.equalsIgnoreCase(SDMConstants.VERSIONED_REPO_ERROR_MSG))
-        throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
-      throw new ServiceException(errorMessage);
+      throw new ServiceException(SDMUtils.getErrorMessage("VERSIONED_REPO_ERROR"));
     }
   }
 
@@ -445,7 +435,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
     } catch (Exception e) {
       throw new ServiceException(
-          SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+          SDMErrorMessages.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
     }
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
@@ -477,25 +467,9 @@ public class SDMServiceGenericHandler implements EventHandler {
       logger.info("Successfully edited link");
     } else {
       if (status.equals("unauthorized")) {
-        String errorMessage =
-            context
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Authorization.userNotAuthorizedError",
-                    null,
-                    context.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_MSG))
-          throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
-        throw new ServiceException(errorMessage);
+        throw new ServiceException(SDMUtils.getErrorMessage("SDM_MISSING_ROLES_EXCEPTION"));
       } else {
-        String errorMessage =
-            context
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Link.failedToEditLinkError", null, context.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(SDMConstants.FAILED_TO_EDIT_LINK_MSG))
-          throw new ServiceException(SDMConstants.FAILED_TO_EDIT_LINK);
-        throw new ServiceException(errorMessage);
+        throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_EDIT_LINK"));
       }
     }
     context.setCompleted();
@@ -524,37 +498,25 @@ public class SDMServiceGenericHandler implements EventHandler {
         dbQuery.getAttachmentsForUPIDAndRepository(
             attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
-    String errorMessageAndCount =
+    Long maxCount =
         SDMUtils.getAttachmentCountAndMessage(
             context.getModel().entities().toList(), attachmentEntity);
-    String[] maxCountArr = errorMessageAndCount.split("__");
-    long maxCount = Long.parseLong(maxCountArr[0]);
-    String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
-      if (message != null && !"null".equalsIgnoreCase(message)) {
-        String errorMessage =
-            context
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Attachments.maxCountError", null, context.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(ATTACHMENT_MAXCOUNT_ERROR_MSG))
-          throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
-        throw new ServiceException(errorMessage);
-      }
-      throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+      throw new ServiceException(
+          String.format(SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"), maxCount.toString()));
     }
   }
 
   private void validateLinkName(String filename, Result result) throws ServiceException {
     if (filename == null || filename.isBlank()) {
-      throw new ServiceException(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE);
+      throw new ServiceException(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE"));
     }
     if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.nameConstraintMessage(Collections.singletonList(filename)));
+          SDMErrorMessages.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
-      throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+      throw new ServiceException(SDMErrorMessages.getDuplicateFilesError(filename));
     }
   }
 
@@ -580,20 +542,12 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     switch (status) {
       case "duplicate":
-        throw new ServiceException(SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
+        throw new ServiceException(
+            SDMErrorMessages.getDuplicateFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        String errorMessage =
-            context
-                .getCdsRuntime()
-                .getLocalizedMessage(
-                    "SDM.Authorization.userNotAuthorizedLinkError",
-                    null,
-                    context.getParameterInfo().getLocale());
-        if (errorMessage.equalsIgnoreCase(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK_MSG))
-          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
-        throw new ServiceException(errorMessage);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR_LINK"));
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         cmisDocument.setParentId(upID);
@@ -658,12 +612,12 @@ public class SDMServiceGenericHandler implements EventHandler {
         }
       }
       if (upID == null) {
-        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+        throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
       }
       return upID;
     } catch (Exception e) {
-      logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
-      throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
+      logger.error(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
   }
 }

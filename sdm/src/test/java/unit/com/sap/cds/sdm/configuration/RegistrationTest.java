@@ -17,6 +17,7 @@ import com.sap.cds.services.runtime.CdsRuntimeConfigurer;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -57,6 +58,30 @@ public class RegistrationTest {
     outboxService = mock(OutboxService.class);
     serviceArgumentCaptor = ArgumentCaptor.forClass(Service.class);
     handlerArgumentCaptor = ArgumentCaptor.forClass(EventHandler.class);
+  }
+
+  @AfterEach
+  void tearDown() throws Exception {
+    // Reset cache static fields to null using reflection to prevent cross-test pollution
+    resetCacheField("errorMessageCache");
+    resetCacheField("userTokenCache");
+    resetCacheField("clientCredentialsTokenCache");
+    resetCacheField("userAuthoritiesTokenCache");
+    resetCacheField("repoCache");
+    resetCacheField("secondaryTypesCache");
+    resetCacheField("maxAllowedAttachmentsCache");
+    resetCacheField("secondaryPropertiesCache");
+  }
+
+  private void resetCacheField(String fieldName) throws Exception {
+    try {
+      java.lang.reflect.Field field =
+          com.sap.cds.sdm.caching.CacheConfig.class.getDeclaredField(fieldName);
+      field.setAccessible(true);
+      field.set(null, null);
+    } catch (NoSuchFieldException e) {
+      // Field might not exist, ignore
+    }
   }
 
   @Test

@@ -10,11 +10,11 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMa
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentRestoreEventContext;
 import com.sap.cds.feature.attachments.service.model.servicehandler.DeletionUserInfo;
-import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CopyAttachmentInput;
 import com.sap.cds.sdm.model.MoveAttachmentInput;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceDelegator;
 import com.sap.cds.services.request.UserInfo;
 import java.io.InputStream;
@@ -46,7 +46,7 @@ public class SDMAttachmentsService extends ServiceDelegator
     String[] facetParts = input.facet().split("\\.");
     if (facetParts.length < 2) {
       throw new IllegalArgumentException(
-          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.facet()));
+          String.format(SDMUtils.getErrorMessage("INVALID_FACET_FORMAT_ERROR"), input.facet()));
     }
 
     // The last part is the composition name, everything else is the parent entity
@@ -80,7 +80,8 @@ public class SDMAttachmentsService extends ServiceDelegator
     String[] targetFacetParts = input.targetFacet().split("\\.");
     if (targetFacetParts.length < 2) {
       throw new IllegalArgumentException(
-          String.format(SDMConstants.INVALID_FACET_FORMAT_ERROR, input.targetFacet()));
+          String.format(
+              SDMUtils.getErrorMessage("INVALID_FACET_FORMAT_ERROR"), input.targetFacet()));
     }
 
     // The last part is the composition name, everything else is the parent entity

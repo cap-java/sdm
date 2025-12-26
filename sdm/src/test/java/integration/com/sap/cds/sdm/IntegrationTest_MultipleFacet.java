@@ -2196,7 +2196,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID4);
         if (response.equals("Saved")) {
           String expectedJson =
-              "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"Cannot upload more than 4 attachments.\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(check);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -2244,7 +2244,7 @@ class IntegrationTest_MultipleFacet {
         System.out.println("Result message for attachment " + i + ": " + resultMessage);
 
         String expectedResponse =
-            "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
+            "{\"error\":{\"code\":\"500\",\"message\":\"Cannot upload more than 4 attachments.\"}}";
         if (resultMessage.equals(expectedResponse)) {
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
@@ -3644,9 +3644,9 @@ class IntegrationTest_MultipleFacet {
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
         if (facetName.equals("references")) {
-          assertEquals("Maximum number of attachments reached in English", errorMessage);
+          assertEquals("Cannot upload more than 5 attachments.", errorMessage);
         } else if (facetName.equals("attachments")) {
-          assertEquals("Maximum number of attachments reached in English", errorMessage);
+          assertEquals("Cannot upload more than 4 attachments.", errorMessage);
         }
       }
     }

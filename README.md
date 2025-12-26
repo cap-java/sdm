@@ -456,18 +456,31 @@ Custom properties are supported via the usage of CMIS secondary type properties.
    > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support for Maximum allowed uploads
-This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit and the error message.
+This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit.
 
 Refer the following example from a sample Bookshop app:
 -  maxCount: Specifies the maximum number of documents a user is allowed to upload.
--  maxCountError: Defines the error message displayed when the upload limit (maxCount) is exceeded.
 
 ```cds
   extend entity Books with {
-    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
+    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4};
     }
    
    ``` 
+
+#### Customizing the Maximum Count Error Message
+
+To customize the error message displayed when the upload limit is exceeded, add the following key to your `messages_[languagecode].properties` file under `srv/src/main/resources`:
+
+```properties
+SDM.maxCountErrorMessage = Maximum number of attachments reached
+```
+
+Example for German language in `messages_de.properties`:
+```properties
+SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
+```
+
    > **Note**
    >
    > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
@@ -1221,25 +1234,39 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
 ## Support for Localization
-If the UI fields have to be available in the local language of the leading application ensure to add the below fields in the i18n_[languagecode].properties file under app/_i18n folder.
-Default language translations are present in i18n.properties files. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
 
-Example i18n_de.properties for german language.
-```
+This plugin supports internationalization (i18n) for both UI fields and error messages, allowing you to provide translations in the local language of your leading application.
+
+### UI Fields Localization
+
+To translate UI fields, add the following keys to your `i18n_[languagecode].properties` file located under `app/_i18n` folder.
+
+Default language translations are present in `i18n.properties` files. If the leading application does not provide translations in their language-specific properties files, default English language messages are shown to the user.
+
+Example `i18n_de.properties` for German language:
+```properties
 Attachment=Attachment
 Attachments=Attachments
-Note= Attachment Note
+Note=Attachment Note
 Filename=File Name
 linkUrl=Link Url
 type=Type
- ```
-For the exception messages as well the translation can be done by adding the translation to messages_[languagecode].properties files present under srv/src/main/resources.
-Default language translations are present in messages.properties. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
-
-Example for german language
 ```
-SDM.Attachments.maxCountError = Maximum number of attachments reached in German......
- ```
+
+### Error Messages Localization
+
+The plugin provides error message keys in the `SDMErrorKeys` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorKeys.java). You can override these messages by adding translations to `messages_[languagecode].properties` files in your leading application under `srv/src/main/resources`.
+
+Default messages are present in `SDMErrorMessages` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorMessages.java). If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
+
+Example `messages_de.properties` for German language:
+```properties
+SDM.virusRepoErrorMoreThan400MB=Sie können keine Dateien hochladen, die größer als 400 MB sind
+SDM.userNotAuthorisedError=Sie verfügen nicht über die erforderlichen Berechtigungen zum Hochladen von Anhängen
+SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
+SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
+```
+
 ## Known Restrictions
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.

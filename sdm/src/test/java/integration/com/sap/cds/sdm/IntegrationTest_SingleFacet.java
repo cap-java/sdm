@@ -2157,7 +2157,7 @@ class IntegrationTest_SingleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID4);
         if (response.equals("Saved")) {
           String expectedJson =
-              "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
+              "{\"error\":{\"code\":\"500\",\"message\":\"Cannot upload more than 4 attachments.\"}}";
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(check);
           JsonNode expectedJsonNode = objectMapper.readTree(expectedJson);
@@ -2205,7 +2205,7 @@ class IntegrationTest_SingleFacet {
         System.out.println("Result message for attachment " + i + ": " + resultMessage);
 
         String expectedResponse =
-            "{\"error\":{\"code\":\"500\",\"message\":\"Maximum number of attachments reached in English\"}}";
+            "{\"error\":{\"code\":\"500\",\"message\":\"Cannot upload more than 4 attachments.\"}}";
         if (resultMessage.equals(expectedResponse)) {
           ObjectMapper objectMapper = new ObjectMapper();
           JsonNode actualJsonNode = objectMapper.readTree(resultMessage);
@@ -3292,7 +3292,7 @@ class IntegrationTest_SingleFacet {
         String errorCode = json.getJSONObject("error").getString("code");
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
-        assertEquals("Maximum number of attachments reached in English", errorMessage);
+        assertEquals("Cannot upload more than 4 attachments.", errorMessage);
       }
       String response = api.saveEntityDraft(appUrl, entityName, srvpath, createLinkEntity);
       if (!response.equals("Saved")) {
