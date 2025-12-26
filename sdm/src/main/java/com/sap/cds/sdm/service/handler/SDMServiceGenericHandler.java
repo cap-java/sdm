@@ -467,7 +467,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       logger.info("Successfully edited link");
     } else {
       if (status.equals("unauthorized")) {
-        throw new ServiceException(SDMUtils.getErrorMessage("SDM_MISSING_ROLES_EXCEPTION_MSG"));
+        throw new ServiceException(SDMUtils.getErrorMessage("SDM_MISSING_ROLES_EXCEPTION"));
       } else {
         throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_EDIT_LINK"));
       }
