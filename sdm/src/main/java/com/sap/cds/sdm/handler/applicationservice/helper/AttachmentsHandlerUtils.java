@@ -4,7 +4,7 @@ import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
-import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.common.SDMAssociationCascader;
 import com.sap.cds.sdm.handler.common.SDMAttachmentsReader;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -90,7 +90,7 @@ public class AttachmentsHandlerUtils {
 
       return pathMapping;
     } catch (Exception e) {
-      logger.error(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.error(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
       return new HashMap<>();
     }
   }
@@ -240,7 +240,7 @@ public class AttachmentsHandlerUtils {
         return entityPath;
       }
     } catch (Exception e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
     return null;
   }
@@ -261,7 +261,7 @@ public class AttachmentsHandlerUtils {
             + attachmentPart;
       }
     } catch (Exception e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
     return null;
   }
@@ -301,7 +301,7 @@ public class AttachmentsHandlerUtils {
         List<Map<String, Object>> attachments = (List<Map<String, Object>>) value;
         result.addAll(attachments);
       } catch (ClassCastException e) {
-        logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+        logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
       }
     }
 
@@ -316,7 +316,7 @@ public class AttachmentsHandlerUtils {
       Map<String, Object> nestedMap = (Map<String, Object>) value;
       result.addAll(findNestedAttachments(nestedMap, attachmentKey, parentKey, key));
     } catch (ClassCastException e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
 
     return result;
@@ -335,7 +335,7 @@ public class AttachmentsHandlerUtils {
         }
       }
     } catch (ClassCastException e) {
-      logger.warn(SDMConstants.FETCH_ATTACHMENT_COMPOSITION_ERROR, e.getMessage());
+      logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
     }
 
     return result;
@@ -581,19 +581,21 @@ public class AttachmentsHandlerUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context.getMessages().error(SDMConstants.FILENAME_WHITESPACE_ERROR_MESSAGE + contextInfo);
+      context
+          .getMessages()
+          .error(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE") + contextInfo);
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
       context
           .getMessages()
-          .error(SDMConstants.nameConstraintMessage(restrictedFileNames) + contextInfo);
+          .error(SDMErrorMessages.nameConstraintMessage(restrictedFileNames) + contextInfo);
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
       String formattedMessage =
           String.format(
-              "%s%s", SDMConstants.duplicateFilenameFormat(duplicateFilenames), contextInfo);
+              "%s%s", SDMErrorMessages.duplicateFilenameFormat(duplicateFilenames), contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }
@@ -626,11 +628,16 @@ public class AttachmentsHandlerUtils {
    * @throws ServiceException if filename validation fails
    */
   public static void updateFilenameProperty(
-      String fileNameInDB, String filenameInRequest, Map<String, String> updatedSecondaryProperties)
+      String fileNameInDB,
+      String filenameInRequest,
+      String fileNameInSDM,
+      Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
-        updatedSecondaryProperties.put("filename", filenameInRequest);
+        if (!filenameInRequest.equals(fileNameInSDM)) {
+          updatedSecondaryProperties.put("filename", filenameInRequest);
+        }
       } else {
         throw new ServiceException("Filename cannot be empty");
       }
@@ -643,25 +650,33 @@ public class AttachmentsHandlerUtils {
     }
   }
 
-  /**
-   * Updates the description property in the secondary properties map if needed.
-   *
-   * @param descriptionInDB the description currently in the database
-   * @param descriptionInRequest the description from the request
-   * @param updatedSecondaryProperties the map to update
-   */
   public static void updateDescriptionProperty(
       String descriptionInDB,
       String descriptionInRequest,
-      Map<String, String> updatedSecondaryProperties) {
-    if (descriptionInDB == null) {
-      if (descriptionInRequest != null) {
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+      String descriptionInSDM,
+      Map<String, String> updatedSecondaryProperties,
+      Boolean isUpdate)
+      throws ServiceException {
+    // Normalize null to empty string for comparison
+    String normalizedRequest = descriptionInRequest == null ? "" : descriptionInRequest;
+    String normalizedDB = descriptionInDB == null ? "" : descriptionInDB;
+    String normalizedSDM = descriptionInSDM == null ? "" : descriptionInSDM;
+
+    if (descriptionInDB == null
+        && isUpdate) { // Attachment did not contain description and is being updated now
+      // Only update if the request actually has a value different from what's in SDM
+      if (!normalizedRequest.isEmpty() && !normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
       }
-    } else {
-      if (descriptionInRequest != null && !descriptionInDB.equals(descriptionInRequest)) {
-        updatedSecondaryProperties.put("description", descriptionInRequest);
+    } else if (descriptionInDB
+        == null) { // Attachment contained description during upload and it was changed before
+      // saving or description was added before save handler (create) was called
+      if (!normalizedRequest.equals(normalizedSDM)) {
+        updatedSecondaryProperties.put("description", normalizedRequest);
       }
+    } else if (!normalizedDB.equals(
+        normalizedRequest)) { // Attachment contained description and is being updated now
+      updatedSecondaryProperties.put("description", normalizedRequest);
     }
   }
 
@@ -711,7 +726,7 @@ public class AttachmentsHandlerUtils {
         // Success cases, do nothing
         break;
       default:
-        throw new ServiceException(SDMConstants.SDM_ROLES_ERROR_MESSAGE, (Object[]) null);
+        throw new ServiceException(SDMUtils.getErrorMessage("SDM_SERVER_ERROR"), (Object[]) null);
     }
   }
 
@@ -738,9 +753,11 @@ public class AttachmentsHandlerUtils {
       String descriptionInSDM,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest) {
-    if (e.getMessage().startsWith(SDMConstants.UNSUPPORTED_PROPERTIES)) {
+    if (e.getMessage().startsWith(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES"))) {
       String unsupportedDetails =
-          e.getMessage().substring(SDMConstants.UNSUPPORTED_PROPERTIES.length()).trim();
+          e.getMessage()
+              .substring(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES").length())
+              .trim();
       filesWithUnsupportedProperties.add(unsupportedDetails);
       revertAttachmentProperties(
           attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
@@ -802,5 +819,11 @@ public class AttachmentsHandlerUtils {
     cmisDocument.setDescription(descriptionInRequest);
     cmisDocument.setObjectId(objectId);
     return cmisDocument;
+  }
+
+  public static String getContextInfo(String compositionName, String parentTitle) {
+    return String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
+        + String.format(
+            SDMErrorMessages.CONTEXT_INFO_PAGE, (parentTitle != null ? parentTitle : "Unknown"));
   }
 }

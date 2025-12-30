@@ -5,6 +5,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -87,11 +88,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         String[] parts = attachmentCompositionName.split("\\.");
         compositionName = parts[parts.length - 1];
       }
-      String contextInfo =
-          "\n\nTable: "
-              + compositionName
-              + "\nPage: "
-              + (parentTitle != null ? parentTitle : "Unknown");
+
+      String contextInfo = AttachmentsHandlerUtils.getContextInfo(compositionName, parentTitle);
 
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);
@@ -221,6 +219,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
+    logger.debug("Processing attachment creation - ID: {}, objectId: {}", id, objectId);
+
     // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -229,17 +229,27 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
+
     CmisDocument cmisDocument =
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
 
     // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, updatedSecondaryProperties);
+        fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
-        descriptionInSDM, descriptionInRequest, updatedSecondaryProperties);
+        descriptionInSDM,
+        descriptionInRequest,
+        descriptionInSDM,
+        updatedSecondaryProperties,
+        false);
 
     // Send update to SDM and handle response
+    logger.debug(
+        "Creating attachment in SDM - ID: {}, properties count: {}",
+        id,
+        updatedSecondaryProperties.size());
+
     try {
       int responseCode =
           sdmService.updateAttachments(
@@ -248,6 +258,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               updatedSecondaryProperties,
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
+
+      logger.debug("SDM create response code: {} for attachment ID: {}", responseCode, id);
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
           attachment,
@@ -286,17 +298,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
+          .warn(
+              SDMErrorMessages.nameConstraintMessage(fileNameWithRestrictedCharacters)
+                  + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
           .warn(
-              String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList))
+              String.format(SDMErrorMessages.duplicateFilenameFormat(duplicateFileNameList))
                   + contextInfo);
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       List<String> invalidPropertyNames = new ArrayList<>();
@@ -314,17 +328,21 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       if (!invalidPropertyNames.isEmpty()) {
         context
             .getMessages()
-            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
+            .warn(
+                SDMErrorMessages.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
 
     if (!badRequest.isEmpty()) {
-      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create") + contextInfo);
+          .warn(
+              SDMErrorMessages.noSDMRolesMessage(
+                      noSDMRoles, SDMUtils.getErrorMessage("EVENT_CREATE"))
+                  + contextInfo);
     }
   }
 }

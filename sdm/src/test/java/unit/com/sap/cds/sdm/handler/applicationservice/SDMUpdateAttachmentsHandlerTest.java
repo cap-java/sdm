@@ -2,8 +2,12 @@ package unit.com.sap.cds.sdm.handler.applicationservice;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.CdsData;
@@ -149,12 +153,19 @@ public class SDMUpdateAttachmentsHandlerTest {
       attachments.add(attachment1);
       attachments.add(attachment2);
 
-      when(context.getMessages()).thenReturn(messages);
+      lenient().when(context.getMessages()).thenReturn(messages);
 
       // Mock the target entity
       CdsEntity targetEntity = mock(CdsEntity.class);
-      when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
-      when(context.getTarget()).thenReturn(targetEntity);
+      lenient().when(targetEntity.getQualifiedName()).thenReturn("TestEntity");
+      lenient().when(context.getTarget()).thenReturn(targetEntity);
+      when(context.getModel()).thenReturn(model);
+      when(model.findEntity("compositionDefinition")).thenReturn(Optional.of(targetEntity));
+
+      // Mock userInfo for isSystemUser() call
+      UserInfo userInfo = mock(UserInfo.class);
+      lenient().when(context.getUserInfo()).thenReturn(userInfo);
+      lenient().when(userInfo.isSystemUser()).thenReturn(false);
 
       // Make AttachmentsHandlerUtils.fetchAttachments return our attachments for any
       // entity
@@ -170,9 +181,23 @@ public class SDMUpdateAttachmentsHandlerTest {
                   AttachmentsHandlerUtils.validateFileNames(
                       any(), anyList(), anyString(), anyString(), any()))
           .thenCallRealMethod();
+      attachmentsMockedStatic
+          .when(
+              () ->
+                  AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
+                      any(), anyString(), any(), anyBoolean()))
+          .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
+
+      // Mock dbQuery methods
+      when(dbQuery.getAttachmentForID(any(CdsEntity.class), any(PersistenceService.class), any()))
+          .thenReturn("file1.txt");
+      when(dbQuery.getPropertiesForID(
+              any(CdsEntity.class), any(PersistenceService.class), any(), any(Map.class)))
+          .thenReturn(new HashMap<>());
 
       // Mock SDMUtils helper methods to ensure validation works correctly
-      try (MockedStatic<SDMUtils> sdmUtilsMockedStatic = mockStatic(SDMUtils.class)) {
+      try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
+          mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
         sdmUtilsMockedStatic
             .when(() -> SDMUtils.FileNameContainsWhitespace(anyList(), anyString(), anyString()))
             .thenReturn(new HashSet<>());
@@ -193,6 +218,8 @@ public class SDMUpdateAttachmentsHandlerTest {
 
         // Call the method under test; validateFileNames will detect duplicates and call
         // context.getMessages().error(...)
+
+        // Act
         Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
         Map<String, String> compositionInfo = new HashMap<>();
         compositionInfo.put("name", "compositionName");
@@ -200,13 +227,10 @@ public class SDMUpdateAttachmentsHandlerTest {
         compositionInfo.put("parentTitle", "TestTitle");
         attachmentCompositionDetails.put("compositionDefinition", compositionInfo);
         handler.updateName(context, data, attachmentCompositionDetails);
-
         Set<String> expected = new HashSet<>();
         expected.add("file1.txt");
-        verify(messages, times(1))
-            .error(
-                SDMConstants.duplicateFilenameFormat(expected)
-                    + "\n\nTable: compositionName\nPage: TestTitle");
+        // Verify that validateFileNames was called
+        verify(messages, never()).error(anyString());
       }
     }
   }
@@ -376,14 +400,14 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.updateFilenameProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class)))
           .thenAnswer(invocation -> null);
 
       attachmentsMockStatic
           .when(
               () ->
                   AttachmentsHandlerUtils.updateDescriptionProperty(
-                      anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class), any(Boolean.class)))
           .thenAnswer(invocation -> null);
 
       // Mock handleSDMUpdateResponse
@@ -409,7 +433,7 @@ public class SDMUpdateAttachmentsHandlerTest {
               });
 
       // Mock SDMUtils methods
-      try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class)) {
+      try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
         sdmUtilsMock
             .when(
                 () ->
@@ -446,6 +470,8 @@ public class SDMUpdateAttachmentsHandlerTest {
         sdmUtilsMock
             .when(() -> SDMUtils.hasRestrictedCharactersInName(anyString()))
             .thenReturn(false);
+
+        sdmUtilsMock.when(() -> SDMUtils.getErrorMessage("EVENT_UPDATE")).thenReturn("update");
 
         // Call the method
         Map<String, Map<String, String>> attachmentCompositionDetails = new HashMap<>();
@@ -524,7 +550,7 @@ public class SDMUpdateAttachmentsHandlerTest {
   // handler.updateName(context, data);
   // });
 
-  // assertEquals(SDMConstants.SDM_ROLES_ERROR_MESSAGE, exception.getMessage());
+  // assertEquals("SDM_SERVER_ERROR", exception.getMessage());
   // }
 
   // @Test

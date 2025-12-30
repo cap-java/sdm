@@ -156,7 +156,7 @@ public class SDMUtilsTest {
     Map<String, String> secondaryProperties = new HashMap<>();
     secondaryProperties.put("filename", "myfile.txt");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertEquals("cmis:name", requestBody.get("propertyId[1]"));
     assertEquals("myfile.txt", requestBody.get("propertyValue[1]"));
@@ -169,7 +169,7 @@ public class SDMUtilsTest {
     secondaryProperties.put("author", "test user");
     secondaryProperties.put("subject", "JUnit Testing");
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertEquals("author", requestBody.get("propertyId[1]"));
     assertEquals("test user", requestBody.get("propertyValue[1]"));
@@ -182,7 +182,7 @@ public class SDMUtilsTest {
     Map<String, String> requestBody = new HashMap<>();
     Map<String, String> secondaryProperties = new HashMap<>();
 
-    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties);
+    SDMUtils.prepareSecondaryProperties(requestBody, secondaryProperties, true);
 
     assertTrue(requestBody.isEmpty());
   }
@@ -683,16 +683,16 @@ public class SDMUtilsTest {
   public void testGetAttachmentCountAndMessage_CachePresent() {
     try (MockedStatic<CacheConfig> cacheConfigMockedStatic = mockStatic(CacheConfig.class)) {
       Cache mockCache = mock(Cache.class);
-      String errorMessageCount = "1__Only one attachment allowed";
+      Long errorMessageCount = 1L;
       cacheConfigMockedStatic
           .when(CacheConfig::getMaxAllowedAttachmentsCache)
           .thenReturn(mockCache);
       when(mockCache.get(any())).thenReturn(errorMessageCount);
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
 
       // Assert the result - no processing occurs so default is used
-      assertEquals("1__Only one attachment allowed", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -718,10 +718,10 @@ public class SDMUtilsTest {
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(entityOne, entityTwo);
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
 
       // Assert the result
-      assertEquals("0__null", result);
+      assertEquals(0L, result);
     }
   }
 
@@ -847,17 +847,12 @@ public class SDMUtilsTest {
 
             public Stream<CdsElement> compositions() {
               CdsElement element1 = mock(CdsElement.class);
-              CdsElement element2 = mock(CdsElement.class);
-              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
-              when(element2.getQualifiedName()).thenReturn("demo.abcd:nnn");
               when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT))
                   .thenReturn(Optional.of(maxcountAnnotation));
-              when(element1.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG))
-                  .thenReturn(Optional.of(errormsgAnnotation));
               when(maxcountAnnotation.getValue()).thenReturn("1");
-              when(errormsgAnnotation.getValue()).thenReturn("Only 1 attachment allowed");
+              when(element1.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
 
-              List<CdsElement> compositions = List.of(element1, element2);
+              List<CdsElement> compositions = List.of(element1);
 
               // Create a Stream from the List of CdsElements
               return compositions.stream();
@@ -867,9 +862,9 @@ public class SDMUtilsTest {
       entities = List.of(mainEntity);
       // when(cds)
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("1__Only 1 attachment allowed", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -1011,9 +1006,9 @@ public class SDMUtilsTest {
       entities = List.of(mainEntity);
       // when(cds)
       // Invoke the method
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("1__null", result);
+      assertEquals(1L, result);
     }
   }
 
@@ -1148,9 +1143,9 @@ public class SDMUtilsTest {
           };
       when(attachmentEntity.getQualifiedName()).thenReturn("com.sap.demo.EntityOne.Attachments");
       entities = List.of(mainEntity);
-      String result = getAttachmentCountAndMessage(entities, attachmentEntity);
+      Long result = getAttachmentCountAndMessage(entities, attachmentEntity);
       // Assert the result
-      assertEquals("0__null", result);
+      assertEquals(0L, result);
     }
   }
 
@@ -1485,9 +1480,9 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop3", "Property 3");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "oldValue1");
-    propertiesInDB.put("prop2", "oldValue2");
-    propertiesInDB.put("prop3", "unchangedValue");
+    propertiesInDB.put("Property 1", "oldValue1");
+    propertiesInDB.put("Property 2", "oldValue2");
+    propertiesInDB.put("Property 3", "unchangedValue");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1512,7 +1507,7 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop1", "Property 1");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "oldValue");
+    propertiesInDB.put("Property 1", "oldValue");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1535,7 +1530,7 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop1", "Property 1");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", null);
+    propertiesInDB.put("Property 1", null);
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1560,8 +1555,8 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop2", "Property 2");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "sameValue1");
-    propertiesInDB.put("prop2", "sameValue2");
+    propertiesInDB.put("Property 1", "sameValue1");
+    propertiesInDB.put("Property 2", "sameValue2");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -1631,10 +1626,10 @@ public class SDMUtilsTest {
     secondaryTypeProperties.put("prop4", "Property 4");
 
     Map<String, String> propertiesInDB = new HashMap<>();
-    propertiesInDB.put("prop1", "old1");
-    propertiesInDB.put("prop2", "old2");
-    propertiesInDB.put("prop3", null);
-    propertiesInDB.put("prop4", "same4");
+    propertiesInDB.put("Property 1", "old1");
+    propertiesInDB.put("Property 2", "old2");
+    propertiesInDB.put("Property 3", null);
+    propertiesInDB.put("Property 4", "same4");
 
     Map<String, String> result =
         SDMUtils.getUpdatedSecondaryProperties(

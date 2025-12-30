@@ -21,6 +21,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Link as attachments: Provides the capability to support link or URL as attachments.
 - Edit Link-type attachments: Provides the capability to update URL of link-type attachments.
 - Move attachments: Provides the capability to move attachments from one entity to another entity.
+- Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 ## Table of Contents
 
@@ -35,6 +36,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
 - [Support for Move attachments](#support-for-move-attachments)
+- [Support for Attachment changelog](#support-for-attachment-changelog)
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
@@ -454,18 +456,31 @@ Custom properties are supported via the usage of CMIS secondary type properties.
    > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
 
 ## Support for Maximum allowed uploads
-This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit and the error message.
+This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit.
 
 Refer the following example from a sample Bookshop app:
 -  maxCount: Specifies the maximum number of documents a user is allowed to upload.
--  maxCountError: Defines the error message displayed when the upload limit (maxCount) is exceeded.
 
 ```cds
   extend entity Books with {
-    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4, maxCountError:'Only 4 attachments allowed.'};
+    attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4};
     }
    
    ``` 
+
+#### Customizing the Maximum Count Error Message
+
+To customize the error message displayed when the upload limit is exceeded, add the following key to your `messages_[languagecode].properties` file under `srv/src/main/resources`:
+
+```properties
+SDM.maxCountErrorMessage = Maximum number of attachments reached
+```
+
+Example for German language in `messages_de.properties`:
+```properties
+SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
+```
+
    > **Note**
    >
    > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
@@ -706,6 +721,224 @@ The move operation returns a list of failed attachments with detailed failure re
 5. **Handle rollback scenarios gracefully** - rolled back attachments remain in the source folder.
 
 > **CRITICAL**: To preserve custom properties attached with attachments on UI, ensure these properties are defined in the target entity. If custom properties are not present in the target entity definition, they will be lost after the move and will not be visible on the UI.
+
+## Support for attachment changelog
+
+The changelog feature provides a complete audit trail of operations performed on an attachment throughout its lifecycle. It tracks creation, modifications with detailed metadata including who made the change, when it occurred.
+
+### Overview
+
+The changelog functionality retrieves the complete history of an attachment from SAP Document Management Service, including:
+
+- **Creation events**: Initial upload information
+- **Modification events**: Updates to file properties
+- **Property changes**: Changes to metadata, description, or custom properties
+- **User information**: Who performed each action
+- **Timestamps**: When each change occurred
+
+### Integration with UI
+
+To enable changelog viewing in your CAP application:
+
+1. **Add a custom controller extension** 
+
+   In webapp/controller/custom.controller.js, copy and paste below content.
+   
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
+   
+   ```js
+   sap.ui.define(
+    [
+    "sap/ui/core/mvc/ControllerExtension",
+    "sap/ui/core/format/DateFormat"
+    ], 
+   function (ControllerExtension, DateFormat) {
+      "use strict";
+      const ChangeCategoryEnum = {
+            created: "Created",
+            updated: "Changed"
+            // Add more mappings as needed
+      };
+    
+      return ControllerExtension.extend("books.controller.custom", {
+         onChangelogPress: function(oContext, aSelectedContexts) {
+               var that =this;
+               this.base.editFlow
+               .invokeAction("AdminService.changelog", {
+                  contexts: aSelectedContexts
+               })
+               .then(function (res) {
+                  console.log("Result",res[0].value.getObject().value);
+                  that.updateChangeLogInPropertiesModel(res[0].value.getObject().value);
+               });
+         },
+         updateChangeLogInPropertiesModel: function (oChangeLogsForObjectResponse) {
+               const aChangeLogs = [];
+               const fileName = JSON.parse(oChangeLogsForObjectResponse).filename;
+               const aChangeLogsObject = JSON.parse(oChangeLogsForObjectResponse)["changeLogs"];
+               // Take latest changes at the top
+               for (let idx = aChangeLogsObject.length - 1; idx >= 0; idx--) {
+                  const oChangeLogEntry = aChangeLogsObject[idx];
+                  const sLastModifiedBy = oChangeLogEntry["user"];
+                  const sChangeType = oChangeLogEntry["operation"];
+                  const sChangeTime = oChangeLogEntry["time"];
+                  let dateTimeFormat = DateFormat.getDateTimeInstance(sap.ui.getCore().getConfiguration().getLocale());
+                  let changedDate = new Date(sChangeTime);
+                  let changedTime = changedDate?dateTimeFormat.format(new Date(changedDate)) : "" ;
+                  const oChangeLog = {
+                     changedOn: changedTime,
+                     changedBy: sLastModifiedBy,
+                     changeType: ChangeCategoryEnum[sChangeType]
+                  };
+                  aChangeLogs.push(oChangeLog);
+               }
+
+               this.logFragment= this.base.getExtensionAPI().loadFragment({
+                  name: "books.fragments.changelog",
+                  controller: this
+               });
+               var that = this;
+               this.logFragment.then(function (dialog) {
+                  if(dialog){
+                     dialog.attachEventOnce("afterClose", function () {
+                           dialog.destroy();
+                     });
+                     var oModel = new sap.ui.model.json.JSONModel();
+                     oModel.setSizeLimit(100000);
+                     oModel.setData(aChangeLogs);
+                     that.getView().setModel(oModel, "changelog");
+                     dialog.setTitle(fileName);
+                     dialog.open()
+                  }
+               });
+         },
+         close: function (closeBtn) {
+               closeBtn.getSource().getParent().close();
+         }
+      });
+   });
+   ```
+   
+   - Replace `books` in `ControllerExtension.extend` with the `SAPUI5.Component` name from your `app/appconfig/fioriSandboxConfig.json` file. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86).
+   - Replace `AdminService` in `invokeAction("AdminService.changelog")` with the name of your service.
+
+2. **Add changelog.fragment.xml**
+
+   In webapp/fragments/changelog.fragment.xml, copy and paste below content.
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/fragments/changelog.fragment.xml) from a sample Bookshop app.
+
+   ```xml
+   <core:FragmentDefinition 
+      xmlns:core="sap.ui.core"
+      xmlns:uxap="sap.uxap"
+      xmlns="sap.m">
+      <Dialog title="Change Log" id = "changelogDialog" resizable="true" contentWidth="50%"
+         contentHeight="50%" draggable="true" class="sapUiSizeCompact" verticalScrolling="true">
+         <content>
+            
+            <IconTabBar
+               id="idIconTabBarNoIcons"
+                  class="mcmPropertiesSections" isChildPage="true" enableLazyLoading="true" upperCaseAnchorBar="false" stretchContentHeight= "true">
+               <items>
+                     <IconTabFilter text="Change Log" key="info">
+                        <Table id="idChangeLogTable" items="{path:'changelog>/', templateShareable:false}"
+                           noDataText="{i18n>LoadingData}">
+                        <columns>
+                              <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                                 <Text text="Category"/>
+                              </Column>
+                              <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                                 <Text text="Changed By"/>
+                              </Column>
+                              <Column demandPopin="true" popinDisplay="Inline" minScreenWidth="Large">
+                                 <Text text="Changed On"/>
+                              </Column>
+                        </columns>
+                        <items>
+                              <ColumnListItem>
+                                 <cells>
+                                    <Text text="{changelog>changeType}"/>
+                                    <Text text="{changelog>changedBy}"/>
+                                    <Text text="{changelog>changedOn}"/>
+                                 </cells>
+                              </ColumnListItem>
+                        </items>
+                     </Table>
+                     </IconTabFilter>
+               </items>
+            </IconTabBar>                 
+                                 
+            </content>
+               
+            <endButton>
+               <Button text="Close" press=".close" />
+            </endButton>
+         </Dialog>
+         </core:FragmentDefinition>
+   ```
+
+3. **Add the `changelog` action to your application's service definition**
+
+   See this [example](https://github.com/cap-java/sdm/blob/396339d3182f1debe96a3134c42b17b609357d9a/cap-notebook/demoapp/srv/admin-service.cds#L39) from a sample Bookshop app.
+
+   ```cds
+   action changelog() returns String;
+   ```
+
+4. **Custom Action Button Configuration**
+
+   To add a custom action button (e.g., "Change Log") to your table that is enabled only when a single row is selected, add the following configuration to your `manifest.json`.
+   See this [example](https://github.com/cap-java/sdm/blob/396339d3182f1debe96a3134c42b17b609357d9a/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L143) from a sample Bookshop app.
+   
+   ```json
+   "controlConfiguration": {
+      "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+         "tableSettings": {
+            "type": "ResponsiveTable",
+            "selectionMode": "Auto"
+         },
+         "actions": {
+            "changelog": {
+            "enableOnSelect": "single",
+            "text": "Change Log",
+            "requiresSelection": true,
+            "press": ".extension.books.controller.custom.onChangelogPress",
+            "command": "COMMON",
+            "position": { 
+               "anchor": "StandardAction::Create", 
+               "placement": "After" 
+            }
+            }
+         }
+      }
+   }
+   ```
+   - Replace `attachments` with your entity’s facet name as needed.
+   - Repeat for other facets's if required.
+   - Replace `books` in `"press": ".extension.books.controller.custom.onChangelogPress"` with the SAPUI5.Component name from your 
+   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+
+   ### Configuration Properties
+
+   | Property | Value | Description |
+   |----------|-------|-------------|
+   | `enableOnSelect` | `"single"` | Button is enabled only when exactly one row is selected |
+   | `requiresSelection` | `true` | Button is disabled when no rows are selected |
+   | `press` | `".extension.books.controller.custom.onChangelogPress"` | Reference to the controller method that handles the button click |
+   | `command` | `"COMMON"` | Makes the button available in the table toolbar |
+   | `position` | `{ "anchor": "StandardAction::Create", "placement": "After" }` | Controls where the button appears relative to standard actions (e.g., after the Create button) |
+
+   ### Behavior
+
+   The button will automatically be:
+
+   | Status | Condition |
+   |--------|-----------|
+   | ✅ Enabled | When exactly one item is selected |
+   | ❌ Disabled | When no items are selected |
+   | ❌ Disabled | When multiple items are selected |
+   
+
 
 ## Support for link type attachments
 
@@ -1001,25 +1234,39 @@ annotate Attachments with @Common: {SideEffects #ContentChanged: {
 - Repeat for other entities and elements if you have defined multiple `composition of many Attachments`.
 
 ## Support for Localization
-If the UI fields have to be available in the local language of the leading application ensure to add the below fields in the i18n_[languagecode].properties file under app/_i18n folder.
-Default language translations are present in i18n.properties files. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
 
-Example i18n_de.properties for german language.
-```
+This plugin supports internationalization (i18n) for both UI fields and error messages, allowing you to provide translations in the local language of your leading application.
+
+### UI Fields Localization
+
+To translate UI fields, add the following keys to your `i18n_[languagecode].properties` file located under `app/_i18n` folder.
+
+Default language translations are present in `i18n.properties` files. If the leading application does not provide translations in their language-specific properties files, default English language messages are shown to the user.
+
+Example `i18n_de.properties` for German language:
+```properties
 Attachment=Attachment
 Attachments=Attachments
-Note= Attachment Note
+Note=Attachment Note
 Filename=File Name
 linkUrl=Link Url
 type=Type
- ```
-For the exception messages as well the translation can be done by adding the translation to messages_[languagecode].properties files present under srv/src/main/resources.
-Default language translations are present in messages.properties. If leading application does not provide any keys and values in their language properties files then default english language messages are shown to the user.
-
-Example for german language
 ```
-SDM.Attachments.maxCountError = Maximum number of attachments reached in German......
- ```
+
+### Error Messages Localization
+
+The plugin provides error message keys in the `SDMErrorKeys` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorKeys.java). You can override these messages by adding translations to `messages_[languagecode].properties` files in your leading application under `srv/src/main/resources`.
+
+Default messages are present in `SDMErrorMessages` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorMessages.java). If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
+
+Example `messages_de.properties` for German language:
+```properties
+SDM.virusRepoErrorMoreThan400MB=Sie können keine Dateien hochladen, die größer als 400 MB sind
+SDM.userNotAuthorisedError=Sie verfügen nicht über die erforderlichen Berechtigungen zum Hochladen von Anhängen
+SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
+SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
+```
+
 ## Known Restrictions
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.
