@@ -8,7 +8,7 @@ using {
 
 
 type UploadStatusCode : String(32) enum {
-   UploadInProgress;
+   uploading;
    Success;
    Failed;
    VirusDetected;
@@ -20,7 +20,7 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-    uploadStatus : UploadStatusCode default 'UploadInProgress' ;
+    uploadStatus : UploadStatusCode default 'uploading' ;
     uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
    }
      entity UploadScanStates : CodeList {

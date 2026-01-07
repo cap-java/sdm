@@ -23,6 +23,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Move attachments: Provides the capability to move attachments from one entity to another entity.
 - Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
+- Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
+
 ## Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
@@ -40,6 +42,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
+- [Support for Upload Status](#support-for-uploadstatus)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -1239,6 +1242,31 @@ Default language translations are present in messages.properties. If leading app
 Example for german language
 ```
 SDM.Attachments.maxCountError = Maximum number of attachments reached in German......
+ ```
+
+## Support for Attachment Upload Status
+
+The attachment upload process displays a status indicator for each file being uploaded.
+
+**For repositories without virus scanning:**
+The upload status transitions from "Uploading" to "Success".
+
+**For repositories with malware scanning:**
+The upload status transitions from "Uploading" to "Success" if no virus is detected. If a virus is detected, the attachment is automatically deleted.
+
+**For repositories with Trend Micro virus scanning:**
+The upload status transitions from "Uploading" to "Virus Scanning in Progress". After refreshing the page, if the scan completes successfully and the attachment is virus-free, the status changes to "Success". If a virus is detected, the status changes to "Virus Detected" and the user must manually delete the file before saving the entity.
+
+**Note:** Files with "Virus Scanning in Progress" or "Virus Detected" status cannot be downloaded or viewed.
+
+To display color-coded status indicators in the UI, create a `sap.attachments-UploadScanStates.csv` file in the `db/data` folder with the following content:
+```
+code;name;criticality
+uploading;Uploading;5
+Success;Success;3
+Failed;Scan Failed;1
+VirusDetected;Virus detected;1
+VirusScanInprogress;Virus scanning inprogress(refresh page);5
  ```
 ## Known Restrictions
 

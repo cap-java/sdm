@@ -195,28 +195,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           || !scanFailedFiles.isEmpty()) {
         StringBuilder errorMessage = new StringBuilder();
         if (!virusDetectedFiles.isEmpty()) {
-          errorMessage
-              .append("Virus detected in the following file(s): ")
-              .append(String.join(", ", virusDetectedFiles))
-              .append(". Please delete them.");
+          errorMessage.append(SDMConstants.virusDetectedFilesMessage(virusDetectedFiles));
         }
         if (!virusScanInProgressFiles.isEmpty()) {
           if (errorMessage.length() > 0) {
             errorMessage.append(" ");
           }
-          errorMessage
-              .append("Virus scanning is in progress for the following file(s): ")
-              .append(String.join(", ", virusScanInProgressFiles))
-              .append(". Please refresh the page to see the effect.");
+          errorMessage.append(
+              SDMConstants.virusScanInProgressFilesMessage(virusScanInProgressFiles));
         }
         if (!scanFailedFiles.isEmpty()) {
           if (errorMessage.length() > 0) {
             errorMessage.append(" ");
           }
-          errorMessage
-              .append("Scan failed for the following file(s): ")
-              .append(String.join(", ", scanFailedFiles))
-              .append(". Please delete the files and retry.");
+          errorMessage.append(SDMConstants.scanFailedFilesMessage(scanFailedFiles));
         }
         throw new ServiceException(errorMessage.toString());
       }

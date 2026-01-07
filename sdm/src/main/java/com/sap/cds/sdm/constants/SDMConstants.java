@@ -166,11 +166,17 @@ public class SDMConstants {
       "\"%s\" contains unsupported characters (‘/’ or ‘\\’). Rename and try again.";
   public static final String SINGLE_DUPLICATE_FILENAME =
       "An object named \"%s\" already exists. Rename the object and try again.";
+  public static final String VIRUS_DETECTED_ERROR_MSG =
+      "You can't save your changes because some files are unsafe. Delete the unsafe files manually before continuing. You can use a filter to help you find the affected files.";
+  public static final String SCAN_FAILED_ERROR_MSG =
+      "You can't save your changes because some files not scanned. Delete the unscanned files manually before continuing.";
+  public static final String VIRUS_SCAN_IN_PROGRESS_ERROR_MSG =
+      "Refresh the page to see scanning is completed.";
 
   // Upload Status Constants
   public static final String UPLOAD_STATUS_SUCCESS = "Success";
   public static final String UPLOAD_STATUS_VIRUS_DETECTED = "VirusDetected";
-  public static final String UPLOAD_STATUS_IN_PROGRESS = "UploadInProgress";
+  public static final String UPLOAD_STATUS_IN_PROGRESS = "uploading";
   public static final String UPLOAD_STATUS_FAILED = "Failed";
   public static final String UPLOAD_STATUS_SCAN_FAILED = "Failed";
   public static final String VIRUS_SCAN_INPROGRESS = "VirusScanInprogress";
@@ -331,5 +337,56 @@ public class SDMConstants {
 
   public static String getVirusFilesError(String filename) {
     return String.format(VIRUS_ERROR, filename);
+  }
+
+  public static String virusDetectedFilesMessage(List<String> files) {
+    // Create the base message
+    String prefixMessage = "We detected a virus, for the following files: \n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each file name to the StringBuilder
+    for (String file : files) {
+      bulletPoints.append(String.format("\t• %%s%%n", file));
+    }
+    bulletPoints.append(System.lineSeparator());
+    bulletPoints.append(VIRUS_DETECTED_ERROR_MSG);
+
+    return bulletPoints.toString();
+  }
+
+  public static String scanFailedFilesMessage(List<String> files) {
+    // Create the base message
+    String prefixMessage = "The virus scan failed, for the following files: \n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each file name to the StringBuilder
+    for (String file : files) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append(System.lineSeparator());
+    bulletPoints.append(SCAN_FAILED_ERROR_MSG);
+
+    return bulletPoints.toString();
+  }
+
+  public static String virusScanInProgressFilesMessage(List<String> files) {
+    // Create the base message
+    String prefixMessage = "The virus scanning is in progress for the following files: \n\n";
+
+    // Initialize the StringBuilder with the formatted message prefix
+    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
+
+    // Append each file name to the StringBuilder
+    for (String file : files) {
+      bulletPoints.append(String.format("\t• %s%n", file));
+    }
+    bulletPoints.append(System.lineSeparator());
+    bulletPoints.append(VIRUS_SCAN_IN_PROGRESS_ERROR_MSG);
+
+    return bulletPoints.toString();
   }
 }
