@@ -106,5 +106,5 @@ resources:
   - name: sdm
     type: org.cloudfoundry.managed-service
     parameters:
-      service: sdm
+      service: sdm-test
       service-plan: standard

@@ -72,7 +72,7 @@ annotate my.Books.attachments with @UI: {
     {Value: note, @HTML5.CssDefaults: {width: '10%'}},
     {
         Value             : uploadStatus,
-        Criticality: statusNav.criticality,
+        Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
         @HTML5.CssDefaults: {width: '15%'},
         @UI.Hidden: IsActiveEntity      },
@@ -121,7 +121,8 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
-  uploadStatus  @(title: '{i18n>UploadStatus}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+
   modifiedAt @(odata.etag: null);
   content
     @Core.ContentDisposition: { Filename: fileName }
@@ -151,6 +152,12 @@ annotate my.Books.references with @UI: {
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
     {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+     {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '15%'},
+        @UI.Hidden: IsActiveEntity      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -197,6 +204,7 @@ annotate my.Books.references with @UI: {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
   modifiedAt @(odata.etag: null);
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
