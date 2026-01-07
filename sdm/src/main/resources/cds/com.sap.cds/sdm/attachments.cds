@@ -20,37 +20,15 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
+    uploadStatus : UploadStatusCode default 'UploadInProgress' ;
+    uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
    }
-extend aspect MediaData with {
-   uploadStatus : UploadStatusCode default 'UploadInProgress' ;
-   uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
-
-}
      entity UploadScanStates : CodeList {
          key code        : UploadStatusCode @Common.Text: name  @Common.TextArrangement: #TextOnly;
              name        : String(64) ;
              criticality : Integer     @UI.Hidden;
      }
 
-annotate MediaData with @UI.MediaResource: {Stream: content} {
-    content   @(
-        title                           : '{i18n>attachment_content}',
-        Core.MediaType                  : mimeType,
-        Core.ContentDisposition.Filename: fileName,
-        Core.ContentDisposition.Type    : 'inline'
-    );
-    mimeType  @(
-        title: '{i18n>attachment_mimeType}',
-        Core.IsMediaType
-    );
-    fileName  @(
-        title: '{i18n>attachment_fileName}',
-        UI.MultiLineText
-        );
-    uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
-    contentId @(UI.Hidden: true);
-    scannedAt @(UI.Hidden: true);
-}
 annotate Attachments with @UI: {
 
     HeaderInfo: {
@@ -77,6 +55,7 @@ annotate Attachments with @UI: {
     note       @(title: '{i18n>Description}', UI.MultiLineText);
     fileName  @(title: '{i18n>Filename}');
        modifiedAt @(odata.etag: null);
+       uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
     content
        @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
         @(title: '{i18n>Attachment}');
