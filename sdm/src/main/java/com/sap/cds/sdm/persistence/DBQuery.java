@@ -206,7 +206,9 @@ public class DBQuery {
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
       cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
     }
     return cmisDocument;
   }
@@ -446,7 +448,9 @@ public class DBQuery {
       cmisDocument.setAttachmentId(row.get("ID").toString());
       cmisDocument.setObjectId(row.get("objectId").toString());
       cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       cmisDocuments.add(cmisDocument);
     }
     if (cmisDocuments.isEmpty()) {
@@ -471,7 +475,9 @@ public class DBQuery {
         cmisDocument.setAttachmentId(row.get("ID").toString());
         cmisDocument.setObjectId(row.get("objectId").toString());
         cmisDocument.setUploadStatus(
-            row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
         cmisDocuments.add(cmisDocument);
       }
     }
@@ -514,7 +520,9 @@ public class DBQuery {
     boolean isAttachmentFound = false;
     for (Row row : result.list()) {
       cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       isAttachmentFound = true;
     }
     if (!isAttachmentFound) {
@@ -526,7 +534,9 @@ public class DBQuery {
       result = persistenceService.run(q);
       for (Row row : result.list()) {
         cmisDocument.setUploadStatus(
-            row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       }
     }
     return cmisDocument;
@@ -566,7 +576,9 @@ public class DBQuery {
           row.get("repositoryId") != null ? row.get("repositoryId").toString() : null);
       cmisDocument.setMimeType(row.get("mimeType") != null ? row.get("mimeType").toString() : null);
       cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       attachments.add(cmisDocument);
     }
     return attachments;
@@ -592,11 +604,11 @@ public class DBQuery {
             .where(doc -> doc.get(upIdKey).eq(upID));
     Result selectRes = persistenceService.run(q);
     for (Row row : selectRes.list()) {
-      if (row.get("uploadStatus") != null
-          && row.get("uploadStatus")
-              .toString()
-              .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)
-          && row.get("objectId") != null) {
+      if (row.get("uploadStatus") == null
+          || row.get("uploadStatus")
+                  .toString()
+                  .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)
+              && row.get("objectId") != null) {
         CqnUpdate updateQuery =
             Update.entity(attachmentEntity)
                 .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
@@ -606,7 +618,10 @@ public class DBQuery {
                             .eq(upID)
                             .and(
                                 doc.get("uploadStatus")
-                                    .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
+                                    .isNull()
+                                    .or(
+                                        doc.get("uploadStatus")
+                                            .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))));
 
         Result r = persistenceService.run(updateQuery);
       }

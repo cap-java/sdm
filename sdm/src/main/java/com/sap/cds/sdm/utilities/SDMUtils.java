@@ -485,6 +485,12 @@ public class SDMUtils {
         whereArray = refArray;
       }
 
+      // Check if whereArray is missing or empty
+      if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
+        logger.warn("No WHERE condition found in CQN query");
+        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+      }
+
       // Get the actual key field names from the parent entity
       List<String> keyElementNames = getKeyElementNames(parentEntity);
 
