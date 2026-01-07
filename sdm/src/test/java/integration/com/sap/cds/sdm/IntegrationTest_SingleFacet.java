@@ -4650,15 +4650,14 @@ class IntegrationTest_SingleFacet {
 
     // Move attachments from source to target with sourceFacet
     String sourceFacet = serviceName + "." + entityName + "." + facetName;
-    Map<String, Object> moveResult =
-        api.moveAttachment(
-            appUrl,
-            entityName,
-            facetName,
-            moveTargetEntity,
-            moveSourceFolderId,
-            moveObjectIds,
-            sourceFacet);
+    api.moveAttachment(
+        appUrl,
+        entityName,
+        facetName,
+        moveTargetEntity,
+        moveSourceFolderId,
+        moveObjectIds,
+        sourceFacet);
 
     // Save target entity after move
     String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
@@ -4807,15 +4806,14 @@ class IntegrationTest_SingleFacet {
     }
 
     // Move attachments from source to target with sourceFacet
-    Map<String, Object> moveResult =
-        api.moveAttachment(
-            appUrl,
-            entityName,
-            facetName,
-            moveTargetEntity,
-            moveSourceFolderId,
-            moveObjectIds,
-            "AdminService.Books.attachments");
+    api.moveAttachment(
+        appUrl,
+        entityName,
+        facetName,
+        moveTargetEntity,
+        moveSourceFolderId,
+        moveObjectIds,
+        "AdminService.Books.attachments");
 
     // Save target entity after move
     String saveMoveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
