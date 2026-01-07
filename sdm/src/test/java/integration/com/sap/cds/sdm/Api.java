@@ -728,6 +728,67 @@ public class Api implements ApiInterface {
     }
   }
 
+  public Map<String, Object> moveAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String targetEntityID,
+      String sourceFolderId,
+      List<String> objectIds,
+      String sourceFacet)
+      throws IOException {
+    String objectIdsString = String.join(",", objectIds);
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + targetEntityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + serviceName
+            + ".moveAttachments";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    StringBuilder jsonPayload = new StringBuilder();
+    jsonPayload.append("{");
+    jsonPayload.append("\"sourceFolderId\": \"").append(sourceFolderId).append("\",");
+    jsonPayload.append("\"up__ID\": \"").append(targetEntityID).append("\",");
+    jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\"");
+
+    if (sourceFacet != null && !sourceFacet.isEmpty()) {
+      jsonPayload.append(",\"sourceFacet\": \"").append(sourceFacet).append("\"");
+    }
+
+    jsonPayload.append("}");
+
+    RequestBody body = RequestBody.create(jsonPayload.toString(), mediaType);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      String responseBody = response.body().string();
+
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not move attachments: " + response.code() + " - " + responseBody);
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> result = objectMapper.readValue(responseBody, Map.class);
+      return result;
+    } catch (IOException e) {
+      System.out.println("Error while moving attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public String createLink(
       String appUrl,
       String entityName,
