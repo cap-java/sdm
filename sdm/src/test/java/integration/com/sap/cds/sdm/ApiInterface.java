@@ -66,6 +66,16 @@ public interface ApiInterface {
       List<String> sourceObjectIds)
       throws IOException;
 
+  public Map<String, Object> moveAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String targetEntityID,
+      String sourceFolderId,
+      List<String> objectIds,
+      String sourceFacet)
+      throws IOException;
+
   public Map<String, Object> fetchMetadata(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
