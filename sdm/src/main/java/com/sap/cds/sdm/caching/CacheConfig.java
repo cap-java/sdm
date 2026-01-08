@@ -21,8 +21,9 @@ public class CacheConfig {
   private static Cache<TokenCacheKey, String> userAuthoritiesTokenCache;
   private static Cache<RepoKey, RepoValue> repoCache;
   private static Cache<SecondaryTypesKey, List<String>> secondaryTypesCache;
-  private static Cache<String, String> maxAllowedAttachmentsCache;
+  private static Cache<String, Long> maxAllowedAttachmentsCache;
   private static Cache<SecondaryPropertiesKey, List<String>> secondaryPropertiesCache;
+  private static Cache<ErrorMessageKey, String> errorMessageCache;
   private static final int HEAP_SIZE = 1000;
   private static final int USER_TOKEN_EXPIRY = 660;
   private static final int ACCESS_TOKEN_EXPIRY = 660;
@@ -149,14 +150,14 @@ public class CacheConfig {
           cacheManager.createCache(
               "maxAllowedAttachmentsCache",
               CacheConfigurationBuilder.newCacheConfigurationBuilder(
-                      String.class, String.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
+                      String.class, Long.class, ResourcePoolsBuilder.heap(HEAP_SIZE))
                   .withExpiry(Expirations.noExpiration()));
     } catch (Exception e) {
       logger.warn(
           "maxAllowedAttachmentsCache already exists or failed to create: {}", e.getMessage());
       try {
         maxAllowedAttachmentsCache =
-            cacheManager.getCache("maxAllowedAttachmentsCache", String.class, String.class);
+            cacheManager.getCache("maxAllowedAttachmentsCache", String.class, Long.class);
       } catch (Exception ex) {
         logger.error("Failed to retrieve existing maxAllowedAttachmentsCache: {}", ex.getMessage());
       }
@@ -184,6 +185,26 @@ public class CacheConfig {
         logger.error("Failed to retrieve existing secondaryPropertiesCache: {}", ex.getMessage());
       }
     }
+
+    try {
+      errorMessageCache =
+          cacheManager.createCache(
+              "errorMessages",
+              CacheConfigurationBuilder.newCacheConfigurationBuilder(
+                      ErrorMessageKey.class,
+                      (Class<String>) (Class<?>) String.class,
+                      ResourcePoolsBuilder.heap(HEAP_SIZE))
+                  .withExpiry(Expirations.noExpiration()));
+    } catch (Exception e) {
+      logger.warn("errorMessageCache already exists or failed to create: {}", e.getMessage());
+      try {
+        errorMessageCache =
+            cacheManager.getCache(
+                "errorMessages", ErrorMessageKey.class, (Class<String>) (Class<?>) String.class);
+      } catch (Exception ex) {
+        logger.error("Failed to retrieve existing errorMessageCache: {}", ex.getMessage());
+      }
+    }
   }
 
   public static Cache<CacheKey, String> getUserTokenCache() {
@@ -202,7 +223,7 @@ public class CacheConfig {
     return repoCache;
   }
 
-  public static Cache<String, String> getMaxAllowedAttachmentsCache() {
+  public static Cache<String, Long> getMaxAllowedAttachmentsCache() {
     return maxAllowedAttachmentsCache;
   }
 
@@ -212,5 +233,9 @@ public class CacheConfig {
 
   public static Cache<SecondaryPropertiesKey, List<String>> getSecondaryPropertiesCache() {
     return secondaryPropertiesCache;
+  }
+
+  public static Cache<ErrorMessageKey, String> getErrorMessageCache() {
+    return errorMessageCache;
   }
 }

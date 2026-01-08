@@ -7,6 +7,7 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.AttachmentMoveContext;
 import com.sap.cds.sdm.model.AttachmentProcessingResults;
@@ -308,12 +309,9 @@ public class SDMCustomServiceHandler {
 
       CdsEntity targetAttachmentEntity = targetEntityOptional.get();
 
-      // Get maxCount and error message from annotations
-      String errorMessageCount =
+      long maxCount =
           SDMUtils.getAttachmentCountAndMessage(
               context.getModel().entities().toList(), targetAttachmentEntity);
-      String[] maxCountArr = errorMessageCount.split("__");
-      long maxCount = Long.parseLong(maxCountArr[0]);
 
       // If maxCount is 0 or negative, no limit is enforced
       if (maxCount <= 0) {
@@ -351,20 +349,7 @@ public class SDMCustomServiceHandler {
 
       // Check if total would exceed maxCount
       if (totalCountAfterMove > maxCount) {
-        String errorMessage = maxCountArr[1];
-        String failureReason;
-
-        if (errorMessage != null && !"null".equalsIgnoreCase(errorMessage)) {
-          // Use custom error message from annotation
-          failureReason = errorMessage;
-        } else {
-          // Use default error message
-          failureReason =
-              String.format(
-                  "Cannot move %d attachment(s). Target entity allows maximum %d attachments, and"
-                      + " already has %d. Maximum count would be exceeded.",
-                  objectIds.size(), maxCount, existingCount);
-        }
+        String failureReason = SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE");
 
         logger.warn(
             "Move operation rejected: Total count {} exceeds maxCount {}. Marking all {} attachments"
@@ -382,7 +367,7 @@ public class SDMCustomServiceHandler {
         }
 
         // Show warning message
-        context.getMessages().warn(failureReason);
+        context.getMessages().warn(String.format(failureReason, maxCount));
       }
     } catch (Exception e) {
       logger.error(
@@ -756,9 +741,9 @@ public class SDMCustomServiceHandler {
     failure.put(OBJECT_ID_KEY, objectId);
     failure.put(
         FAILURE_REASON_KEY,
-        SDMConstants.INVALID_SECONDARY_PROPERTIES_PREFIX
+        SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX")
             + String.join(", ", invalidProperties)
-            + SDMConstants.INVALID_SECONDARY_PROPERTIES_SUFFIX);
+            + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX"));
     failedAttachments.add(failure);
   }
 
@@ -773,7 +758,7 @@ public class SDMCustomServiceHandler {
     String errorMessage = extractErrorMessage(exception);
 
     if (errorMessage == null || errorMessage.isEmpty()) {
-      return SDMConstants.SDM_MOVE_OPERATION_FAILED;
+      return SDMUtils.getErrorMessage("SDM_MOVE_OPERATION_FAILED");
     }
 
     // Try to match specific error types
@@ -819,7 +804,7 @@ public class SDMCustomServiceHandler {
   private boolean isGenericMessage(String message) {
     return message == null
         || message.isEmpty()
-        || message.equals(SDMConstants.FAILED_TO_MOVE_ATTACHMENT);
+        || message.equals(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT"));
   }
 
   /**
@@ -843,15 +828,15 @@ public class SDMCustomServiceHandler {
     if (lowerCaseMessage.contains("unauthorized")
         || lowerCaseMessage.contains("not authorized")
         || lowerCaseMessage.contains("permission")) {
-      return SDMConstants.USER_NOT_AUTHORISED_ERROR;
+      return SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR");
     }
 
     if (lowerCaseMessage.contains("blocked") || lowerCaseMessage.contains("mimetype")) {
-      return SDMConstants.MIMETYPE_INVALID_ERROR;
+      return SDMUtils.getErrorMessage("MIMETYPE_INVALID_ERROR");
     }
 
     if (lowerCaseMessage.contains("not found") || lowerCaseMessage.contains("object not found")) {
-      return SDMConstants.FILE_NOT_FOUND_ERROR;
+      return SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR");
     }
 
     return null;
@@ -874,7 +859,7 @@ public class SDMCustomServiceHandler {
       int withIndex = detailedMessage.indexOf(" with Id");
       if (withIndex != -1) {
         String filename = detailedMessage.substring(6, withIndex).trim();
-        return SDMConstants.getDuplicateFilesError(filename);
+        return SDMErrorMessages.getDuplicateFilesError(filename);
       }
     }
     return detailedMessage;
@@ -909,9 +894,9 @@ public class SDMCustomServiceHandler {
     // Check if we have invalid properties information in the context
     if (moveContext.getInvalidProperties() != null
         && !moveContext.getInvalidProperties().isEmpty()) {
-      return SDMConstants.INVALID_SECONDARY_PROPERTIES_PREFIX
+      return SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX")
           + String.join(", ", moveContext.getInvalidProperties())
-          + SDMConstants.INVALID_SECONDARY_PROPERTIES_SUFFIX;
+          + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX");
     }
 
     // Detect specific failure types and provide meaningful messages

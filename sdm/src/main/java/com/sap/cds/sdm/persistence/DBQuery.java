@@ -17,8 +17,8 @@ import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
 import java.util.ArrayList;
@@ -51,39 +51,6 @@ public class DBQuery {
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
             .where(doc -> doc.get(upIdKey).eq(upID));
     return persistenceService.run(q);
-  }
-
-  public Result getAllAttachments(
-      CdsReadEventContext context, PersistenceService persistenceService) {
-    Optional<CdsEntity> attachmentDraftEntity =
-        context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-    if (attachmentDraftEntity.isPresent()) {
-
-      CqnSelect q =
-          Select.from(attachmentDraftEntity.get())
-              .columns(
-                  "fileName",
-                  "ID",
-                  "IsActiveEntity",
-                  "folderId",
-                  "repositoryId",
-                  "mimeType",
-                  "uploadStatus");
-      return persistenceService.run(q);
-    } else {
-      attachmentDraftEntity = context.getModel().findEntity(context.getTarget().getQualifiedName());
-      CqnSelect q =
-          Select.from(attachmentDraftEntity.get())
-              .columns(
-                  "fileName",
-                  "ID",
-                  "IsActiveEntity",
-                  "folderId",
-                  "repositoryId",
-                  "mimeType",
-                  "uploadStatus");
-      return persistenceService.run(q);
-    }
   }
 
   public CmisDocument getObjectIdForAttachmentID(
@@ -120,61 +87,73 @@ public class DBQuery {
   public CmisDocument getAttachmentForObjectID(
       PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
 
-    String targetEntityName = resolveTargetEntityName(context);
-    CdsModel model = context.getModel();
-    CdsEntity attachmentEntity = getAttachmentEntity(model, targetEntityName);
-
-    // Search in active entity first
-    CmisDocument cmisDocument = queryAttachmentData(persistenceService, attachmentEntity, id);
-
-    // If not found in active entity, check draft table
-    if (isEmptyCmisDocument(cmisDocument)) {
-      cmisDocument = queryDraftAttachmentData(persistenceService, model, targetEntityName, id);
-    }
-
-    return cmisDocument;
-  }
-
-  private String resolveTargetEntityName(AttachmentCopyEventContext context) {
+    // Use the new API to resolve the target attachment entity
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
     CdsModel model = context.getModel();
 
     // Find the parent entity
-    CdsEntity parentEntityObj =
-        model
-            .findEntity(parentEntity)
-            .orElseThrow(
-                () ->
-                    new ServiceException(
-                        String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity)));
+    Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
+    if (optionalParentEntity.isEmpty()) {
+      throw new ServiceException(
+          String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
+    }
 
     // Find the composition element in the parent entity
-    CdsElement compositionElement =
-        parentEntityObj
-            .findElement(compositionName)
-            .filter(elem -> elem.getType().isAssociation())
-            .orElseThrow(
-                () ->
-                    new ServiceException(
-                        String.format(
-                            SDMConstants.COMPOSITION_NOT_FOUND_ERROR,
-                            compositionName,
-                            parentEntity)));
+    Optional<CdsElement> compositionElement =
+        optionalParentEntity.get().findElement(compositionName);
+    if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      throw new ServiceException(
+          String.format(
+              SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
+              compositionName,
+              parentEntity));
+    }
 
     // Get the target entity of the composition
-    CdsAssociationType assocType = (CdsAssociationType) compositionElement.getType();
-    return assocType.getTarget().getQualifiedName();
-  }
+    CdsAssociationType assocType = (CdsAssociationType) compositionElement.get().getType();
+    String targetEntityName = assocType.getTarget().getQualifiedName();
 
-  private CdsEntity getAttachmentEntity(CdsModel model, String targetEntityName) {
-    return model
-        .findEntity(targetEntityName)
-        .orElseThrow(
-            () ->
-                new ServiceException(
-                    String.format(
-                        SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName)));
+    // Find the target attachment entity
+    Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
+    if (attachmentEntity.isEmpty()) {
+      throw new ServiceException(
+          String.format(
+              SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
+              targetEntityName));
+    }
+
+    // Search in active entity first
+    CqnSelect q =
+        Select.from(attachmentEntity.get())
+            .columns("linkUrl", "type")
+            .where(doc -> doc.get("objectId").eq(id));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      Row row = res.get();
+      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+    } else {
+      // Check in draft table as well
+      Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
+      if (attachmentDraftEntity.isPresent()) {
+        q =
+            Select.from(attachmentDraftEntity.get())
+                .columns("linkUrl", "type")
+                .where(doc -> doc.get("objectId").eq(id));
+        result = persistenceService.run(q);
+        res = result.first();
+        if (res.isPresent()) {
+          Row row = res.get();
+          cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
+          cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+        }
+      }
+    }
+    return cmisDocument;
   }
 
   private CmisDocument queryAttachmentData(
@@ -185,18 +164,6 @@ public class DBQuery {
             .where(doc -> doc.get("objectId").eq(objectId));
     Result result = persistenceService.run(query);
     return mapRowToCmisDocument(result.first());
-  }
-
-  private CmisDocument queryDraftAttachmentData(
-      PersistenceService persistenceService,
-      CdsModel model,
-      String targetEntityName,
-      String objectId) {
-    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
-    if (attachmentDraftEntity.isPresent()) {
-      return queryAttachmentData(persistenceService, attachmentDraftEntity.get(), objectId);
-    }
-    return new CmisDocument();
   }
 
   private CmisDocument mapRowToCmisDocument(Optional<Row> optionalRow) {
@@ -236,7 +203,7 @@ public class DBQuery {
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+          String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
 
     // Find the composition element in the parent entity
@@ -244,7 +211,10 @@ public class DBQuery {
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
       throw new ServiceException(
-          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+          String.format(
+              SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
+              compositionName,
+              parentEntity));
     }
 
     // Get the target entity of the composition
@@ -258,7 +228,9 @@ public class DBQuery {
       attachmentEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentEntity.isEmpty()) {
         throw new ServiceException(
-            String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+            String.format(
+                SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
+                targetEntityName));
       }
     }
 
@@ -319,7 +291,7 @@ public class DBQuery {
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
       throw new ServiceException(
-          String.format(SDMConstants.PARENT_ENTITY_NOT_FOUND_ERROR, parentEntity));
+          String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
 
     // Find the composition element
@@ -327,7 +299,10 @@ public class DBQuery {
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
       throw new ServiceException(
-          String.format(SDMConstants.COMPOSITION_NOT_FOUND_ERROR, compositionName, parentEntity));
+          String.format(
+              SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
+              compositionName,
+              parentEntity));
     }
 
     // Get the target entity
@@ -340,7 +315,9 @@ public class DBQuery {
       attachmentEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentEntity.isEmpty()) {
         throw new ServiceException(
-            String.format(SDMConstants.TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR, targetEntityName));
+            String.format(
+                SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
+                targetEntityName));
       }
     }
 

@@ -1034,4 +1034,62 @@ public class Api implements ApiInterface {
       }
     }
   }
+
+  public Map<String, Object> fetchChangelog(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/"
+            + serviceName
+            + ".changelog";
+
+    RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+
+    Request request =
+        new Request.Builder().url(url).addHeader("Authorization", token).post(body).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (response.isSuccessful() && response.body() != null) {
+        String responseBody = response.body().string();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> changelogResponse = objectMapper.readValue(responseBody, Map.class);
+
+        // Check if response is wrapped in a "value" field containing a JSON string
+        if (changelogResponse.containsKey("value")) {
+          Object valueObj = changelogResponse.get("value");
+          if (valueObj instanceof String) {
+            // Parse the JSON string
+            @SuppressWarnings("unchecked")
+            Map<String, Object> actualResponse =
+                objectMapper.readValue((String) valueObj, Map.class);
+            return actualResponse;
+          }
+        }
+
+        return changelogResponse;
+      } else {
+        throw new IOException(
+            "Failed to fetch changelog: "
+                + response.code()
+                + " - "
+                + (response.body() != null ? response.body().string() : "No response body"));
+      }
+    } catch (IOException e) {
+      throw new IOException("Error fetching changelog: " + e.getMessage(), e);
+    }
+  }
 }

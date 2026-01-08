@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -16,7 +17,6 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.reflect.CdsStructuredType;
-import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -25,6 +25,7 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.service.handler.AttachmentCopyEventContext;
 import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.sdm.service.handler.SDMCustomServiceHandler;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -2030,7 +2031,7 @@ public class SDMCustomServiceHandlerTest {
     try (var mockedStatic = mockStatic(com.sap.cds.sdm.utilities.SDMUtils.class)) {
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage(any(), any()))
-          .thenReturn("0__No limit");
+          .thenReturn(0L);
 
       sdmCustomServiceHandler.moveAttachments(context);
 
@@ -2072,7 +2073,7 @@ public class SDMCustomServiceHandlerTest {
     try (var mockedStatic = mockStatic(com.sap.cds.sdm.utilities.SDMUtils.class)) {
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage(any(), any()))
-          .thenReturn("5__Too many attachments");
+          .thenReturn(5L);
 
       sdmCustomServiceHandler.moveAttachments(context);
 
@@ -2106,10 +2107,13 @@ public class SDMCustomServiceHandlerTest {
     try (var mockedStatic = mockStatic(com.sap.cds.sdm.utilities.SDMUtils.class)) {
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage(any(), any()))
-          .thenReturn("2__Custom error: Maximum 2 attachments allowed");
+          .thenReturn(2L);
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getUpIdKey(any()))
           .thenReturn("up__ID");
+      mockedStatic
+          .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"))
+          .thenReturn("Cannot upload more than %s attachments.");
 
       // Mock existing attachments count = 2 (already at limit)
       com.sap.cds.Result mockResult = mock(com.sap.cds.Result.class);
@@ -2119,8 +2123,8 @@ public class SDMCustomServiceHandlerTest {
 
       sdmCustomServiceHandler.moveAttachments(context);
 
-      // Verify custom error message was used and attachments marked as failed
-      verify(context.getMessages(), times(1)).warn("Custom error: Maximum 2 attachments allowed");
+      // Verify error message was used and attachments marked as failed
+      verify(context.getMessages(), times(1)).warn("Cannot upload more than 2 attachments.");
       verify(context, times(1)).setCompleted();
       // No actual move should happen - failed before move
       verify(sdmService, never()).moveAttachment(any(CmisDocument.class), any(), anyBoolean());
@@ -2152,10 +2156,13 @@ public class SDMCustomServiceHandlerTest {
     try (var mockedStatic = mockStatic(com.sap.cds.sdm.utilities.SDMUtils.class)) {
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage(any(), any()))
-          .thenReturn("3__null"); // null error message - should use default
+          .thenReturn(3L); // null error message - should use default
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getUpIdKey(any()))
           .thenReturn("up__ID");
+      mockedStatic
+          .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"))
+          .thenReturn("Cannot upload more than %s attachments.");
 
       // Mock existing attachments count = 2
       com.sap.cds.Result mockResult = mock(com.sap.cds.Result.class);
@@ -2167,10 +2174,7 @@ public class SDMCustomServiceHandlerTest {
       sdmCustomServiceHandler.moveAttachments(context);
 
       // Verify default error message format was used
-      verify(context.getMessages(), times(1))
-          .warn(
-              "Cannot move 2 attachment(s). Target entity allows maximum 3 attachments, and"
-                  + " already has 2. Maximum count would be exceeded.");
+      verify(context.getMessages(), times(1)).warn("Cannot upload more than 3 attachments.");
       verify(context, times(1)).setCompleted();
       // No actual move should happen - failed before move
       verify(sdmService, never()).moveAttachment(any(CmisDocument.class), any(), anyBoolean());
@@ -2210,7 +2214,7 @@ public class SDMCustomServiceHandlerTest {
     try (var mockedStatic = mockStatic(com.sap.cds.sdm.utilities.SDMUtils.class)) {
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getAttachmentCountAndMessage(any(), any()))
-          .thenReturn("5__Maximum 5 attachments allowed");
+          .thenReturn(5L);
       mockedStatic
           .when(() -> com.sap.cds.sdm.utilities.SDMUtils.getUpIdKey(any()))
           .thenReturn("up__ID");
@@ -2739,7 +2743,8 @@ public class SDMCustomServiceHandlerTest {
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
     assertEquals(
-        SDMConstants.USER_NOT_AUTHORISED_ERROR, failedAttachments.get(0).get("failureReason"));
+        SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2769,7 +2774,8 @@ public class SDMCustomServiceHandlerTest {
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
     assertEquals(
-        SDMConstants.USER_NOT_AUTHORISED_ERROR, failedAttachments.get(0).get("failureReason"));
+        SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2797,7 +2803,8 @@ public class SDMCustomServiceHandlerTest {
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
     assertEquals(
-        SDMConstants.USER_NOT_AUTHORISED_ERROR, failedAttachments.get(0).get("failureReason"));
+        SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2825,7 +2832,8 @@ public class SDMCustomServiceHandlerTest {
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
     assertEquals(
-        SDMConstants.MIMETYPE_INVALID_ERROR, failedAttachments.get(0).get("failureReason"));
+        SDMUtils.getErrorMessage("MIMETYPE_INVALID_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2854,7 +2862,8 @@ public class SDMCustomServiceHandlerTest {
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
     assertEquals(
-        SDMConstants.MIMETYPE_INVALID_ERROR, failedAttachments.get(0).get("failureReason"));
+        SDMUtils.getErrorMessage("MIMETYPE_INVALID_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2882,7 +2891,9 @@ public class SDMCustomServiceHandlerTest {
     verify(context).setFailedAttachments(captor.capture());
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
-    assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, failedAttachments.get(0).get("failureReason"));
+    assertEquals(
+        SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test
@@ -2911,7 +2922,9 @@ public class SDMCustomServiceHandlerTest {
     verify(context).setFailedAttachments(captor.capture());
     List<Map<String, String>> failedAttachments = captor.getValue();
     assertEquals(1, failedAttachments.size());
-    assertEquals(SDMConstants.FILE_NOT_FOUND_ERROR, failedAttachments.get(0).get("failureReason"));
+    assertEquals(
+        SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"),
+        failedAttachments.get(0).get("failureReason"));
   }
 
   @Test

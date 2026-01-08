@@ -1,10 +1,7 @@
 package com.sap.cds.sdm.constants;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class SDMConstants {
   private SDMConstants() {
@@ -14,9 +11,6 @@ public class SDMConstants {
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String MIMETYPE_INTERNET_SHORTCUT = "application/internet-shortcut";
   public static final String SYSTEM_USER = "system-internal";
-  public static final String DESTINATION_EXCEPTION =
-      "Unable to get the destination for sdm service binding";
-
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =
@@ -73,25 +67,7 @@ public class SDMConstants {
   public static final String MAX_COUNT_ERROR_MESSAGE =
       "Cannot upload more than %s attachments as set up by the application";
   public static final String FETCH_CHANGELOG_ERROR = "Could not fetch the changelog";
-
-  // Localized error message keys
-  public static final String VERSIONED_REPO_ERROR_MSG = "SDM.Repository.versionedRepoError";
-  public static final String USER_NOT_AUTHORISED_ERROR_MSG =
-      "SDM.Authorization.userNotAuthorizedError";
-  public static final String USER_NOT_AUTHORISED_ERROR_LINK_MSG =
-      "SDM.Authorization.userNotAuthorizedLinkError";
-  public static final String FAILED_TO_EDIT_LINK_MSG = "SDM.Link.failedToEditLinkError";
-  public static final String REPOSITORY_ERROR_MSG = "SDM.Repository.repositoryError";
-  public static final String FILE_NOT_FOUND_ERROR_MSG = "SDM.File.fileNotFoundError";
-  public static final String MIMETYPE_INVALID_ERROR_MSG = "SDM.File.mimetypeInvalidError";
-  public static final String FAILED_TO_FETCH_FACET_MSG = "SDM.Facet.failedToFetchFacetError";
-  public static final String NO_SDM_BINDING = "No SDM binding found";
-  public static final String DI_TOKEN_EXCHANGE_ERROR = "Error fetching DI token with JWT bearer";
-  public static final String DI_TOKEN_EXCHANGE_PARAMS =
-      "/oauth/token?grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer";
-  public static final String DRAFT_NOT_FOUND = "Attachment draft entity not found";
-  public static final String UNSUPPORTED_PROPERTIES = "Unsupported properties";
-  public static final String REPOSITORY_VERSIONED = "Versioned";
+  public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
   public static final Integer TIMEOUT_MILLISECONDS = 900000;
   public static final Integer MAX_CONNECTIONS_PER_ROUTE = 50;
   public static final Integer MAX_CONNECTIONS_TOTAL = 50;
@@ -99,7 +75,6 @@ public class SDMConstants {
   public static final String TECHNICAL_USER_FLOW = "TECHNICAL_CREDENTIALS_FLOW";
   public static final String NAMED_USER_FLOW = "TOKEN_EXCHANGE";
   public static final String ANNOTATION_IS_MEDIA_DATA = "_is_media_data";
-  public static final String DRAFT_READONLY_CONTEXT = "DRAFT_READONLY_CONTEXT";
   public static final String FAILED_TO_COPY_ATTACHMENT = "Failed to copy attachment";
 
   // Error messages for move operations
@@ -123,45 +98,7 @@ public class SDMConstants {
       "Unable to find composition '%s' in entity: %s";
   public static final String TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR =
       "Unable to find target attachment entity: %s";
-  public static final String INVALID_FACET_FORMAT_ERROR =
-      "Invalid facet format. Expected: Service.Entity.Composition, got: %s";
-  public static final String FETCH_ATTACHMENT_COMPOSITION_ERROR =
-      "Failed to fetch attachment composition";
 
-  // Error messages for ServiceException
-  public static final String FAILED_TO_EDIT_LINK = "Failed to edit link";
-  public static final String ERROR_IN_SETTING_TIMEOUT = "Error in setting timeout";
-  public static final String SDM_CREDENTIALS_MISSING_OR_INVALID =
-      "SDM credentials are missing or invalid.";
-  public static final String FAILED_TO_RETRIEVE_SDM_CREDENTIALS =
-      "Failed to retrieve SDM credentials.";
-  public static final String FAILED_TO_CREATE_HTTP_CLIENT = "Failed to create HTTP client.";
-  public static final String ERROR_WHILE_CREATING_HTTP_CLIENT = "Error while creating HTTP client.";
-  public static final String FAILED_TO_SET_REPOSITORY_DETAILS = "Failed to set repository details.";
-  public static final String FAILED_TO_SERIALIZE_REPOSITORY_OBJECT_TO_JSON =
-      "Failed to serialize repository object to JSON.";
-  public static final String FAILED_TO_CREATE_STRING_ENTITY = "Failed to create StringEntity.";
-  public static final String CLIENT_CREDENTIALS_MISSING_OR_INVALID =
-      "Client credentials are missing or invalid.";
-  public static final String FAILED_TO_CREATE_CLIENT_CREDENTIALS =
-      "Failed to create client credentials.";
-  public static final String FAILED_TO_REPLACE_SUBDOMAIN_IN_BASE_TOKEN_URL =
-      "Failed to replace subdomain in base token URL.";
-  public static final String ERROR_WHILE_FETCHING_REPOSITORY_ID =
-      "Error while fetching repository ID.";
-  public static final String UNEXPECTED_ERROR_WHILE_FETCHING_REPOSITORY_ID =
-      "Unexpected error while fetching repository ID.";
-  public static final String FAILED_TO_OFFBOARD_REPOSITORY = "Failed to offboard repository.";
-  public static final String ERROR_WHILE_OFFBOARDING_REPOSITORY =
-      "Error while offboarding repository.";
-  public static final String UNEXPECTED_ERROR_WHILE_OFFBOARDING_REPOSITORY =
-      "Unexpected error while offboarding repository.";
-  public static final String FAILED_TO_PARSE_REPOSITORY_RESPONSE =
-      "Failed to parse repository response";
-  public static final String ERROR_IN_SETTING_TIMEOUT_MESSAGE = "Error in setting timeout";
-  public static final String FAILED_TO_CREATE_FOLDER = "Failed to create folder";
-  public static final String FILENAME_WHITESPACE_ERROR_MESSAGE =
-      "The object name cannot be empty or consist entirely of space characters. Enter a value.";
   public static final String SINGLE_RESTRICTED_CHARACTER_IN_FILE =
       "\"%s\" contains unsupported characters (‘/’ or ‘\\’). Rename and try again.";
   public static final String SINGLE_DUPLICATE_FILENAME =
@@ -182,11 +119,6 @@ public class SDMConstants {
   public static final String VIRUS_SCAN_INPROGRESS = "VirusScanInprogress";
 
   // New scan status constants
-  public static final String SCAN_STATUS_PENDING = "PENDING";
-  public static final String SCAN_STATUS_SCANNING = "SCANNING";
-  public static final String SCAN_STATUS_CLEAN = "CLEAN";
-  public static final String SCAN_STATUS_QUARANTINED = "QUARANTINED";
-  public static final String SCAN_STATUS_FAILED = "FAILED";
 
   public enum ScanStatus {
     BLANK(""),
@@ -273,21 +205,6 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String badRequestMessage(Map<String, String> badRequest) {
-    // Create the base message
-    String prefixMessage = "Could not update the following files. \n\n";
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
-
-    // Append each file name and its error message to the StringBuilder
-    for (Map.Entry<String, String> entry : badRequest.entrySet()) {
-      bulletPoints.append(String.format("\t• %s : %s%n", entry.getKey(), entry.getValue()));
-    }
-    bulletPoints.append("\nPlease try again.");
-    return bulletPoints.toString();
-  }
-
   public static String noSDMRolesMessage(List<String> files, String operation) {
     // Create the base message
     String prefixMessage = "Could not " + operation + " the following files. \n\n";
@@ -325,68 +242,11 @@ public class SDMConstants {
     return bulletPoints.toString();
   }
 
-  public static String getDuplicateFilesError(String filename) {
-    Set<String> filenames = new HashSet<>();
-    filenames.add(filename);
-    return duplicateFilenameFormat(filenames);
-  }
-
   public static String getGenericError(String event) {
     return String.format(GENERIC_ERROR, event);
   }
 
   public static String getVirusFilesError(String filename) {
     return String.format(VIRUS_ERROR, filename);
-  }
-
-  public static String virusDetectedFilesMessage(List<String> files) {
-    // Create the base message
-    String prefixMessage = "We detected a virus, for the following files: \n\n";
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
-
-    // Append each file name to the StringBuilder
-    for (String file : files) {
-      bulletPoints.append(String.format("\t• %%s%%n", file));
-    }
-    bulletPoints.append(System.lineSeparator());
-    bulletPoints.append(VIRUS_DETECTED_ERROR_MSG);
-
-    return bulletPoints.toString();
-  }
-
-  public static String scanFailedFilesMessage(List<String> files) {
-    // Create the base message
-    String prefixMessage = "The virus scan failed, for the following files: \n\n";
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
-
-    // Append each file name to the StringBuilder
-    for (String file : files) {
-      bulletPoints.append(String.format("\t• %s%n", file));
-    }
-    bulletPoints.append(System.lineSeparator());
-    bulletPoints.append(SCAN_FAILED_ERROR_MSG);
-
-    return bulletPoints.toString();
-  }
-
-  public static String virusScanInProgressFilesMessage(List<String> files) {
-    // Create the base message
-    String prefixMessage = "The virus scanning is in progress for the following files: \n\n";
-
-    // Initialize the StringBuilder with the formatted message prefix
-    StringBuilder bulletPoints = new StringBuilder(prefixMessage);
-
-    // Append each file name to the StringBuilder
-    for (String file : files) {
-      bulletPoints.append(String.format("\t• %s%n", file));
-    }
-    bulletPoints.append(System.lineSeparator());
-    bulletPoints.append(VIRUS_SCAN_IN_PROGRESS_ERROR_MSG);
-
-    return bulletPoints.toString();
   }
 }

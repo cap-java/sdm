@@ -5,6 +5,7 @@ import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.CmisDocument;
@@ -20,6 +21,7 @@ import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.utils.OrderConstants;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,10 +54,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   @Before
+  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES)
+  void processBeforeForDraft(CdsCreateEventContext context, List<CdsData> data) {
+    // before the attachment's readonly fields are removed by the runtime, preserve them in a custom
+    // field in data
+    logger.info("Hellooo");
+  }
+
+  @Before
   @HandlerOrder(HandlerOrder.EARLY)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     logger.info("Target Entity : " + context.getTarget().getQualifiedName());
     for (CdsData entityData : data) {
+      entityData.put("uploadStatus", "uploading");
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
               context.getModel(),
@@ -88,11 +99,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         String[] parts = attachmentCompositionName.split("\\.");
         compositionName = parts[parts.length - 1];
       }
-      String contextInfo =
-          "\n\nTable: "
-              + compositionName
-              + "\nPage: "
-              + (parentTitle != null ? parentTitle : "Unknown");
+
+      String contextInfo = AttachmentsHandlerUtils.getContextInfo(compositionName, parentTitle);
 
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);
@@ -195,20 +203,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           || !scanFailedFiles.isEmpty()) {
         StringBuilder errorMessage = new StringBuilder();
         if (!virusDetectedFiles.isEmpty()) {
-          errorMessage.append(SDMConstants.virusDetectedFilesMessage(virusDetectedFiles));
+          errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
         }
         if (!virusScanInProgressFiles.isEmpty()) {
           if (errorMessage.length() > 0) {
             errorMessage.append(" ");
           }
           errorMessage.append(
-              SDMConstants.virusScanInProgressFilesMessage(virusScanInProgressFiles));
+              SDMErrorMessages.virusScanInProgressFilesMessage(virusScanInProgressFiles));
         }
         if (!scanFailedFiles.isEmpty()) {
           if (errorMessage.length() > 0) {
             errorMessage.append(" ");
           }
-          errorMessage.append(SDMConstants.scanFailedFilesMessage(scanFailedFiles));
+          errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));
         }
         throw new ServiceException(errorMessage.toString());
       }
@@ -361,17 +369,19 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.nameConstraintMessage(fileNameWithRestrictedCharacters) + contextInfo);
+          .warn(
+              SDMErrorMessages.nameConstraintMessage(fileNameWithRestrictedCharacters)
+                  + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
       context
           .getMessages()
           .warn(
-              String.format(SDMConstants.duplicateFilenameFormat(duplicateFileNameList))
+              String.format(SDMErrorMessages.duplicateFilenameFormat(duplicateFileNameList))
                   + contextInfo);
     }
     if (!filesNotFound.isEmpty()) {
-      context.getMessages().warn(SDMConstants.fileNotFound(filesNotFound) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
       List<String> invalidPropertyNames = new ArrayList<>();
@@ -389,17 +399,21 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       if (!invalidPropertyNames.isEmpty()) {
         context
             .getMessages()
-            .warn(SDMConstants.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
+            .warn(
+                SDMErrorMessages.unsupportedPropertiesMessage(invalidPropertyNames) + contextInfo);
       }
     }
 
     if (!badRequest.isEmpty()) {
-      context.getMessages().warn(SDMConstants.badRequestMessage(badRequest) + contextInfo);
+      context.getMessages().warn(SDMErrorMessages.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
       context
           .getMessages()
-          .warn(SDMConstants.noSDMRolesMessage(noSDMRoles, "create") + contextInfo);
+          .warn(
+              SDMErrorMessages.noSDMRolesMessage(
+                      noSDMRoles, SDMUtils.getErrorMessage("EVENT_CREATE"))
+                  + contextInfo);
     }
   }
 }

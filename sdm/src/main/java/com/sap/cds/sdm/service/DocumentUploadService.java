@@ -7,10 +7,12 @@ import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCr
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
+import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -77,7 +79,6 @@ public class DocumentUploadService {
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       if (totalSize <= 400 * 1024 * 1024) {
 
-        dbQuery.addAttachmentToDraft(attachmentDraftEntity.get(), persistenceService, cmisDocument);
         // Upload directly if file is ≤ 400MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       } else {
@@ -106,7 +107,7 @@ public class DocumentUploadService {
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e);
     }
   }
 
@@ -411,7 +412,8 @@ public class DocumentUploadService {
         finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
+      throw new ServiceException(
+          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")), e);
     }
   }
 }

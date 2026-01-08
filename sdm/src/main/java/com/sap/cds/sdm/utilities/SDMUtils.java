@@ -9,7 +9,9 @@ import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.AttachmentInfo;
 import com.sap.cds.services.ServiceException;
@@ -29,6 +31,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.util.EntityUtils;
+import org.ehcache.Cache;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -233,6 +236,26 @@ public class SDMUtils {
     return titleMap;
   }
 
+  public static String getErrorMessage(String errorKey) {
+    ErrorMessageKey errorMessageKey = new ErrorMessageKey();
+    errorMessageKey.setKey(errorKey);
+    Cache<ErrorMessageKey, String> cache = CacheConfig.getErrorMessageCache();
+    if (cache == null) {
+      // Cache not initialized, fall back to constant value from SDMErrorMessages
+      try {
+        java.lang.reflect.Field field = SDMErrorMessages.class.getDeclaredField(errorKey);
+        Object value = field.get(null);
+        return value != null ? value.toString() : errorKey;
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        return errorKey;
+      }
+    }
+
+    ErrorMessageKey lookupKey = new ErrorMessageKey(errorKey);
+    String errorMessage = cache.get(lookupKey);
+    return errorMessage != null ? errorMessage : errorKey;
+  }
+
   private static String extractPropertyName(CdsElement element) {
     /*
      * Check both old and new SDM annotations to track titles for properties needing
@@ -354,21 +377,15 @@ public class SDMUtils {
     for (Map.Entry<String, String> entry : secondaryTypeProperties.entrySet()) {
       String property = entry.getKey();
       String value = entry.getValue();
-      String valueInDB = propertiesInDB.get(property);
+      String valueInDB = propertiesInDB.get(value);
       Object valueInMap = propertiesMap.get(property);
 
-      if ((valueInMap == null && valueInDB != null)
-          || (valueInMap != null && !valueInMap.equals(valueInDB))) {
-        logger.debug(
-            "Property '{}' changed - DB value: {}, Request value: {}",
-            property,
-            valueInDB,
-            valueInMap);
-        if (valueInMap != null) {
-          updatedSecondaryProperties.put(value, valueInMap.toString());
-        } else {
-          updatedSecondaryProperties.put(value, null);
-        }
+      // Convert valueInMap to String for proper comparison
+      String valueInMapAsString = valueInMap != null ? valueInMap.toString() : null;
+
+      if ((valueInMapAsString == null && valueInDB != null)
+          || (valueInMapAsString != null && !valueInMapAsString.equals(valueInDB))) {
+        updatedSecondaryProperties.put(value, valueInMapAsString);
       }
     }
 
@@ -378,15 +395,15 @@ public class SDMUtils {
     return updatedSecondaryProperties;
   }
 
-  public static String getAttachmentCountAndMessage(
+  public static Long getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
-    String maxCount =
+    Long maxCount =
         CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
 
     if (maxCount == null) {
       AttachmentInfo attachmentInfo = new AttachmentInfo();
       determineAttachmentDetails(attachmentEntity, entities, attachmentInfo);
-      maxCount = attachmentInfo.getAttachmentCount() + "__" + attachmentInfo.getErrorMessage();
+      maxCount = attachmentInfo.getAttachmentCount();
       CacheConfig.getMaxAllowedAttachmentsCache()
           .put(attachmentEntity.getQualifiedName(), maxCount);
     }
@@ -452,11 +469,6 @@ public class SDMUtils {
     maxcountAnnotation.ifPresent(
         annotation ->
             attachmentInfo.setAttachmentCount(Long.parseLong(annotation.getValue().toString())));
-
-    Optional<CdsAnnotation<Object>> errormsgAnnotation =
-        cdsElement.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT_ERROR_MSG);
-    errormsgAnnotation.ifPresent(
-        annotation -> attachmentInfo.setErrorMessage(annotation.getValue().toString()));
   }
 
   private static List<String> getKeyElementNames(CdsEntity entity) {

@@ -2,12 +2,15 @@ package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.Result;
 import com.sap.cds.ql.CQL;
-import com.sap.cds.ql.Predicate;
 import com.sap.cds.ql.cqn.CqnSelect;
-import com.sap.cds.ql.cqn.Modifier;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElementDefinition;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.SDMBeforeReadItemsModifier;
+import com.sap.cds.sdm.handler.common.SDMApplicationHandlerHelper;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -16,14 +19,19 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.draft.Drafts;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +58,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   }
 
   @Before
-  @HandlerOrder(HandlerOrder.DEFAULT)
+  @HandlerOrder(HandlerOrder.EARLY + 500)
   public void processBefore(CdsReadEventContext context) throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
@@ -71,20 +79,57 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       if (repoValue.getIsAsyncVirusScanEnabled()) {
         processVirusScanInProgressAttachments(context, upID, upIdKey);
       }
-      CqnSelect copy =
-          CQL.copy(
-              context.getCqn(),
-              new Modifier() {
-                @Override
-                public Predicate where(Predicate where) {
-                  return CQL.and(where, CQL.get("repositoryId").eq(repositoryId));
-                }
-              });
-      context.setCqn(copy);
+
+      // Get attachment associations to handle deep reads with expand
+      CdsModel cdsModel = context.getModel();
+      List<String> fieldNames =
+          getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
+
+      // Use the new modifier that handles both filtering and expand scenarios
+      CqnSelect resultCqn =
+          CQL.copy(context.getCqn(), new SDMBeforeReadItemsModifier(repositoryId, fieldNames));
+      context.setCqn(resultCqn);
 
     } else {
       context.setCqn(context.getCqn());
     }
+  }
+
+  /**
+   * Recursively get all attachment associations in the entity tree. This is needed to properly
+   * handle deep navigation like Books/covers with $expand=statusNav
+   */
+  private List<String> getAttachmentAssociations(
+      CdsModel model, CdsEntity entity, String associationName, List<String> processedEntities) {
+    List<String> associationNames = new ArrayList<>();
+    if (SDMApplicationHandlerHelper.isMediaEntity(entity)) {
+      associationNames.add(associationName);
+    }
+
+    Map<String, CdsEntity> annotatedEntities =
+        entity
+            .associations()
+            .collect(
+                Collectors.toMap(
+                    CdsElementDefinition::getName,
+                    element -> element.getType().as(CdsAssociationType.class).getTarget()));
+
+    if (annotatedEntities.isEmpty()) {
+      return associationNames;
+    }
+
+    for (Entry<String, CdsEntity> associatedElement : annotatedEntities.entrySet()) {
+      if (!associationNames.contains(associatedElement.getKey())
+          && !processedEntities.contains(associatedElement.getKey())
+          && !Drafts.SIBLING_ENTITY.equals(associatedElement.getKey())) {
+        processedEntities.add(associatedElement.getKey());
+        List<String> result =
+            getAttachmentAssociations(
+                model, associatedElement.getValue(), associatedElement.getKey(), processedEntities);
+        associationNames.addAll(result);
+      }
+    }
+    return associationNames;
   }
 
   /**

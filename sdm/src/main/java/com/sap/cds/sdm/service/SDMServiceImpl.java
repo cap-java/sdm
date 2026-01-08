@@ -9,6 +9,7 @@ import com.sap.cds.Result;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.sdm.caching.*;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.RepoValue;
@@ -129,7 +130,8 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ERROR_IN_SETTING_TIMEOUT_MESSAGE, e.getMessage());
+      throw new ServiceException(
+          SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e.getMessage());
     }
   }
 
@@ -265,7 +267,7 @@ public class SDMServiceImpl implements SDMService {
     if (!keysToRemove.isEmpty()) {
       String errorMessage = String.join(", ", keysToRemove);
       throw new ServiceException(
-          SDMConstants.UNSUPPORTED_PROPERTIES
+          SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES")
               + " "
               + errorMessage); // Some invalid/unsupported properties were present and were updated.
       // So processing is stopped (Request is not sent to SDM) and
@@ -319,7 +321,7 @@ public class SDMServiceImpl implements SDMService {
       }
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.COULD_NOT_UPDATE_THE_ATTACHMENT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("COULD_NOT_UPDATE_THE_ATTACHMENT"), e);
     }
   }
 
@@ -349,7 +351,7 @@ public class SDMServiceImpl implements SDMService {
       String responseString = EntityUtils.toString(response.getEntity());
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.ATTACHMENT_NOT_FOUND, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ATTACHMENT_NOT_FOUND"), e);
     }
   }
 
@@ -375,14 +377,7 @@ public class SDMServiceImpl implements SDMService {
       if (responseCode != 200) {
         response.close();
         if (responseCode == 404) {
-          String errorMessage =
-              context
-                  .getCdsRuntime()
-                  .getLocalizedMessage(
-                      "SDM.File.fileNotFoundError", null, context.getParameterInfo().getLocale());
-          if (errorMessage.equalsIgnoreCase(SDMConstants.FILE_NOT_FOUND_ERROR_MSG))
-            throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
-          throw new ServiceException(errorMessage);
+          throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
         }
         throw new ServiceException("Unexpected code");
       }
@@ -446,6 +441,7 @@ public class SDMServiceImpl implements SDMService {
       String folderName,
       boolean isSystemUser) {
 
+    @SuppressWarnings("unchecked")
     List<Map<String, Object>> resultList =
         result.listOf(Map.class).stream()
             .map(map -> (Map<String, Object>) map)
@@ -507,11 +503,12 @@ public class SDMServiceImpl implements SDMService {
                 .getJSONObject("cmis:objectId")
                 .getString("value");
       } else if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       }
       return folderId;
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("upload"));
+      throw new ServiceException(
+          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")));
     }
   }
 
@@ -538,12 +535,14 @@ public class SDMServiceImpl implements SDMService {
       String responseBody = EntityUtils.toString(response.getEntity());
       if (responseCode == 201) return responseBody;
       else if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else {
-        throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + ". " + responseBody);
+        throw new ServiceException(
+            SDMUtils.getErrorMessage("FAILED_TO_CREATE_FOLDER") + ". " + responseBody);
       }
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.FAILED_TO_CREATE_FOLDER + " " + e.getMessage());
+      throw new ServiceException(
+          SDMUtils.getErrorMessage("FAILED_TO_CREATE_FOLDER") + " " + e.getMessage());
     }
   }
 
@@ -567,6 +566,7 @@ public class SDMServiceImpl implements SDMService {
     return repoValue;
   }
 
+  @Override
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
@@ -575,12 +575,13 @@ public class SDMServiceImpl implements SDMService {
         sdmCredentials.getUrl() + "browser/" + repositoryId + "?cmisselector=repositoryInfo";
     HttpGet getRepoInfoRequest = new HttpGet(getRepoInfoUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepoInfoRequest)) {
-      if (response.getStatusLine().getStatusCode() != 200)
-        throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+      if (response.getStatusLine().getStatusCode() != 200) {
+        throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"));
+      }
       String responseString = EntityUtils.toString(response.getEntity());
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.REPOSITORY_ERROR);
+      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"));
     }
   }
 
@@ -630,7 +631,8 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(deleteDocumentRequest)) {
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.getGenericError("delete"));
+      throw new ServiceException(
+          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_DELETE")));
     }
   }
 
@@ -713,7 +715,7 @@ public class SDMServiceImpl implements SDMService {
             iterator.remove();
           }
         } catch (IOException e) {
-          throw new ServiceException(SDMConstants.UPDATE_ATTACHMENT_ERROR, e);
+          throw new ServiceException(SDMUtils.getErrorMessage("UPDATE_ATTACHMENT_ERROR"), e);
         }
       }
     }
@@ -760,7 +762,7 @@ public class SDMServiceImpl implements SDMService {
       String errorMessage = errorJson.optString("message");
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.FAILED_TO_COPY_ATTACHMENT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_COPY_ATTACHMENT"), e);
     }
   }
 
@@ -784,7 +786,8 @@ public class SDMServiceImpl implements SDMService {
         }
       }
     } catch (Exception e) {
-      throw new ServiceException(SDMConstants.FAILED_TO_PARSE_REPOSITORY_RESPONSE, e);
+      throw new ServiceException(
+          SDMUtils.getErrorMessage("FAILED_TO_PARSE_REPOSITORY_RESPONSE"), e);
     }
     return null;
   }
@@ -802,15 +805,16 @@ public class SDMServiceImpl implements SDMService {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseString = EntityUtils.toString(response.getEntity());
       if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else if (responseCode != 200) {
-        logger.info(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
-        throw new ServiceException(SDMConstants.REPOSITORY_ERROR + " : " + responseString);
+        logger.info(SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + responseString);
+        throw new ServiceException(
+            SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + responseString);
       }
       repoId = getRepositoryId(responseString);
     } catch (IOException e) {
-      logger.info(SDMConstants.REPOSITORY_ERROR + " : " + e.getMessage());
-      throw new ServiceException(SDMConstants.REPOSITORY_ERROR, e);
+      logger.info(SDMUtils.getErrorMessage("REPOSITORY_ERROR") + " : " + e.getMessage());
+      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
     }
     sdmUrl =
         sdmUrl
@@ -824,15 +828,15 @@ public class SDMServiceImpl implements SDMService {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseString = EntityUtils.toString(response.getEntity());
       if (responseCode == 403) {
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else if (responseCode == 404) {
-        throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
       } else if (responseCode != 200) {
-        throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR);
+        throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"));
       }
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMConstants.FETCH_CHANGELOG_ERROR, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"), e);
     }
   }
 
@@ -925,7 +929,7 @@ public class SDMServiceImpl implements SDMService {
           .blockingFirst();
     } catch (Exception e) {
       logger.error("Failed to move attachment after retries: {}", e.getMessage(), e);
-      throw new ServiceException(SDMConstants.FAILED_TO_MOVE_ATTACHMENT, e);
+      throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_MOVE_ATTACHMENT"), e);
     }
   }
 }

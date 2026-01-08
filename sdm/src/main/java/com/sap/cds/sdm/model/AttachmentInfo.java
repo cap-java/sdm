@@ -13,5 +13,4 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AttachmentInfo {
   private long attachmentCount;
-  private String errorMessage;
 }
