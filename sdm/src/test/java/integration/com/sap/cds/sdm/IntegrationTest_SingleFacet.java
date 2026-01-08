@@ -2999,6 +2999,8 @@ class IntegrationTest_SingleFacet {
       fail(
           "Could not verify that notes field and all secondary properties were copied from source to target attachment");
     }
+    api.deleteEntity(appUrl, entityName, copyCustomSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyCustomTargetEntity);
   }
 
   @Test
@@ -3752,6 +3754,7 @@ class IntegrationTest_SingleFacet {
     if (!testStatus) {
       fail("Link got edited without SDM roles");
     }
+    api.deleteEntity(appUrl, entityName, editLinkEntity);
   }
 
   @Test
@@ -4178,6 +4181,8 @@ class IntegrationTest_SingleFacet {
     } else {
       fail("Could not create entities");
     }
+    api.deleteEntityDraft(appUrl, entityName, copyAttachmentSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntity);
   }
 
   @Test

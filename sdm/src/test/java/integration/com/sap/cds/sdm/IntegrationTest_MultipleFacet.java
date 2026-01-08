@@ -2479,7 +2479,7 @@ class IntegrationTest_MultipleFacet {
         }
       }
     }
-
+    api.deleteEntityDraft(appUrl, entityName, entityID7);
     if (!testStatus) {
       fail("Attachment uploaded without SDM role for one or more facets");
     }
@@ -3294,7 +3294,8 @@ class IntegrationTest_MultipleFacet {
         testStatus = true;
       }
     }
-
+    api.deleteEntity(appUrl, entityName, copyCustomSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyCustomTargetEntity);
     if (!testStatus) {
       fail(
           "Could not verify that notes field and all secondary properties were copied from source to target attachment for all facets");
@@ -4728,6 +4729,8 @@ class IntegrationTest_MultipleFacet {
     } else {
       fail("Could not create entities");
     }
+    api.deleteEntityDraft(appUrl, entityName, copyAttachmentSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntity);
   }
 
   @Test
