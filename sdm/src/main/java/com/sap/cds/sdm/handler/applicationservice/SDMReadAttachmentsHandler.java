@@ -11,6 +11,8 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorKeys;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.SDMBeforeReadItemsModifier;
 import com.sap.cds.sdm.handler.common.SDMApplicationHandlerHelper;
@@ -67,6 +69,40 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     if (errorMessageCache == null) {
       return; // Cache not initialized, skip
     }
+
+    // Check if localized error messages are already cached
+    ErrorMessageKey cacheCheckKey = new ErrorMessageKey();
+    cacheCheckKey.setKey("localizedErrorMessagesSetInCache");
+    String cacheValue = errorMessageCache.get(cacheCheckKey);
+
+    if ("true".equals(cacheValue)) {
+      return; // Skip processing if already cached
+    }
+
+    Map<String, Object> errorMessages = SDMErrorMessages.getAllErrorMessages();
+    Map<String, Object> errorKeys = SDMErrorKeys.getAllErrorKeys();
+    String localizedMessage;
+    String localizedErrorMessageKey;
+    for (Map.Entry<String, Object> entry : errorMessages.entrySet()) {
+      String errorMessage = entry.getKey();
+      Object errorValue = entry.getValue();
+      localizedErrorMessageKey = String.valueOf(errorKeys.get(errorMessage + "_KEY"));
+      localizedMessage =
+          context
+              .getCdsRuntime()
+              .getLocalizedMessage(
+                  localizedErrorMessageKey, null, context.getParameterInfo().getLocale());
+      ErrorMessageKey errorMessageKey = new ErrorMessageKey();
+      errorMessageKey.setKey(errorMessage);
+      errorMessageCache.put(
+          errorMessageKey,
+          java.util.Objects.equals(localizedMessage, localizedErrorMessageKey)
+              ? String.valueOf(errorValue)
+              : localizedMessage);
+    }
+
+    // Mark that localized error messages have been cached
+    errorMessageCache.put(cacheCheckKey, "true");
   }
 
   @Before
@@ -121,7 +157,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                     }
                   });
         }
-
+        setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {
         logger.error("Error in SDMReadAttachmentsHandler.processBefore: {}", e.getMessage(), e);
@@ -129,6 +165,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
         throw e;
       }
     }
+    // No action needed for non-media entities
   }
 
   /**
