@@ -254,34 +254,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       }
 
       // Throw exception if any files failed virus scan or scan failed
-      if (!virusDetectedFiles.isEmpty()
-          || !virusScanInProgressFiles.isEmpty()
-          || !scanFailedFiles.isEmpty()
-          || !uploadInProgressFiles.isEmpty()) {
-        StringBuilder errorMessage = new StringBuilder();
-        if (!virusDetectedFiles.isEmpty()) {
-          errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
-        }
-        if (!virusScanInProgressFiles.isEmpty()) {
-          if (errorMessage.length() > 0) {
-            errorMessage.append(" ");
-          }
-          errorMessage.append(
-              SDMErrorMessages.virusScanInProgressFilesMessage(virusScanInProgressFiles));
-        }
-        if (!scanFailedFiles.isEmpty()) {
-          if (errorMessage.length() > 0) {
-            errorMessage.append(" ");
-          }
-          errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));
-        }
-        if (!uploadInProgressFiles.isEmpty()) {
-          if (errorMessage.length() > 0) {
-            errorMessage.append(" ");
-          }
-          errorMessage.append(SDMErrorMessages.uploadInProgressFilesMessage(uploadInProgressFiles));
-        }
-        throw new ServiceException(errorMessage.toString());
+      String errorMessage =
+          buildErrorMessage(
+              virusDetectedFiles, virusScanInProgressFiles, scanFailedFiles, uploadInProgressFiles);
+      if (!errorMessage.isEmpty()) {
+        throw new ServiceException(errorMessage);
       }
 
       SecondaryPropertiesKey secondaryPropertiesKey =
@@ -313,42 +290,96 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
 
-    // Fetch original data from DB and SDM
-    String fileNameInDB;
+    // Fetch original data from DB
     CmisDocument cmisDocument =
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String fileNameInDB = cmisDocument.getFileName();
 
-    fileNameInDB = cmisDocument.getFileName();
-    String uploadStatus = "";
-    // Collect files with virus-related upload statuses
-    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
-    if (readonlyData != null && readonlyData.get("uploadStatus") != null) {
-      uploadStatus = readonlyData.get("uploadStatus").toString();
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
-        virusDetectedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
-        virusScanInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
-        uploadInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
-        scanFailedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      attachment.put("uploadStatus", uploadStatus);
+    // Check upload status and collect problematic files
+    if (checkUploadStatus(
+        attachment,
+        fileNameInDB,
+        filenameInRequest,
+        virusDetectedFiles,
+        virusScanInProgressFiles,
+        scanFailedFiles,
+        uploadInProgressFiles)) {
+      return; // Skip further processing if upload status is problematic
     }
 
+    // Fetch data from SDM
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    String fileNameInSDM = null, descriptionInSDM = null;
+    SDMAttachmentData sdmData = fetchSDMData(context, objectId, sdmCredentials);
+
+    // Prepare and update attachment in SDM
+    updateAndSendToSDM(
+        context,
+        attachment,
+        id,
+        objectId,
+        filenameInRequest,
+        descriptionInRequest,
+        fileNameInDB,
+        sdmData.fileNameInSDM,
+        sdmData.descriptionInSDM,
+        sdmCredentials,
+        attachmentEntity,
+        secondaryPropertiesWithInvalidDefinitions,
+        noSDMRoles,
+        duplicateFileNameList,
+        filesNotFound,
+        filesWithUnsupportedProperties,
+        badRequest);
+  }
+
+  private boolean checkUploadStatus(
+      Map<String, Object> attachment,
+      String fileNameInDB,
+      String filenameInRequest,
+      List<String> virusDetectedFiles,
+      List<String> virusScanInProgressFiles,
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles) {
+    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
+    if (readonlyData == null || readonlyData.get("uploadStatus") == null) {
+      return false;
+    }
+
+    String uploadStatus = readonlyData.get("uploadStatus").toString();
+    String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
+
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
+      virusDetectedFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
+      virusScanInProgressFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      uploadInProgressFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+      scanFailedFiles.add(fileName);
+      return true;
+    }
+
+    attachment.put("uploadStatus", uploadStatus);
+    return false;
+  }
+
+  private SDMAttachmentData fetchSDMData(
+      CdsCreateEventContext context, String objectId, SDMCredentials sdmCredentials)
+      throws IOException {
     JSONObject sdmAttachmentData =
         AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
             sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
     JSONObject succinctProperties = sdmAttachmentData.getJSONObject("succinctProperties");
+
+    String fileNameInSDM = null;
+    String descriptionInSDM = null;
+
     if (succinctProperties.has("cmis:name")) {
       fileNameInSDM = succinctProperties.getString("cmis:name");
     }
@@ -356,6 +387,28 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       descriptionInSDM = succinctProperties.getString("cmis:description");
     }
 
+    return new SDMAttachmentData(fileNameInSDM, descriptionInSDM);
+  }
+
+  private void updateAndSendToSDM(
+      CdsCreateEventContext context,
+      Map<String, Object> attachment,
+      String id,
+      String objectId,
+      String filenameInRequest,
+      String descriptionInRequest,
+      String fileNameInDB,
+      String fileNameInSDM,
+      String descriptionInSDM,
+      SDMCredentials sdmCredentials,
+      Optional<CdsEntity> attachmentEntity,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles,
+      List<String> duplicateFileNameList,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest)
+      throws IOException {
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     Map<String, String> propertiesInDB =
@@ -364,7 +417,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     logger.debug("Processing attachment creation - ID: {}, objectId: {}", id, objectId);
 
-    // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -372,11 +424,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-    cmisDocument =
+    CmisDocument cmisDocument =
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
 
-    // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
@@ -386,7 +437,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         updatedSecondaryProperties,
         false);
 
-    // Send update to SDM and handle response
     logger.debug(
         "Creating attachment in SDM - ID: {}, properties count: {}",
         id,
@@ -413,7 +463,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           noSDMRoles,
           duplicateFileNameList,
           filesNotFound);
-
     } catch (ServiceException e) {
       AttachmentsHandlerUtils.handleSDMServiceException(
           e,
@@ -486,6 +535,49 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               SDMErrorMessages.noSDMRolesMessage(
                       noSDMRoles, SDMUtils.getErrorMessage("EVENT_CREATE"))
                   + contextInfo);
+    }
+  }
+
+  private String buildErrorMessage(
+      List<String> virusDetectedFiles,
+      List<String> virusScanInProgressFiles,
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles) {
+    StringBuilder errorMessage = new StringBuilder();
+
+    if (!virusDetectedFiles.isEmpty()) {
+      errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
+    }
+    if (!virusScanInProgressFiles.isEmpty()) {
+      appendWithSpace(errorMessage);
+      errorMessage.append(
+          SDMErrorMessages.virusScanInProgressFilesMessage(virusScanInProgressFiles));
+    }
+    if (!scanFailedFiles.isEmpty()) {
+      appendWithSpace(errorMessage);
+      errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));
+    }
+    if (!uploadInProgressFiles.isEmpty()) {
+      appendWithSpace(errorMessage);
+      errorMessage.append(SDMErrorMessages.uploadInProgressFilesMessage(uploadInProgressFiles));
+    }
+
+    return errorMessage.toString();
+  }
+
+  private void appendWithSpace(StringBuilder sb) {
+    if (sb.length() > 0) {
+      sb.append(" ");
+    }
+  }
+
+  private static class SDMAttachmentData {
+    final String fileNameInSDM;
+    final String descriptionInSDM;
+
+    SDMAttachmentData(String fileNameInSDM, String descriptionInSDM) {
+      this.fileNameInSDM = fileNameInSDM;
+      this.descriptionInSDM = descriptionInSDM;
     }
   }
 }

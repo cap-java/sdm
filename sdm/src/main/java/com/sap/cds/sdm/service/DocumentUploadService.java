@@ -11,7 +11,6 @@ import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
-import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
@@ -41,19 +40,16 @@ public class DocumentUploadService {
   private final ServiceBinding binding;
   private final CdsProperties.ConnectionPool connectionPool;
   private final TokenHandler tokenHandler;
-  private DBQuery dbQuery;
 
   public DocumentUploadService(
       ServiceBinding binding,
       CdsProperties.ConnectionPool connectionPool,
-      TokenHandler tokenHandler,
-      DBQuery dbQuery) {
+      TokenHandler tokenHandler) {
     logger.info("DocumentUploadService is instantiated");
 
     this.connectionPool = connectionPool;
     this.binding = binding;
     this.tokenHandler = tokenHandler;
-    this.dbQuery = dbQuery;
   }
 
   /*

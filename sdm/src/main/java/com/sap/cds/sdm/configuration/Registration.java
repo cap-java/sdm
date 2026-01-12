@@ -72,7 +72,7 @@ public class Registration implements CdsRuntimeConfiguration {
     DBQuery dbQueryInstance = DBQuery.getDBQueryInstance();
     SDMService sdmService = new SDMServiceImpl(binding, connectionPool, tokenHandlerInstance);
     DocumentUploadService documentService =
-        new DocumentUploadService(binding, connectionPool, tokenHandlerInstance, dbQueryInstance);
+        new DocumentUploadService(binding, connectionPool, tokenHandlerInstance);
     configurer.eventHandler(
         buildReadHandler(persistenceService, sdmService, tokenHandlerInstance, dbQueryInstance));
     configurer.eventHandler(

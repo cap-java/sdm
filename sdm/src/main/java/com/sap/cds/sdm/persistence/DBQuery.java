@@ -156,16 +156,6 @@ public class DBQuery {
     return cmisDocument;
   }
 
-  private CmisDocument queryAttachmentData(
-      PersistenceService persistenceService, CdsEntity entity, String objectId) {
-    CqnSelect query =
-        Select.from(entity)
-            .columns("linkUrl", "type", "uploadStatus")
-            .where(doc -> doc.get("objectId").eq(objectId));
-    Result result = persistenceService.run(query);
-    return mapRowToCmisDocument(result.first());
-  }
-
   private CmisDocument mapRowToCmisDocument(Optional<Row> optionalRow) {
     CmisDocument cmisDocument = new CmisDocument();
     if (optionalRow.isPresent()) {
@@ -178,10 +168,6 @@ public class DBQuery {
               : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
     }
     return cmisDocument;
-  }
-
-  private boolean isEmptyCmisDocument(CmisDocument doc) {
-    return doc.getType() == null && doc.getUrl() == null && doc.getUploadStatus() == null;
   }
 
   /**
