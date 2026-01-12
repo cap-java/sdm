@@ -14,7 +14,6 @@ import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.environment.CdsProperties;
-import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cloud.environment.servicebinding.api.ServiceBinding;
 import java.io.*;
 import java.lang.management.MemoryMXBean;
@@ -59,8 +58,7 @@ public class DocumentUploadService {
       CmisDocument cmisDocument,
       SDMCredentials sdmCredentials,
       boolean isSystemUser,
-      AttachmentCreateEventContext eventContext,
-      PersistenceService persistenceService)
+      AttachmentCreateEventContext eventContext)
       throws IOException {
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
@@ -81,13 +79,7 @@ public class DocumentUploadService {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > 400MB
-        return uploadLargeFileInChunks(
-            cmisDocument,
-            sdmUrl,
-            chunkSize,
-            isSystemUser,
-            attachmentDraftEntity.get(),
-            persistenceService);
+        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
       }
     } catch (Exception e) {
       throw new IOException("Error uploading document: " + e.getMessage(), e);
@@ -232,12 +224,7 @@ public class DocumentUploadService {
   }
 
   private JSONObject uploadLargeFileInChunks(
-      CmisDocument cmisDocument,
-      String sdmUrl,
-      int chunkSize,
-      boolean isSystemUser,
-      CdsEntity entity,
-      PersistenceService persistenceService)
+      CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
       throws IOException {
 
     try (ReadAheadInputStream chunkedStream =

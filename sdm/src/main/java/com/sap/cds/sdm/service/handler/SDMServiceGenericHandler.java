@@ -461,8 +461,7 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     try {
       createResult =
-          documentService.createDocument(
-              cmisDocument, sdmCredentials, isSystemUser, null, persistenceService);
+          documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser, null);
     } catch (Exception e) {
       throw new ServiceException(
           SDMErrorMessages.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);

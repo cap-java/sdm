@@ -446,8 +446,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
@@ -549,8 +548,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -710,8 +708,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
         mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
@@ -799,8 +796,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -894,8 +890,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -995,8 +990,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -1093,8 +1087,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -1181,8 +1174,7 @@ public class SDMAttachmentsServiceHandlerTest {
             any(CmisDocument.class),
             any(SDMCredentials.class),
             anyBoolean(),
-            any(AttachmentCreateEventContext.class),
-            any(PersistenceService.class)))
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();

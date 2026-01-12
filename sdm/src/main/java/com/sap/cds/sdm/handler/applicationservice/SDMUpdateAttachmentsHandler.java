@@ -372,7 +372,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
 
     updateAttachmentInSDM(
-        attachmentEntity,
         context,
         attachment,
         id,
@@ -483,7 +482,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   }
 
   private void updateAttachmentInSDM(
-      Optional<CdsEntity> attachmentEntity,
       CdsUpdateEventContext context,
       Map<String, Object> attachment,
       String id,

@@ -374,7 +374,6 @@ public class DBQuery {
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       CmisDocument cmisDocument) {
-    String repositoryId = SDMConstants.REPOSITORY_ID;
     Map<String, Object> updatedFields = new HashMap<>();
     updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
     CqnUpdate updateQuery =
@@ -586,7 +585,7 @@ public class DBQuery {
                                         doc.get("uploadStatus")
                                             .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))));
 
-        Result r = persistenceService.run(updateQuery);
+        persistenceService.run(updateQuery);
       }
     }
   }

@@ -1,6 +1,5 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
-import com.sap.cds.Result;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Predicate;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -250,9 +249,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           // Update the uploadStatus based on the scan status
           if (scanStatus != null) {
             SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
-            Result r =
-                dbQuery.updateUploadStatusByScanStatus(
-                    attachmentDraftEntity, persistenceService, objectId, scanStatusEnum);
+            dbQuery.updateUploadStatusByScanStatus(
+                attachmentDraftEntity, persistenceService, objectId, scanStatusEnum);
             logger.info(
                 "Updated uploadStatus for objectId: {} based on scanStatus: {}",
                 objectId,

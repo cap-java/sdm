@@ -479,7 +479,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "ok");
-    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(createResult);
 
     // Act
@@ -487,7 +488,8 @@ public class SDMServiceGenericHandlerTest {
 
     // Assert
     verify(sdmService).checkRepositoryType(anyString(), anyString());
-    verify(documentService).createDocument(any(), any(), anyBoolean(), any(), any());
+    verify(documentService)
+        .createDocument(any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any());
     verify(draftService).newDraft(any(Insert.class));
     verify(mockContext).setCompleted();
   }
@@ -871,7 +873,8 @@ public class SDMServiceGenericHandlerTest {
     sdmCredentials.setUrl("http://test-url");
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenThrow(new RuntimeException("Document creation failed"));
 
     // Act & Assert
@@ -958,7 +961,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Duplicate file");
-    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(createResult);
 
     // Act & Assert
@@ -1041,7 +1045,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Some error message");
-    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(createResult);
 
     // Act & Assert
@@ -1126,7 +1131,8 @@ public class SDMServiceGenericHandlerTest {
     createResult.put("objectId", "obj123");
     createResult.put("folderId", "folderId123");
     createResult.put("message", "Unauthorized");
-    when(documentService.createDocument(any(), any(), anyBoolean(), any(), any()))
+    when(documentService.createDocument(
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(createResult);
 
     // Act & Assert
@@ -1708,7 +1714,7 @@ public class SDMServiceGenericHandlerTest {
     JSONObject createResult = new JSONObject();
     createResult.put("status", "unauthorized");
     when(documentService.createDocument(
-            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any(), any()))
+            any(CmisDocument.class), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(createResult);
 
     // Act & Assert
