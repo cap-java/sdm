@@ -37,17 +37,18 @@ annotate Attachments with @UI: {
         TypeNamePlural: '{i18n>Attachments}',
     },
     LineItem  : [
-        {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
-               {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-               {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-               {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-               {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+        {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+            {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
+            {Value: content, @HTML5.CssDefaults: {width: '0%'}},
+            {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+            {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
+            {Value: note, @HTML5.CssDefaults: {width: '20%'}},
 
 {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
+        @HTML5.CssDefaults: {width: '10%'},
         @UI.Hidden: IsActiveEntity
       },
     ]
