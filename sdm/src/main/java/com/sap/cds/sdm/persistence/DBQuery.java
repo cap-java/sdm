@@ -398,6 +398,20 @@ public class DBQuery {
     persistenceService.run(updateQuery);
   }
 
+  public void saveUploadStatusToAttachment(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      CmisDocument cmisDocument) {
+    String repositoryId = SDMConstants.REPOSITORY_ID;
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
+    persistenceService.run(updateQuery);
+  }
+
   public List<CmisDocument> getAttachmentsForFolder(
       String entity,
       PersistenceService persistenceService,

@@ -364,6 +364,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
       throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity

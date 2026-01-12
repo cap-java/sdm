@@ -20,7 +20,7 @@ extend aspect Attachments with {
     objectId : String;
     linkUrl : String default null;
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
-    uploadStatus : UploadStatusCode default 'uploading' ;
+    uploadStatus : UploadStatusCode default 'uploading' @readonly ;
     uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
    }
      entity UploadScanStates : CodeList {

@@ -1289,7 +1289,7 @@ To display color-coded status indicators in the UI, create a `sap.attachments-Up
 code;name;criticality
 uploading;Uploading;5
 Success;Success;3
-Failed;Scan Failed;1
+Failed;Scan Failed;2
 VirusDetected;Virus detected;1
 VirusScanInprogress;Virus scanning inprogress(refresh page);5
  ```

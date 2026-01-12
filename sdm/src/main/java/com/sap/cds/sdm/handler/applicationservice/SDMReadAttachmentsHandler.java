@@ -2,7 +2,9 @@ package com.sap.cds.sdm.handler.applicationservice;
 
 import com.sap.cds.Result;
 import com.sap.cds.ql.CQL;
+import com.sap.cds.ql.Predicate;
 import com.sap.cds.ql.cqn.CqnSelect;
+import com.sap.cds.ql.cqn.Modifier;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElementDefinition;
 import com.sap.cds.reflect.CdsEntity;
@@ -62,36 +64,60 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   public void processBefore(CdsReadEventContext context) throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
-      // update the uploadStatus of all blank attachments with success this is for existing
-      // attachments
-      RepoValue repoValue =
-          sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
-      Optional<CdsEntity> attachmentDraftEntity =
-          context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-      String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-      CqnSelect select = (CqnSelect) context.get("cqn");
-      String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-      if (!repoValue.getIsAsyncVirusScanEnabled()) {
+      try {
+        // update the uploadStatus of all blank attachments with success this is for existing
+        // attachments
+        RepoValue repoValue =
+            sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
+        Optional<CdsEntity> attachmentDraftEntity =
+            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
-        dbQuery.updateInProgressUploadStatusToSuccess(
-            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+        if (attachmentDraftEntity.isPresent()) {
+          String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+          CqnSelect select = (CqnSelect) context.get("cqn");
+          String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+
+          if (!repoValue.getIsAsyncVirusScanEnabled()) {
+            dbQuery.updateInProgressUploadStatusToSuccess(
+                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+          }
+          if (repoValue.getIsAsyncVirusScanEnabled()) {
+            processVirusScanInProgressAttachments(context, upID, upIdKey);
+          }
+        }
+
+        // Get attachment associations to handle deep reads with expand
+        CdsModel cdsModel = context.getModel();
+        List<String> fieldNames =
+            getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
+
+        // Use the new modifier to handle expand scenarios
+        CqnSelect modifiedCqn =
+            CQL.copy(context.getCqn(), new SDMBeforeReadItemsModifier(fieldNames));
+
+        // Only add repositoryId filter if this is a collection read (no keys specified)
+        CqnSelect select = (CqnSelect) context.get("cqn");
+        boolean hasKeys = select.ref() != null && select.ref().rootSegment().filter() != null;
+
+        if (!hasKeys) {
+          // Apply repositoryId filter for collection reads
+          modifiedCqn =
+              CQL.copy(
+                  modifiedCqn,
+                  new Modifier() {
+                    @Override
+                    public Predicate where(Predicate where) {
+                      return CQL.and(where, CQL.get("repositoryId").eq(repositoryId));
+                    }
+                  });
+        }
+
+        context.setCqn(modifiedCqn);
+      } catch (Exception e) {
+        logger.error("Error in SDMReadAttachmentsHandler.processBefore: {}", e.getMessage(), e);
+        // Re-throw to maintain error handling behavior
+        throw e;
       }
-      if (repoValue.getIsAsyncVirusScanEnabled()) {
-        processVirusScanInProgressAttachments(context, upID, upIdKey);
-      }
-
-      // Get attachment associations to handle deep reads with expand
-      CdsModel cdsModel = context.getModel();
-      List<String> fieldNames =
-          getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
-
-      // Use the new modifier that handles both filtering and expand scenarios
-      CqnSelect resultCqn =
-          CQL.copy(context.getCqn(), new SDMBeforeReadItemsModifier(repositoryId, fieldNames));
-      context.setCqn(resultCqn);
-
-    } else {
-      context.setCqn(context.getCqn());
     }
   }
 

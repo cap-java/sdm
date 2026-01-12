@@ -84,6 +84,8 @@ public class SDMErrorKeys {
   public static final String VIRUS_DETECTED_FILE_ERROR_KEY = "SDM.virusDetectedFileError";
   public static final String VIRUS_SCAN_IN_PROGRESS_FILE_ERROR_KEY =
       "SDM.virusScanInProgressFileError";
+
+  public static final String UPLOAD_IN_PROGRESS_FILE_ERROR_KEY = "SDM.uploadInProgressFileError";
   public static final String VIRUS_DETECTED_FILES_PREFIX_KEY = "SDM.virusDetectedFilesPrefix";
   public static final String VIRUS_DETECTED_FILES_SUFFIX_KEY = "SDM.virusDetectedFilesSuffix";
   public static final String VIRUS_SCAN_IN_PROGRESS_FILES_PREFIX_KEY =

@@ -20,11 +20,9 @@ public class SDMBeforeReadItemsModifier implements Modifier {
   private static final Logger logger = LoggerFactory.getLogger(SDMBeforeReadItemsModifier.class);
 
   private static final String ROOT_ASSOCIATION = "";
-  private final String repositoryId;
   private final List<String> mediaAssociations;
 
-  public SDMBeforeReadItemsModifier(String repositoryId, List<String> mediaAssociations) {
-    this.repositoryId = repositoryId;
+  public SDMBeforeReadItemsModifier(List<String> mediaAssociations) {
     this.mediaAssociations = mediaAssociations;
   }
 
@@ -91,7 +89,9 @@ public class SDMBeforeReadItemsModifier implements Modifier {
 
   private boolean isMediaAssociationAndNeedRequiredFields(
       String association, List<CqnSelectListItem> list) {
-    return mediaAssociations.contains(association)
+    // Only add fields for actual media associations, not the root entity (empty string)
+    return !association.equals(ROOT_ASSOCIATION)
+        && mediaAssociations.contains(association)
         && list.stream().anyMatch(item -> isItemRefFieldWithName(item, MediaData.CONTENT));
   }
 

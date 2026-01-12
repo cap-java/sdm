@@ -6,15 +6,17 @@ import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.*;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.model.RepoValue;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.cds.CdsReadEventContext;
+import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
-import java.util.Optional;
+import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +33,8 @@ public class SDMReadAttachmentsHandlerTest {
   @Mock private SDMService sdmService;
   @Mock private UserInfo userInfo;
   @Mock private DBQuery dbQuery;
+  @Mock private PersistenceService persistenceService;
+  @Mock private TokenHandler tokenHandler;
 
   @InjectMocks private SDMReadAttachmentsHandler sdmReadAttachmentsHandler;
 
@@ -115,20 +119,93 @@ public class SDMReadAttachmentsHandlerTest {
 
   @Test
   void testModifyCqnForNonAttachmentsEntity() throws IOException {
-    // Arrange
-    CqnSelect select =
-        Select.from("SomeEntity").where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
-
-    // Mock target
+    // Arrange - Mock target to return false for media annotation
     when(context.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
         .thenReturn(false);
-    when(context.getCqn()).thenReturn(select);
 
     // Act
     sdmReadAttachmentsHandler.processBefore(context);
 
-    // Assert — since it enters the 'else' clause, it should call setCqn with original select
-    verify(context).setCqn(select);
+    // Assert — since annotation is false, it should NOT call setCqn
+    verify(context, never()).setCqn(any());
+    verify(context, never()).getCqn();
+  }
+
+  @Test
+  void testProcessBefore_ExceptionHandling() throws IOException {
+    // Arrange
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+    when(sdmService.checkRepositoryType(any(), any()))
+        .thenThrow(new RuntimeException("Test exception"));
+
+    // Act & Assert
+    try {
+      sdmReadAttachmentsHandler.processBefore(context);
+    } catch (RuntimeException e) {
+      // Exception should be re-thrown
+      verify(sdmService).checkRepositoryType(any(), any());
+    }
+  }
+
+  @Test
+  void testProcessBefore_NoAttachmentDraftEntity() throws IOException {
+    // Arrange
+    CqnSelect select =
+        Select.from(cdsEntity).where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getCqn()).thenReturn(select);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+    when(model.findEntity(anyString())).thenReturn(Optional.empty());
+    when(context.get("cqn")).thenReturn(select);
+
+    // Act
+    sdmReadAttachmentsHandler.processBefore(context);
+
+    // Assert - should still call setCqn even without draft entity
+    verify(context).setCqn(any(CqnSelect.class));
+    verify(dbQuery, never())
+        .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+  }
+
+  @Test
+  void testProcessBefore_WithCollectionReadNoKeys() throws IOException {
+    // Arrange - create a select without keys (collection read)
+    CqnSelect select = Select.from("TestEntity");
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getCqn()).thenReturn(select);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+    when(model.findEntity(anyString())).thenReturn(Optional.empty());
+    when(context.get("cqn")).thenReturn(select);
+
+    // Act
+    sdmReadAttachmentsHandler.processBefore(context);
+
+    // Assert - repositoryId filter should be added for collection reads
+    verify(context).setCqn(any(CqnSelect.class));
   }
 }

@@ -19,7 +19,6 @@ import com.sap.cds.sdm.service.DocumentUploadService;
 import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
-import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.*;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -34,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 @ServiceName(
     value = "*",
-    type = {AttachmentService.class, DraftService.class})
+    type = {AttachmentService.class})
 public class SDMAttachmentsServiceHandler implements EventHandler {
   private final PersistenceService persistenceService;
   private final SDMService sdmService;
@@ -112,6 +111,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
       throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
     try {
       sdmService.readDocument(objectId, sdmCredentials, context);
     } catch (Exception e) {

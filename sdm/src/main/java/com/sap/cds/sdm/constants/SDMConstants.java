@@ -11,6 +11,8 @@ public class SDMConstants {
   public static final String REPOSITORY_ID = System.getenv("REPOSITORY_ID");
   public static final String MIMETYPE_INTERNET_SHORTCUT = "application/internet-shortcut";
   public static final String SYSTEM_USER = "system-internal";
+  public static final String SDM_READONLY_CONTEXT = "SDM_READONLY_CONTEXT";
+
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY_NAME =
       "SDM.Attachments.AdditionalProperty.name";
   public static final String SDM_ANNOTATION_ADDITIONALPROPERTY =

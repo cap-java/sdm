@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
+import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
+
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -17,6 +19,7 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
@@ -54,19 +57,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   @Before
-  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES)
-  void processBeforeForDraft(CdsCreateEventContext context, List<CdsData> data) {
-    // before the attachment's readonly fields are removed by the runtime, preserve them in a custom
-    // field in data
-    logger.info("Hellooo");
-  }
-
-  @Before
-  @HandlerOrder(HandlerOrder.EARLY)
+  @HandlerOrder(HandlerOrder.DEFAULT)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     logger.info("Target Entity : " + context.getTarget().getQualifiedName());
+
     for (CdsData entityData : data) {
-      entityData.put("uploadStatus", "uploading");
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
               context.getModel(),
@@ -76,7 +71,66 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               entityData);
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
       updateName(context, data, attachmentCompositionDetails);
+      // Remove uploadStatus from attachment data to prevent validation errors
+
     }
+    SDMUtils.cleanupReadonlyContexts(data);
+  }
+
+  @After
+  @HandlerOrder(HandlerOrder.LATE)
+  public void processAfter(CdsCreateEventContext context, List<CdsData> data) {
+    // Update uploadStatus to Success after entity is persisted
+    logger.info(
+        "Post-processing attachments after persistence for entity: {}",
+        context.getTarget().getQualifiedName());
+
+    for (CdsData entityData : data) {
+      Map<String, Map<String, String>> attachmentCompositionDetails =
+          AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+              context.getModel(),
+              context.getTarget(),
+              persistenceService,
+              context.getTarget().getQualifiedName(),
+              entityData);
+
+      for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+        String attachmentCompositionDefinition = entry.getKey();
+        String attachmentCompositionName = entry.getValue().get("name");
+        Optional<CdsEntity> attachmentEntity =
+            context.getModel().findEntity(attachmentCompositionDefinition);
+
+        if (attachmentEntity.isPresent()) {
+          String targetEntity = context.getTarget().getQualifiedName();
+          List<Map<String, Object>> attachments =
+              AttachmentsHandlerUtils.fetchAttachments(
+                  targetEntity, entityData, attachmentCompositionName);
+
+          if (attachments != null) {
+            for (Map<String, Object> attachment : attachments) {
+              String id = (String) attachment.get("ID");
+              String uploadStatus = (String) attachment.get("uploadStatus");
+              if (id != null) {
+                CmisDocument cmisDocument = new CmisDocument();
+                cmisDocument.setAttachmentId(id);
+                cmisDocument.setUploadStatus(uploadStatus);
+                // Update uploadStatus to Success in database if it was InProgress
+                dbQuery.saveUploadStatusToAttachment(
+                    attachmentEntity.get(), persistenceService, cmisDocument);
+                logger.debug("Updated uploadStatus to Success for attachment ID: {}", id);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Before
+  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 500)
+  public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
+    // Preserve uploadStatus before CDS removes readonly fields
+    SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
 
   public void updateName(
@@ -177,6 +231,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     List<String> virusDetectedFiles = new ArrayList<>();
     List<String> virusScanInProgressFiles = new ArrayList<>();
     List<String> scanFailedFiles = new ArrayList<>();
+    List<String> uploadInProgressFiles = new ArrayList<>();
 
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
@@ -194,13 +249,15 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             noSDMRoles,
             virusDetectedFiles,
             virusScanInProgressFiles,
-            scanFailedFiles);
+            scanFailedFiles,
+            uploadInProgressFiles);
       }
 
       // Throw exception if any files failed virus scan or scan failed
       if (!virusDetectedFiles.isEmpty()
           || !virusScanInProgressFiles.isEmpty()
-          || !scanFailedFiles.isEmpty()) {
+          || !scanFailedFiles.isEmpty()
+          || !uploadInProgressFiles.isEmpty()) {
         StringBuilder errorMessage = new StringBuilder();
         if (!virusDetectedFiles.isEmpty()) {
           errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
@@ -217,6 +274,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             errorMessage.append(" ");
           }
           errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));
+        }
+        if (!uploadInProgressFiles.isEmpty()) {
+          if (errorMessage.length() > 0) {
+            errorMessage.append(" ");
+          }
+          errorMessage.append(SDMErrorMessages.uploadInProgressFilesMessage(uploadInProgressFiles));
         }
         throw new ServiceException(errorMessage.toString());
       }
@@ -242,7 +305,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles,
       List<String> virusDetectedFiles,
       List<String> virusScanInProgressFiles,
-      List<String> scanFailedFiles)
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
@@ -255,10 +319,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
 
     fileNameInDB = cmisDocument.getFileName();
-
+    String uploadStatus = "";
     // Collect files with virus-related upload statuses
-    if (attachment.get("uploadStatus") != null) {
-      String uploadStatus = attachment.get("uploadStatus").toString();
+    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
+    if (readonlyData != null && readonlyData.get("uploadStatus") != null) {
+      uploadStatus = readonlyData.get("uploadStatus").toString();
       if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
         virusDetectedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
         return; // Skip further processing for this attachment
@@ -267,11 +332,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         virusScanInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
         return; // Skip further processing for this attachment
       }
+      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+        uploadInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
+        return; // Skip further processing for this attachment
+      }
       if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
         scanFailedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
         return; // Skip further processing for this attachment
       }
+      attachment.put("uploadStatus", uploadStatus);
     }
+
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     String fileNameInSDM = null, descriptionInSDM = null;
     JSONObject sdmAttachmentData =
@@ -342,6 +413,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           noSDMRoles,
           duplicateFileNameList,
           filesNotFound);
+
     } catch (ServiceException e) {
       AttachmentsHandlerUtils.handleSDMServiceException(
           e,

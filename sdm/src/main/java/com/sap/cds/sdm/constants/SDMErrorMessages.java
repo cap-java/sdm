@@ -112,6 +112,10 @@ public class SDMErrorMessages {
       "The virus scan failed, for the following files: \n\n";
   public static final String SCAN_FAILED_FILES_SUFFIX =
       "You can't save your changes because some files not scanned. Delete the unscanned files manually before continuing.";
+  public static final String UPLOAD_IN_PROGRESS_FILES_PREFIX =
+      "The upload is in progress for the following files: \n\n";
+  public static final String UPLOAD_IN_PROGRESS_FILES_SUFFIX =
+      "You can't save your changes until the upload completes. Refresh the page to check if the upload is complete.";
   public static final String RESTRICTED_CHARACTERS_IN_MULTIPLE_FILES =
       "The following names contain unsupported characters (‘/’ or ‘\\’). Rename and try again:\n\n";
   public static final String MULTIPLE_DUPLICATE_FILENAMES_PREFIX =
@@ -285,6 +289,13 @@ public class SDMErrorMessages {
     StringBuilder prefix = new StringBuilder();
     prefix.append(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILES_PREFIX"));
     String closingRemark = SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILES_SUFFIX");
+    return buildErrorMessage(files, prefix, closingRemark);
+  }
+
+  public static String uploadInProgressFilesMessage(List<String> files) {
+    StringBuilder prefix = new StringBuilder();
+    prefix.append(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILES_PREFIX"));
+    String closingRemark = SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILES_SUFFIX");
     return buildErrorMessage(files, prefix, closingRemark);
   }
 

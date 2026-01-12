@@ -1,8 +1,11 @@
 package com.sap.cds.sdm.utilities;
 
+import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.CdsData;
+import com.sap.cds.CdsDataProcessor;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsAssociationType;
@@ -62,6 +65,24 @@ public class SDMUtils {
       }
     }
     return filenamesWithWhitespace;
+  }
+
+  public static void cleanupReadonlyContexts(List<CdsData> data) {
+    for (CdsData entityData : data) {
+      // Remove SDM_READONLY_CONTEXT from all attachments in the data
+      entityData.forEach(
+          (key, value) -> {
+            if (value instanceof List) {
+              List<?> list = (List<?>) value;
+              for (Object item : list) {
+                if (item instanceof Map) {
+                  Map<String, Object> attachment = (Map<String, Object>) item;
+                  attachment.remove(SDM_READONLY_CONTEXT);
+                }
+              }
+            }
+          });
+    }
   }
 
   public static Set<String> FileNameDuplicateInDrafts(
@@ -221,7 +242,9 @@ public class SDMUtils {
     }
     CdsEntity entity = attachmentEntity.get();
     for (String key : attachment.keySet()) {
-      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key) || entity.getElement(key) == null) {
+      if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)
+          || SDMConstants.SDM_READONLY_CONTEXT.equals(key)
+          || entity.getElement(key) == null) {
         continue;
       }
 
@@ -234,6 +257,26 @@ public class SDMUtils {
       }
     }
     return titleMap;
+  }
+
+  public static void preserveReadonlyFields(CdsEntity target, List<CdsData> data) {
+    CdsDataProcessor.Filter mediaContentFilter =
+        (path, element, type) -> element.findAnnotation("Core.MediaType").isPresent();
+
+    CdsDataProcessor.Validator validator =
+        (path, element, value) -> {
+          Map<String, Object> values = path.target().values();
+          Map<String, Object> readonlyData = new HashMap<>();
+          if (values.containsKey("uploadStatus")) {
+            readonlyData.put("uploadStatus", values.get("uploadStatus"));
+          }
+
+          if (!readonlyData.isEmpty()) {
+            values.put(SDM_READONLY_CONTEXT, readonlyData);
+          }
+        };
+
+    CdsDataProcessor.create().addValidator(mediaContentFilter, validator).process(data, target);
   }
 
   public static String getErrorMessage(String errorKey) {
@@ -291,7 +334,8 @@ public class SDMUtils {
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
-        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)
+            || SDMConstants.SDM_READONLY_CONTEXT.equals(key)) {
           continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);
@@ -326,7 +370,8 @@ public class SDMUtils {
     if (attachmentEntity.isPresent()) {
       CdsEntity entity = attachmentEntity.get();
       for (String key : keysList) {
-        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)) {
+        if (SDMConstants.DRAFT_READONLY_CONTEXT.equals(key)
+            || SDMConstants.SDM_READONLY_CONTEXT.equals(key)) {
           continue; // Skip updateProperties processing for DRAFT_READONLY_CONTEXT
         }
         CdsElement element = entity.getElement(key);
@@ -497,10 +542,10 @@ public class SDMUtils {
         whereArray = refArray;
       }
 
-      // Check if whereArray is missing or empty
+      // If where condition is not present or empty, return null (valid scenario for select without
+      // filter)
       if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
-        logger.warn("No WHERE condition found in CQN query");
-        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
+        return null;
       }
 
       // Get the actual key field names from the parent entity
@@ -519,9 +564,7 @@ public class SDMUtils {
           }
         }
       }
-      if (upID == null) {
-        throw new ServiceException(SDMConstants.ENTITY_PROCESSING_ERROR_LINK);
-      }
+      // Return null if UP ID is not found (valid scenario)
       return upID;
     } catch (Exception e) {
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);
