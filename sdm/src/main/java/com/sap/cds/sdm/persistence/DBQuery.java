@@ -156,20 +156,6 @@ public class DBQuery {
     return cmisDocument;
   }
 
-  private CmisDocument mapRowToCmisDocument(Optional<Row> optionalRow) {
-    CmisDocument cmisDocument = new CmisDocument();
-    if (optionalRow.isPresent()) {
-      Row row = optionalRow.get();
-      cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
-      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
-      cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null
-              ? row.get("uploadStatus").toString()
-              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-    }
-    return cmisDocument;
-  }
-
   /**
    * Retrieves valid secondary properties for the target attachment entity. Used to determine which
    * properties from SDM should be persisted to the database.

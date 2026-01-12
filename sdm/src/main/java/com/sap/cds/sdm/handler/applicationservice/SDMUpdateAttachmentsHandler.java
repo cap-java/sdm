@@ -325,54 +325,146 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
-    String fileNameInDB;
     CmisDocument cmisDocument =
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
-    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    fileNameInDB = cmisDocument.getFileName();
-    String uploadStatus = "";
-    // Collect files with virus-related upload statuses
-    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
-    if (readonlyData != null && readonlyData.get("uploadStatus") != null) {
-      uploadStatus = readonlyData.get("uploadStatus").toString();
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
-        virusDetectedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
-        virusScanInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
-        scanFailedFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
-        uploadInProgressFiles.add(fileNameInDB != null ? fileNameInDB : filenameInRequest);
-        return; // Skip further processing for this attachment
-      }
-      attachment.put("uploadStatus", uploadStatus);
+    String fileNameInDB = cmisDocument.getFileName();
+
+    // Check for upload status issues
+    if (handleUploadStatusCheck(
+        attachment,
+        fileNameInDB,
+        filenameInRequest,
+        virusDetectedFiles,
+        virusScanInProgressFiles,
+        scanFailedFiles,
+        uploadInProgressFiles)) {
+      return;
     }
-    // Fetch from SDM if not in DB
+
+    // Fetch file details from SDM if needed
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    AttachmentDetails details =
+        fetchAttachmentDetails(
+            fileNameInDB,
+            descriptionInRequest,
+            objectId,
+            sdmCredentials,
+            context.getUserInfo().isSystemUser());
+
+    Map<String, String> propertiesInDB =
+        dbQuery.getPropertiesForID(
+            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
+
+    Map<String, String> updatedSecondaryProperties =
+        prepareUpdatedProperties(
+            attachmentEntity,
+            attachment,
+            filenameInRequest,
+            descriptionInRequest,
+            details.fileNameInDB,
+            details.descriptionInDB,
+            secondaryTypeProperties,
+            propertiesInDB);
+
+    if (updatedSecondaryProperties.isEmpty()) {
+      logger.debug("No changes detected for attachment ID: {}, skipping SDM update", id);
+      return;
+    }
+
+    updateAttachmentInSDM(
+        attachmentEntity,
+        context,
+        attachment,
+        id,
+        filenameInRequest,
+        descriptionInRequest,
+        objectId,
+        details.fileNameInDB,
+        details.descriptionInDB,
+        propertiesInDB,
+        secondaryTypeProperties,
+        updatedSecondaryProperties,
+        secondaryPropertiesWithInvalidDefinitions,
+        noSDMRoles,
+        duplicateFileNameList,
+        filesNotFound,
+        filesWithUnsupportedProperties,
+        badRequest);
+  }
+
+  private boolean handleUploadStatusCheck(
+      Map<String, Object> attachment,
+      String fileNameInDB,
+      String filenameInRequest,
+      List<String> virusDetectedFiles,
+      List<String> virusScanInProgressFiles,
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles) {
+    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
+    if (readonlyData == null || readonlyData.get("uploadStatus") == null) {
+      return false;
+    }
+
+    String uploadStatus = readonlyData.get("uploadStatus").toString();
+    String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
+
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
+      virusDetectedFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
+      virusScanInProgressFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+      scanFailedFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      uploadInProgressFiles.add(fileName);
+      return true;
+    }
+
+    attachment.put("uploadStatus", uploadStatus);
+    return false;
+  }
+
+  private AttachmentDetails fetchAttachmentDetails(
+      String fileNameInDB,
+      String descriptionInRequest,
+      String objectId,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser)
+      throws IOException {
+    String finalFileNameInDB = fileNameInDB;
     String descriptionInDB = null;
+
     if (fileNameInDB == null || descriptionInRequest != null) {
       JSONObject sdmAttachmentData =
           AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
-              sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+              sdmService, objectId, sdmCredentials, isSystemUser);
       JSONObject succinctProperties = sdmAttachmentData.getJSONObject("succinctProperties");
+
       if (succinctProperties.has("cmis:name")) {
-        fileNameInDB = succinctProperties.getString("cmis:name");
+        finalFileNameInDB = succinctProperties.getString("cmis:name");
       }
       if (succinctProperties.has("cmis:description")) {
         descriptionInDB = succinctProperties.getString("cmis:description");
       }
     }
 
-    Map<String, String> propertiesInDB =
-        dbQuery.getPropertiesForID(
-            attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
-    // Prepare document and updated properties
+    return new AttachmentDetails(finalFileNameInDB, descriptionInDB);
+  }
 
+  private Map<String, String> prepareUpdatedProperties(
+      Optional<CdsEntity> attachmentEntity,
+      Map<String, Object> attachment,
+      String filenameInRequest,
+      String descriptionInRequest,
+      String fileNameInDB,
+      String descriptionInDB,
+      Map<String, String> secondaryTypeProperties,
+      Map<String, String> propertiesInDB) {
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -380,27 +472,43 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-    cmisDocument =
-        AttachmentsHandlerUtils.prepareCmisDocument(
-            filenameInRequest, descriptionInRequest, objectId);
 
-    // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, fileNameInDB, updatedSecondaryProperties);
 
     AttachmentsHandlerUtils.updateDescriptionProperty(
         null, descriptionInRequest, descriptionInDB, updatedSecondaryProperties, true);
 
-    // Send update to SDM only if there are changes
-    if (updatedSecondaryProperties.isEmpty()) {
-      logger.debug("No changes detected for attachment ID: {}, skipping SDM update", id);
-      return;
-    }
+    return updatedSecondaryProperties;
+  }
 
+  private void updateAttachmentInSDM(
+      Optional<CdsEntity> attachmentEntity,
+      CdsUpdateEventContext context,
+      Map<String, Object> attachment,
+      String id,
+      String filenameInRequest,
+      String descriptionInRequest,
+      String objectId,
+      String fileNameInDB,
+      String descriptionInDB,
+      Map<String, String> propertiesInDB,
+      Map<String, String> secondaryTypeProperties,
+      Map<String, String> updatedSecondaryProperties,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles,
+      List<String> duplicateFileNameList,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest) {
     logger.debug(
         "Updating attachment in SDM - ID: {}, properties count: {}",
         id,
         updatedSecondaryProperties.size());
+
+    CmisDocument cmisDocument =
+        AttachmentsHandlerUtils.prepareCmisDocument(
+            filenameInRequest, descriptionInRequest, objectId);
 
     try {
       int responseCode =
@@ -439,6 +547,16 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           descriptionInDB,
           filesWithUnsupportedProperties,
           badRequest);
+    }
+  }
+
+  private static class AttachmentDetails {
+    final String fileNameInDB;
+    final String descriptionInDB;
+
+    AttachmentDetails(String fileNameInDB, String descriptionInDB) {
+      this.fileNameInDB = fileNameInDB;
+      this.descriptionInDB = descriptionInDB;
     }
   }
 
