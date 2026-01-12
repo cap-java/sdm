@@ -1,0 +1,6 @@
+code;name;criticality
+uploading;Uploading;5
+Success;Success;3
+Failed;Scan Failed;2
+VirusDetected;Virus detected;1
+VirusScanInprogress;Virus scanning in progress(Refresh the page);5

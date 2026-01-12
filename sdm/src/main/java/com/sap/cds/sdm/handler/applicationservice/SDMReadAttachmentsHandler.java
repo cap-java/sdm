@@ -9,6 +9,8 @@ import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElementDefinition;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
+import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.SDMBeforeReadItemsModifier;
@@ -34,6 +36,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.ehcache.Cache;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +60,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     this.sdmService = sdmService;
     this.tokenHandler = tokenHandler;
     this.dbQuery = dbQuery;
+  }
+
+  private void setErrorMessagesInCache(CdsReadEventContext context) {
+    // Check if cache is available
+    Cache<ErrorMessageKey, String> errorMessageCache = CacheConfig.getErrorMessageCache();
+    if (errorMessageCache == null) {
+      return; // Cache not initialized, skip
+    }
   }
 
   @Before
