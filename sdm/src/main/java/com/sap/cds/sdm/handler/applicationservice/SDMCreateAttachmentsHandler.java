@@ -228,8 +228,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String targetEntity = context.getTarget().getQualifiedName();
     List<Map<String, Object>> attachments =
         AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
-    List<String> virusDetectedFiles = new ArrayList<>();
-    List<String> virusScanInProgressFiles = new ArrayList<>();
     List<String> scanFailedFiles = new ArrayList<>();
     List<String> uploadInProgressFiles = new ArrayList<>();
 
@@ -247,16 +245,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             attachmentEntity,
             secondaryPropertiesWithInvalidDefinitions,
             noSDMRoles,
-            virusDetectedFiles,
-            virusScanInProgressFiles,
             scanFailedFiles,
             uploadInProgressFiles);
       }
 
-      // Throw exception if any files failed virus scan or scan failed
-      String errorMessage =
-          buildErrorMessage(
-              virusDetectedFiles, virusScanInProgressFiles, scanFailedFiles, uploadInProgressFiles);
+      // Throw exception if any files failed scan or upload in progress
+      String errorMessage = buildErrorMessage(scanFailedFiles, uploadInProgressFiles);
       if (!errorMessage.isEmpty()) {
         throw new ServiceException(errorMessage);
       }
@@ -280,8 +274,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Optional<CdsEntity> attachmentEntity,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles,
-      List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles,
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles)
       throws IOException {
@@ -297,13 +289,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     // Check upload status and collect problematic files
     if (checkUploadStatus(
-        attachment,
-        fileNameInDB,
-        filenameInRequest,
-        virusDetectedFiles,
-        virusScanInProgressFiles,
-        scanFailedFiles,
-        uploadInProgressFiles)) {
+        attachment, fileNameInDB, filenameInRequest, scanFailedFiles, uploadInProgressFiles)) {
       return; // Skip further processing if upload status is problematic
     }
 
@@ -336,8 +322,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       Map<String, Object> attachment,
       String fileNameInDB,
       String filenameInRequest,
-      List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles,
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles) {
     Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
@@ -348,14 +332,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String uploadStatus = readonlyData.get("uploadStatus").toString();
     String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
 
-    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
-      virusDetectedFiles.add(fileName);
-      return true;
-    }
-    if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
-      virusScanInProgressFiles.add(fileName);
-      return true;
-    }
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
       uploadInProgressFiles.add(fileName);
       return true;
@@ -539,20 +515,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   private String buildErrorMessage(
-      List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles,
-      List<String> scanFailedFiles,
-      List<String> uploadInProgressFiles) {
+      List<String> scanFailedFiles, List<String> uploadInProgressFiles) {
     StringBuilder errorMessage = new StringBuilder();
 
-    if (!virusDetectedFiles.isEmpty()) {
-      errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
-    }
-    if (!virusScanInProgressFiles.isEmpty()) {
-      appendWithSpace(errorMessage);
-      errorMessage.append(
-          SDMErrorMessages.virusScanInProgressFilesMessage(virusScanInProgressFiles));
-    }
     if (!scanFailedFiles.isEmpty()) {
       appendWithSpace(errorMessage);
       errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));

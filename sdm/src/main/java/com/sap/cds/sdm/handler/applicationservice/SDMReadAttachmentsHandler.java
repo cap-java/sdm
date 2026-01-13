@@ -63,6 +63,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     this.dbQuery = dbQuery;
   }
 
+  /*
+    Error message caching requires the CAP context to retrieve localized messages, which may not be
+    available at all error throw sites. To ensure availability, error messages are cached during the
+    before read event when the context is guaranteed to be present.
+  */
   private void setErrorMessagesInCache(CdsReadEventContext context) {
     // Check if cache is available
     Cache<ErrorMessageKey, String> errorMessageCache = CacheConfig.getErrorMessageCache();
@@ -147,13 +152,17 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
         if (!hasKeys) {
           // Apply repositoryId filter for collection reads
+          Predicate repositoryFilter = CQL.get("repositoryId").eq(repositoryId);
           modifiedCqn =
               CQL.copy(
                   modifiedCqn,
                   new Modifier() {
                     @Override
                     public Predicate where(Predicate where) {
-                      return CQL.and(where, CQL.get("repositoryId").eq(repositoryId));
+                      if (where == null) {
+                        return repositoryFilter;
+                      }
+                      return CQL.and(where, repositoryFilter);
                     }
                   });
         }
@@ -164,8 +173,9 @@ public class SDMReadAttachmentsHandler implements EventHandler {
         // Re-throw to maintain error handling behavior
         throw e;
       }
+    } else {
+      context.setCqn(context.getCqn());
     }
-    // No action needed for non-media entities
   }
 
   /**

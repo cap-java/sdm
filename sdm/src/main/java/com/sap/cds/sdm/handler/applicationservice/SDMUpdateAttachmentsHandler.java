@@ -237,8 +237,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
-    List<String> virusDetectedFiles = new ArrayList<>();
-    List<String> virusScanInProgressFiles = new ArrayList<>();
     List<String> scanFailedFiles = new ArrayList<>();
     List<String> uploadInProgressFiles = new ArrayList<>();
 
@@ -256,28 +254,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           badRequest,
           secondaryPropertiesWithInvalidDefinitions,
           noSDMRoles,
-          virusDetectedFiles,
-          virusScanInProgressFiles,
           scanFailedFiles,
           uploadInProgressFiles);
     }
 
-    // Throw exception if any files failed virus scan or scan failed
-    if (!virusDetectedFiles.isEmpty()
-        || !virusScanInProgressFiles.isEmpty()
-        || !scanFailedFiles.isEmpty()
-        || !uploadInProgressFiles.isEmpty()) {
+    // Throw exception if any files failed scan or upload in progress
+    if (!scanFailedFiles.isEmpty() || !uploadInProgressFiles.isEmpty()) {
       StringBuilder errorMessage = new StringBuilder();
-      if (!virusDetectedFiles.isEmpty()) {
-        errorMessage.append(SDMErrorMessages.virusDetectedFilesMessage(virusDetectedFiles));
-      }
-      if (!virusScanInProgressFiles.isEmpty()) {
-        if (errorMessage.length() > 0) {
-          errorMessage.append(" ");
-        }
-        errorMessage.append(
-            SDMErrorMessages.virusScanInProgressFilesMessage(virusScanInProgressFiles));
-      }
       if (!scanFailedFiles.isEmpty()) {
         if (errorMessage.length() > 0) {
           errorMessage.append(" ");
@@ -311,8 +294,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles,
-      List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles,
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles)
       throws IOException {
@@ -331,13 +312,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     // Check for upload status issues
     if (handleUploadStatusCheck(
-        attachment,
-        fileNameInDB,
-        filenameInRequest,
-        virusDetectedFiles,
-        virusScanInProgressFiles,
-        scanFailedFiles,
-        uploadInProgressFiles)) {
+        attachment, fileNameInDB, filenameInRequest, scanFailedFiles, uploadInProgressFiles)) {
       return;
     }
 
@@ -395,8 +370,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, Object> attachment,
       String fileNameInDB,
       String filenameInRequest,
-      List<String> virusDetectedFiles,
-      List<String> virusScanInProgressFiles,
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles) {
     Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
@@ -407,14 +380,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String uploadStatus = readonlyData.get("uploadStatus").toString();
     String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
 
-    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
-      virusDetectedFiles.add(fileName);
-      return true;
-    }
-    if (uploadStatus.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
-      virusScanInProgressFiles.add(fileName);
-      return true;
-    }
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
       scanFailedFiles.add(fileName);
       return true;

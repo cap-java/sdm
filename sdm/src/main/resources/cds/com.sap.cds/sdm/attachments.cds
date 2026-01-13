@@ -37,23 +37,21 @@ annotate Attachments with @UI: {
         TypeNamePlural: '{i18n>Attachments}',
     },
     LineItem  : [
-        {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-            {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
-            {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-            {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-            {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-            {Value: note, @HTML5.CssDefaults: {width: '20%'}},
-
+        {Value: fileName, @HTML5.CssDefaults: {width: '15%'}},
+                {Value: content, @HTML5.CssDefaults: {width: '20%'}},
+                {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
+                {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+                {Value: note, @HTML5.CssDefaults: {width: '15%'}},
 {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '10%'},
+        @HTML5.CssDefaults: {width: '15%'},
         @UI.Hidden: IsActiveEntity
       },
     ]
 } {
-    note       @(title: '{i18n>Description}', UI.MultiLineText);
+    note       @(title: '{i18n>Description}');
     fileName  @(title: '{i18n>Filename}');
        modifiedAt @(odata.etag: null);
        uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
