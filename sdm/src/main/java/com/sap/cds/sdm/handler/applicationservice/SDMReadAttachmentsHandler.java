@@ -142,25 +142,37 @@ public class SDMReadAttachmentsHandler implements EventHandler {
         List<String> fieldNames =
             getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
 
-        // Use the new modifier to handle expand scenarios
-        CqnSelect modifiedCqn =
-            CQL.copy(context.getCqn(), new SDMBeforeReadItemsModifier(fieldNames));
+        // First apply repositoryId filter, then handle field selection
+        CqnSelect originalCqn = context.getCqn();
 
-        // Apply repositoryId filter for all reads
-        // The filter will be combined with any existing where conditions
-        Predicate repositoryFilter = CQL.get("repositoryId").eq(repositoryId);
-        modifiedCqn =
-            CQL.copy(
-                modifiedCqn,
-                new Modifier() {
-                  @Override
-                  public Predicate where(Predicate where) {
-                    if (where == null) {
-                      return repositoryFilter;
+        // Check if this is a keyed read by examining if there's a filter in the ref
+        boolean isKeyedRead =
+            originalCqn.ref() != null
+                && originalCqn.ref().rootSegment() != null
+                && originalCqn.ref().rootSegment().filter() != null
+                && !originalCqn.ref().rootSegment().filter().toString().isEmpty();
+
+        CqnSelect modifiedCqn = originalCqn;
+
+        if (!isKeyedRead) {
+          // Apply repositoryId filter for collection reads first
+          Predicate repositoryFilter = CQL.get("repositoryId").eq(repositoryId);
+          modifiedCqn =
+              CQL.copy(
+                  modifiedCqn,
+                  new Modifier() {
+                    @Override
+                    public Predicate where(Predicate where) {
+                      if (where == null) {
+                        return repositoryFilter;
+                      }
+                      return CQL.and(where, repositoryFilter);
                     }
-                    return CQL.and(where, repositoryFilter);
-                  }
-                });
+                  });
+        }
+
+        // Then apply the modifier to handle expand scenarios
+        modifiedCqn = CQL.copy(modifiedCqn, new SDMBeforeReadItemsModifier(fieldNames));
 
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
