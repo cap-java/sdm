@@ -146,26 +146,22 @@ public class SDMReadAttachmentsHandler implements EventHandler {
         CqnSelect modifiedCqn =
             CQL.copy(context.getCqn(), new SDMBeforeReadItemsModifier(fieldNames));
 
-        // Only add repositoryId filter if this is a collection read (no keys specified)
-        CqnSelect select = (CqnSelect) context.get("cqn");
-        boolean hasKeys = select.ref() != null && select.ref().rootSegment().filter() != null;
-
-        if (!hasKeys) {
-          // Apply repositoryId filter for collection reads
-          Predicate repositoryFilter = CQL.get("repositoryId").eq(repositoryId);
-          modifiedCqn =
-              CQL.copy(
-                  modifiedCqn,
-                  new Modifier() {
-                    @Override
-                    public Predicate where(Predicate where) {
-                      if (where == null) {
-                        return repositoryFilter;
-                      }
-                      return CQL.and(where, repositoryFilter);
+        // Apply repositoryId filter for all reads
+        // The filter will be combined with any existing where conditions
+        Predicate repositoryFilter = CQL.get("repositoryId").eq(repositoryId);
+        modifiedCqn =
+            CQL.copy(
+                modifiedCqn,
+                new Modifier() {
+                  @Override
+                  public Predicate where(Predicate where) {
+                    if (where == null) {
+                      return repositoryFilter;
                     }
-                  });
-        }
+                    return CQL.and(where, repositoryFilter);
+                  }
+                });
+
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {

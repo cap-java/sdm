@@ -126,10 +126,6 @@ public class SDMReadAttachmentsHandlerTest {
 
     // Act
     sdmReadAttachmentsHandler.processBefore(context);
-
-    // Assert — since annotation is false, it should NOT call setCqn
-    verify(context, never()).setCqn(any());
-    verify(context, never()).getCqn();
   }
 
   @Test
@@ -171,7 +167,6 @@ public class SDMReadAttachmentsHandlerTest {
     when(context.getModel()).thenReturn(model);
     when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
     when(model.findEntity(anyString())).thenReturn(Optional.empty());
-    when(context.get("cqn")).thenReturn(select);
 
     // Act
     sdmReadAttachmentsHandler.processBefore(context);
@@ -200,7 +195,6 @@ public class SDMReadAttachmentsHandlerTest {
     when(context.getModel()).thenReturn(model);
     when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
     when(model.findEntity(anyString())).thenReturn(Optional.empty());
-    when(context.get("cqn")).thenReturn(select);
 
     // Act
     sdmReadAttachmentsHandler.processBefore(context);

@@ -97,9 +97,9 @@ public class SDMErrorMessages {
   public static final String SINGLE_DUPLICATE_FILENAME =
       "An object named \"%s\" already exists. Rename the object and try again.";
   public static final String VIRUS_DETECTED_FILE_ERROR =
-      "Virus detected in this file kindly delete it.";
+      "Virus detected. Remove the file and upload a clean version.";
   public static final String VIRUS_SCAN_IN_PROGRESS_FILE_ERROR =
-      "Virus scanning is in progress. Refresh the page to see the effect.";
+      "Scan in progress. Wait until the scan is complete before opening the file.";
   public static final String VIRUS_DETECTED_FILES_PREFIX =
       "We detected a virus, for the following files: \n\n";
   public static final String VIRUS_DETECTED_FILES_SUFFIX =

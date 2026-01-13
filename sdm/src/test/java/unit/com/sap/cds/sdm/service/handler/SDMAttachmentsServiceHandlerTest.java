@@ -2311,7 +2311,8 @@ public class SDMAttachmentsServiceHandlerTest {
               handlerSpy.readAttachment(readContext);
             });
     // Should fail on draft entity not found, not on virus scan
-    assertEquals("Virus detected in this file kindly delete it.", thrown.getMessage());
+    assertEquals(
+        "Virus detected. Remove the file and upload a clean version.", thrown.getMessage());
   }
 
   @Test
@@ -2362,7 +2363,8 @@ public class SDMAttachmentsServiceHandlerTest {
             });
     // Should fail on draft entity not found, not on virus scan
     assertEquals(
-        "Virus scanning is in progress. Refresh the page to see the effect.", thrown.getMessage());
+        "Scan in progress. Wait until the scan is complete before opening the file.",
+        thrown.getMessage());
   }
 
   @Test
