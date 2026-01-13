@@ -121,7 +121,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
-  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  uploadStatus    @(title: '{i18n>UploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
   type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
   content
@@ -205,7 +205,7 @@ annotate my.Books.references with @UI: {
   fileName  @(title: '{i18n>Filename}');
   type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
-  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  uploadStatus    @(title: '{i18n>UploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
