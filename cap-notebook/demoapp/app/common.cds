@@ -69,12 +69,12 @@ annotate my.Books.attachments with @UI: {
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
     {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
+        @HTML5.CssDefaults: {width: '20%'},
         @UI.Hidden: IsActiveEntity      },
     {
       $Type : 'UI.DataFieldForAction',
@@ -122,7 +122,7 @@ annotate my.Books.attachments with @UI: {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
   uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
-
+  type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
   content
     @Core.ContentDisposition: { Filename: fileName }
@@ -146,17 +146,17 @@ annotate my.Books.references with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
-     {
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
+        @HTML5.CssDefaults: {width: '20%'},
         @UI.Hidden: IsActiveEntity      },
     {
       $Type : 'UI.DataFieldForAction',
@@ -203,6 +203,7 @@ annotate my.Books.references with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
+  type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
   uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
   content
