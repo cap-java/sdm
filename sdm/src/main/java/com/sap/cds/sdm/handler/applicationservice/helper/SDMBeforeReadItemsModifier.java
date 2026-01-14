@@ -78,9 +78,6 @@ public class SDMBeforeReadItemsModifier implements Modifier {
       if (list.stream().noneMatch(item -> isItemRefFieldWithName(item, Attachments.STATUS))) {
         listToEnhance.add(CQL.get(Attachments.STATUS));
       }
-      if (list.stream().noneMatch(item -> isItemRefFieldWithName(item, "repositoryId"))) {
-        listToEnhance.add(CQL.get("repositoryId"));
-      }
       if (list.stream().noneMatch(item -> isItemRefFieldWithName(item, "uploadStatus"))) {
         listToEnhance.add(CQL.get("uploadStatus"));
       }
