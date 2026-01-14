@@ -1,7 +1,12 @@
 
 ---
-cds:
-    data-source:
-        csv:
-            paths:
-            - "./src/main/resources/cds/**"      
+spring:
+  config:
+    activate:
+      on-profile: default
+  sql:
+    init:
+      schema-locations: classpath:schema-h2.sql
+  data-source:
+    auto-config:
+      enabled: false     
