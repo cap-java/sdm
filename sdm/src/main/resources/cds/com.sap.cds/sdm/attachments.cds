@@ -46,8 +46,7 @@ annotate Attachments with @UI: {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '15%'},
-        @UI.Hidden: IsActiveEntity
+        @HTML5.CssDefaults: {width: '15%'}
       },
     ]
 } {
