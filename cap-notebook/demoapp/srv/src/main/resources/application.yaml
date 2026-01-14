@@ -9,4 +9,4 @@ spring:
       schema-locations: classpath:schema-h2.sql
   data-source:
     auto-config:
-      enabled: false     
+      enabled: false   
