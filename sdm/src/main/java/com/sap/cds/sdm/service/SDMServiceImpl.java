@@ -603,7 +603,10 @@ public class SDMServiceImpl implements SDMService {
         // Fetch the disableVirusScannerForLargeFile
         repoValue.setDisableVirusScannerForLargeFile(
             featureData.getBoolean("disableVirusScannerForLargeFile"));
-        repoValue.setIsAsyncVirusScanEnabled(featureData.getBoolean("isAsyncVirusScanEnabled"));
+        repoValue.setIsAsyncVirusScanEnabled(
+            featureData.has("isAsyncVirusScanEnabled")
+                ? featureData.getBoolean("isAsyncVirusScanEnabled")
+                : false);
       }
     }
     repoValueMap.put(repositoryId, repoValue);
