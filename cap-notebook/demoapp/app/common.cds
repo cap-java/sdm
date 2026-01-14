@@ -74,8 +74,7 @@ annotate my.Books.attachments with @UI: {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '20%'},
-        @UI.Hidden: IsActiveEntity      },
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -121,7 +120,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
-  uploadStatus    @(title: '{i18n>UploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
   type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
   content
@@ -156,8 +155,7 @@ annotate my.Books.references with @UI: {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
         @Common.FieldControl: #ReadOnly,
-        @HTML5.CssDefaults: {width: '20%'},
-        @UI.Hidden: IsActiveEntity      },
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -203,9 +201,9 @@ annotate my.Books.references with @UI: {
 {
   note       @(title: '{i18n>Note}');
   fileName  @(title: '{i18n>Filename}');
-  type  @(title: '{i18n>type}');
   modifiedAt @(odata.etag: null);
-  uploadStatus    @(title: '{i18n>UploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
@@ -224,11 +222,16 @@ annotate my.Books.footnotes with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -278,6 +281,8 @@ annotate my.Books.footnotes with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -293,11 +298,16 @@ annotate my.Chapters.attachments with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -347,6 +357,8 @@ annotate my.Chapters.attachments with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -361,12 +373,17 @@ annotate my.Chapters.references with @UI: {
     TypeNamePlural: '{i18n>References}',
   },
   LineItem  : [
-    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy References',
@@ -416,6 +433,8 @@ annotate my.Chapters.references with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -431,11 +450,16 @@ annotate my.Chapters.footnotes with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Footnotes',
@@ -485,6 +509,8 @@ annotate my.Chapters.footnotes with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -500,11 +526,16 @@ annotate my.Pages.attachments with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Attachments',
@@ -554,6 +585,8 @@ annotate my.Pages.attachments with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -569,11 +602,16 @@ annotate my.Pages.references with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy References',
@@ -623,6 +661,8 @@ annotate my.Pages.references with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');  
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
@@ -638,11 +678,16 @@ annotate my.Pages.footnotes with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
-    {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '20%'}      },
     {
       $Type : 'UI.DataFieldForAction',
       Label : 'Copy Footnotes',
@@ -692,6 +737,8 @@ annotate my.Pages.footnotes with @UI: {
   content
     @Core.ContentDisposition: { Filename: fileName }
     @(title: '{i18n>Attachment}');
+  uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
+  type  @(title: '{i18n>type}');    
   folderId @UI.Hidden;
   repositoryId  @UI.Hidden ;
   objectId  @UI.Hidden ;
