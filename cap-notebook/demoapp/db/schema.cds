@@ -92,3 +92,4 @@ entity Writers : managed, cuid {
   notebooks       : Association to many Notebooks
                       on notebooks.writer = $self;
 }
+

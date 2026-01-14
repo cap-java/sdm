@@ -139,6 +139,18 @@
                     "type": "ResponsiveTable",
                     "selectionMode": "Auto",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
+                  },
+                  "actions": {
+                    "changelog": {
+                      "enableOnSelect": "single",
+                      "text": "Change Log",
+                      "requiresSelection": true,
+                      "press": ".extension.books.controller.custom.onChangelogPress",
+                      "command": "COMMON", "position": { 
+                        "anchor": "StandardAction::Create", 
+                        "placement": "After" 
+                      }
+                    }
                   }
                 },
                 "references/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -146,6 +158,18 @@
                     "type": "ResponsiveTable",
                     "selectionMode": "Auto",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
+                  },
+                  "actions": {
+                    "changelog": {
+                      "enableOnSelect": "single",
+                      "text": "Change Log",
+                      "requiresSelection": true,
+                      "press": ".extension.books.controller.custom.onChangelogPress",
+                      "command": "COMMON", "position": { 
+                        "anchor": "StandardAction::Create", 
+                        "placement": "After" 
+                      }
+                    }
                   }
                 },
                 "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -153,6 +177,18 @@
                     "type": "ResponsiveTable",
                     "selectionMode": "Auto",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
+                  },
+                  "actions": {
+                    "changelog": {
+                      "enableOnSelect": "single",
+                      "text": "Change Log",
+                      "requiresSelection": true,
+                      "press": ".extension.books.controller.custom.onChangelogPress",
+                      "command": "COMMON", "position": { 
+                        "anchor": "StandardAction::Create", 
+                        "placement": "After" 
+                      }
+                    }
                   }
                 }
               }
@@ -173,6 +209,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          }
+                        }
                       }
                     },
                     "references/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -180,6 +228,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          }
+                        }
                       }
                     },
                     "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -187,6 +247,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          }
+                        }
                       }
                     }
                   }
@@ -208,6 +280,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          } 
+                        }
                       }
                     },
                     "references/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -215,6 +299,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          }
+                        }
                       }
                     },
                     "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -222,6 +318,18 @@
                         "type": "ResponsiveTable",
                         "selectionMode": "Auto",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": { 
+                            "anchor": "StandardAction::Create", 
+                            "placement": "After" 
+                          }
+                        }
                       }
                     }
                   }
