@@ -2680,7 +2680,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facetName)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facet[i])) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
@@ -3571,7 +3571,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facetName)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facet[i])) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
@@ -4913,7 +4913,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facetName)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150, facet[i])) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
