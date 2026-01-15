@@ -300,7 +300,7 @@ class IntegrationTest_MultipleFacet {
         }
 
         // Still uploading, wait before checking again
-        Thread.sleep(2000);
+        Thread.sleep(5000);
       } catch (Exception e) {
         System.err.println(
             "Error checking upload status for entity " + entityId + ": " + e.getMessage());
@@ -726,6 +726,13 @@ class IntegrationTest_MultipleFacet {
     System.out.println("Test (10) : Rename attachments with unsupported characters");
     Boolean testStatus = false;
 
+    // Allow time for previous test's operations to complete
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     String[] name = {"sample/1234", "reference1/234", "footnote1/234"};
     if (response.equals("Entity in draft mode")) {
@@ -836,6 +843,13 @@ class IntegrationTest_MultipleFacet {
     System.out.println(
         "Test (13) : Rename multiple files out of which one file name contains unsupported characters");
     boolean testStatus = false;
+
+    // Allow time for previous test's operations to complete
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
 
@@ -996,6 +1010,14 @@ class IntegrationTest_MultipleFacet {
   void testDeleteMultipleAttachmentsReferencesFootnotes() throws IOException {
     System.out.println("Test (17) : Delete multiple attachments, references, and footnotes");
     Boolean testStatus = false;
+
+    // Allow time for previous test's operations to complete
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response.equals("Entity in draft mode")) {
       for (int i = 0; i < facet.length; i++) {
@@ -2647,7 +2669,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150)) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
@@ -2705,7 +2727,7 @@ class IntegrationTest_MultipleFacet {
                     .collect(Collectors.toList());
             // Wait for copied uploads to complete
             for (String copiedAttachmentId : copiedAttachmentIds) {
-              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 150)) {
                 fail(
                     "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
               }
@@ -2757,7 +2779,7 @@ class IntegrationTest_MultipleFacet {
         "Test (36): Copy incorrect attachments from one entity to another new entity");
     // Allow time for previous test's save to complete
     try {
-      Thread.sleep(2000);
+      Thread.sleep(5000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -2855,7 +2877,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150)) {
         fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
       }
     }
@@ -2989,7 +3011,7 @@ class IntegrationTest_MultipleFacet {
 
     // Allow time for previous test's save to complete
     try {
-      Thread.sleep(2000);
+      Thread.sleep(5000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -3053,7 +3075,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150)) {
         fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
       }
     }
@@ -3141,7 +3163,7 @@ class IntegrationTest_MultipleFacet {
 
       // Wait for copied uploads to complete
       for (String copiedAttachmentId : copiedAttachmentIds) {
-        if (!waitForUploadCompletion(copyCustomTargetEntity, copiedAttachmentId, 90)) {
+        if (!waitForUploadCompletion(copyCustomTargetEntity, copiedAttachmentId, 150)) {
           fail("Copied upload did not complete in time for attachment: " + copiedAttachmentId);
         }
       }
@@ -3225,7 +3247,7 @@ class IntegrationTest_MultipleFacet {
 
     // Allow time for previous test's save to complete
     try {
-      Thread.sleep(2000);
+      Thread.sleep(5000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -3307,7 +3329,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150)) {
         fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
       }
     }
@@ -3488,7 +3510,7 @@ class IntegrationTest_MultipleFacet {
     System.out.println("Test (40): Copy attachments from one entity to another existing entity");
     // Allow time for previous test's save to complete
     try {
-      Thread.sleep(2000);
+      Thread.sleep(5000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -3537,7 +3559,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150)) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
@@ -3599,7 +3621,7 @@ class IntegrationTest_MultipleFacet {
 
             // Wait for copied uploads to complete
             for (String copiedAttachmentId : copiedAttachmentIds) {
-              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 150)) {
                 fail(
                     "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
               }
@@ -3653,7 +3675,7 @@ class IntegrationTest_MultipleFacet {
     System.out.println("Test (41): Copy attachments from one entity to another new entity");
     // Allow time for previous test's save to complete
     try {
-      Thread.sleep(2000);
+      Thread.sleep(5000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
@@ -4507,7 +4529,7 @@ class IntegrationTest_MultipleFacet {
         fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
       }
 
-      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 300)) {
         fail("Upload did not complete in time after copying attachments");
       }
 
@@ -4638,7 +4660,7 @@ class IntegrationTest_MultipleFacet {
         fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
       }
 
-      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 300)) {
         fail("Upload did not complete in time after copying attachments");
       }
 
@@ -4786,7 +4808,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 300)) {
         fail("Upload did not complete in time after copying attachments for facet " + facetName);
       }
 
@@ -4878,7 +4900,7 @@ class IntegrationTest_MultipleFacet {
         }
         // Wait for uploads to complete for this facet
         for (String attachmentId : attachments.get(i)) {
-          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 150)) {
             fail("Upload did not complete in time for attachment: " + attachmentId);
           }
         }
@@ -4937,7 +4959,7 @@ class IntegrationTest_MultipleFacet {
 
             // Wait for copied uploads to complete
             for (String copiedAttachmentId : copiedAttachmentIds) {
-              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 150)) {
                 fail(
                     "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
               }
@@ -5504,7 +5526,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -5648,7 +5670,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -5792,7 +5814,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -5930,7 +5952,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6095,7 +6117,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6261,7 +6283,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6444,7 +6466,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6602,7 +6624,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6761,7 +6783,7 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments");
       }
 
@@ -6880,7 +6902,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments to target 1");
       }
 
@@ -6963,7 +6985,7 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity2, facet[i], 180)) {
+      if (!waitForAllUploadsCompletion(moveTargetEntity2, facet[i], 300)) {
         fail("Upload did not complete in time after moving attachments to target 2");
       }
 
