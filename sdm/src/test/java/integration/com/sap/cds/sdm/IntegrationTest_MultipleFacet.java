@@ -192,6 +192,126 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
+  /**
+   * Helper method to wait for attachment upload to complete. Polls the attachment metadata until
+   * uploadStatus is "Success" or "Failed", or timeout is reached.
+   *
+   * @param entityId The entity ID containing the attachment
+   * @param attachmentId The attachment ID to wait for
+   * @param timeoutSeconds Maximum time to wait in seconds
+   * @return true if upload completed successfully, false if failed or timed out
+   */
+  private static boolean waitForUploadCompletion(
+      String entityId, String attachmentId, int timeoutSeconds) {
+    int pollIntervalSeconds = 2;
+    int maxAttempts = timeoutSeconds / pollIntervalSeconds;
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        // Fetch metadata for the attachment in draft mode
+        Map<String, Object> metadata;
+        try {
+          // First try fetchMetadataDraft for draft entities
+          metadata = api.fetchMetadataDraft(appUrl, entityName, facet[0], entityId, attachmentId);
+        } catch (IOException e) {
+          // If draft fetch fails, entity might be active, try regular fetch
+          try {
+            metadata = api.fetchMetadata(appUrl, entityName, facet[0], entityId, attachmentId);
+          } catch (IOException e2) {
+            // If both fail, wait and retry
+            Thread.sleep(pollIntervalSeconds * 1000);
+            continue;
+          }
+        }
+
+        // Check upload status
+        if (metadata.containsKey("uploadStatus")) {
+          String uploadStatus = (String) metadata.get("uploadStatus");
+
+          if ("Success".equals(uploadStatus)) {
+            return true;
+          } else if ("Failed".equals(uploadStatus)) {
+            System.err.println(
+                "Upload failed for attachment "
+                    + attachmentId
+                    + " in entity "
+                    + entityId
+                    + ". Status: "
+                    + uploadStatus);
+            return false;
+          }
+          // If status is "uploading" or any other status, continue waiting
+        }
+
+        // Wait before next poll
+        Thread.sleep(pollIntervalSeconds * 1000);
+
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        System.err.println("Wait interrupted for attachment " + attachmentId);
+        return false;
+      }
+    }
+
+    // Timeout reached
+    System.err.println(
+        "Timeout waiting for upload completion of attachment "
+            + attachmentId
+            + " in entity "
+            + entityId);
+    return false;
+  }
+
+  /**
+   * Helper method to wait for all attachments in an entity to complete upload.
+   *
+   * @param entityId The ID of the entity containing the attachments
+   * @param facetName The name of the facet to check
+   * @param timeoutSeconds Maximum time to wait in seconds
+   * @return true if all uploads completed successfully, false if any failed or timed out
+   */
+  private static boolean waitForAllUploadsCompletion(
+      String entityId, String facetName, int timeoutSeconds) {
+    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
+    for (int i = 0; i < maxIterations; i++) {
+      try {
+        List<Map<String, Object>> attachmentsMetadata =
+            api.fetchEntityMetadataDraft(appUrl, entityName, facetName, entityId);
+
+        boolean allComplete = true;
+        boolean anyFailed = false;
+
+        for (Map<String, Object> metadata : attachmentsMetadata) {
+          String uploadStatus = (String) metadata.get("uploadStatus");
+          if (uploadStatus == null || "InProgress".equals(uploadStatus)) {
+            allComplete = false;
+          } else if ("Failed".equals(uploadStatus)) {
+            anyFailed = true;
+            System.err.println("Upload failed for attachment: " + metadata.get("ID"));
+          }
+        }
+
+        if (anyFailed) {
+          return false;
+        }
+
+        if (allComplete) {
+          return true;
+        }
+
+        // Still uploading, wait before checking again
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        System.err.println(
+            "Error checking upload status for entity " + entityId + ": " + e.getMessage());
+        return false;
+      }
+    }
+
+    System.err.println("Upload timed out for entity: " + entityId);
+    return false;
+  }
+
   private String CreateandReturnFacetID(
       String appUrl,
       String serviceName,
@@ -684,7 +804,7 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         String expected =
             String.format(
-                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}",
+                "{\"error\":{\"code\":\"400\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"An object named\\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"An object named \\\"%s\\\" already exists. Rename the object and try again.\\n\\nTable:footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}",
                 name[1], name[0], name[2]);
         if (response.equals(expected)) {
           for (int i = 0; i < facet.length; i++) {
@@ -827,7 +947,7 @@ class IntegrationTest_MultipleFacet {
         if (testStatus) {
           apiResponse = apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, entityID);
           String expected =
-              "[{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
+              "[{\"code\":\"<none>\",\"message\":\"Could not update the following files.\\n\\n\\t\\u2022 reference123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 sample123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"numericSeverity\":3},{\"code\":\"<none>\",\"message\":\"Could not update the following files. \\n\\n\\t\\u2022 footnote123\\n\\nYou do not have the required permissions to update attachments. Kindly contact the admin\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
           if (!apiResponse.equals(expected)) {
             testStatus = false;
           }
@@ -2525,15 +2645,20 @@ class IntegrationTest_MultipleFacet {
             fail("Could not create attachment");
           }
         }
+        // Wait for uploads to complete for this facet
+        for (String attachmentId : attachments.get(i)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+            fail("Upload did not complete in time for attachment: " + attachmentId);
+          }
+        }
       }
-      api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
       List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
       Map<String, Object> fetchAttachmentMetadataResponse;
       for (int i = 0; i < attachments.size(); i++) {
         for (String attachment : attachments.get(i)) {
           try {
             fetchAttachmentMetadataResponse =
-                api.fetchMetadata(
+                api.fetchMetadataDraft(
                     appUrl, entityName, facet[i], copyAttachmentSourceEntity, attachment);
             attachmentsMetadata.add(fetchAttachmentMetadataResponse);
           } catch (IOException e) {
@@ -2548,6 +2673,7 @@ class IntegrationTest_MultipleFacet {
           fail("Attachment metadata does not contain objectId");
         }
       }
+      api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
 
       if (sourceObjectIds.size() == 6) {
         String copyResponse;
@@ -2569,6 +2695,21 @@ class IntegrationTest_MultipleFacet {
                   sourceObjectIds.subList(i, Math.min(i + 2, sourceObjectIds.size())));
           i += 2;
           if (copyResponse.equals("Attachments copied successfully")) {
+            // Fetch copied attachment IDs from target draft
+            List<Map<String, Object>> copiedMetadataResponse =
+                api.fetchEntityMetadata(appUrl, entityName, facetName, copyAttachmentTargetEntity);
+            List<String> copiedAttachmentIds =
+                copiedMetadataResponse.stream()
+                    .map(item -> (String) item.get("ID"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            // Wait for copied uploads to complete
+            for (String copiedAttachmentId : copiedAttachmentIds) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+                fail(
+                    "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
+              }
+            }
             String saveEntityResponse =
                 api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
             if (saveEntityResponse.equals("Saved")) {
@@ -2614,6 +2755,12 @@ class IntegrationTest_MultipleFacet {
   void testCopyAttachmentsUnsuccessfulNewEntity() throws IOException {
     System.out.println(
         "Test (36): Copy incorrect attachments from one entity to another new entity");
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     copyAttachmentTargetEntityEmpty =
@@ -2706,12 +2853,11 @@ class IntegrationTest_MultipleFacet {
       if (!updateResponse.equals("Updated")) {
         fail("Could not update attachment notes field in facet: " + facetName);
       }
-    }
 
-    String saveSourceResponse =
-        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!saveSourceResponse.equals("Saved")) {
-      fail("Could not save source entity");
+      // Wait for upload to complete
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+      }
     }
 
     List<String> objectIdsToStore = new ArrayList<>();
@@ -2750,6 +2896,12 @@ class IntegrationTest_MultipleFacet {
 
     int startIndex = sourceObjectIds.size();
     sourceObjectIds.addAll(objectIdsToStore);
+
+    String saveSourceResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity");
+    }
 
     copyCustomTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (copyCustomTargetEntity.equals("Could not create entity")) {
@@ -2835,6 +2987,13 @@ class IntegrationTest_MultipleFacet {
         "Test (38): Verify that secondary properties are preserved when copying attachments between entities across multiple facets");
     Boolean testStatus = false;
 
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
     String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
     if (!editResponse.equals("Entity in draft mode")) {
       fail("Could not edit source entity");
@@ -2892,12 +3051,11 @@ class IntegrationTest_MultipleFacet {
       if (!updateSecondaryPropertyResponse2.equals("Updated")) {
         fail("Could not update attachment customProperty2 field for facet: " + facetName);
       }
-    }
 
-    String saveSourceResponse =
-        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!saveSourceResponse.equals("Saved")) {
-      fail("Could not save source entity");
+      // Wait for upload to complete
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+      }
     }
 
     Integer customProperty2Value = 12345;
@@ -2970,6 +3128,22 @@ class IntegrationTest_MultipleFacet {
 
       if (!copyResponse.equals("Attachments copied successfully")) {
         fail("Could not copy attachment to target entity for facet: " + facetName);
+      }
+
+      // Fetch copied attachment IDs from target draft
+      List<Map<String, Object>> copiedMetadataResponse =
+          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+      List<String> copiedAttachmentIds =
+          copiedMetadataResponse.stream()
+              .map(item -> (String) item.get("ID"))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+
+      // Wait for copied uploads to complete
+      for (String copiedAttachmentId : copiedAttachmentIds) {
+        if (!waitForUploadCompletion(copyCustomTargetEntity, copiedAttachmentId, 90)) {
+          fail("Copied upload did not complete in time for attachment: " + copiedAttachmentId);
+        }
       }
 
       String saveTargetResponse =
@@ -3049,6 +3223,13 @@ class IntegrationTest_MultipleFacet {
         "Test (39): Verify that both notes field and secondary properties are preserved during attachment copy across multiple facets");
     Boolean testStatus = false;
 
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
     String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
     if (!editResponse.equals("Entity in draft mode")) {
       fail("Could not edit source entity");
@@ -3124,12 +3305,11 @@ class IntegrationTest_MultipleFacet {
       if (!updateSecondaryPropertyResponse2.equals("Updated")) {
         fail("Could not update attachment customProperty2 field for facet: " + facetName);
       }
-    }
 
-    String saveSourceResponse =
-        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!saveSourceResponse.equals("Saved")) {
-      fail("Could not save source entity");
+      // Wait for upload to complete
+      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 90)) {
+        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+      }
     }
 
     for (String facetName : facet) {
@@ -3306,6 +3486,12 @@ class IntegrationTest_MultipleFacet {
   @Order(40)
   void testCopyAttachmentsSuccessExistingEntity() throws IOException {
     System.out.println("Test (40): Copy attachments from one entity to another existing entity");
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
     List<List<String>> attachments = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       attachments.add(new ArrayList<>());
@@ -3349,15 +3535,20 @@ class IntegrationTest_MultipleFacet {
             fail("Could not create attachment");
           }
         }
+        // Wait for uploads to complete for this facet
+        for (String attachmentId : attachments.get(i)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+            fail("Upload did not complete in time for attachment: " + attachmentId);
+          }
+        }
       }
-      api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
       List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
       Map<String, Object> fetchAttachmentMetadataResponse;
       for (int i = 0; i < attachments.size(); i++) {
         for (String attachment : attachments.get(i)) {
           try {
             fetchAttachmentMetadataResponse =
-                api.fetchMetadata(
+                api.fetchMetadataDraft(
                     appUrl, entityName, facet[i], copyAttachmentSourceEntity, attachment);
             attachmentsMetadata.add(fetchAttachmentMetadataResponse);
           } catch (IOException e) {
@@ -3374,6 +3565,7 @@ class IntegrationTest_MultipleFacet {
           fail("Attachment metadata does not contain objectId");
         }
       }
+      api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
 
       if (sourceObjectIds.size() == 6) {
         String copyResponse;
@@ -3396,6 +3588,23 @@ class IntegrationTest_MultipleFacet {
                   appUrl, entityName, facetName, copyAttachmentTargetEntity, currentFacetObjectIds);
           i += 2;
           if (copyResponse.equals("Attachments copied successfully")) {
+            // Fetch copied attachment IDs from target draft
+            List<Map<String, Object>> copiedMetadataResponse =
+                api.fetchEntityMetadata(appUrl, entityName, facetName, copyAttachmentTargetEntity);
+            List<String> copiedAttachmentIds =
+                copiedMetadataResponse.stream()
+                    .map(item -> (String) item.get("ID"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // Wait for copied uploads to complete
+            for (String copiedAttachmentId : copiedAttachmentIds) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+                fail(
+                    "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
+              }
+            }
+
             String saveEntityResponse =
                 api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
             if (saveEntityResponse.equals("Saved")) {
@@ -3442,6 +3651,12 @@ class IntegrationTest_MultipleFacet {
   @Order(41)
   void testCopyAttachmentsUnsuccessfulExistingEntity() throws IOException {
     System.out.println("Test (41): Copy attachments from one entity to another new entity");
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
     String editResponse1 =
         api.editEntityDraft(appUrl, entityName, srvpath, copyAttachmentSourceEntity);
     String editResponse2 =
@@ -4292,6 +4507,10 @@ class IntegrationTest_MultipleFacet {
         fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
       }
 
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+        fail("Upload did not complete in time after copying attachments");
+      }
+
       String saveEntityResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
       if (!saveEntityResponse.equals("Saved")) {
@@ -4417,6 +4636,10 @@ class IntegrationTest_MultipleFacet {
 
       if (!copyResponse.equals("Attachments copied successfully")) {
         fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
+      }
+
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+        fail("Upload did not complete in time after copying attachments");
       }
 
       String saveEntityResponse =
@@ -4562,6 +4785,11 @@ class IntegrationTest_MultipleFacet {
         fail("Could not copy attachments for facet " + facetName + ": " + copyResponse);
       }
 
+      // Wait for all uploads to complete before saving
+      if (!waitForAllUploadsCompletion(copyLinkTargetEntity, facetName, 180)) {
+        fail("Upload did not complete in time after copying attachments for facet " + facetName);
+      }
+
       String saveEntityResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
       if (!saveEntityResponse.equals("Saved")) {
@@ -4648,6 +4876,12 @@ class IntegrationTest_MultipleFacet {
             fail("Could not create attachment");
           }
         }
+        // Wait for uploads to complete for this facet
+        for (String attachmentId : attachments.get(i)) {
+          if (!waitForUploadCompletion(copyAttachmentSourceEntity, attachmentId, 90)) {
+            fail("Upload did not complete in time for attachment: " + attachmentId);
+          }
+        }
       }
       List<Map<String, Object>> attachmentsMetadata = new ArrayList<>();
       Map<String, Object> fetchAttachmentMetadataResponse;
@@ -4691,6 +4925,24 @@ class IntegrationTest_MultipleFacet {
                   sourceObjectIds.subList(i, Math.min(i + 2, sourceObjectIds.size())));
           i += 2;
           if (copyResponse.equals("Attachments copied successfully")) {
+            // Fetch copied attachment IDs from target draft
+            List<Map<String, Object>> copiedMetadataResponse =
+                api.fetchEntityMetadataDraft(
+                    appUrl, entityName, facetName, copyAttachmentTargetEntity);
+            List<String> copiedAttachmentIds =
+                copiedMetadataResponse.stream()
+                    .map(item -> (String) item.get("ID"))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            // Wait for copied uploads to complete
+            for (String copiedAttachmentId : copiedAttachmentIds) {
+              if (!waitForUploadCompletion(copyAttachmentTargetEntity, copiedAttachmentId, 90)) {
+                fail(
+                    "Copied upload did not complete in time for attachment: " + copiedAttachmentId);
+              }
+            }
+
             String saveEntityResponse =
                 api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
             if (saveEntityResponse.equals("Saved")) {
@@ -5251,6 +5503,11 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
+      // Wait for all uploads to complete before saving
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
+      }
+
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
@@ -5389,6 +5646,10 @@ class IntegrationTest_MultipleFacet {
 
       if (moveResult == null) {
         fail("Move operation returned null result");
+      }
+
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
       }
 
       String saveMoveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
@@ -5531,6 +5792,10 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
+      }
+
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
@@ -5663,6 +5928,10 @@ class IntegrationTest_MultipleFacet {
 
       if (moveResult == null) {
         fail("Move operation returned null result");
+      }
+
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
       }
 
       String saveTargetResponse =
@@ -5826,6 +6095,10 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
+      }
+
       saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
         fail("Could not save target entity after move: " + saveTargetResponse);
@@ -5986,6 +6259,10 @@ class IntegrationTest_MultipleFacet {
 
       if (moveResult == null) {
         fail("Move operation returned null result");
+      }
+
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
       }
 
       String saveTargetResponse =
@@ -6167,6 +6444,10 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
+      }
+
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
@@ -6319,6 +6600,10 @@ class IntegrationTest_MultipleFacet {
 
       if (moveResult == null) {
         fail("Move operation returned null result");
+      }
+
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
       }
 
       saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
@@ -6476,6 +6761,10 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation returned null result");
       }
 
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments");
+      }
+
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
@@ -6590,6 +6879,11 @@ class IntegrationTest_MultipleFacet {
         fail("Move operation from source to target 1 returned null result");
       }
 
+      // Wait for all uploads to complete before saving
+      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments to target 1");
+      }
+
       String saveTarget1Response =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTarget1Response.equals("Saved")) {
@@ -6666,6 +6960,11 @@ class IntegrationTest_MultipleFacet {
 
       if (moveResult2 == null) {
         fail("Move operation from target 1 to target 2 returned null result");
+      }
+
+      // Wait for all uploads to complete before saving
+      if (!waitForAllUploadsCompletion(moveTargetEntity2, facet[i], 180)) {
+        fail("Upload did not complete in time after moving attachments to target 2");
       }
 
       String saveTarget2Response =
