@@ -2913,7 +2913,7 @@ class IntegrationTest_MultipleFacet {
     List<String> objectIdsToStore = new ArrayList<>();
     for (String facetName : facet) {
       List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadataDraftDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
+          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
 
       if (sourceAttachmentsMetadata.isEmpty()) {
         fail("No attachments found in source entity for facet: " + facetName);
