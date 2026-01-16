@@ -69,22 +69,44 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   @On(event = AttachmentService.EVENT_MARK_ATTACHMENT_AS_DELETED)
   public void markAttachmentAsDeleted(AttachmentMarkAsDeletedEventContext context)
       throws IOException {
+    logger.info("[SDM-DELETION] Deletion event triggered. ContentId: {}", context.getContentId());
+
     String[] contextValues = context.getContentId().split(":");
     if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
       String entity = contextValues[2];
+
+      logger.info(
+          "[SDM-DELETION] Parsed - ObjectId: {}, FolderId: {}, Entity: {}",
+          objectId,
+          folderId,
+          entity);
+
       // check if only attachment exists against the folderId
       List<CmisDocument> cmisDocuments =
           dbQuery.getAttachmentsForFolder(entity, persistenceService, folderId, context);
+
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
+        logger.info("[SDM-DELETION] Decision: Delete entire folder tree (last attachment)");
+        logger.info("[SDM-DELETION] Calling SDM to delete folder: {}", folderId);
         sdmService.deleteDocument("deleteTree", folderId, context.getDeletionUserInfo().getName());
+        logger.info("[SDM-DELETION] Folder deletion completed successfully");
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
+          logger.info(
+              "[SDM-DELETION] Decision: Delete single object (other attachments still exist)");
+          logger.info("[SDM-DELETION] Calling SDM to delete object: {}", objectId);
           sdmService.deleteDocument("delete", objectId, context.getDeletionUserInfo().getName());
+          logger.info("[SDM-DELETION] Object deletion completed successfully");
+        } else {
+          logger.info(
+              "[SDM-DELETION] ObjectId {} still exists in folder. Skipping deletion", objectId);
         }
       }
+    } else {
+      logger.warn("[SDM-DELETION] Invalid contentId: {}. Deletion skipped", context.getContentId());
     }
     context.setCompleted();
   }
@@ -132,11 +154,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   }
 
   private boolean isObjectIdPresent(List<CmisDocument> documents, String objectId) {
+    logger.info(
+        "Checking if objectId {} is present in remaining {} attachments",
+        objectId,
+        documents.size());
     for (CmisDocument doc : documents) {
       if (objectId.equals(doc.getObjectId())) {
+        logger.info("ObjectId {} found in remaining attachments", objectId);
         return true;
       }
     }
+    logger.info(
+        "ObjectId {} NOT found in remaining attachments. Will proceed with deletion", objectId);
     return false;
   }
 

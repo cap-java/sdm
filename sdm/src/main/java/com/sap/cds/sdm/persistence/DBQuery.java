@@ -360,8 +360,11 @@ public class DBQuery {
       PersistenceService persistenceService,
       String folderId,
       AttachmentMarkAsDeletedEventContext context) {
+    logger.info("[SDM-DELETION] Checking for remaining attachments in folder: {}", folderId);
+
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     List<CmisDocument> cmisDocuments = new ArrayList<>();
+
     CqnSelect q =
         Select.from(attachmentEntity.get())
             .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
@@ -377,12 +380,14 @@ public class DBQuery {
       cmisDocuments.add(cmisDocument);
     }
     if (cmisDocuments.isEmpty()) {
+      logger.info("[SDM-DELETION] No attachments in draft table. Checking active table");
       attachmentEntity = context.getModel().findEntity(entity);
       q =
           Select.from(attachmentEntity.get())
               .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
               .where(doc -> doc.get("folderId").eq(folderId));
       result = persistenceService.run(q);
+
       for (Row row : result.list()) {
         CmisDocument cmisDocument = new CmisDocument();
         cmisDocument.setFolderId(row.get("folderId").toString());
@@ -392,6 +397,14 @@ public class DBQuery {
         cmisDocument.setObjectId(row.get("objectId").toString());
         cmisDocuments.add(cmisDocument);
       }
+    }
+
+    if (cmisDocuments.isEmpty()) {
+      logger.info("[SDM-DELETION] No remaining attachments found. Folder is ready for deletion");
+    } else {
+      logger.info(
+          "[SDM-DELETION] Found {} remaining attachment(s). Will delete single object only",
+          cmisDocuments.size());
     }
     return cmisDocuments;
   }

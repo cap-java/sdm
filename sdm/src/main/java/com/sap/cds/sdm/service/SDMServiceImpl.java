@@ -612,6 +612,12 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public int deleteDocument(String cmisaction, String objectId, String user) {
+    logger.info(
+        "[SDM-DELETION] SDMService.deleteDocument() called - Action: {}, ObjectId: {}, User: {}",
+        cmisaction,
+        objectId,
+        user);
+
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
     if (user.equals(SDMConstants.SYSTEM_USER)) {
@@ -621,6 +627,8 @@ public class SDMServiceImpl implements SDMService {
     }
 
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + SDMConstants.REPOSITORY_ID + "/root";
+    logger.info("[SDM-DELETION] SDM Repository URL: {}", sdmUrl);
+
     HttpPost deleteDocumentRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     // Add additional form fields
@@ -628,9 +636,11 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
     HttpEntity multipart = builder.build();
     deleteDocumentRequest.setEntity(multipart);
+    logger.info("[SDM-DELETION] Executing HTTP DELETE request to SDM repository...");
     try (var response = (CloseableHttpResponse) httpClient.execute(deleteDocumentRequest)) {
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
+      logger.error("[SDM-DELETION] SDM deletion failed with IOException: {}", e.getMessage());
       throw new ServiceException(
           SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_DELETE")));
     }
