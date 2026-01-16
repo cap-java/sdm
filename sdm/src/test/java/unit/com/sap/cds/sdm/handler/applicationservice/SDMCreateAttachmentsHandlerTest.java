@@ -12,6 +12,7 @@ import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMCreateAttachmentsHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
+import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
@@ -25,6 +26,7 @@ import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -517,7 +519,15 @@ public class SDMCreateAttachmentsHandlerTest {
                 () ->
                     AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
                         any(), anyString(), any(), anyBoolean()))
-            .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
+            .thenReturn(
+                new JSONObject()
+                    .put("name", "fileInSDM.txt")
+                    .put("description", "descriptionInSDM")
+                    .put(
+                        "succinctProperties",
+                        new JSONObject()
+                            .put("cmis:name", "fileInSDM.txt")
+                            .put("cmis:description", "descriptionInSDM")));
 
         // Mock attachment entity
         CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
@@ -538,8 +548,10 @@ public class SDMCreateAttachmentsHandlerTest {
         when(jwtTokenInfo.getToken()).thenReturn("testJwtToken");
 
         // Mock getObject
-        when(sdmService.getObject("test-object-id", mockCredentials, false))
-            .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
+        JSONObject mockObject = new JSONObject();
+        mockObject.put("name", "fileInSDM.txt");
+        mockObject.put("description", "descriptionInSDM");
+        when(sdmService.getObject("test-object-id", mockCredentials, false)).thenReturn(mockObject);
 
         // Mock getSecondaryTypeProperties
         Map<String, String> secondaryTypeProperties = new HashMap<>();
@@ -566,8 +578,12 @@ public class SDMCreateAttachmentsHandlerTest {
             .when(() -> SDMUtils.hasRestrictedCharactersInName("fileNameInRequest"))
             .thenReturn(false);
 
+        CmisDocument mockCmisDoc = new CmisDocument();
+        mockCmisDoc.setFileName(null);
+        Map<String, Object> secondaryProps = new HashMap<>();
+        mockCmisDoc.setSecondaryProperties(secondaryProps);
         when(dbQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
-            .thenReturn(null);
+            .thenReturn(mockCmisDoc);
 
         // When getPropertiesForID is called
         when(dbQuery.getPropertiesForID(
@@ -660,6 +676,12 @@ public class SDMCreateAttachmentsHandlerTest {
                       data, "compositionName", "some.qualified.Name"))
           .thenReturn(Arrays.asList("file/1.txt"));
 
+      // Mock getAttachmentForID to return CmisDocument
+      CmisDocument mockCmisDoc = new CmisDocument();
+      mockCmisDoc.setFileName("file/1.txt");
+      when(dbQuery.getAttachmentForID(attachmentDraftEntity, persistenceService, "test-id"))
+          .thenReturn(mockCmisDoc);
+
       try (MockedStatic<AttachmentsHandlerUtils> attachmentsHandlerUtilsMocked =
           mockStatic(AttachmentsHandlerUtils.class)) {
         attachmentsHandlerUtilsMocked
@@ -667,7 +689,15 @@ public class SDMCreateAttachmentsHandlerTest {
                 () ->
                     AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
                         any(), anyString(), any(), anyBoolean()))
-            .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
+            .thenReturn(
+                new JSONObject()
+                    .put("name", "fileInSDM.txt")
+                    .put("description", "descriptionInSDM")
+                    .put(
+                        "succinctProperties",
+                        new JSONObject()
+                            .put("cmis:name", "fileInSDM.txt")
+                            .put("cmis:description", "descriptionInSDM")));
         attachmentsHandlerUtilsMocked
             .when(
                 () ->

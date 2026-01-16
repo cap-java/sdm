@@ -11,4 +11,5 @@ public class RepoValue {
   private Boolean virusScanEnabled;
   private Boolean versionEnabled;
   private Boolean disableVirusScannerForLargeFile;
+  private Boolean isAsyncVirusScanEnabled;
 }

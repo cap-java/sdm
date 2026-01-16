@@ -289,6 +289,7 @@ public class SDMAttachmentsServiceHandlerTest {
       repoValue.setVirusScanEnabled(true);
       repoValue.setDisableVirusScannerForLargeFile(false);
       repoValue.setVersionEnabled(false);
+      repoValue.setIsAsyncVirusScanEnabled(false);
       when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
       when(mockContext.getMessages()).thenReturn(mockMessages);
       when(mockMessages.error(SDMUtils.getErrorMessage("VIRUS_REPO_ERROR_MORE_THAN_400MB")))
@@ -354,6 +355,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -429,6 +431,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getData()).thenReturn(mockMediaData);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -439,7 +442,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "duplicate");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
@@ -524,6 +531,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -536,7 +544,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "virus");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -679,6 +691,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -691,7 +704,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("status", "fail");
     mockResponse.put("message", "Failed due to a DI error");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     try (MockedStatic<SDMUtils> sdmUtilsMockedStatic =
         mockStatic(SDMUtils.class, CALLS_REAL_METHODS); ) {
@@ -757,6 +774,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t1");
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
@@ -774,7 +792,11 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockMediaData.getFileName()).thenReturn("test.txt");
 
     // Mock the behavior of createDocument and other dependencies
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -846,6 +868,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t1");
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
@@ -863,7 +886,11 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
 
     // Mock the behavior of createDocument and other dependencies
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -940,6 +967,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(false);
     when(mockContext.getUserInfo()).thenReturn(userInfo);
     when(userInfo.getTenant()).thenReturn("t1");
@@ -958,7 +986,11 @@ public class SDMAttachmentsServiceHandlerTest {
     when(mockJwtTokenInfo.getToken()).thenReturn("mockedJwtToken");
 
     // Mock the behavior of createDocument and other dependencies
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
     when(dbQuery.getAttachmentsForUPID(any(), any(), any(), any())).thenReturn(mockResult);
@@ -1022,7 +1054,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
     mockCreateResult.put("mimeType", "application/pdf");
-
+    mockCreateResult.put("uploadStatus", "Success");
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getModel()).thenReturn(cdsModel);
@@ -1037,6 +1069,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1050,7 +1083,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("objectId", "123");
 
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -1103,6 +1140,7 @@ public class SDMAttachmentsServiceHandlerTest {
     mockCreateResult.put("name", "sample.pdf");
     mockCreateResult.put("objectId", "objectId");
     mockCreateResult.put("mimeType", "application/pdf");
+    mockCreateResult.put("uploadStatus", "Success");
     when(mockMediaData.getFileName()).thenReturn("sample.pdf");
     when(mockMediaData.getContent()).thenReturn(contentStream);
     when(mockContext.getModel()).thenReturn(cdsModel);
@@ -1118,6 +1156,7 @@ public class SDMAttachmentsServiceHandlerTest {
     repoValue.setVirusScanEnabled(true);
     repoValue.setVersionEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(true);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1131,7 +1170,11 @@ public class SDMAttachmentsServiceHandlerTest {
     mockResponse.put("objectId", "123");
     mockResponse.put("mimeType", "application/pdf");
     // Mock the behavior of createDocumentRx to return the mock response wrapped in a Single
-    when(documentUploadService.createDocument(any(), any(), anyBoolean()))
+    when(documentUploadService.createDocument(
+            any(CmisDocument.class),
+            any(SDMCredentials.class),
+            anyBoolean(),
+            any(AttachmentCreateEventContext.class)))
         .thenReturn(mockCreateResult);
     ParameterInfo mockParameterInfo = mock(ParameterInfo.class);
     Map<String, String> mockHeaders = new HashMap<>();
@@ -1189,6 +1232,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1299,6 +1343,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1519,10 +1564,13 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
     handlerSpy.readAttachment(mockReadContext);
 
     // Verify that readDocument method was called
@@ -1538,13 +1586,16 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
     doThrow(new ServiceException("FILE_NOT_FOUND_ERROR"))
         .when(sdmService)
         .readDocument(anyString(), any(SDMCredentials.class), eq(mockReadContext));
-
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
     ServiceException exception =
         assertThrows(
             ServiceException.class,
@@ -1593,6 +1644,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockResult.rowCount()).thenReturn(3L);
@@ -1668,6 +1720,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockResult.rowCount()).thenReturn(3L);
@@ -1743,6 +1796,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockResult.list()).thenReturn(nonEmptyRowList);
     when(mockResult.rowCount()).thenReturn(3L);
@@ -1789,6 +1843,8 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
     when(mockContext.getModel()).thenReturn(cdsModel);
     when(mockContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
@@ -1816,6 +1872,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     Map<String, String> emptyHeaders = new HashMap<>();
@@ -1844,6 +1901,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false);
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     Map<String, String> headersWithEmpty = new HashMap<>();
@@ -1874,6 +1932,7 @@ public class SDMAttachmentsServiceHandlerTest {
     repoValue.setVirusScanEnabled(true);
     repoValue.setVersionEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     Map<String, String> largeFileHeaders = new HashMap<>();
@@ -1905,6 +1964,7 @@ public class SDMAttachmentsServiceHandlerTest {
     repoValue.setVirusScanEnabled(true);
     repoValue.setVersionEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     Map<String, String> normalFileHeaders = new HashMap<>();
@@ -1935,6 +1995,7 @@ public class SDMAttachmentsServiceHandlerTest {
     repoValue.setVirusScanEnabled(true);
     repoValue.setVersionEnabled(false);
     repoValue.setDisableVirusScannerForLargeFile(true);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     Map<String, String> largeFileHeaders = new HashMap<>();
@@ -2079,7 +2140,9 @@ public class SDMAttachmentsServiceHandlerTest {
 
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
     handlerSpy.readAttachment(readContext);
 
     verify(sdmService).readDocument(eq("objectId"), eq(mockSdmCredentials), eq(readContext));
@@ -2096,7 +2159,9 @@ public class SDMAttachmentsServiceHandlerTest {
 
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
-
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
     // This should work as readAttachment handles the parsing internally
     handlerSpy.readAttachment(readContext);
 
@@ -2189,7 +2254,9 @@ public class SDMAttachmentsServiceHandlerTest {
         .when(sdmService)
         .readDocument(
             anyString(), any(SDMCredentials.class), any(AttachmentReadEventContext.class));
-
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
     ServiceException thrown =
         assertThrows(
             ServiceException.class,
@@ -2211,12 +2278,93 @@ public class SDMAttachmentsServiceHandlerTest {
 
     SDMCredentials mockSdmCredentials = new SDMCredentials();
     when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_SUCCESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
 
     handlerSpy.readAttachment(readContext);
 
     // Should call readDocument with the full contentId as objectId
     verify(sdmService).readDocument(eq("singleObjectId"), eq(mockSdmCredentials), eq(readContext));
     verify(readContext).setCompleted();
+  }
+
+  @Test
+  public void testReadAttachment_WithSinglePartContentId_NotSuccess() throws IOException {
+    // Test scenario with single part content ID (no colon separator)
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId()).thenReturn("singleObjectId");
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    SDMCredentials mockSdmCredentials = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handlerSpy.readAttachment(readContext);
+            });
+    // Should fail on draft entity not found, not on virus scan
+    assertEquals(
+        "Virus detected. Remove the file and upload a clean version.", thrown.getMessage());
+  }
+
+  @Test
+  public void testReadAttachment_WithSinglePartContentId_Uploading() throws IOException {
+    // Test scenario with single part content ID (no colon separator)
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId()).thenReturn("singleObjectId");
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    SDMCredentials mockSdmCredentials = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handlerSpy.readAttachment(readContext);
+            });
+    // Should fail on draft entity not found, not on virus scan
+    assertEquals("UPLOAD_IN_PROGRESS_FILE_ERROR", thrown.getMessage());
+  }
+
+  @Test
+  public void testReadAttachment_WithSinglePartContentId_ScanInProgress() throws IOException {
+    // Test scenario with single part content ID (no colon separator)
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId()).thenReturn("singleObjectId");
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    SDMCredentials mockSdmCredentials = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setUploadStatus(SDMConstants.VIRUS_SCAN_INPROGRESS);
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(
+            ServiceException.class,
+            () -> {
+              handlerSpy.readAttachment(readContext);
+            });
+    // Should fail on draft entity not found, not on virus scan
+    assertEquals(
+        "Scan in progress. Wait until the scan is complete before opening the file.",
+        thrown.getMessage());
   }
 
   @Test
@@ -2254,6 +2402,7 @@ public class SDMAttachmentsServiceHandlerTest {
     RepoValue repoValue = new RepoValue();
     repoValue.setVirusScanEnabled(false); // Virus scan disabled
     repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
     when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
 
     // Set large file size (600MB)

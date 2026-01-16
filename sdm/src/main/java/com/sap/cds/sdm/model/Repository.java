@@ -25,6 +25,7 @@ public class Repository {
   private Boolean isEncryptionEnabled;
   private Boolean isThumbnailEnabled;
   private Boolean isContentBridgeEnabled;
+  private Boolean isAsyncVirusScanEnabled;
   private String hashAlgorithms;
   private List<RepositoryParams> repositoryParams;
 }

@@ -3,6 +3,7 @@ package com.sap.cds.sdm.persistence;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentReadEventContext;
 import com.sap.cds.ql.Delete;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -56,7 +57,14 @@ public class DBQuery {
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("objectId", "folderId", "fileName", "mimeType", "contentId", "linkUrl")
+            .columns(
+                "objectId",
+                "folderId",
+                "fileName",
+                "mimeType",
+                "contentId",
+                "linkUrl",
+                "uploadStatus")
             .where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
     Optional<Row> res = result.first();
@@ -70,6 +78,8 @@ public class DBQuery {
       cmisDocument.setContentId(
           row.get("contentId") != null ? row.get("contentId").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
     }
     return cmisDocument;
   }
@@ -328,12 +338,16 @@ public class DBQuery {
     return persistenceService.run(q);
   }
 
-  public String getAttachmentForID(
+  public CmisDocument getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
     CqnSelect q =
         Select.from(attachmentEntity).columns("fileName").where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
-    return result.rowCount() == 0 ? null : result.list().get(0).get("fileName").toString();
+    CmisDocument cmisDocument = new CmisDocument();
+    for (Row row : result.list()) {
+      cmisDocument.setFileName(row.get("fileName").toString());
+    }
+    return cmisDocument;
   }
 
   public void addAttachmentToDraft(
@@ -348,6 +362,20 @@ public class DBQuery {
     updatedFields.put("status", "Clean");
     updatedFields.put("type", "sap-icon://document");
     updatedFields.put("mimeType", cmisDocument.getMimeType());
+    updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data(updatedFields)
+            .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
+    persistenceService.run(updateQuery);
+  }
+
+  public void saveUploadStatusToAttachment(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      CmisDocument cmisDocument) {
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
@@ -364,7 +392,14 @@ public class DBQuery {
     List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
         Select.from(attachmentEntity.get())
-            .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+            .columns(
+                "fileName",
+                "IsActiveEntity",
+                "ID",
+                "folderId",
+                "repositoryId",
+                "objectId",
+                "uploadStatus")
             .where(doc -> doc.get("folderId").eq(folderId));
     Result result = persistenceService.run(q);
     for (Row row : result.list()) {
@@ -374,13 +409,24 @@ public class DBQuery {
       cmisDocument.setFileName(row.get("fileName").toString());
       cmisDocument.setAttachmentId(row.get("ID").toString());
       cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       cmisDocuments.add(cmisDocument);
     }
     if (cmisDocuments.isEmpty()) {
       attachmentEntity = context.getModel().findEntity(entity);
       q =
           Select.from(attachmentEntity.get())
-              .columns("fileName", "IsActiveEntity", "ID", "folderId", "repositoryId", "objectId")
+              .columns(
+                  "fileName",
+                  "IsActiveEntity",
+                  "ID",
+                  "folderId",
+                  "repositoryId",
+                  "objectId",
+                  "uploadStatus")
               .where(doc -> doc.get("folderId").eq(folderId));
       result = persistenceService.run(q);
       for (Row row : result.list()) {
@@ -390,30 +436,14 @@ public class DBQuery {
         cmisDocument.setFileName(row.get("fileName").toString());
         cmisDocument.setAttachmentId(row.get("ID").toString());
         cmisDocument.setObjectId(row.get("objectId").toString());
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
         cmisDocuments.add(cmisDocument);
       }
     }
     return cmisDocuments;
-  }
-
-  public Map<String, String> getPropertiesForID(
-      CdsEntity attachmentEntity,
-      PersistenceService persistenceService,
-      String id,
-      List<String> properties) {
-    CqnSelect q =
-        Select.from(attachmentEntity)
-            .columns(properties.toArray(new String[0]))
-            .where(doc -> doc.get("ID").eq(id));
-    Result result = persistenceService.run(q);
-    Map<String, String> propertyValueMap = new HashMap<>();
-
-    for (String property : properties) {
-      Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
-      propertyValueMap.put(property, value != null ? value.toString() : null);
-    }
-
-    return propertyValueMap;
   }
 
   public Map<String, String> getPropertiesForID(
@@ -435,6 +465,161 @@ public class DBQuery {
       propertyValueMap.put(mapKey, value != null ? value.toString() : null);
     }
     return propertyValueMap;
+  }
+
+  public CmisDocument getuploadStatusForAttachment(
+      String entity,
+      PersistenceService persistenceService,
+      String objectId,
+      AttachmentReadEventContext context) {
+    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
+    CqnSelect q =
+        Select.from(attachmentEntity.get())
+            .columns("uploadStatus")
+            .where(doc -> doc.get("objectId").eq(objectId));
+    Result result = persistenceService.run(q);
+    CmisDocument cmisDocument = new CmisDocument();
+    boolean isAttachmentFound = false;
+    for (Row row : result.list()) {
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+      isAttachmentFound = true;
+    }
+    if (!isAttachmentFound) {
+      attachmentEntity = context.getModel().findEntity(entity);
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("uploadStatus")
+              .where(doc -> doc.get("objectId").eq(objectId));
+      result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+      }
+    }
+    return cmisDocument;
+  }
+
+  public List<CmisDocument> getAttachmentsWithVirusScanInProgress(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIDkey) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(
+                "ID",
+                "objectId",
+                "fileName",
+                "folderId",
+                "repositoryId",
+                "mimeType",
+                "uploadStatus")
+            .where(
+                doc ->
+                    doc.get(upIDkey)
+                        .eq(upID)
+                        .and(doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS)));
+
+    Result result = persistenceService.run(q);
+
+    List<CmisDocument> attachments = new ArrayList<>();
+    for (Row row : result.list()) {
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setAttachmentId(row.get("ID") != null ? row.get("ID").toString() : null);
+      cmisDocument.setObjectId(row.get("objectId") != null ? row.get("objectId").toString() : null);
+      cmisDocument.setFileName(row.get("fileName") != null ? row.get("fileName").toString() : null);
+      cmisDocument.setFolderId(row.get("folderId") != null ? row.get("folderId").toString() : null);
+      cmisDocument.setRepositoryId(
+          row.get("repositoryId") != null ? row.get("repositoryId").toString() : null);
+      cmisDocument.setMimeType(row.get("mimeType") != null ? row.get("mimeType").toString() : null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null
+              ? row.get("uploadStatus").toString()
+              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+      attachments.add(cmisDocument);
+    }
+    return attachments;
+  }
+
+  /**
+   * Updates uploadStatus to 'SUCCESS' for all attachments where uploadStatus is
+   * UPLOAD_STATUS_IN_PROGRESS for a given up__ID.
+   *
+   * @param attachmentEntity the attachment entity
+   * @param persistenceService the persistence service
+   * @param upID the up__ID to filter attachments
+   * @param upIdKey the key name for up__ID field (e.g., "up__ID")
+   */
+  public void updateInProgressUploadStatusToSuccess(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns("objectId", "uploadStatus")
+            .where(doc -> doc.get(upIdKey).eq(upID));
+    Result selectRes = persistenceService.run(q);
+    for (Row row : selectRes.list()) {
+      if (row.get("uploadStatus") == null
+          || row.get("uploadStatus")
+                  .toString()
+                  .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)
+              && row.get("objectId") != null) {
+        CqnUpdate updateQuery =
+            Update.entity(attachmentEntity)
+                .data("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS)
+                .where(
+                    doc ->
+                        doc.get(upIdKey)
+                            .eq(upID)
+                            .and(
+                                doc.get("uploadStatus")
+                                    .isNull()
+                                    .or(
+                                        doc.get("uploadStatus")
+                                            .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))));
+
+        persistenceService.run(updateQuery);
+      }
+    }
+  }
+
+  public Result updateUploadStatusByScanStatus(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      SDMConstants.ScanStatus scanStatus) {
+    String uploadStatus = mapScanStatusToUploadStatus(scanStatus);
+    CqnUpdate updateQuery =
+        Update.entity(attachmentEntity)
+            .data("uploadStatus", uploadStatus)
+            .where(doc -> doc.get("objectId").eq(objectId));
+
+    return persistenceService.run(updateQuery);
+  }
+
+  private String mapScanStatusToUploadStatus(SDMConstants.ScanStatus scanStatus) {
+    switch (scanStatus) {
+      case QUARANTINED:
+        return SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+      case PENDING:
+        return SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+      case SCANNING:
+        return SDMConstants.VIRUS_SCAN_INPROGRESS;
+      case FAILED:
+        return SDMConstants.UPLOAD_STATUS_SCAN_FAILED;
+      case CLEAN:
+        return SDMConstants.UPLOAD_STATUS_SUCCESS;
+      case BLANK:
+      default:
+        return SDMConstants.UPLOAD_STATUS_SUCCESS;
+    }
   }
 
   /**

@@ -1,5 +1,7 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
+import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
+
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -17,10 +19,12 @@ import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsCreateEventContext;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.utils.OrderConstants;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,9 +57,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   @Before
-  @HandlerOrder(HandlerOrder.EARLY)
+  @HandlerOrder(HandlerOrder.DEFAULT)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
     logger.info("Target Entity : " + context.getTarget().getQualifiedName());
+
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
@@ -65,7 +71,66 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               entityData);
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
       updateName(context, data, attachmentCompositionDetails);
+      // Remove uploadStatus from attachment data to prevent validation errors
+
     }
+    SDMUtils.cleanupReadonlyContexts(data);
+  }
+
+  @After
+  @HandlerOrder(HandlerOrder.LATE)
+  public void processAfter(CdsCreateEventContext context, List<CdsData> data) {
+    // Update uploadStatus to Success after entity is persisted
+    logger.info(
+        "Post-processing attachments after persistence for entity: {}",
+        context.getTarget().getQualifiedName());
+
+    for (CdsData entityData : data) {
+      Map<String, Map<String, String>> attachmentCompositionDetails =
+          AttachmentsHandlerUtils.getAttachmentCompositionDetails(
+              context.getModel(),
+              context.getTarget(),
+              persistenceService,
+              context.getTarget().getQualifiedName(),
+              entityData);
+
+      for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+        String attachmentCompositionDefinition = entry.getKey();
+        String attachmentCompositionName = entry.getValue().get("name");
+        Optional<CdsEntity> attachmentEntity =
+            context.getModel().findEntity(attachmentCompositionDefinition);
+
+        if (attachmentEntity.isPresent()) {
+          String targetEntity = context.getTarget().getQualifiedName();
+          List<Map<String, Object>> attachments =
+              AttachmentsHandlerUtils.fetchAttachments(
+                  targetEntity, entityData, attachmentCompositionName);
+
+          if (attachments != null) {
+            for (Map<String, Object> attachment : attachments) {
+              String id = (String) attachment.get("ID");
+              String uploadStatus = (String) attachment.get("uploadStatus");
+              if (id != null) {
+                CmisDocument cmisDocument = new CmisDocument();
+                cmisDocument.setAttachmentId(id);
+                cmisDocument.setUploadStatus(uploadStatus);
+                // Update uploadStatus to Success in database if it was InProgress
+                dbQuery.saveUploadStatusToAttachment(
+                    attachmentEntity.get(), persistenceService, cmisDocument);
+                logger.debug("Updated uploadStatus to Success for attachment ID: {}", id);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @Before
+  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 500)
+  public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
+    // Preserve uploadStatus before CDS removes readonly fields
+    SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
 
   public void updateName(
@@ -163,6 +228,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String targetEntity = context.getTarget().getQualifiedName();
     List<Map<String, Object>> attachments =
         AttachmentsHandlerUtils.fetchAttachments(targetEntity, entity, attachmentCompositionName);
+    List<String> scanFailedFiles = new ArrayList<>();
+    List<String> uploadInProgressFiles = new ArrayList<>();
+
     if (attachments != null) {
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
@@ -176,8 +244,17 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             composition,
             attachmentEntity,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles);
+            noSDMRoles,
+            scanFailedFiles,
+            uploadInProgressFiles);
       }
+
+      // Throw exception if any files failed scan or upload in progress
+      String errorMessage = buildErrorMessage(scanFailedFiles, uploadInProgressFiles);
+      if (!errorMessage.isEmpty()) {
+        throw new ServiceException(errorMessage);
+      }
+
       SecondaryPropertiesKey secondaryPropertiesKey =
           new SecondaryPropertiesKey(); // Emptying cache after attachments are updated in loop
       secondaryPropertiesKey.setRepositoryId(SDMConstants.REPOSITORY_ID);
@@ -196,23 +273,118 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String composition,
       Optional<CdsEntity> attachmentEntity,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
 
-    // Fetch original data from DB and SDM
-    String fileNameInDB =
+    // Fetch original data from DB
+    CmisDocument cmisDocument =
         dbQuery.getAttachmentForID(attachmentEntity.get(), persistenceService, id);
+    String fileNameInDB = cmisDocument.getFileName();
+
+    // Check upload status and collect problematic files
+    if (checkUploadStatus(
+        attachment, fileNameInDB, filenameInRequest, scanFailedFiles, uploadInProgressFiles)) {
+      return; // Skip further processing if upload status is problematic
+    }
+
+    // Fetch data from SDM
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    List<String> sdmAttachmentData =
+    SDMAttachmentData sdmData = fetchSDMData(context, objectId, sdmCredentials);
+
+    // Prepare and update attachment in SDM
+    updateAndSendToSDM(
+        context,
+        attachment,
+        id,
+        objectId,
+        filenameInRequest,
+        descriptionInRequest,
+        fileNameInDB,
+        sdmData.fileNameInSDM,
+        sdmData.descriptionInSDM,
+        sdmCredentials,
+        attachmentEntity,
+        secondaryPropertiesWithInvalidDefinitions,
+        noSDMRoles,
+        duplicateFileNameList,
+        filesNotFound,
+        filesWithUnsupportedProperties,
+        badRequest);
+  }
+
+  private boolean checkUploadStatus(
+      Map<String, Object> attachment,
+      String fileNameInDB,
+      String filenameInRequest,
+      List<String> scanFailedFiles,
+      List<String> uploadInProgressFiles) {
+    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
+    if (readonlyData == null || readonlyData.get("uploadStatus") == null) {
+      return false;
+    }
+
+    String uploadStatus = readonlyData.get("uploadStatus").toString();
+    String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
+
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      uploadInProgressFiles.add(fileName);
+      return true;
+    }
+    if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+      scanFailedFiles.add(fileName);
+      return true;
+    }
+
+    attachment.put("uploadStatus", uploadStatus);
+    return false;
+  }
+
+  private SDMAttachmentData fetchSDMData(
+      CdsCreateEventContext context, String objectId, SDMCredentials sdmCredentials)
+      throws IOException {
+    JSONObject sdmAttachmentData =
         AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
             sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
-    String fileNameInSDM = sdmAttachmentData.get(0);
-    String descriptionInSDM = sdmAttachmentData.get(1);
+    JSONObject succinctProperties = sdmAttachmentData.getJSONObject("succinctProperties");
 
+    String fileNameInSDM = null;
+    String descriptionInSDM = null;
+
+    if (succinctProperties.has("cmis:name")) {
+      fileNameInSDM = succinctProperties.getString("cmis:name");
+    }
+    if (succinctProperties.has("cmis:description")) {
+      descriptionInSDM = succinctProperties.getString("cmis:description");
+    }
+
+    return new SDMAttachmentData(fileNameInSDM, descriptionInSDM);
+  }
+
+  private void updateAndSendToSDM(
+      CdsCreateEventContext context,
+      Map<String, Object> attachment,
+      String id,
+      String objectId,
+      String filenameInRequest,
+      String descriptionInRequest,
+      String fileNameInDB,
+      String fileNameInSDM,
+      String descriptionInSDM,
+      SDMCredentials sdmCredentials,
+      Optional<CdsEntity> attachmentEntity,
+      Map<String, String> secondaryPropertiesWithInvalidDefinitions,
+      List<String> noSDMRoles,
+      List<String> duplicateFileNameList,
+      List<String> filesNotFound,
+      List<String> filesWithUnsupportedProperties,
+      Map<String, String> badRequest)
+      throws IOException {
     Map<String, String> secondaryTypeProperties =
         SDMUtils.getSecondaryTypeProperties(attachmentEntity, attachment);
     Map<String, String> propertiesInDB =
@@ -221,7 +393,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
     logger.debug("Processing attachment creation - ID: {}, objectId: {}", id, objectId);
 
-    // Prepare document and updated properties
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -229,12 +400,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             persistenceService,
             secondaryTypeProperties,
             propertiesInDB);
-
     CmisDocument cmisDocument =
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
 
-    // Update filename and description properties
     AttachmentsHandlerUtils.updateFilenameProperty(
         fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
     AttachmentsHandlerUtils.updateDescriptionProperty(
@@ -244,7 +413,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         updatedSecondaryProperties,
         false);
 
-    // Send update to SDM and handle response
     logger.debug(
         "Creating attachment in SDM - ID: {}, properties count: {}",
         id,
@@ -343,6 +511,38 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               SDMErrorMessages.noSDMRolesMessage(
                       noSDMRoles, SDMUtils.getErrorMessage("EVENT_CREATE"))
                   + contextInfo);
+    }
+  }
+
+  private String buildErrorMessage(
+      List<String> scanFailedFiles, List<String> uploadInProgressFiles) {
+    StringBuilder errorMessage = new StringBuilder();
+
+    if (!scanFailedFiles.isEmpty()) {
+      appendWithSpace(errorMessage);
+      errorMessage.append(SDMErrorMessages.scanFailedFilesMessage(scanFailedFiles));
+    }
+    if (!uploadInProgressFiles.isEmpty()) {
+      appendWithSpace(errorMessage);
+      errorMessage.append(SDMErrorMessages.uploadInProgressFilesMessage(uploadInProgressFiles));
+    }
+
+    return errorMessage.toString();
+  }
+
+  private void appendWithSpace(StringBuilder sb) {
+    if (sb.length() > 0) {
+      sb.append(" ");
+    }
+  }
+
+  private static class SDMAttachmentData {
+    final String fileNameInSDM;
+    final String descriptionInSDM;
+
+    SDMAttachmentData(String fileNameInSDM, String descriptionInSDM) {
+      this.fileNameInSDM = fileNameInSDM;
+      this.descriptionInSDM = descriptionInSDM;
     }
   }
 }

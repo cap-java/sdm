@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -382,8 +383,10 @@ public class SDMCustomServiceHandlerTest {
                 + "\"}}");
 
     // Mock getObject for metadata (no sourceFacet, so fetch from SDM)
-    when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+    JSONObject mockObjectResponse = new JSONObject();
+    mockObjectResponse.put("cmis:name", "document.pdf");
+    mockObjectResponse.put("cmis:description", "Test doc");
+    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(mockObjectResponse);
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -460,8 +463,11 @@ public class SDMCustomServiceHandlerTest {
                 + "\", \"invalidProp\": \"someValue\"}}");
 
     // Mock getObject for metadata
-    when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc", "invalidProp"));
+    JSONObject mockObjectResponse2 = new JSONObject();
+    mockObjectResponse2.put("cmis:name", "document.pdf");
+    mockObjectResponse2.put("cmis:description", "Test doc");
+    mockObjectResponse2.put("invalidProp", "someValue");
+    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(mockObjectResponse2);
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -495,7 +501,8 @@ public class SDMCustomServiceHandlerTest {
 
     // Mock getObject
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -530,7 +537,8 @@ public class SDMCustomServiceHandlerTest {
 
     // Mock getObject
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -564,7 +572,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Move failed for obj2"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     // Execute
     sdmCustomServiceHandler.moveAttachments(context);
@@ -695,7 +704,8 @@ public class SDMCustomServiceHandlerTest {
                 "nameConstraintViolation : Child doc.pdf with Id xyz already exists"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -717,7 +727,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Virus scan status: cmis:virusScanStatus infected"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -738,7 +749,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Malware detected in file"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -759,7 +771,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("User not authorized to perform this operation"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -780,7 +793,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Permission denied for this resource"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -801,7 +815,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("MimeType application/exe is blocked"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -822,7 +837,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Object not found in repository"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -843,7 +859,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("SDM Error : Detailed error information here"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -864,7 +881,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException(""));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -886,7 +904,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(nullMessageException);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -910,7 +929,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(genericCause);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -933,7 +953,8 @@ public class SDMCustomServiceHandlerTest {
                 "nameConstraintViolation : Child document.pdf with Id abc123 already exists in folder"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -954,7 +975,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Duplicate file constraint violation"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -975,7 +997,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("duplicate"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1132,7 +1155,11 @@ public class SDMCustomServiceHandlerTest {
                 + "\", \"invalidProp\": \"value\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "invalidProp"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("invalidProp", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1171,7 +1198,11 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("Rollback failed"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "invalidProp"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("invalidProp", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1511,7 +1542,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(List.of("nullProp"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "nullProp"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("nullProp", (Object) null));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1546,7 +1581,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(List.of("description"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "description"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("description", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1581,7 +1620,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(List.of("pageCount"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "pageCount"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("pageCount", 10));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1618,7 +1661,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(List.of("unknownProp"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "unknownProp"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("unknownProp", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1654,7 +1701,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + OBJECT_ID + "\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "invalidProp"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("invalidProp", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1692,7 +1743,11 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + OBJECT_ID + "\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc", "invalidProp1"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "doc.pdf")
+                .put("cmis:description", "Test doc")
+                .put("invalidProp1", "someValue"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1735,7 +1790,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + OBJECT_ID + "\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1775,7 +1831,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new IOException("Network error during rollback"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1815,7 +1872,8 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new RuntimeException("403 Forbidden - Access denied"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1855,7 +1913,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + OBJECT_ID + "\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1897,7 +1956,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn("{\"succinctProperties\": {\"cmis:objectId\": \"" + specificObjectId + "\"}}");
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("doc.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "doc.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1924,7 +1984,8 @@ public class SDMCustomServiceHandlerTest {
                 + OBJECT_ID
                 + "\"}}");
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1951,7 +2012,8 @@ public class SDMCustomServiceHandlerTest {
                 + OBJECT_ID
                 + "\"}}");
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -1989,7 +2051,8 @@ public class SDMCustomServiceHandlerTest {
                 + OBJECT_ID
                 + "\"}}");
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2128,7 +2191,8 @@ public class SDMCustomServiceHandlerTest {
                 + OBJECT_ID
                 + "\"}}");
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2180,7 +2244,8 @@ public class SDMCustomServiceHandlerTest {
                 + OBJECT_ID
                 + "\"}}");
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test doc"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "document.pdf").put("cmis:description", "Test doc"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2543,7 +2608,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("duplicate file detected"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2569,7 +2637,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("nameconstraintviolation occurred"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2595,7 +2666,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("virus detected in file"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2622,7 +2696,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("malware found"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2650,7 +2727,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("unauthorized access"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2678,7 +2758,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("user not authorized"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2705,7 +2788,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("permission denied"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2731,7 +2817,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("file blocked"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2757,7 +2846,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("mimetype not allowed"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2784,7 +2876,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("file not found"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2812,7 +2907,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("object not found in repository"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2839,7 +2937,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("network timeout error"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2866,7 +2967,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("duplicate file error"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2895,7 +2999,10 @@ public class SDMCustomServiceHandlerTest {
                 "nameConstraintViolation : Child document.pdf with Id abc123 already exists"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2922,7 +3029,10 @@ public class SDMCustomServiceHandlerTest {
             new ServiceException("duplicate : A file with the same name already exists in folder"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2949,7 +3059,10 @@ public class SDMCustomServiceHandlerTest {
         .thenThrow(new ServiceException("duplicate : Child element already exists in target"));
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("document.pdf", "Test document"));
+        .thenReturn(
+            new JSONObject()
+                .put("cmis:name", "document.pdf")
+                .put("cmis:description", "Test document"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -2982,7 +3095,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(sdmResponse);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("test.url", "Test link"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "test.url").put("cmis:description", "Test link"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -3009,7 +3123,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(sdmResponse);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("test.url", "Test link"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "test.url").put("cmis:description", "Test link"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -3039,7 +3154,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(sdmResponse);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("test.url", "Test link"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "test.url").put("cmis:description", "Test link"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -3069,7 +3185,8 @@ public class SDMCustomServiceHandlerTest {
         .thenReturn(sdmResponse);
 
     when(sdmService.getObject(any(), any(), anyBoolean()))
-        .thenReturn(List.of("test.url", "Test link"));
+        .thenReturn(
+            new JSONObject().put("cmis:name", "test.url").put("cmis:description", "Test link"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
 
@@ -3096,7 +3213,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3119,7 +3237,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3141,7 +3260,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3166,7 +3286,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3187,7 +3308,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3208,7 +3330,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3232,7 +3355,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);
@@ -3253,7 +3377,8 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.moveAttachment(any(CmisDocument.class), any(), anyBoolean()))
         .thenReturn(sdmResponse);
 
-    when(sdmService.getObject(any(), any(), anyBoolean())).thenReturn(List.of("test.pdf", "Test"));
+    when(sdmService.getObject(any(), any(), anyBoolean()))
+        .thenReturn(new JSONObject().put("cmis:name", "test.pdf").put("cmis:description", "Test"));
 
     AttachmentMoveEventContext context = createMockMoveContext(false);
     sdmCustomServiceHandler.moveAttachments(context);

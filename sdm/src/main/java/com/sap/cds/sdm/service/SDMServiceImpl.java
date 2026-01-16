@@ -147,7 +147,6 @@ public class SDMServiceImpl implements SDMService {
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       int responseCode = response.getStatusLine().getStatusCode();
-
       if (responseCode == 201 || responseCode == 200) {
         status = "success";
         JSONObject jsonResponse = new JSONObject(responseString);
@@ -255,6 +254,7 @@ public class SDMServiceImpl implements SDMService {
                 Collectors
                     .toSet()); // Adding the properties which are unsupported to a list so that
     // exeception can be thrown
+
     Set<String> keysMap1 = secondaryProperties.keySet();
     for (Map.Entry<String, String> entry :
         secondaryPropertiesWithInvalidDefinitions
@@ -326,8 +326,8 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public List<String> getObject(
-      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
+  public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException {
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -343,14 +343,13 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getObjectRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
-        return Collections.emptyList();
+        if (response.getStatusLine().getStatusCode() == 403) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+        }
+        return null;
       }
       String responseString = EntityUtils.toString(response.getEntity());
-      JSONObject jsonObject = new JSONObject(responseString);
-      JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
-      String cmisName = succinctProperties.optString("cmis:name", "");
-      String cmisDescription = succinctProperties.optString("cmis:description", "");
-      return List.of(cmisName, cmisDescription);
+      return new JSONObject(responseString);
     } catch (IOException e) {
       throw new ServiceException(SDMUtils.getErrorMessage("ATTACHMENT_NOT_FOUND"), e);
     }
@@ -604,6 +603,10 @@ public class SDMServiceImpl implements SDMService {
         // Fetch the disableVirusScannerForLargeFile
         repoValue.setDisableVirusScannerForLargeFile(
             featureData.getBoolean("disableVirusScannerForLargeFile"));
+        repoValue.setIsAsyncVirusScanEnabled(
+            featureData.has("isAsyncVirusScanEnabled")
+                ? featureData.getBoolean("isAsyncVirusScanEnabled")
+                : false);
       }
     }
     repoValueMap.put(repositoryId, repoValue);
