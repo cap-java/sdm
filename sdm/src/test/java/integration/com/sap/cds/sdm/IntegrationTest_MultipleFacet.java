@@ -778,6 +778,14 @@ class IntegrationTest_MultipleFacet {
   void testRenameMultipleEntityComponents() {
     System.out.println("Test (11) : Rename multiple attachments, references, and footnotes");
     boolean testStatus = true;
+
+    // Allow time for previous test's save to complete
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
     String draftResponse = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (!"Entity in draft mode".equals(draftResponse)) {
       fail("Entity is not in draft mode.");
@@ -1037,7 +1045,15 @@ class IntegrationTest_MultipleFacet {
         if (response1.equals("Deleted") && response2.equals("Deleted")) counter++;
       }
     }
-    if (counter >= 2) response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+    if (counter >= 2) {
+      // Allow time for deletions to process
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+    }
     if (response.equals("Saved")) {
       for (int i = 0; i < facet.length; i++) {
         String response1 = api.readAttachment(appUrl, entityName, facet[i], entityID, ID2[i]);
@@ -2897,7 +2913,7 @@ class IntegrationTest_MultipleFacet {
     List<String> objectIdsToStore = new ArrayList<>();
     for (String facetName : facet) {
       List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomSourceEntity);
+          api.fetchEntityMetadataDraftDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
 
       if (sourceAttachmentsMetadata.isEmpty()) {
         fail("No attachments found in source entity for facet: " + facetName);
@@ -3348,7 +3364,7 @@ class IntegrationTest_MultipleFacet {
 
     for (String facetName : facet) {
       List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomSourceEntity);
+          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
 
       Map<String, Object> sourceAttachmentMetadata =
           sourceAttachmentsMetadata.stream()
