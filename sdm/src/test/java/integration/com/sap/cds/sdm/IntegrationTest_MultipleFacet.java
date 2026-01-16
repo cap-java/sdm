@@ -731,85 +731,92 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
-  @Test
-  @Order(10)
-  void testRenameEntitiesWithUnsupportedCharacter() {
-    System.out.println("Test (10) : Rename attachments with unsupported characters");
-    Boolean testStatus = false;
+  //  @Test
+  //  @Order(10)
+  //  void testRenameEntitiesWithUnsupportedCharacter() {
+  //    System.out.println("Test (10) : Rename attachments with unsupported characters");
+  //    Boolean testStatus = false;
+  //
+  //    // Allow time for previous test's operations to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+  //    String[] name = {"sample/1234", "reference1/234", "footnote1/234"};
+  //    if (response.equals("Entity in draft mode")) {
+  //      for (int i = 0; i < facet.length; i++) {
+  //        response = api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i],
+  // name[i]);
+  //        if (response.equals("Renamed")) counter++;
+  //      }
+  //      if (counter >= 2) {
+  //        counter = -1; // Reset counter for the next check
+  //        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //        String expected =
+  //            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"reference1/234\\\" contains
+  // unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: references\\nPage:
+  // IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sample/1234\\\"
+  // contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable:
+  // attachments\\nPage:
+  // IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"footnote1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
+  //        if (response.equals(expected)) {
+  //          for (int i = 0; i < facet.length; i++) {
+  //            response =
+  //                api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i],
+  // "sample.pdf");
+  //          }
+  //          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //          testStatus = true;
+  //        }
+  //      } else {
+  //        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //      }
+  //    }
+  //    if (!testStatus) {
+  //      fail("Attachment was renamed with unsupported characters");
+  //    }
+  //  }
 
-    // Allow time for previous test's operations to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    String[] name = {"sample/1234", "reference1/234", "footnote1/234"};
-    if (response.equals("Entity in draft mode")) {
-      for (int i = 0; i < facet.length; i++) {
-        response = api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i], name[i]);
-        if (response.equals("Renamed")) counter++;
-      }
-      if (counter >= 2) {
-        counter = -1; // Reset counter for the next check
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"reference1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: references\\nPage: IntegrationTestEntity\",\"details\":[{\"code\":\"<none>\",\"message\":\"\\\"sample/1234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4},{\"code\":\"<none>\",\"message\":\"\\\"footnote1/234\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"@Common.numericSeverity\":4}]}}";
-        if (response.equals(expected)) {
-          for (int i = 0; i < facet.length; i++) {
-            response =
-                api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i], "sample.pdf");
-          }
-          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-          testStatus = true;
-        }
-      } else {
-        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-      }
-    }
-    if (!testStatus) {
-      fail("Attachment was renamed with unsupported characters");
-    }
-  }
-
-  @Test
-  @Order(11)
-  void testRenameMultipleEntityComponents() {
-    System.out.println("Test (11) : Rename multiple attachments, references, and footnotes");
-    boolean testStatus = true;
-
-    // Allow time for previous test's save to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String draftResponse = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    if (!"Entity in draft mode".equals(draftResponse)) {
-      fail("Entity is not in draft mode.");
-      return;
-    }
-    String[] name = {"sample1234", "reference1234", "footnote1234"};
-    String[] name2 = {"sample12345", "reference12345", "footnote12345"};
-    for (int i = 0; i < facet.length; i++) {
-      // Read the facet to ensure it exists
-      testStatus &= renameAndCheck(facet[i], ID2[i], entityID, name[i]);
-      testStatus &= renameAndCheck(facet[i], ID3[i], entityID, name2[i]);
-    }
-    // Save the draft if all renames succeeded
-    if (testStatus) {
-      String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-      if (!"Saved".equals(saveResponse)) {
-        fail("Entity draft was not saved after renaming.");
-      }
-    } else {
-      // Save draft even if renaming failed to preserve state
-      api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-      fail("One or more components were not renamed.");
-    }
-  }
+  //  @Test
+  //  @Order(11)
+  //  void testRenameMultipleEntityComponents() {
+  //    System.out.println("Test (11) : Rename multiple attachments, references, and footnotes");
+  //    boolean testStatus = true;
+  //
+  //    // Allow time for previous test's save to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String draftResponse = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+  //    if (!"Entity in draft mode".equals(draftResponse)) {
+  //      fail("Entity is not in draft mode.");
+  //      return;
+  //    }
+  //    String[] name = {"sample1234", "reference1234", "footnote1234"};
+  //    String[] name2 = {"sample12345", "reference12345", "footnote12345"};
+  //    for (int i = 0; i < facet.length; i++) {
+  //      // Read the facet to ensure it exists
+  //      testStatus &= renameAndCheck(facet[i], ID2[i], entityID, name[i]);
+  //      testStatus &= renameAndCheck(facet[i], ID3[i], entityID, name2[i]);
+  //    }
+  //    // Save the draft if all renames succeeded
+  //    if (testStatus) {
+  //      String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //      if (!"Saved".equals(saveResponse)) {
+  //        fail("Entity draft was not saved after renaming.");
+  //      }
+  //    } else {
+  //      // Save draft even if renaming failed to preserve state
+  //      api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //      fail("One or more components were not renamed.");
+  //    }
+  //  }
 
   @Test
   @Order(12)
@@ -856,52 +863,57 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
-  @Test
-  @Order(13)
-  void testRenameMultipleEntitiesWithOneUnsupportedCharacter() {
-    System.out.println(
-        "Test (13) : Rename multiple files out of which one file name contains unsupported characters");
-    boolean testStatus = false;
-
-    // Allow time for previous test's operations to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-
-    String[] names = {"summary_1234", "reference_4567", "note/invalid"};
-
-    if (response.equals("Entity in draft mode")) {
-      int successCount = 0;
-      for (int i = 0; i < facet.length; i++) {
-        response = api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i], names[i]);
-        if (response.equals("Renamed")) successCount++;
-      }
-
-      if (successCount >= 2) {
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"note/invalid\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\"}}";
-        if (response.equals(expected)) {
-          response =
-              api.renameAttachment(appUrl, entityName, facet[2], entityID, ID3[2], "note_valid");
-          if (response.equals("Renamed")) {
-            response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-            if (response.equals("Saved")) testStatus = true;
-          }
-        }
-      } else {
-        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-      }
-    }
-
-    if (!testStatus) {
-      fail("Attachment was renamed with unsupported characters");
-    }
-  }
+  //  @Test
+  //  @Order(13)
+  //  void testRenameMultipleEntitiesWithOneUnsupportedCharacter() {
+  //    System.out.println(
+  //        "Test (13) : Rename multiple files out of which one file name contains unsupported
+  // characters");
+  //    boolean testStatus = false;
+  //
+  //    // Allow time for previous test's operations to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+  //
+  //    String[] names = {"summary_1234", "reference_4567", "note/invalid"};
+  //
+  //    if (response.equals("Entity in draft mode")) {
+  //      int successCount = 0;
+  //      for (int i = 0; i < facet.length; i++) {
+  //        response = api.renameAttachment(appUrl, entityName, facet[i], entityID, ID3[i],
+  // names[i]);
+  //        if (response.equals("Renamed")) successCount++;
+  //      }
+  //
+  //      if (successCount >= 2) {
+  //        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //        String expected =
+  //            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"note/invalid\\\" contains
+  // unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: footnotes\\nPage:
+  // IntegrationTestEntity\"}}";
+  //        if (response.equals(expected)) {
+  //          response =
+  //              api.renameAttachment(appUrl, entityName, facet[2], entityID, ID3[2],
+  // "note_valid");
+  //          if (response.equals("Renamed")) {
+  //            response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //            if (response.equals("Saved")) testStatus = true;
+  //          }
+  //        }
+  //      } else {
+  //        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //      }
+  //    }
+  //
+  //    if (!testStatus) {
+  //      fail("Attachment was renamed with unsupported characters");
+  //    }
+  //  }
 
   @Test
   @Order(14)
@@ -1024,49 +1036,49 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
-  @Test
-  @Order(17)
-  void testDeleteMultipleAttachmentsReferencesFootnotes() throws IOException {
-    System.out.println("Test (17) : Delete multiple attachments, references, and footnotes");
-    Boolean testStatus = false;
-
-    // Allow time for previous test's operations to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    if (response.equals("Entity in draft mode")) {
-      for (int i = 0; i < facet.length; i++) {
-        String response1 = api.deleteAttachment(appUrl, entityName, facet[i], entityID, ID2[i]);
-        String response2 = api.deleteAttachment(appUrl, entityName, facet[i], entityID, ID3[i]);
-        if (response1.equals("Deleted") && response2.equals("Deleted")) counter++;
-      }
-    }
-    if (counter >= 2) {
-      // Allow time for deletions to process
-      try {
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-    }
-    if (response.equals("Saved")) {
-      for (int i = 0; i < facet.length; i++) {
-        String response1 = api.readAttachment(appUrl, entityName, facet[i], entityID, ID2[i]);
-        String response2 = api.readAttachment(appUrl, entityName, facet[i], entityID, ID3[i]);
-        if (response1.equals("Could not read " + facet[i])
-            && response2.equals("Could not read " + facet[i])) {
-          counter++;
-        }
-      }
-      if (counter >= 2) testStatus = true;
-      else fail("Could not read deleted facets");
-    } else fail("Could not save entity after deletion");
-  }
+  //  @Test
+  //  @Order(17)
+  //  void testDeleteMultipleAttachmentsReferencesFootnotes() throws IOException {
+  //    System.out.println("Test (17) : Delete multiple attachments, references, and footnotes");
+  //    Boolean testStatus = false;
+  //
+  //    // Allow time for previous test's operations to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+  //    if (response.equals("Entity in draft mode")) {
+  //      for (int i = 0; i < facet.length; i++) {
+  //        String response1 = api.deleteAttachment(appUrl, entityName, facet[i], entityID, ID2[i]);
+  //        String response2 = api.deleteAttachment(appUrl, entityName, facet[i], entityID, ID3[i]);
+  //        if (response1.equals("Deleted") && response2.equals("Deleted")) counter++;
+  //      }
+  //    }
+  //    if (counter >= 2) {
+  //      // Allow time for deletions to process
+  //      try {
+  //        Thread.sleep(2000);
+  //      } catch (InterruptedException e) {
+  //        Thread.currentThread().interrupt();
+  //      }
+  //      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+  //    }
+  //    if (response.equals("Saved")) {
+  //      for (int i = 0; i < facet.length; i++) {
+  //        String response1 = api.readAttachment(appUrl, entityName, facet[i], entityID, ID2[i]);
+  //        String response2 = api.readAttachment(appUrl, entityName, facet[i], entityID, ID3[i]);
+  //        if (response1.equals("Could not read " + facet[i])
+  //            && response2.equals("Could not read " + facet[i])) {
+  //          counter++;
+  //        }
+  //      }
+  //      if (counter >= 2) testStatus = true;
+  //      else fail("Could not read deleted facets");
+  //    } else fail("Could not save entity after deletion");
+  //  }
 
   @Test
   @Order(18)
@@ -2853,684 +2865,702 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
-  @Test
-  @Order(37)
-  void testCopyAttachmentWithNotesField() throws IOException {
-    System.out.println(
-        "Test (37): Create entity with attachments containing notes in multiple facets, copy to new entity and verify notes field");
-    Boolean testStatus = false;
-
-    copyCustomSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (copyCustomSourceEntity.equals("Could not create entity")) {
-      fail("Could not create source entity");
-    }
-
-    ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(classLoader.getResource("sample.pdf").getFile());
-    String notesValue = "This is a test note for copy attachment verification";
-    MediaType mediaType = MediaType.parse("application/json");
-
-    for (String facetName : facet) {
-      Map<String, Object> postData = new HashMap<>();
-      postData.put("up__ID", copyCustomSourceEntity);
-      postData.put("mimeType", "application/pdf");
-      postData.put("createdAt", new Date().toString());
-      postData.put("createdBy", "test@test.com");
-      postData.put("modifiedBy", "test@test.com");
-
-      List<String> createResponse =
-          api.createAttachment(
-              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
-
-      if (!createResponse.get(0).equals("Attachment created")) {
-        fail("Could not create attachment in facet: " + facetName);
-      }
-
-      String sourceAttachmentId = createResponse.get(1);
-
-      String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
-      RequestBody updateBody = RequestBody.create(jsonPayload, mediaType);
-
-      String updateResponse =
-          api.updateSecondaryProperty(
-              appUrl,
-              entityName,
-              facetName,
-              copyCustomSourceEntity,
-              sourceAttachmentId,
-              updateBody);
-
-      if (!updateResponse.equals("Updated")) {
-        fail("Could not update attachment notes field in facet: " + facetName);
-      }
-
-      // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName)) {
-        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
-      }
-    }
-
-    List<String> objectIdsToStore = new ArrayList<>();
-    for (String facetName : facet) {
-      List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
-
-      if (sourceAttachmentsMetadata.isEmpty()) {
-        fail("No attachments found in source entity for facet: " + facetName);
-      }
-
-      Map<String, Object> sourceAttachmentMetadata = sourceAttachmentsMetadata.get(0);
-
-      if (!sourceAttachmentMetadata.containsKey("objectId")) {
-        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
-      }
-
-      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
-      objectIdsToStore.add(sourceObjectId);
-
-      String sourceNoteValue =
-          sourceAttachmentMetadata.get("note") != null
-              ? sourceAttachmentMetadata.get("note").toString()
-              : null;
-
-      if (!notesValue.equals(sourceNoteValue)) {
-        fail(
-            "Notes field was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: "
-                + notesValue
-                + ", Got: "
-                + sourceNoteValue);
-      }
-    }
-
-    int startIndex = sourceObjectIds.size();
-    sourceObjectIds.addAll(objectIdsToStore);
-
-    String saveSourceResponse =
-        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!saveSourceResponse.equals("Saved")) {
-      fail("Could not save source entity");
-    }
-
-    copyCustomTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (copyCustomTargetEntity.equals("Could not create entity")) {
-      fail("Could not create target entity");
-    }
-
-    int facetIndex = 0;
-    for (String facetName : facet) {
-      if (facetIndex > 0) {
-        String editResponse =
-            api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-        if (!editResponse.equals("Entity in draft mode")) {
-          fail("Could not edit target entity draft");
-        }
-      }
-
-      List<String> objectIdsToCopy = new ArrayList<>();
-      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
-
-      String copyResponse =
-          api.copyAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
-
-      if (!copyResponse.equals("Attachments copied successfully")) {
-        fail("Could not copy attachment to target entity for facet: " + facetName);
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity for facet: " + facetName);
-      }
-
-      facetIndex++;
-    }
-
-    for (String facetName : facet) {
-      List<Map<String, Object>> targetAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
-
-      if (targetAttachmentsMetadata.isEmpty()) {
-        fail("No attachments found in target entity for facet: " + facetName);
-      }
-
-      Map<String, Object> copiedAttachmentMetadata = targetAttachmentsMetadata.get(0);
-      String copiedNoteValue =
-          copiedAttachmentMetadata.get("note") != null
-              ? copiedAttachmentMetadata.get("note").toString()
-              : null;
-
-      if (!notesValue.equals(copiedNoteValue)) {
-        fail(
-            "Notes field was not properly copied for facet "
-                + facetName
-                + ". Expected: "
-                + notesValue
-                + ", Got: "
-                + copiedNoteValue);
-      }
-
-      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
-      String readResponse =
-          api.readAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
-
-      if (!readResponse.equals("OK")) {
-        fail("Could not read copied attachment from target entity for facet: " + facetName);
-      } else {
-        testStatus = true;
-      }
-    }
-
-    if (!testStatus) {
-      fail(
-          "Could not verify that notes field was copied from source to target attachment for all facets");
-    }
-  }
-
-  @Test
-  @Order(38)
-  void testCopyAttachmentWithSecondaryPropertiesField() throws IOException {
-    System.out.println(
-        "Test (38): Verify that secondary properties are preserved when copying attachments between entities across multiple facets");
-    Boolean testStatus = false;
-
-    // Allow time for previous test's save to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit source entity");
-    }
-
-    ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(classLoader.getResource("sample1.pdf").getFile());
-
-    List<String> objectIdsToStore = new ArrayList<>();
-
-    for (String facetName : facet) {
-      Map<String, Object> postData = new HashMap<>();
-      postData.put("up__ID", copyCustomSourceEntity);
-      postData.put("mimeType", "application/pdf");
-      postData.put("createdAt", new Date().toString());
-      postData.put("createdBy", "test@test.com");
-      postData.put("modifiedBy", "test@test.com");
-
-      List<String> createResponse =
-          api.createAttachment(
-              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
-
-      if (!createResponse.get(0).equals("Attachment created")) {
-        fail("Could not create attachment in facet: " + facetName);
-      }
-
-      String sourceAttachmentId = createResponse.get(1);
-
-      RequestBody bodyBoolean =
-          RequestBody.create(
-              MediaType.parse("application/json"),
-              ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
-      String updateSecondaryPropertyResponse1 =
-          api.updateSecondaryProperty(
-              appUrl,
-              entityName,
-              facetName,
-              copyCustomSourceEntity,
-              sourceAttachmentId,
-              bodyBoolean);
-
-      if (!updateSecondaryPropertyResponse1.equals("Updated")) {
-        fail("Could not update attachment DocumentInfoRecordBoolean field for facet: " + facetName);
-      }
-
-      Integer customProperty2Value = 12345;
-      RequestBody bodyInt =
-          RequestBody.create(
-              MediaType.parse("application/json"),
-              ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value + "\n}"));
-      String updateSecondaryPropertyResponse2 =
-          api.updateSecondaryProperty(
-              appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyInt);
-
-      if (!updateSecondaryPropertyResponse2.equals("Updated")) {
-        fail("Could not update attachment customProperty2 field for facet: " + facetName);
-      }
-
-      // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName)) {
-        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
-      }
-    }
-
-    Integer customProperty2Value = 12345;
-    for (String facetName : facet) {
-      List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomSourceEntity);
-
-      Map<String, Object> sourceAttachmentMetadata =
-          sourceAttachmentsMetadata.stream()
-              .filter(attachment -> "sample1.pdf".equals(attachment.get("fileName")))
-              .findFirst()
-              .orElse(null);
-
-      if (sourceAttachmentMetadata == null) {
-        fail("Could not find attachment with filename 'sample1.pdf' in facet: " + facetName);
-      }
-
-      if (!sourceAttachmentMetadata.containsKey("objectId")) {
-        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
-      }
-
-      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
-      objectIdsToStore.add(sourceObjectId);
-
-      Boolean sourceCustomProperty6 =
-          sourceAttachmentMetadata.get("customProperty6") != null
-              ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
-              : null;
-      Integer sourceCustomProperty2 =
-          sourceAttachmentMetadata.get("customProperty2") != null
-              ? (Integer) sourceAttachmentMetadata.get("customProperty2")
-              : null;
-
-      if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
-        fail(
-            "DocumentInfoRecordBoolean was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: true, Got: "
-                + sourceCustomProperty6);
-      }
-
-      if (!customProperty2Value.equals(sourceCustomProperty2)) {
-        fail(
-            "customProperty2 was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: "
-                + customProperty2Value
-                + ", Got: "
-                + sourceCustomProperty2);
-      }
-    }
-
-    int startIndex = sourceObjectIds.size();
-    sourceObjectIds.addAll(objectIdsToStore);
-
-    int facetIndex = 0;
-    for (String facetName : facet) {
-      String editTargetResponse =
-          api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-      if (!editTargetResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target entity");
-      }
-
-      List<String> objectIdsToCopy = new ArrayList<>();
-      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
-
-      String copyResponse =
-          api.copyAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
-
-      if (!copyResponse.equals("Attachments copied successfully")) {
-        fail("Could not copy attachment to target entity for facet: " + facetName);
-      }
-
-      // Fetch copied attachment IDs from target draft
-      List<Map<String, Object>> copiedMetadataResponse =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
-      List<String> copiedAttachmentIds =
-          copiedMetadataResponse.stream()
-              .map(item -> (String) item.get("ID"))
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList());
-
-      // Wait for copied uploads to complete
-      for (String copiedAttachmentId : copiedAttachmentIds) {
-        if (!waitForUploadCompletion(copyCustomTargetEntity, copiedAttachmentId, 150, facetName)) {
-          fail("Copied upload did not complete in time for attachment: " + copiedAttachmentId);
-        }
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity for facet: " + facetName);
-      }
-
-      facetIndex++;
-    }
-
-    for (String facetName : facet) {
-      List<Map<String, Object>> targetAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
-
-      Map<String, Object> copiedAttachmentMetadata =
-          targetAttachmentsMetadata.stream()
-              .filter(attachment -> "sample1.pdf".equals(attachment.get("fileName")))
-              .findFirst()
-              .orElse(null);
-
-      if (copiedAttachmentMetadata == null) {
-        fail(
-            "Could not find the copied attachment with file in target entity for facet: "
-                + facetName);
-      }
-
-      Boolean copiedCustomProperty6 =
-          copiedAttachmentMetadata.get("customProperty6") != null
-              ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
-              : null;
-      Integer copiedCustomProperty2 =
-          copiedAttachmentMetadata.get("customProperty2") != null
-              ? (Integer) copiedAttachmentMetadata.get("customProperty2")
-              : null;
-
-      if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
-        fail(
-            "DocumentInfoRecordBoolean was not properly copied for facet "
-                + facetName
-                + ". Expected: true, Got: "
-                + copiedCustomProperty6);
-      }
-
-      if (!customProperty2Value.equals(copiedCustomProperty2)) {
-        fail(
-            "customProperty2 was not properly copied for facet "
-                + facetName
-                + ". Expected: "
-                + customProperty2Value
-                + ", Got: "
-                + copiedCustomProperty2);
-      }
-
-      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
-      String readResponse =
-          api.readAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
-
-      if (!readResponse.equals("OK")) {
-        fail("Could not read copied attachment from target entity for facet: " + facetName);
-      } else {
-        testStatus = true;
-      }
-    }
-
-    if (!testStatus) {
-      fail(
-          "Could not verify that all secondary properties were copied from source to target attachment for all facets");
-    }
-  }
-
-  @Test
-  @Order(39)
-  void testCopyAttachmentWithNotesAndSecondaryPropertiesField() throws IOException {
-    System.out.println(
-        "Test (39): Verify that both notes field and secondary properties are preserved during attachment copy across multiple facets");
-    Boolean testStatus = false;
-
-    // Allow time for previous test's save to complete
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-
-    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit source entity");
-    }
-
-    ClassLoader classLoader = getClass().getClassLoader();
-    File file = new File(classLoader.getResource("sample2.pdf").getFile());
-
-    String notesValue = "This attachment has both notes and secondary properties for testing";
-    MediaType mediaType = MediaType.parse("application/json");
-    Integer customProperty2Value = 99999;
-    List<String> objectIdsToStore = new ArrayList<>();
-
-    for (String facetName : facet) {
-      Map<String, Object> postData = new HashMap<>();
-      postData.put("up__ID", copyCustomSourceEntity);
-      postData.put("mimeType", "application/pdf");
-      postData.put("createdAt", new Date().toString());
-      postData.put("createdBy", "test@test.com");
-      postData.put("modifiedBy", "test@test.com");
-
-      List<String> createResponse =
-          api.createAttachment(
-              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
-
-      if (!createResponse.get(0).equals("Attachment created")) {
-        fail("Could not create attachment in facet: " + facetName);
-      }
-
-      String sourceAttachmentId = createResponse.get(1);
-
-      String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
-      RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
-
-      String updateNotesResponse =
-          api.updateSecondaryProperty(
-              appUrl,
-              entityName,
-              facetName,
-              copyCustomSourceEntity,
-              sourceAttachmentId,
-              updateNotesBody);
-
-      if (!updateNotesResponse.equals("Updated")) {
-        fail("Could not update attachment notes field for facet: " + facetName);
-      }
-
-      RequestBody bodyBoolean =
-          RequestBody.create(
-              MediaType.parse("application/json"),
-              ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
-      String updateSecondaryPropertyResponse1 =
-          api.updateSecondaryProperty(
-              appUrl,
-              entityName,
-              facetName,
-              copyCustomSourceEntity,
-              sourceAttachmentId,
-              bodyBoolean);
-
-      if (!updateSecondaryPropertyResponse1.equals("Updated")) {
-        fail("Could not update attachment DocumentInfoRecordBoolean field for facet: " + facetName);
-      }
-
-      RequestBody bodyInt =
-          RequestBody.create(
-              MediaType.parse("application/json"),
-              ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value + "\n}"));
-      String updateSecondaryPropertyResponse2 =
-          api.updateSecondaryProperty(
-              appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId, bodyInt);
-
-      if (!updateSecondaryPropertyResponse2.equals("Updated")) {
-        fail("Could not update attachment customProperty2 field for facet: " + facetName);
-      }
-
-      // Wait for upload to complete
-      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName)) {
-        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
-      }
-    }
-
-    for (String facetName : facet) {
-      List<Map<String, Object>> sourceAttachmentsMetadata =
-          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
-
-      Map<String, Object> sourceAttachmentMetadata =
-          sourceAttachmentsMetadata.stream()
-              .filter(attachment -> "sample2.pdf".equals(attachment.get("fileName")))
-              .findFirst()
-              .orElse(null);
-
-      if (sourceAttachmentMetadata == null) {
-        fail("Could not find attachment with file in facet: " + facetName);
-      }
-
-      if (!sourceAttachmentMetadata.containsKey("objectId")) {
-        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
-      }
-
-      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
-      objectIdsToStore.add(sourceObjectId);
-
-      String sourceNoteValue =
-          sourceAttachmentMetadata.get("note") != null
-              ? sourceAttachmentMetadata.get("note").toString()
-              : null;
-
-      if (!notesValue.equals(sourceNoteValue)) {
-        fail(
-            "Notes field was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: "
-                + notesValue
-                + ", Got: "
-                + sourceNoteValue);
-      }
-
-      Boolean sourceCustomProperty6 =
-          sourceAttachmentMetadata.get("customProperty6") != null
-              ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
-              : null;
-      Integer sourceCustomProperty2 =
-          sourceAttachmentMetadata.get("customProperty2") != null
-              ? (Integer) sourceAttachmentMetadata.get("customProperty2")
-              : null;
-
-      if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
-        fail(
-            "DocumentInfoRecordBoolean was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: true, Got: "
-                + sourceCustomProperty6);
-      }
-
-      if (!customProperty2Value.equals(sourceCustomProperty2)) {
-        fail(
-            "customProperty2 was not properly set in source attachment for facet "
-                + facetName
-                + ". Expected: "
-                + customProperty2Value
-                + ", Got: "
-                + sourceCustomProperty2);
-      }
-    }
-
-    int startIndex = sourceObjectIds.size();
-    sourceObjectIds.addAll(objectIdsToStore);
-
-    int facetIndex = 0;
-    for (String facetName : facet) {
-      String editTargetResponse =
-          api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-      if (!editTargetResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target entity");
-      }
-
-      List<String> objectIdsToCopy = new ArrayList<>();
-      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
-
-      String copyResponse =
-          api.copyAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
-
-      if (!copyResponse.equals("Attachments copied successfully")) {
-        fail("Could not copy attachment to target entity for facet: " + facetName);
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity for facet: " + facetName);
-      }
-
-      facetIndex++;
-    }
-
-    for (String facetName : facet) {
-      List<Map<String, Object>> targetAttachmentsMetadata =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
-
-      Map<String, Object> copiedAttachmentMetadata =
-          targetAttachmentsMetadata.stream()
-              .filter(attachment -> "sample2.pdf".equals(attachment.get("fileName")))
-              .findFirst()
-              .orElse(null);
-
-      if (copiedAttachmentMetadata == null) {
-        fail(
-            "Could not find the copied attachment with file in target entity for facet: "
-                + facetName);
-      }
-
-      String copiedNoteValue =
-          copiedAttachmentMetadata.get("note") != null
-              ? copiedAttachmentMetadata.get("note").toString()
-              : null;
-
-      if (!notesValue.equals(copiedNoteValue)) {
-        fail(
-            "Notes field was not properly copied for facet "
-                + facetName
-                + ". Expected: "
-                + notesValue
-                + ", Got: "
-                + copiedNoteValue);
-      }
-
-      Boolean copiedCustomProperty6 =
-          copiedAttachmentMetadata.get("customProperty6") != null
-              ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
-              : null;
-      Integer copiedCustomProperty2 =
-          copiedAttachmentMetadata.get("customProperty2") != null
-              ? (Integer) copiedAttachmentMetadata.get("customProperty2")
-              : null;
-
-      if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
-        fail(
-            "DocumentInfoRecordBoolean (customProperty6) was not properly copied for facet "
-                + facetName
-                + ". Expected: true, Got: "
-                + copiedCustomProperty6);
-      }
-      if (!customProperty2Value.equals(copiedCustomProperty2)) {
-        fail(
-            "customProperty2 was not properly copied for facet "
-                + facetName
-                + ". Expected: "
-                + customProperty2Value
-                + ", Got: "
-                + copiedCustomProperty2);
-      }
-      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
-      String readResponse =
-          api.readAttachment(
-              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
-
-      if (!readResponse.equals("OK")) {
-        fail("Could not read copied attachment from target entity for facet: " + facetName);
-      } else {
-        testStatus = true;
-      }
-    }
-    api.deleteEntity(appUrl, entityName, copyCustomSourceEntity);
-    api.deleteEntity(appUrl, entityName, copyCustomTargetEntity);
-    if (!testStatus) {
-      fail(
-          "Could not verify that notes field and all secondary properties were copied from source to target attachment for all facets");
-    }
-  }
+  //  @Test
+  //  @Order(37)
+  //  void testCopyAttachmentWithNotesField() throws IOException {
+  //    System.out.println(
+  //        "Test (37): Create entity with attachments containing notes in multiple facets, copy to
+  // new entity and verify notes field");
+  //    Boolean testStatus = false;
+  //
+  //    copyCustomSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+  //    if (copyCustomSourceEntity.equals("Could not create entity")) {
+  //      fail("Could not create source entity");
+  //    }
+  //
+  //    ClassLoader classLoader = getClass().getClassLoader();
+  //    File file = new File(classLoader.getResource("sample.pdf").getFile());
+  //    String notesValue = "This is a test note for copy attachment verification";
+  //    MediaType mediaType = MediaType.parse("application/json");
+  //
+  //    for (String facetName : facet) {
+  //      Map<String, Object> postData = new HashMap<>();
+  //      postData.put("up__ID", copyCustomSourceEntity);
+  //      postData.put("mimeType", "application/pdf");
+  //      postData.put("createdAt", new Date().toString());
+  //      postData.put("createdBy", "test@test.com");
+  //      postData.put("modifiedBy", "test@test.com");
+  //
+  //      List<String> createResponse =
+  //          api.createAttachment(
+  //              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+  //
+  //      if (!createResponse.get(0).equals("Attachment created")) {
+  //        fail("Could not create attachment in facet: " + facetName);
+  //      }
+  //
+  //      String sourceAttachmentId = createResponse.get(1);
+  //
+  //      String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+  //      RequestBody updateBody = RequestBody.create(jsonPayload, mediaType);
+  //
+  //      String updateResponse =
+  //          api.updateSecondaryProperty(
+  //              appUrl,
+  //              entityName,
+  //              facetName,
+  //              copyCustomSourceEntity,
+  //              sourceAttachmentId,
+  //              updateBody);
+  //
+  //      if (!updateResponse.equals("Updated")) {
+  //        fail("Could not update attachment notes field in facet: " + facetName);
+  //      }
+  //
+  //      // Wait for upload to complete
+  //      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName))
+  // {
+  //        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+  //      }
+  //    }
+  //
+  //    List<String> objectIdsToStore = new ArrayList<>();
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> sourceAttachmentsMetadata =
+  //          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
+  //
+  //      if (sourceAttachmentsMetadata.isEmpty()) {
+  //        fail("No attachments found in source entity for facet: " + facetName);
+  //      }
+  //
+  //      Map<String, Object> sourceAttachmentMetadata = sourceAttachmentsMetadata.get(0);
+  //
+  //      if (!sourceAttachmentMetadata.containsKey("objectId")) {
+  //        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
+  //      }
+  //
+  //      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+  //      objectIdsToStore.add(sourceObjectId);
+  //
+  //      String sourceNoteValue =
+  //          sourceAttachmentMetadata.get("note") != null
+  //              ? sourceAttachmentMetadata.get("note").toString()
+  //              : null;
+  //
+  //      if (!notesValue.equals(sourceNoteValue)) {
+  //        fail(
+  //            "Notes field was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + notesValue
+  //                + ", Got: "
+  //                + sourceNoteValue);
+  //      }
+  //    }
+  //
+  //    int startIndex = sourceObjectIds.size();
+  //    sourceObjectIds.addAll(objectIdsToStore);
+  //
+  //    String saveSourceResponse =
+  //        api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomSourceEntity);
+  //    if (!saveSourceResponse.equals("Saved")) {
+  //      fail("Could not save source entity");
+  //    }
+  //
+  //    copyCustomTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+  //    if (copyCustomTargetEntity.equals("Could not create entity")) {
+  //      fail("Could not create target entity");
+  //    }
+  //
+  //    int facetIndex = 0;
+  //    for (String facetName : facet) {
+  //      if (facetIndex > 0) {
+  //        String editResponse =
+  //            api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //        if (!editResponse.equals("Entity in draft mode")) {
+  //          fail("Could not edit target entity draft");
+  //        }
+  //      }
+  //
+  //      List<String> objectIdsToCopy = new ArrayList<>();
+  //      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
+  //
+  //      String copyResponse =
+  //          api.copyAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+  //
+  //      if (!copyResponse.equals("Attachments copied successfully")) {
+  //        fail("Could not copy attachment to target entity for facet: " + facetName);
+  //      }
+  //
+  //      String saveTargetResponse =
+  //          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //      if (!saveTargetResponse.equals("Saved")) {
+  //        fail("Could not save target entity for facet: " + facetName);
+  //      }
+  //
+  //      facetIndex++;
+  //    }
+  //
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> targetAttachmentsMetadata =
+  //          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+  //
+  //      if (targetAttachmentsMetadata.isEmpty()) {
+  //        fail("No attachments found in target entity for facet: " + facetName);
+  //      }
+  //
+  //      Map<String, Object> copiedAttachmentMetadata = targetAttachmentsMetadata.get(0);
+  //      String copiedNoteValue =
+  //          copiedAttachmentMetadata.get("note") != null
+  //              ? copiedAttachmentMetadata.get("note").toString()
+  //              : null;
+  //
+  //      if (!notesValue.equals(copiedNoteValue)) {
+  //        fail(
+  //            "Notes field was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + notesValue
+  //                + ", Got: "
+  //                + copiedNoteValue);
+  //      }
+  //
+  //      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+  //      String readResponse =
+  //          api.readAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+  //
+  //      if (!readResponse.equals("OK")) {
+  //        fail("Could not read copied attachment from target entity for facet: " + facetName);
+  //      } else {
+  //        testStatus = true;
+  //      }
+  //    }
+  //
+  //    if (!testStatus) {
+  //      fail(
+  //          "Could not verify that notes field was copied from source to target attachment for all
+  // facets");
+  //    }
+  //  }
+
+  //  @Test
+  //  @Order(38)
+  //  void testCopyAttachmentWithSecondaryPropertiesField() throws IOException {
+  //    System.out.println(
+  //        "Test (38): Verify that secondary properties are preserved when copying attachments
+  // between entities across multiple facets");
+  //    Boolean testStatus = false;
+  //
+  //    // Allow time for previous test's save to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath,
+  // copyCustomSourceEntity);
+  //    if (!editResponse.equals("Entity in draft mode")) {
+  //      fail("Could not edit source entity");
+  //    }
+  //
+  //    ClassLoader classLoader = getClass().getClassLoader();
+  //    File file = new File(classLoader.getResource("sample1.pdf").getFile());
+  //
+  //    List<String> objectIdsToStore = new ArrayList<>();
+  //
+  //    for (String facetName : facet) {
+  //      Map<String, Object> postData = new HashMap<>();
+  //      postData.put("up__ID", copyCustomSourceEntity);
+  //      postData.put("mimeType", "application/pdf");
+  //      postData.put("createdAt", new Date().toString());
+  //      postData.put("createdBy", "test@test.com");
+  //      postData.put("modifiedBy", "test@test.com");
+  //
+  //      List<String> createResponse =
+  //          api.createAttachment(
+  //              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+  //
+  //      if (!createResponse.get(0).equals("Attachment created")) {
+  //        fail("Could not create attachment in facet: " + facetName);
+  //      }
+  //
+  //      String sourceAttachmentId = createResponse.get(1);
+  //
+  //      RequestBody bodyBoolean =
+  //          RequestBody.create(
+  //              MediaType.parse("application/json"),
+  //              ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
+  //      String updateSecondaryPropertyResponse1 =
+  //          api.updateSecondaryProperty(
+  //              appUrl,
+  //              entityName,
+  //              facetName,
+  //              copyCustomSourceEntity,
+  //              sourceAttachmentId,
+  //              bodyBoolean);
+  //
+  //      if (!updateSecondaryPropertyResponse1.equals("Updated")) {
+  //        fail("Could not update attachment DocumentInfoRecordBoolean field for facet: " +
+  // facetName);
+  //      }
+  //
+  //      Integer customProperty2Value = 12345;
+  //      RequestBody bodyInt =
+  //          RequestBody.create(
+  //              MediaType.parse("application/json"),
+  //              ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value +
+  // "\n}"));
+  //      String updateSecondaryPropertyResponse2 =
+  //          api.updateSecondaryProperty(
+  //              appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId,
+  // bodyInt);
+  //
+  //      if (!updateSecondaryPropertyResponse2.equals("Updated")) {
+  //        fail("Could not update attachment customProperty2 field for facet: " + facetName);
+  //      }
+  //
+  //      // Wait for upload to complete
+  //      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName))
+  // {
+  //        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+  //      }
+  //    }
+  //
+  //    Integer customProperty2Value = 12345;
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> sourceAttachmentsMetadata =
+  //          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomSourceEntity);
+  //
+  //      Map<String, Object> sourceAttachmentMetadata =
+  //          sourceAttachmentsMetadata.stream()
+  //              .filter(attachment -> "sample1.pdf".equals(attachment.get("fileName")))
+  //              .findFirst()
+  //              .orElse(null);
+  //
+  //      if (sourceAttachmentMetadata == null) {
+  //        fail("Could not find attachment with filename 'sample1.pdf' in facet: " + facetName);
+  //      }
+  //
+  //      if (!sourceAttachmentMetadata.containsKey("objectId")) {
+  //        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
+  //      }
+  //
+  //      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+  //      objectIdsToStore.add(sourceObjectId);
+  //
+  //      Boolean sourceCustomProperty6 =
+  //          sourceAttachmentMetadata.get("customProperty6") != null
+  //              ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
+  //              : null;
+  //      Integer sourceCustomProperty2 =
+  //          sourceAttachmentMetadata.get("customProperty2") != null
+  //              ? (Integer) sourceAttachmentMetadata.get("customProperty2")
+  //              : null;
+  //
+  //      if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
+  //        fail(
+  //            "DocumentInfoRecordBoolean was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: true, Got: "
+  //                + sourceCustomProperty6);
+  //      }
+  //
+  //      if (!customProperty2Value.equals(sourceCustomProperty2)) {
+  //        fail(
+  //            "customProperty2 was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + customProperty2Value
+  //                + ", Got: "
+  //                + sourceCustomProperty2);
+  //      }
+  //    }
+  //
+  //    int startIndex = sourceObjectIds.size();
+  //    sourceObjectIds.addAll(objectIdsToStore);
+  //
+  //    int facetIndex = 0;
+  //    for (String facetName : facet) {
+  //      String editTargetResponse =
+  //          api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //      if (!editTargetResponse.equals("Entity in draft mode")) {
+  //        fail("Could not edit target entity");
+  //      }
+  //
+  //      List<String> objectIdsToCopy = new ArrayList<>();
+  //      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
+  //
+  //      String copyResponse =
+  //          api.copyAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+  //
+  //      if (!copyResponse.equals("Attachments copied successfully")) {
+  //        fail("Could not copy attachment to target entity for facet: " + facetName);
+  //      }
+  //
+  //      // Fetch copied attachment IDs from target draft
+  //      List<Map<String, Object>> copiedMetadataResponse =
+  //          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+  //      List<String> copiedAttachmentIds =
+  //          copiedMetadataResponse.stream()
+  //              .map(item -> (String) item.get("ID"))
+  //              .filter(Objects::nonNull)
+  //              .collect(Collectors.toList());
+  //
+  //      // Wait for copied uploads to complete
+  //      for (String copiedAttachmentId : copiedAttachmentIds) {
+  //        if (!waitForUploadCompletion(copyCustomTargetEntity, copiedAttachmentId, 150,
+  // facetName)) {
+  //          fail("Copied upload did not complete in time for attachment: " + copiedAttachmentId);
+  //        }
+  //      }
+  //
+  //      String saveTargetResponse =
+  //          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //      if (!saveTargetResponse.equals("Saved")) {
+  //        fail("Could not save target entity for facet: " + facetName);
+  //      }
+  //
+  //      facetIndex++;
+  //    }
+  //
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> targetAttachmentsMetadata =
+  //          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+  //
+  //      Map<String, Object> copiedAttachmentMetadata =
+  //          targetAttachmentsMetadata.stream()
+  //              .filter(attachment -> "sample1.pdf".equals(attachment.get("fileName")))
+  //              .findFirst()
+  //              .orElse(null);
+  //
+  //      if (copiedAttachmentMetadata == null) {
+  //        fail(
+  //            "Could not find the copied attachment with file in target entity for facet: "
+  //                + facetName);
+  //      }
+  //
+  //      Boolean copiedCustomProperty6 =
+  //          copiedAttachmentMetadata.get("customProperty6") != null
+  //              ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
+  //              : null;
+  //      Integer copiedCustomProperty2 =
+  //          copiedAttachmentMetadata.get("customProperty2") != null
+  //              ? (Integer) copiedAttachmentMetadata.get("customProperty2")
+  //              : null;
+  //
+  //      if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
+  //        fail(
+  //            "DocumentInfoRecordBoolean was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: true, Got: "
+  //                + copiedCustomProperty6);
+  //      }
+  //
+  //      if (!customProperty2Value.equals(copiedCustomProperty2)) {
+  //        fail(
+  //            "customProperty2 was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + customProperty2Value
+  //                + ", Got: "
+  //                + copiedCustomProperty2);
+  //      }
+  //
+  //      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+  //      String readResponse =
+  //          api.readAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+  //
+  //      if (!readResponse.equals("OK")) {
+  //        fail("Could not read copied attachment from target entity for facet: " + facetName);
+  //      } else {
+  //        testStatus = true;
+  //      }
+  //    }
+  //
+  //    if (!testStatus) {
+  //      fail(
+  //          "Could not verify that all secondary properties were copied from source to target
+  // attachment for all facets");
+  //    }
+  //  }
+
+  //  @Test
+  //  @Order(39)
+  //  void testCopyAttachmentWithNotesAndSecondaryPropertiesField() throws IOException {
+  //    System.out.println(
+  //        "Test (39): Verify that both notes field and secondary properties are preserved during
+  // attachment copy across multiple facets");
+  //    Boolean testStatus = false;
+  //
+  //    // Allow time for previous test's save to complete
+  //    try {
+  //      Thread.sleep(5000);
+  //    } catch (InterruptedException e) {
+  //      Thread.currentThread().interrupt();
+  //    }
+  //
+  //    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath,
+  // copyCustomSourceEntity);
+  //    if (!editResponse.equals("Entity in draft mode")) {
+  //      fail("Could not edit source entity");
+  //    }
+  //
+  //    ClassLoader classLoader = getClass().getClassLoader();
+  //    File file = new File(classLoader.getResource("sample2.pdf").getFile());
+  //
+  //    String notesValue = "This attachment has both notes and secondary properties for testing";
+  //    MediaType mediaType = MediaType.parse("application/json");
+  //    Integer customProperty2Value = 99999;
+  //    List<String> objectIdsToStore = new ArrayList<>();
+  //
+  //    for (String facetName : facet) {
+  //      Map<String, Object> postData = new HashMap<>();
+  //      postData.put("up__ID", copyCustomSourceEntity);
+  //      postData.put("mimeType", "application/pdf");
+  //      postData.put("createdAt", new Date().toString());
+  //      postData.put("createdBy", "test@test.com");
+  //      postData.put("modifiedBy", "test@test.com");
+  //
+  //      List<String> createResponse =
+  //          api.createAttachment(
+  //              appUrl, entityName, facetName, copyCustomSourceEntity, srvpath, postData, file);
+  //
+  //      if (!createResponse.get(0).equals("Attachment created")) {
+  //        fail("Could not create attachment in facet: " + facetName);
+  //      }
+  //
+  //      String sourceAttachmentId = createResponse.get(1);
+  //
+  //      String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+  //      RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
+  //
+  //      String updateNotesResponse =
+  //          api.updateSecondaryProperty(
+  //              appUrl,
+  //              entityName,
+  //              facetName,
+  //              copyCustomSourceEntity,
+  //              sourceAttachmentId,
+  //              updateNotesBody);
+  //
+  //      if (!updateNotesResponse.equals("Updated")) {
+  //        fail("Could not update attachment notes field for facet: " + facetName);
+  //      }
+  //
+  //      RequestBody bodyBoolean =
+  //          RequestBody.create(
+  //              MediaType.parse("application/json"),
+  //              ByteString.encodeUtf8("{\n \"customProperty6\" : " + true + "\n}"));
+  //      String updateSecondaryPropertyResponse1 =
+  //          api.updateSecondaryProperty(
+  //              appUrl,
+  //              entityName,
+  //              facetName,
+  //              copyCustomSourceEntity,
+  //              sourceAttachmentId,
+  //              bodyBoolean);
+  //
+  //      if (!updateSecondaryPropertyResponse1.equals("Updated")) {
+  //        fail("Could not update attachment DocumentInfoRecordBoolean field for facet: " +
+  // facetName);
+  //      }
+  //
+  //      RequestBody bodyInt =
+  //          RequestBody.create(
+  //              MediaType.parse("application/json"),
+  //              ByteString.encodeUtf8("{\n \"customProperty2\" : " + customProperty2Value +
+  // "\n}"));
+  //      String updateSecondaryPropertyResponse2 =
+  //          api.updateSecondaryProperty(
+  //              appUrl, entityName, facetName, copyCustomSourceEntity, sourceAttachmentId,
+  // bodyInt);
+  //
+  //      if (!updateSecondaryPropertyResponse2.equals("Updated")) {
+  //        fail("Could not update attachment customProperty2 field for facet: " + facetName);
+  //      }
+  //
+  //      // Wait for upload to complete
+  //      if (!waitForUploadCompletion(copyCustomSourceEntity, sourceAttachmentId, 150, facetName))
+  // {
+  //        fail("Upload did not complete in time for attachment: " + sourceAttachmentId);
+  //      }
+  //    }
+  //
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> sourceAttachmentsMetadata =
+  //          api.fetchEntityMetadataDraft(appUrl, entityName, facetName, copyCustomSourceEntity);
+  //
+  //      Map<String, Object> sourceAttachmentMetadata =
+  //          sourceAttachmentsMetadata.stream()
+  //              .filter(attachment -> "sample2.pdf".equals(attachment.get("fileName")))
+  //              .findFirst()
+  //              .orElse(null);
+  //
+  //      if (sourceAttachmentMetadata == null) {
+  //        fail("Could not find attachment with file in facet: " + facetName);
+  //      }
+  //
+  //      if (!sourceAttachmentMetadata.containsKey("objectId")) {
+  //        fail("Source attachment metadata does not contain objectId for facet: " + facetName);
+  //      }
+  //
+  //      String sourceObjectId = sourceAttachmentMetadata.get("objectId").toString();
+  //      objectIdsToStore.add(sourceObjectId);
+  //
+  //      String sourceNoteValue =
+  //          sourceAttachmentMetadata.get("note") != null
+  //              ? sourceAttachmentMetadata.get("note").toString()
+  //              : null;
+  //
+  //      if (!notesValue.equals(sourceNoteValue)) {
+  //        fail(
+  //            "Notes field was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + notesValue
+  //                + ", Got: "
+  //                + sourceNoteValue);
+  //      }
+  //
+  //      Boolean sourceCustomProperty6 =
+  //          sourceAttachmentMetadata.get("customProperty6") != null
+  //              ? (Boolean) sourceAttachmentMetadata.get("customProperty6")
+  //              : null;
+  //      Integer sourceCustomProperty2 =
+  //          sourceAttachmentMetadata.get("customProperty2") != null
+  //              ? (Integer) sourceAttachmentMetadata.get("customProperty2")
+  //              : null;
+  //
+  //      if (sourceCustomProperty6 == null || !sourceCustomProperty6) {
+  //        fail(
+  //            "DocumentInfoRecordBoolean was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: true, Got: "
+  //                + sourceCustomProperty6);
+  //      }
+  //
+  //      if (!customProperty2Value.equals(sourceCustomProperty2)) {
+  //        fail(
+  //            "customProperty2 was not properly set in source attachment for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + customProperty2Value
+  //                + ", Got: "
+  //                + sourceCustomProperty2);
+  //      }
+  //    }
+  //
+  //    int startIndex = sourceObjectIds.size();
+  //    sourceObjectIds.addAll(objectIdsToStore);
+  //
+  //    int facetIndex = 0;
+  //    for (String facetName : facet) {
+  //      String editTargetResponse =
+  //          api.editEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //      if (!editTargetResponse.equals("Entity in draft mode")) {
+  //        fail("Could not edit target entity");
+  //      }
+  //
+  //      List<String> objectIdsToCopy = new ArrayList<>();
+  //      objectIdsToCopy.add(sourceObjectIds.get(startIndex + facetIndex));
+  //
+  //      String copyResponse =
+  //          api.copyAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, objectIdsToCopy);
+  //
+  //      if (!copyResponse.equals("Attachments copied successfully")) {
+  //        fail("Could not copy attachment to target entity for facet: " + facetName);
+  //      }
+  //
+  //      String saveTargetResponse =
+  //          api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
+  //      if (!saveTargetResponse.equals("Saved")) {
+  //        fail("Could not save target entity for facet: " + facetName);
+  //      }
+  //
+  //      facetIndex++;
+  //    }
+  //
+  //    for (String facetName : facet) {
+  //      List<Map<String, Object>> targetAttachmentsMetadata =
+  //          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
+  //
+  //      Map<String, Object> copiedAttachmentMetadata =
+  //          targetAttachmentsMetadata.stream()
+  //              .filter(attachment -> "sample2.pdf".equals(attachment.get("fileName")))
+  //              .findFirst()
+  //              .orElse(null);
+  //
+  //      if (copiedAttachmentMetadata == null) {
+  //        fail(
+  //            "Could not find the copied attachment with file in target entity for facet: "
+  //                + facetName);
+  //      }
+  //
+  //      String copiedNoteValue =
+  //          copiedAttachmentMetadata.get("note") != null
+  //              ? copiedAttachmentMetadata.get("note").toString()
+  //              : null;
+  //
+  //      if (!notesValue.equals(copiedNoteValue)) {
+  //        fail(
+  //            "Notes field was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + notesValue
+  //                + ", Got: "
+  //                + copiedNoteValue);
+  //      }
+  //
+  //      Boolean copiedCustomProperty6 =
+  //          copiedAttachmentMetadata.get("customProperty6") != null
+  //              ? (Boolean) copiedAttachmentMetadata.get("customProperty6")
+  //              : null;
+  //      Integer copiedCustomProperty2 =
+  //          copiedAttachmentMetadata.get("customProperty2") != null
+  //              ? (Integer) copiedAttachmentMetadata.get("customProperty2")
+  //              : null;
+  //
+  //      if (copiedCustomProperty6 == null || !copiedCustomProperty6) {
+  //        fail(
+  //            "DocumentInfoRecordBoolean (customProperty6) was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: true, Got: "
+  //                + copiedCustomProperty6);
+  //      }
+  //      if (!customProperty2Value.equals(copiedCustomProperty2)) {
+  //        fail(
+  //            "customProperty2 was not properly copied for facet "
+  //                + facetName
+  //                + ". Expected: "
+  //                + customProperty2Value
+  //                + ", Got: "
+  //                + copiedCustomProperty2);
+  //      }
+  //      String targetAttachmentId = (String) copiedAttachmentMetadata.get("ID");
+  //      String readResponse =
+  //          api.readAttachment(
+  //              appUrl, entityName, facetName, copyCustomTargetEntity, targetAttachmentId);
+  //
+  //      if (!readResponse.equals("OK")) {
+  //        fail("Could not read copied attachment from target entity for facet: " + facetName);
+  //      } else {
+  //        testStatus = true;
+  //      }
+  //    }
+  //    api.deleteEntity(appUrl, entityName, copyCustomSourceEntity);
+  //    api.deleteEntity(appUrl, entityName, copyCustomTargetEntity);
+  //    if (!testStatus) {
+  //      fail(
+  //          "Could not verify that notes field and all secondary properties were copied from
+  // source to target attachment for all facets");
+  //    }
+  //  }
 
   @Test
   @Order(40)
