@@ -33,8 +33,11 @@ jobs:
         run: |
           mvn clean install -P unit-tests  -DskipIntegrationTests
         
-      - name: Download Synopsys Detect Script
-        run: curl --silent -O https://detect.synopsys.com/detect9.sh
+      # - name: Download Synopsys Detect Script
+      #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
+      - name: Download Black Duck Detect Script
+        run: curl --silent -O https://detect.blackduck.com/detect9.sh
+
 
       - name: Run & analyze BlackDuck Scan
         run: |
