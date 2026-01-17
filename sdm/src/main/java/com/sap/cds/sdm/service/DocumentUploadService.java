@@ -4,7 +4,6 @@ import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
 import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
-import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.constants.SDMErrorMessages;
@@ -67,9 +66,6 @@ public class DocumentUploadService {
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
-      CdsModel model = eventContext.getModel();
-      Optional<CdsEntity> attachmentDraftEntity =
-          model.findEntity(eventContext.getAttachmentEntity() + "_drafts");
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       if (totalSize <= 400 * 1024 * 1024) {
 
@@ -278,15 +274,27 @@ public class DocumentUploadService {
 
         // Step 7: Append Chunk. Call cmis api to append content stream
         if (bytesRead > 0) {
-          responseBody =
-              appendContentStream(
-                  cmisDocument,
-                  sdmUrl,
-                  chunkBuffer,
-                  bytesRead,
-                  isLastChunk,
-                  chunkIndex,
-                  isSystemUser);
+          // Only capture response from the last chunk to avoid unnecessary object allocation
+          if (isLastChunk) {
+            responseBody =
+                appendContentStream(
+                    cmisDocument,
+                    sdmUrl,
+                    chunkBuffer,
+                    bytesRead,
+                    isLastChunk,
+                    chunkIndex,
+                    isSystemUser);
+          } else {
+            appendContentStream(
+                cmisDocument,
+                sdmUrl,
+                chunkBuffer,
+                bytesRead,
+                isLastChunk,
+                chunkIndex,
+                isSystemUser);
+          }
         }
 
         long endChunkUploadTime = System.currentTimeMillis();
