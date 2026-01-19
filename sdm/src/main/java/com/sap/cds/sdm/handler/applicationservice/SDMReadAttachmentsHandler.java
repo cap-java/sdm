@@ -122,11 +122,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
         Optional<CdsEntity> attachmentDraftEntity =
             context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-        String upIdKey="",upID="";
+        String upIdKey = "", upID = "";
         if (attachmentDraftEntity.isPresent()) {
-           upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+          upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
           CqnSelect select = (CqnSelect) context.get("cqn");
-           upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+          upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
 
@@ -169,7 +169,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                   }
                 });
         dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
-                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {
