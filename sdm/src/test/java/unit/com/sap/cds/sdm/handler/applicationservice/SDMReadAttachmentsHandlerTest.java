@@ -202,4 +202,51 @@ public class SDMReadAttachmentsHandlerTest {
     // Assert - repositoryId filter should be added for collection reads
     verify(context).setCqn(any(CqnSelect.class));
   }
+
+  @Test
+  void testProcessBefore_DeleteDraftEntriesWithNullObjectIdAndFolderId() throws IOException {
+    // Arrange
+    CqnSelect select =
+        Select.from(cdsEntity).where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getCqn()).thenReturn(select);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+
+    CdsEntity attachmentDraftEntity = Mockito.mock(CdsEntity.class);
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity(anyString())).thenReturn(Optional.of(attachmentDraftEntity));
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+    when(context.get("cqn")).thenReturn(select);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = Mockito.mockStatic(SDMUtils.class)) {
+      sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any())).thenReturn("mockUpIdKey");
+      sdmUtilsMock.when(() -> SDMUtils.fetchUPIDFromCQN(any(), any())).thenReturn("mockUpID");
+
+      doNothing()
+          .when(dbQuery)
+          .deleteDraftEntriesWithNullObjectIdAndFolderId(any(), any(), anyString(), anyString());
+      doNothing()
+          .when(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+
+      // Act
+      sdmReadAttachmentsHandler.processBefore(context);
+
+      // Assert - verify deleteDraftEntriesWithNullObjectIdAndFolderId is called before
+      // updateInProgressUploadStatusToSuccess
+      verify(dbQuery)
+          .deleteDraftEntriesWithNullObjectIdAndFolderId(
+              any(), any(), eq("mockUpID"), eq("mockUpIdKey"));
+      verify(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), eq("mockUpID"), eq("mockUpIdKey"));
+      verify(context).setCqn(any(CqnSelect.class));
+    }
+  }
 }

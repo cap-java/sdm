@@ -505,29 +505,62 @@ public class DBQuery {
   }
 
   public List<CmisDocument> getAttachmentsWithVirusScanInProgress(
-      CdsEntity attachmentEntity,
+      CdsEntity attachmentDraftEntity,
+      CdsEntity attachmentActiveEntity,
       PersistenceService persistenceService,
       String upID,
       String upIDkey) {
-    CqnSelect q =
-        Select.from(attachmentEntity)
-            .columns(
-                "ID",
-                "objectId",
-                "fileName",
-                "folderId",
-                "repositoryId",
-                "mimeType",
-                "uploadStatus")
-            .where(
-                doc ->
-                    doc.get(upIDkey)
-                        .eq(upID)
-                        .and(doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS)));
-
-    Result result = persistenceService.run(q);
-
     List<CmisDocument> attachments = new ArrayList<>();
+
+    // Query draft table
+    if (attachmentDraftEntity != null) {
+      CqnSelect draftQuery =
+          Select.from(attachmentDraftEntity)
+              .columns(
+                  "ID",
+                  "objectId",
+                  "fileName",
+                  "folderId",
+                  "repositoryId",
+                  "mimeType",
+                  "uploadStatus")
+              .where(
+                  doc ->
+                      doc.get(upIDkey)
+                          .eq(upID)
+                          .and(doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS)));
+
+      Result draftResult = persistenceService.run(draftQuery);
+      attachments.addAll(mapResultToCmisDocuments(draftResult));
+    }
+
+    // Query active table
+    if (attachmentActiveEntity != null) {
+      CqnSelect activeQuery =
+          Select.from(attachmentActiveEntity)
+              .columns(
+                  "ID",
+                  "objectId",
+                  "fileName",
+                  "folderId",
+                  "repositoryId",
+                  "mimeType",
+                  "uploadStatus")
+              .where(
+                  doc ->
+                      doc.get(upIDkey)
+                          .eq(upID)
+                          .and(doc.get("uploadStatus").eq(SDMConstants.VIRUS_SCAN_INPROGRESS)));
+
+      Result activeResult = persistenceService.run(activeQuery);
+      attachments.addAll(mapResultToCmisDocuments(activeResult));
+    }
+
+    return attachments;
+  }
+
+  private List<CmisDocument> mapResultToCmisDocuments(Result result) {
+    List<CmisDocument> documents = new ArrayList<>();
     for (Row row : result.list()) {
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setAttachmentId(row.get("ID") != null ? row.get("ID").toString() : null);
@@ -541,9 +574,40 @@ public class DBQuery {
           row.get("uploadStatus") != null
               ? row.get("uploadStatus").toString()
               : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      attachments.add(cmisDocument);
+      documents.add(cmisDocument);
     }
-    return attachments;
+    return documents;
+  }
+
+  /**
+   * Deletes draft entries from the attachment entity where both objectId and folderId are null.
+   * This is used to clean up failed or incomplete upload entries.
+   *
+   * @param attachmentEntity the draft attachment entity to delete from
+   * @param persistenceService the persistence service to use for database operations
+   * @param upID the up__ID to filter attachments
+   * @param upIdKey the key name for up__ID field (e.g., "up__ID")
+   */
+  public void deleteDraftEntriesWithNullObjectIdAndFolderId(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
+    var deleteQuery =
+        Delete.from(attachmentEntity)
+            .where(
+                doc ->
+                    doc.get(upIdKey)
+                        .eq(upID)
+                        .and(doc.get("objectId").isNull())
+                        .and(doc.get("folderId").isNull()));
+    Result result = persistenceService.run(deleteQuery);
+    if (result.rowCount() > 0) {
+      logger.info(
+          "Deleted {} draft entries with null objectId and folderId for upID: {}",
+          result.rowCount(),
+          upID);
+    }
   }
 
   /**
@@ -591,17 +655,48 @@ public class DBQuery {
   }
 
   public Result updateUploadStatusByScanStatus(
-      CdsEntity attachmentEntity,
+      CdsEntity attachmentDraftEntity,
+      CdsEntity attachmentActiveEntity,
       PersistenceService persistenceService,
       String objectId,
       SDMConstants.ScanStatus scanStatus) {
     String uploadStatus = mapScanStatusToUploadStatus(scanStatus);
-    CqnUpdate updateQuery =
-        Update.entity(attachmentEntity)
-            .data("uploadStatus", uploadStatus)
-            .where(doc -> doc.get("objectId").eq(objectId));
+    Result combinedResult = null;
+    int totalRowCount = 0;
 
-    return persistenceService.run(updateQuery);
+    // Update draft table
+    if (attachmentDraftEntity != null) {
+      CqnUpdate draftUpdateQuery =
+          Update.entity(attachmentDraftEntity)
+              .data("uploadStatus", uploadStatus)
+              .where(doc -> doc.get("objectId").eq(objectId));
+      Result draftResult = persistenceService.run(draftUpdateQuery);
+      totalRowCount += draftResult.rowCount();
+      combinedResult = draftResult;
+    }
+
+    // Update active table
+    if (attachmentActiveEntity != null) {
+      CqnUpdate activeUpdateQuery =
+          Update.entity(attachmentActiveEntity)
+              .data("uploadStatus", uploadStatus)
+              .where(doc -> doc.get("objectId").eq(objectId));
+      Result activeResult = persistenceService.run(activeUpdateQuery);
+      totalRowCount += activeResult.rowCount();
+      if (combinedResult == null) {
+        combinedResult = activeResult;
+      }
+    }
+
+    if (totalRowCount > 0) {
+      logger.info(
+          "Updated {} record(s) with objectId: {} to uploadStatus: {}",
+          totalRowCount,
+          objectId,
+          uploadStatus);
+    }
+
+    return combinedResult;
   }
 
   private String mapScanStatusToUploadStatus(SDMConstants.ScanStatus scanStatus) {
