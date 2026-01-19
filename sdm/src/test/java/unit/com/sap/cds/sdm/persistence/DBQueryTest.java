@@ -38,6 +38,40 @@ class DBQueryTest {
   }
 
   @Test
+  void testDeleteAttachmentsWithNullObjectIdAndUploadingStatus_Success() {
+    // Arrange
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
+    when(mockResult.rowCount()).thenReturn(3L);
+    when(mockPersistenceService.run(any(CqnDelete.class))).thenReturn(mockResult);
+
+    // Act
+    dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+        mockDraftEntity, mockPersistenceService, upID, upIdKey);
+
+    // Assert
+    verify(mockPersistenceService).run(any(CqnDelete.class));
+    verify(mockResult).rowCount();
+  }
+
+  @Test
+  void testDeleteAttachmentsWithNullObjectIdAndUploadingStatus_NoRecordsDeleted() {
+    // Arrange
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
+    when(mockResult.rowCount()).thenReturn(0L);
+    when(mockPersistenceService.run(any(CqnDelete.class))).thenReturn(mockResult);
+
+    // Act
+    dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+        mockDraftEntity, mockPersistenceService, upID, upIdKey);
+
+    // Assert
+    verify(mockPersistenceService).run(any(CqnDelete.class));
+    verify(mockResult).rowCount();
+  }
+
+  @Test
   void testDeleteDraftEntriesWithNullObjectIdAndFolderId_Success() {
     // Arrange
     String upID = "testUpID";

@@ -127,8 +127,16 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
           CqnSelect select = (CqnSelect) context.get("cqn");
           String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-          dbQuery.deleteDraftEntriesWithNullObjectIdAndFolderId(
-              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+
+          // Only delete attachments with null objectId and uploading status if this is NOT a
+          // single entity read (i.e., doesn't have attachment ID in the keys)
+          // This prevents 404 errors when fetching a specific attachment that's being deleted
+          boolean isSingleEntityRead = isSingleAttachmentRead(context.getCqn());
+          if (!isSingleEntityRead) {
+            dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+          }
+         
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
 
             dbQuery.updateInProgressUploadStatusToSuccess(
@@ -340,6 +348,32 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           "Unexpected error processing attachment with objectId: {}, error: {}",
           attachment.getObjectId(),
           e.getMessage());
+    }
+  }
+
+  /**
+   * Checks if the CQN select is for a single attachment entity (has ID in keys).
+   *
+   * @param select the CQN select to check
+   * @return true if this is a single entity read with ID specified, false otherwise
+   */
+  private boolean isSingleAttachmentRead(CqnSelect select) {
+    try {
+      // Check if the select has keys (filters by ID)
+      // A single entity read will have ID specified in the where clause
+      if (select.ref() != null && select.ref().segments() != null) {
+        return select.ref().segments().stream()
+            .anyMatch(
+                segment ->
+                    segment.keys() != null
+                        && !segment.keys().isEmpty()
+                        && segment.keys().stream().anyMatch(key -> "ID".equals(key.ref())));
+      }
+      return false;
+    } catch (Exception e) {
+      // If we can't determine, assume it's not a single entity read to be safe
+      logger.debug("Could not determine if single entity read: {}", e.getMessage());
+      return false;
     }
   }
 }

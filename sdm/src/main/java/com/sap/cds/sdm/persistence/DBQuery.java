@@ -580,6 +580,38 @@ public class DBQuery {
   }
 
   /**
+   * Deletes draft entries from the attachment entity where objectId is null and uploadStatus is
+   * 'uploading'. This is used to clean up incomplete upload entries when the application is
+   * refreshed.
+   *
+   * @param attachmentEntity the draft attachment entity to delete from
+   * @param persistenceService the persistence service to use for database operations
+   * @param upID the up__ID to filter attachments
+   * @param upIdKey the key name for up__ID field (e.g., "up__ID")
+   */
+  public void deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String upID,
+      String upIdKey) {
+    var deleteQuery =
+        Delete.from(attachmentEntity)
+            .where(
+                doc ->
+                    doc.get(upIdKey)
+                        .eq(upID)
+                        .and(doc.get("objectId").isNull())
+                        .and(doc.get("uploadStatus").eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)));
+    Result result = persistenceService.run(deleteQuery);
+    if (result.rowCount() > 0) {
+      logger.info(
+          "Deleted {} attachment(s) with null objectId and uploading status for upID: {}",
+          result.rowCount(),
+          upID);
+    }
+  }
+
+  /**
    * Deletes draft entries from the attachment entity where both objectId and folderId are null.
    * This is used to clean up failed or incomplete upload entries.
    *
