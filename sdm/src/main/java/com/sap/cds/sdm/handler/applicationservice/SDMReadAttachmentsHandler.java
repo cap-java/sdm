@@ -182,6 +182,30 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     }
   }
 
+  @Before
+  @HandlerOrder(HandlerOrder.EARLY + 1000)
+  public void cleanupIncompleteUploads(CdsReadEventContext context) throws IOException {
+    if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
+      try {
+        Optional<CdsEntity> attachmentDraftEntity =
+            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+
+        if (attachmentDraftEntity.isPresent()) {
+          String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+          CqnSelect select = (CqnSelect) context.get("cqn");
+          String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+
+          dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+        }
+      } catch (Exception e) {
+        logger.error(
+            "Error in SDMReadAttachmentsHandler.cleanupIncompleteUploads: {}", e.getMessage(), e);
+        // Don't re-throw to avoid blocking reads
+      }
+    }
+  }
+
   /**
    * Recursively get all attachment associations in the entity tree. This is needed to properly
    * handle deep navigation like Books/covers with $expand=statusNav
