@@ -122,21 +122,12 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
         Optional<CdsEntity> attachmentDraftEntity =
             context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-
+        String upIdKey="",upID="";
         if (attachmentDraftEntity.isPresent()) {
-          String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+           upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
           CqnSelect select = (CqnSelect) context.get("cqn");
-          String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+           upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
-          // Only delete attachments with null objectId and uploading status if this is NOT a
-          // single entity read (i.e., doesn't have attachment ID in the keys)
-          // This prevents 404 errors when fetching a specific attachment that's being deleted
-          boolean isSingleEntityRead = isSingleAttachmentRead(context.getCqn());
-          if (!isSingleEntityRead) {
-            dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
-                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-          }
-         
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
 
             dbQuery.updateInProgressUploadStatusToSuccess(
@@ -177,7 +168,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                     return CQL.and(where, repositoryFilter);
                   }
                 });
-
+        dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {
