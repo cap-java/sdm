@@ -128,6 +128,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           CqnSelect select = (CqnSelect) context.get("cqn");
           upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
+          // Delete attachments with null objectId and uploading status ONLY for collection reads
+          // Skip deletion for single entity reads to prevent 404 errors
+          boolean isSingleEntityRead = isSingleAttachmentRead(context.getCqn());
+          if (!isSingleEntityRead) {
+            dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+          }
+
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
 
             dbQuery.updateInProgressUploadStatusToSuccess(
@@ -168,8 +176,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                     return CQL.and(where, repositoryFilter);
                   }
                 });
-        dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
-            attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {
@@ -179,30 +185,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       }
     } else {
       context.setCqn(context.getCqn());
-    }
-  }
-
-  @Before
-  @HandlerOrder(HandlerOrder.EARLY + 1000)
-  public void cleanupIncompleteUploads(CdsReadEventContext context) throws IOException {
-    if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
-      try {
-        Optional<CdsEntity> attachmentDraftEntity =
-            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-
-        if (attachmentDraftEntity.isPresent()) {
-          String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-          CqnSelect select = (CqnSelect) context.get("cqn");
-          String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-
-          dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
-              attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-        }
-      } catch (Exception e) {
-        logger.error(
-            "Error in SDMReadAttachmentsHandler.cleanupIncompleteUploads: {}", e.getMessage(), e);
-        // Don't re-throw to avoid blocking reads
-      }
     }
   }
 
@@ -365,5 +347,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           attachment.getObjectId(),
           e.getMessage());
     }
+  }
+
+  private boolean isSingleAttachmentRead(CqnSelect select) {
+    if (select == null || select.where() == null) {
+      return false;
+    }
+    // Check if the where clause contains an ID filter
+    String whereClause = select.where().toString();
+    return whereClause != null && whereClause.contains("ID =");
   }
 }
