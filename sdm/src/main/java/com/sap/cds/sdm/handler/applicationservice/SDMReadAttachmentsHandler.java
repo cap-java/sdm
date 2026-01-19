@@ -342,30 +342,4 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           e.getMessage());
     }
   }
-
-  /**
-   * Checks if the CQN select is for a single attachment entity (has ID in keys).
-   *
-   * @param select the CQN select to check
-   * @return true if this is a single entity read with ID specified, false otherwise
-   */
-  private boolean isSingleAttachmentRead(CqnSelect select) {
-    try {
-      // Check if the select has keys (filters by ID)
-      // A single entity read will have ID specified in the where clause
-      if (select.ref() != null && select.ref().segments() != null) {
-        return select.ref().segments().stream()
-            .anyMatch(
-                segment ->
-                    segment.keys() != null
-                        && !segment.keys().isEmpty()
-                        && segment.keys().stream().anyMatch(key -> "ID".equals(key.ref())));
-      }
-      return false;
-    } catch (Exception e) {
-      // If we can't determine, assume it's not a single entity read to be safe
-      logger.debug("Could not determine if single entity read: {}", e.getMessage());
-      return false;
-    }
-  }
 }
