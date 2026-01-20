@@ -2,9 +2,7 @@ package com.sap.cds.sdm.service;
 
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.service.exceptions.InsufficientDataException;
-import io.reactivex.Flowable;
 import java.io.*;
-import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,7 +23,8 @@ public class ReadAheadInputStream extends InputStream {
   private final ExecutorService executor =
       Executors.newFixedThreadPool(2); // Thread pool to Read next chunk
   private final BlockingQueue<byte[]> chunkQueue =
-      new LinkedBlockingQueue<>(50); // Next chunk is read to a queue
+      new LinkedBlockingQueue<>(
+          4); // Reduced from 50 to 4 (80MB) - balances read-ahead performance with heap constraints
 
   public ReadAheadInputStream(InputStream inputStream, long totalSize) throws IOException {
     if (inputStream == null) {
@@ -91,42 +90,50 @@ public class ReadAheadInputStream extends InputStream {
 
   private void readChunk(AtomicReference<byte[]> bufferRef, AtomicLong bytesReadAtomic)
       throws IOException {
+    int maxRetries = 5;
+    int retryCount = 0;
+
     while (bytesReadAtomic.get() < CHUNK_SIZE) {
       try {
-        List<Integer> results =
-            Flowable.fromCallable(
-                    () -> {
-                      byte[] buffer = bufferRef.get();
-                      // Read from stream and update bytesReadAtomic
-                      int result =
-                          originalStream.read(
-                              buffer,
-                              (int) bytesReadAtomic.get(),
-                              CHUNK_SIZE - (int) bytesReadAtomic.get());
-                      if (result > 0) {
-                        bytesReadAtomic.addAndGet(result);
-                      } else if (result == 0) {
-                        throw new InsufficientDataException("Read returned 0 bytes");
-                      }
-                      return result;
-                    })
-                .retryWhen(RetryUtils.retryLogic(5)) // Apply retry logic with 5 attempts
-                .toList()
-                .blockingGet();
+        byte[] buffer = bufferRef.get();
+        int result =
+            originalStream.read(
+                buffer, (int) bytesReadAtomic.get(), CHUNK_SIZE - (int) bytesReadAtomic.get());
 
-        if (results == null || results.isEmpty())
-          throw new IOException("Failed to read chunk: results is null or empty");
-        // Check if the read was successful
-
-        int readAttempt = results.get(0);
-
-        if (readAttempt == -1) {
+        if (result > 0) {
+          bytesReadAtomic.addAndGet(result);
+          retryCount = 0; // Reset retry count on successful read
+        } else if (result == -1) {
           logger.info("EOF reached while reading the stream.");
           break;
+        } else if (result == 0) {
+          // Treat 0 bytes read as InsufficientDataException (matches original behavior)
+          throw new InsufficientDataException("Read returned 0 bytes");
         }
-      } catch (Exception e) {
-        logger.error("Failed to read chunk after retries: {}", e.getMessage(), e);
-        throw new IOException("Failed to read chunk", e);
+      } catch (EOFException | InsufficientDataException e) {
+        // These exceptions should be retried (matching RetryUtils.shouldRetry())
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          logger.error("Failed to read chunk after {} retries: {}", maxRetries, e.getMessage(), e);
+          throw new IOException("Failed to read chunk after retries", e);
+        }
+        long delaySeconds =
+            (long) Math.pow(2, retryCount); // Exponential backoff: 2, 4, 8, 16, 32 seconds
+        logger.info(
+            "Retry attempt {} failed. Retrying in {} seconds. Error: {}",
+            retryCount,
+            delaySeconds,
+            e.getMessage());
+        try {
+          Thread.sleep(delaySeconds * 1000); // Convert to milliseconds
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          throw new IOException("Interrupted during retry backoff", ie);
+        }
+      } catch (IOException e) {
+        // Other IOExceptions should fail immediately (not retried in original)
+        logger.error("Non-retryable IOException: {}", e.getMessage(), e);
+        throw e;
       }
     }
   }
