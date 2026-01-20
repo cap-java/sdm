@@ -340,28 +340,4 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           e.getMessage());
     }
   }
-
-  private boolean isSingleAttachmentRead(CqnSelect select) {
-    if (select == null) {
-      return false;
-    }
-
-    // Check if the query has a where clause with ID filter (single entity read)
-    if (select.where() != null) {
-      String whereClause = select.where().toString();
-      if (whereClause != null && (whereClause.contains("ID =") || whereClause.contains("ID="))) {
-        return true;
-      }
-    }
-
-    // Check if query has expand for uploadStatusNav - don't delete if expanding navigation
-    if (select.items() != null) {
-      String items = select.items().toString();
-      if (items != null && items.contains("uploadStatusNav")) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 }
