@@ -81,10 +81,10 @@ If you want to use the version of SDM CAP plugin released on the central maven r
    git clone https://github.com/cap-java/sdm
 ```
 
-3. Checkout to the branch **deploy**:
+3. Checkout to the branch **local_deploy**:
 
 ```sh
-   git checkout deploy
+   git checkout local_deploy
 ```
 
 4. Navigate to the demoapp folder:
@@ -128,10 +128,10 @@ To use a development version of the SDM CAP plugin, follow these steps. This is 
 ```
 The plugin is now added to your local .m2 repository, giving it priority over the version available in the central Maven repository during the application build.
 
-3. Checkout to the branch **deploy**:
+3. Checkout to the branch **local_deploy**:
 
 ```sh
-   git checkout deploy
+   git checkout local_deploy
 ```
 
 4. Navigate to the demoapp folder:
@@ -1185,11 +1185,17 @@ annotate my.Books.attachments with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '10%'}
+      },
     {
       $Type  : 'UI.DataFieldForActionGroup',
       ID     : 'TableActionGroup',
