@@ -24,7 +24,6 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 - Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
-- Attachment Virus Scanning: Provides the capability to scan uploaded attachments for viruses using either Malware Scan (synchronous) or Trend Micro Scan (asynchronous) during the upload process.
 
 ## Table of Contents
 
@@ -43,7 +42,6 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
-- [Support for Attachment Virus Scanning](#support-for-attachment-virus-scanning)
 - [Support for Attachment Upload Status](#support-for-attachment-upload-status)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
@@ -70,7 +68,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 ## Setup
 
-In this guide, we use the Bookshop sample app in the [deploy branch](https://github.com/cap-java/sdm/tree/deploy) of this repository, to integrate SDM CAP plugin.  Follow the steps in this section for a quick way to deploy and test the plugin without needing to create your own custom CAP application.
+In this guide, we use the Bookshop sample app in the [local_deploy branch](https://github.com/cap-java/sdm/tree/local_deploy) of this repository, to integrate SDM CAP plugin.  Follow the steps in this section for a quick way to deploy and test the plugin without needing to create your own custom CAP application.
 
 ### Using the released version
 If you want to use the version of SDM CAP plugin released on the central maven repository follow the below steps:
@@ -1276,48 +1274,6 @@ SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
 SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 ```
 
-## Support for Attachment Virus Scanning
-
-The SDM CAP plugin supports two types of virus scanning for uploaded attachments:
-
-### 1. Malware Scan
-
-Malware scanning can be enabled by setting the `VirusScanEnabled` property to `true` during repository onboarding.
-
-**Enable Malware Scan:**
-```java
-repository.setIsVirusScanEnabled(true);
-```
-
-**Workflow:**
-- When a file is uploaded to a malware scan-enabled repository, the initial status displays as **"Uploading"**.
-- If the attachment is clean, the status changes to **"Success"**.
-- If a virus is detected, an error message is displayed and the file is automatically removed from the UI.
-
-**Limitations:**
-- Malware scanning supports a maximum file size of **400 MB**.
-- Files exceeding this limit cannot be scanned and will show an error.
-
-### 2. Trend Micro Scan
-
-Trend Micro scanning provides advanced virus detection capabilities with asynchronous processing.
-
-**Enable Trend Micro Scan:**
-```java
-repository.setIsAsyncVirusScanEnabled(true);
-```
-
-**Workflow:**
-- When a file is uploaded to a Trend Micro scan-enabled repository, the initial status displays as **"Uploading"**.
-- The status then transitions to **"Virus Scanning in Progress"**.
-- After the scan completes:
-  - If the attachment is virus-free, the status changes to **"Success"** (requires page refresh).
-  - If a virus is detected, the status changes to **"Virus Detected"** and the user must manually delete the file before saving the entity.
-
-**Key Considerations:**
-- There is no restriction on file size for Trend Micro scanning.
-- Files with **"Virus Scanning in Progress"** or **"Virus Detected"** status cannot be downloaded or viewed.
-- Users need to refresh the page to see updated scan results.
 
 ## Support for Attachment Upload Status
 
@@ -1329,19 +1285,12 @@ The upload status transitions from "Uploading" to "Success".
 **For repositories with malware scanning:**
 The upload status transitions from "Uploading" to "Success" if no virus is detected. If a virus is detected, the attachment is automatically deleted.
 
-**For repositories with Trend Micro virus scanning:**
-The upload status transitions from "Uploading" to "Virus Scanning in Progress". After refreshing the page, if the scan completes successfully and the attachment is virus-free, the status changes to "Success". If a virus is detected, the status changes to "Virus Detected" and the user must manually delete the file before saving the entity.
-
-**Note:** Files with "Virus Scanning in Progress" or "Virus Detected" status cannot be downloaded or viewed.
-
 To display color-coded status indicators in the UI, create a `sap.attachments-UploadScanStates.csv` file in the `db/data` folder with the following content:
 ```
 code;name;criticality
 uploading;Uploading;5
 Success;Success;3
 Failed;Scan Failed;2
-VirusDetected;Virus detected;1
-VirusScanInprogress;Virus scanning inprogress(refresh page);5
  ```
 
 ## Known Restrictions
