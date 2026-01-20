@@ -694,7 +694,7 @@ public class DBQuery {
       SDMConstants.ScanStatus scanStatus) {
     String uploadStatus = mapScanStatusToUploadStatus(scanStatus);
     Result combinedResult = null;
-    int totalRowCount = 0;
+    long totalRowCount = 0L;
 
     // Update draft table
     if (attachmentDraftEntity != null) {
