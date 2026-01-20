@@ -128,14 +128,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           CqnSelect select = (CqnSelect) context.get("cqn");
           upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
-          // Delete attachments with null objectId and uploading status ONLY for collection reads
-          // Skip deletion for single entity reads to prevent 404 errors
-          boolean isSingleEntityRead = isSingleAttachmentRead(context.getCqn());
-          if (!isSingleEntityRead) {
-            dbQuery.deleteAttachmentsWithNullObjectIdAndUploadingStatus(
-                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-          }
-
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
 
             dbQuery.updateInProgressUploadStatusToSuccess(
@@ -350,11 +342,26 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   }
 
   private boolean isSingleAttachmentRead(CqnSelect select) {
-    if (select == null || select.where() == null) {
+    if (select == null) {
       return false;
     }
-    // Check if the where clause contains an ID filter
-    String whereClause = select.where().toString();
-    return whereClause != null && whereClause.contains("ID =");
+
+    // Check if the query has a where clause with ID filter (single entity read)
+    if (select.where() != null) {
+      String whereClause = select.where().toString();
+      if (whereClause != null && (whereClause.contains("ID =") || whereClause.contains("ID="))) {
+        return true;
+      }
+    }
+
+    // Check if query has expand for uploadStatusNav - don't delete if expanding navigation
+    if (select.items() != null) {
+      String items = select.items().toString();
+      if (items != null && items.contains("uploadStatusNav")) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
