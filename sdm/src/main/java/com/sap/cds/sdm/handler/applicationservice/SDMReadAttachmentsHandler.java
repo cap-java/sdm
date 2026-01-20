@@ -122,13 +122,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
         Optional<CdsEntity> attachmentDraftEntity =
             context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-
+        String upIdKey = "", upID = "";
         if (attachmentDraftEntity.isPresent()) {
-          String upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+          upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
           CqnSelect select = (CqnSelect) context.get("cqn");
-          String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+          upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
           if (!repoValue.getIsAsyncVirusScanEnabled()) {
+
             dbQuery.updateInProgressUploadStatusToSuccess(
                 attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
           }
@@ -167,7 +168,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                     return CQL.and(where, repositoryFilter);
                   }
                 });
-
         setErrorMessagesInCache(context);
         context.setCqn(modifiedCqn);
       } catch (Exception e) {
@@ -231,10 +231,16 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // Get all attachments with virus scan in progress
       Optional<CdsEntity> attachmentDraftEntity =
           context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+      Optional<CdsEntity> attachmentActiveEntity =
+          context.getModel().findEntity(context.getTarget().getQualifiedName());
 
       List<CmisDocument> attachmentsInProgress =
           dbQuery.getAttachmentsWithVirusScanInProgress(
-              attachmentDraftEntity.get(), persistenceService, upID, upIDkey);
+              attachmentDraftEntity.orElse(null),
+              attachmentActiveEntity.orElse(null),
+              persistenceService,
+              upID,
+              upIDkey);
 
       // Get SDM credentials
       var sdmCredentials = tokenHandler.getSDMCredentials();
@@ -242,7 +248,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       // Iterate through each attachment and call getObject
       for (CmisDocument attachment : attachmentsInProgress) {
         processAttachmentVirusScanStatus(
-            attachment, sdmCredentials, attachmentDraftEntity.get(), persistenceService);
+            attachment,
+            sdmCredentials,
+            attachmentDraftEntity.orElse(null),
+            attachmentActiveEntity.orElse(null),
+            persistenceService);
       }
 
       if (!attachmentsInProgress.isEmpty()) {
@@ -261,12 +271,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
    * @param attachment the attachment document to process
    * @param sdmCredentials the SDM credentials for API calls
    * @param attachmentDraftEntity the draft entity for the attachment
+   * @param attachmentActiveEntity the active entity for the attachment
    * @param persistenceService the persistence service for database operations
    */
   private void processAttachmentVirusScanStatus(
       CmisDocument attachment,
       SDMCredentials sdmCredentials,
       CdsEntity attachmentDraftEntity,
+      CdsEntity attachmentActiveEntity,
       PersistenceService persistenceService) {
     try {
       String objectId = attachment.getObjectId();
@@ -299,7 +311,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           if (scanStatus != null) {
             SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
             dbQuery.updateUploadStatusByScanStatus(
-                attachmentDraftEntity, persistenceService, objectId, scanStatusEnum);
+                attachmentDraftEntity,
+                attachmentActiveEntity,
+                persistenceService,
+                objectId,
+                scanStatusEnum);
             logger.info(
                 "Updated uploadStatus for objectId: {} based on scanStatus: {}",
                 objectId,

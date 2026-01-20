@@ -65,7 +65,6 @@ public class SDMReadAttachmentsHandlerTest {
     try (MockedStatic<SDMUtils> sdmUtilsMock = Mockito.mockStatic(SDMUtils.class)) {
       sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any())).thenReturn("mockUpIdKey");
       sdmUtilsMock.when(() -> SDMUtils.fetchUPIDFromCQN(any(), any())).thenReturn("mockUpID");
-
       doNothing()
           .when(dbQuery)
           .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
@@ -201,5 +200,95 @@ public class SDMReadAttachmentsHandlerTest {
 
     // Assert - repositoryId filter should be added for collection reads
     verify(context).setCqn(any(CqnSelect.class));
+  }
+
+  @Test
+  void testProcessBefore_DeleteDraftEntriesWithNullObjectIdAndFolderId() throws IOException {
+    // Arrange
+    CqnSelect select =
+        Select.from(cdsEntity).where(doc -> doc.get("repositoryId").eq(REPOSITORY_ID_KEY));
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getCqn()).thenReturn(select);
+    RepoValue repoValue = new RepoValue();
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+
+    CdsEntity attachmentDraftEntity = Mockito.mock(CdsEntity.class);
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity(anyString())).thenReturn(Optional.of(attachmentDraftEntity));
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+    when(context.get("cqn")).thenReturn(select);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = Mockito.mockStatic(SDMUtils.class)) {
+      sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any())).thenReturn("mockUpIdKey");
+      sdmUtilsMock.when(() -> SDMUtils.fetchUPIDFromCQN(any(), any())).thenReturn("mockUpID");
+
+      doNothing()
+          .when(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+
+      // Act
+      sdmReadAttachmentsHandler.processBefore(context);
+
+      // Assert - verify deleteDraftEntriesWithNullObjectIdAndFolderId is called before
+      // updateInProgressUploadStatusToSuccess
+      verify(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), eq("mockUpID"), eq("mockUpIdKey"));
+      verify(context).setCqn(any(CqnSelect.class));
+    }
+  }
+
+  @Test
+  void testProcessBefore_SingleEntityRead_NoDelete() throws IOException {
+    // Arrange - simulate a single entity read with ID in where clause
+    CqnSelect select =
+        Select.from(cdsEntity)
+            .where(
+                doc ->
+                    doc.get("ID")
+                        .eq("test-id-123")
+                        .and(doc.get("repositoryId").eq(REPOSITORY_ID_KEY)));
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false))
+        .thenReturn(true);
+    when(context.getCqn()).thenReturn(select);
+    when(context.get("cqn")).thenReturn(select);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(any(), any())).thenReturn(repoValue);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("tenant1");
+
+    CdsEntity attachmentDraftEntity = Mockito.mock(CdsEntity.class);
+    CdsModel model = Mockito.mock(CdsModel.class);
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity(anyString())).thenReturn(Optional.of(attachmentDraftEntity));
+    when(cdsEntity.getQualifiedName()).thenReturn("TestEntity");
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = Mockito.mockStatic(SDMUtils.class)) {
+      sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(any())).thenReturn("mockUpIdKey");
+      sdmUtilsMock.when(() -> SDMUtils.fetchUPIDFromCQN(any(), any())).thenReturn("mockUpID");
+      doNothing()
+          .when(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), anyString(), anyString());
+
+      // Act
+      sdmReadAttachmentsHandler.processBefore(context);
+
+      // Assert - deleteAttachmentsWithNullObjectIdAndUploadingStatus should NOT be called for
+      // single entity reads (where clause contains ID =)
+      verify(dbQuery, never())
+          .deleteAttachmentsWithNullObjectIdAndUploadingStatus(
+              any(), any(), anyString(), anyString());
+      verify(dbQuery)
+          .updateInProgressUploadStatusToSuccess(any(), any(), eq("mockUpID"), eq("mockUpIdKey"));
+      verify(context).setCqn(any(CqnSelect.class));
+    }
   }
 }
