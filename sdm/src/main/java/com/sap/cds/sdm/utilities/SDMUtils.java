@@ -67,24 +67,6 @@ public class SDMUtils {
     return filenamesWithWhitespace;
   }
 
-  public static void cleanupReadonlyContexts(List<CdsData> data) {
-    for (CdsData entityData : data) {
-      // Remove SDM_READONLY_CONTEXT from all attachments in the data
-      entityData.forEach(
-          (key, value) -> {
-            if (value instanceof List) {
-              List<?> list = (List<?>) value;
-              for (Object item : list) {
-                if (item instanceof Map) {
-                  Map<String, Object> attachment = (Map<String, Object>) item;
-                  attachment.remove(SDM_READONLY_CONTEXT);
-                }
-              }
-            }
-          });
-    }
-  }
-
   public static Set<String> FileNameDuplicateInDrafts(
       List<CdsData> data, String composition, String targetEntity, String upIdKey) {
     Set<String> uniqueFilenames = new HashSet<>();
