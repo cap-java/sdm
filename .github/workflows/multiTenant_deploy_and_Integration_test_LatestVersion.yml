@@ -4,9 +4,9 @@ name: Multi Tenancy Deploy & Integration Test LatestVersion🚀
 # (multiTenant_deploy_and_Integration_test.yml) has completed successfully. It can still be
 # triggered manually via workflow_dispatch if needed.
 on:
-  workflow_run:
-    workflows: ["Multi Tenancy Deploy & Integration Test🚀"]
-    types: [completed]
+  # workflow_run:
+  #   workflows: ["Multi Tenancy Deploy & Integration Test🚀"]
+  #   types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ permissions:
 jobs:
   deploy:
     #Run only if the triggering workflow concluded successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
 
     steps:
