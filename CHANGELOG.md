@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.7.0
+
+### Added
+- ChangeLog support
+- MoveAttachments support
+- Upload Status support in Attachments
+- Internationalization support for error messages
+
+### Fixed
+- Prevent unwanted update calls on edit without changes
+- Heap Out of Memory error in Large file upload
+
 ## Version 1.6.2
 
 ### Fixed

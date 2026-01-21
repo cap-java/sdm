@@ -72,9 +72,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
       updateName(context, data, attachmentCompositionDetails);
       // Remove uploadStatus from attachment data to prevent validation errors
-
+      cleanupReadonlyContextsForAttachments(context, entityData, attachmentCompositionDetails);
     }
-    SDMUtils.cleanupReadonlyContexts(data);
   }
 
   @After
@@ -533,6 +532,45 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private void appendWithSpace(StringBuilder sb) {
     if (sb.length() > 0) {
       sb.append(" ");
+    }
+  }
+
+  private void cleanupReadonlyContextsForAttachments(
+      CdsCreateEventContext context,
+      Map<String, Object> entityData,
+      Map<String, Map<String, String>> attachmentCompositionDetails) {
+    String targetEntity = context.getTarget().getQualifiedName();
+
+    for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
+      String attachmentCompositionName = entry.getValue().get("name");
+
+      logger.info(
+          "Cleaning up SDM_READONLY_CONTEXT for composition: {}", attachmentCompositionName);
+
+      // Fetch attachments for this specific composition
+      List<Map<String, Object>> attachments =
+          AttachmentsHandlerUtils.fetchAttachments(
+              targetEntity, entityData, attachmentCompositionName);
+
+      if (attachments != null && !attachments.isEmpty()) {
+        logger.info(
+            "Found {} attachments in composition: {}",
+            attachments.size(),
+            attachmentCompositionName);
+
+        for (int i = 0; i < attachments.size(); i++) {
+          Map<String, Object> attachment = attachments.get(i);
+          if (attachment.containsKey(SDM_READONLY_CONTEXT)) {
+            logger.info(
+                "  Removing SDM_READONLY_CONTEXT from attachment [{}] in {}",
+                i,
+                attachmentCompositionName);
+            attachment.remove(SDM_READONLY_CONTEXT);
+          }
+        }
+      } else {
+        logger.info("No attachments found for composition: {}", attachmentCompositionName);
+      }
     }
   }
 
