@@ -5,7 +5,6 @@ import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.CdsData;
-import com.sap.cds.CdsDataProcessor;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsAssociationType;
@@ -293,23 +292,46 @@ public class SDMUtils {
   }
 
   public static void preserveReadonlyFields(CdsEntity target, List<CdsData> data) {
-    CdsDataProcessor.Filter mediaContentFilter =
-        (path, element, type) -> element.findAnnotation("Core.MediaType").isPresent();
+    for (CdsData entityData : data) {
+      // Recursively preserve uploadStatus for all nested attachments
+      preserveReadonlyFieldsRecursive(entityData);
+    }
+  }
 
-    CdsDataProcessor.Validator validator =
-        (path, element, value) -> {
-          Map<String, Object> values = path.target().values();
-          Map<String, Object> readonlyData = new HashMap<>();
-          if (values.containsKey("uploadStatus")) {
-            readonlyData.put("uploadStatus", values.get("uploadStatus"));
+  private static void preserveReadonlyFieldsRecursive(Map<String, Object> data) {
+    if (data == null) {
+      return;
+    }
+
+    data.forEach(
+        (key, value) -> {
+          if (value instanceof List) {
+            List<?> list = (List<?>) value;
+            for (Object item : list) {
+              if (item instanceof Map) {
+                Map<String, Object> mapItem = (Map<String, Object>) item;
+                // Preserve uploadStatus if it exists
+                if (mapItem.containsKey("uploadStatus") && mapItem.get("uploadStatus") != null) {
+                  Map<String, Object> readonlyData = new HashMap<>();
+                  readonlyData.put("uploadStatus", mapItem.get("uploadStatus"));
+                  mapItem.put(SDM_READONLY_CONTEXT, readonlyData);
+                }
+                // Recursively process nested structures
+                preserveReadonlyFieldsRecursive(mapItem);
+              }
+            }
+          } else if (value instanceof Map) {
+            Map<String, Object> mapValue = (Map<String, Object>) value;
+            // Preserve uploadStatus if it exists
+            if (mapValue.containsKey("uploadStatus") && mapValue.get("uploadStatus") != null) {
+              Map<String, Object> readonlyData = new HashMap<>();
+              readonlyData.put("uploadStatus", mapValue.get("uploadStatus"));
+              mapValue.put(SDM_READONLY_CONTEXT, readonlyData);
+            }
+            // Recursively process nested structures
+            preserveReadonlyFieldsRecursive(mapValue);
           }
-
-          if (!readonlyData.isEmpty()) {
-            values.put(SDM_READONLY_CONTEXT, readonlyData);
-          }
-        };
-
-    CdsDataProcessor.create().addValidator(mediaContentFilter, validator).process(data, target);
+        });
   }
 
   public static String getErrorMessage(String errorKey) {
