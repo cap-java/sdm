@@ -1728,4 +1728,100 @@ public class SDMUtilsTest {
     assertEquals("value1", result.get("Property 1"));
     assertEquals("value2", result.get("Property 2"));
   }
+
+  @Test
+  void testCleanupReadonlyContexts_SingleLevelEntity() {
+    // Test single level entity structure
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    Map<String, Object> attachment1 = new HashMap<>();
+    attachment1.put("ID", "1");
+    attachment1.put("fileName", "file1.txt");
+    attachment1.put(SDMConstants.SDM_READONLY_CONTEXT, new HashMap<String, Object>());
+    attachments.add(attachment1);
+
+    entity.put("attachments", attachments);
+    data.add(CdsData.create(entity));
+
+    SDMUtils.cleanupReadonlyContexts(data);
+
+    assertFalse(attachment1.containsKey(SDMConstants.SDM_READONLY_CONTEXT));
+  }
+
+  @Test
+  void testCleanupReadonlyContexts_MultilevelEntity() {
+    // Test multilevel entity structure (e.g., Books -> Chapters -> Attachments)
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> chapters = new ArrayList<>();
+
+    Map<String, Object> chapter1 = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    Map<String, Object> attachment1 = new HashMap<>();
+    attachment1.put("ID", "1");
+    attachment1.put("fileName", "chapter1-file1.txt");
+    Map<String, Object> readonlyData1 = new HashMap<>();
+    readonlyData1.put("uploadStatus", "Success");
+    attachment1.put(SDMConstants.SDM_READONLY_CONTEXT, readonlyData1);
+    attachments.add(attachment1);
+
+    Map<String, Object> attachment2 = new HashMap<>();
+    attachment2.put("ID", "2");
+    attachment2.put("fileName", "chapter1-file2.txt");
+    Map<String, Object> readonlyData2 = new HashMap<>();
+    readonlyData2.put("uploadStatus", "InProgress");
+    attachment2.put(SDMConstants.SDM_READONLY_CONTEXT, readonlyData2);
+    attachments.add(attachment2);
+
+    chapter1.put("attachments", attachments);
+    chapters.add(chapter1);
+
+    entity.put("chapters", chapters);
+    data.add(CdsData.create(entity));
+
+    SDMUtils.cleanupReadonlyContexts(data);
+
+    // Verify that SDM_READONLY_CONTEXT is removed from nested attachments
+    assertFalse(attachment1.containsKey(SDMConstants.SDM_READONLY_CONTEXT));
+    assertFalse(attachment2.containsKey(SDMConstants.SDM_READONLY_CONTEXT));
+  }
+
+  @Test
+  void testCleanupReadonlyContexts_DeepNestedEntity() {
+    // Test deeply nested entity structure (e.g., Books -> Chapters -> Sections -> Attachments)
+    List<CdsData> data = new ArrayList<>();
+    Map<String, Object> entity = new HashMap<>();
+    List<Map<String, Object>> chapters = new ArrayList<>();
+
+    Map<String, Object> chapter1 = new HashMap<>();
+    List<Map<String, Object>> sections = new ArrayList<>();
+
+    Map<String, Object> section1 = new HashMap<>();
+    List<Map<String, Object>> attachments = new ArrayList<>();
+
+    Map<String, Object> attachment1 = new HashMap<>();
+    attachment1.put("ID", "1");
+    attachment1.put("fileName", "deep-nested-file.txt");
+    Map<String, Object> readonlyData = new HashMap<>();
+    readonlyData.put("uploadStatus", "Success");
+    attachment1.put(SDMConstants.SDM_READONLY_CONTEXT, readonlyData);
+    attachments.add(attachment1);
+
+    section1.put("attachments", attachments);
+    sections.add(section1);
+
+    chapter1.put("sections", sections);
+    chapters.add(chapter1);
+
+    entity.put("chapters", chapters);
+    data.add(CdsData.create(entity));
+
+    SDMUtils.cleanupReadonlyContexts(data);
+
+    // Verify that SDM_READONLY_CONTEXT is removed from deeply nested attachments
+    assertFalse(attachment1.containsKey(SDMConstants.SDM_READONLY_CONTEXT));
+  }
 }

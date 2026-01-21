@@ -58,6 +58,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
 
+  @Before
+  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 400)
+  public void cleanupReadonlyContextEarly(CdsUpdateEventContext context, List<CdsData> data) {
+    // Clean up SDM_READONLY_CONTEXT immediately after preservation and before CDS validation
+    // This prevents Invalid CQN errors for multilevel entities
+    SDMUtils.cleanupReadonlyContexts(data);
+  }
+
   @After
   @HandlerOrder(HandlerOrder.LATE)
   public void processAfter(CdsUpdateEventContext context, List<CdsData> data) {
@@ -123,7 +131,6 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
       updateName(context, data, attachmentCompositionDetails);
     }
-    SDMUtils.cleanupReadonlyContexts(data);
   }
 
   public void updateName(
@@ -390,6 +397,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     }
 
     attachment.put("uploadStatus", uploadStatus);
+    // Remove SDM_READONLY_CONTEXT immediately after extracting the data
+    attachment.remove(SDM_READONLY_CONTEXT);
     return false;
   }
 

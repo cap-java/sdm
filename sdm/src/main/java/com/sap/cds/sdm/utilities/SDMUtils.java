@@ -69,20 +69,37 @@ public class SDMUtils {
 
   public static void cleanupReadonlyContexts(List<CdsData> data) {
     for (CdsData entityData : data) {
-      // Remove SDM_READONLY_CONTEXT from all attachments in the data
-      entityData.forEach(
-          (key, value) -> {
-            if (value instanceof List) {
-              List<?> list = (List<?>) value;
-              for (Object item : list) {
-                if (item instanceof Map) {
-                  Map<String, Object> attachment = (Map<String, Object>) item;
-                  attachment.remove(SDM_READONLY_CONTEXT);
-                }
+      // Remove SDM_READONLY_CONTEXT from all attachments in the data (including nested)
+      cleanupReadonlyContextsRecursive(entityData);
+    }
+  }
+
+  private static void cleanupReadonlyContextsRecursive(Map<String, Object> data) {
+    if (data == null) {
+      return;
+    }
+
+    data.forEach(
+        (key, value) -> {
+          if (value instanceof List) {
+            List<?> list = (List<?>) value;
+            for (Object item : list) {
+              if (item instanceof Map) {
+                Map<String, Object> mapItem = (Map<String, Object>) item;
+                // Remove SDM_READONLY_CONTEXT from current level
+                mapItem.remove(SDM_READONLY_CONTEXT);
+                // Recursively process nested structures
+                cleanupReadonlyContextsRecursive(mapItem);
               }
             }
-          });
-    }
+          } else if (value instanceof Map) {
+            Map<String, Object> mapValue = (Map<String, Object>) value;
+            // Remove SDM_READONLY_CONTEXT from current level
+            mapValue.remove(SDM_READONLY_CONTEXT);
+            // Recursively process nested structures
+            cleanupReadonlyContextsRecursive(mapValue);
+          }
+        });
   }
 
   public static Set<String> FileNameDuplicateInDrafts(

@@ -74,7 +74,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       // Remove uploadStatus from attachment data to prevent validation errors
 
     }
-    SDMUtils.cleanupReadonlyContexts(data);
   }
 
   @After
@@ -131,6 +130,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
     // Preserve uploadStatus before CDS removes readonly fields
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
+  }
+
+  @Before
+  @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 400)
+  public void cleanupReadonlyContextEarly(CdsCreateEventContext context, List<CdsData> data) {
+    // Clean up readonly context immediately after preservation to prevent CQN validation errors
+    SDMUtils.cleanupReadonlyContexts(data);
   }
 
   public void updateName(
@@ -342,6 +348,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
 
     attachment.put("uploadStatus", uploadStatus);
+    // Remove SDM_READONLY_CONTEXT immediately after extracting the data
+    attachment.remove(SDM_READONLY_CONTEXT);
     return false;
   }
 
