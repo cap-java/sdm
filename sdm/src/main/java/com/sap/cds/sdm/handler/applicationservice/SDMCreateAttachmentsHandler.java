@@ -1,7 +1,5 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
-import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
-
 import com.sap.cds.CdsData;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.sdm.caching.CacheConfig;
@@ -330,12 +328,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String filenameInRequest,
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles) {
-    Map<String, Object> readonlyData = (Map<String, Object>) attachment.get(SDM_READONLY_CONTEXT);
-    if (readonlyData == null || readonlyData.get("uploadStatus") == null) {
+    // uploadStatus is already extracted from SDM_READONLY_CONTEXT during cleanup
+    Object uploadStatusObj = attachment.get("uploadStatus");
+    if (uploadStatusObj == null) {
       return false;
     }
 
-    String uploadStatus = readonlyData.get("uploadStatus").toString();
+    String uploadStatus = uploadStatusObj.toString();
     String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
 
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
@@ -347,7 +346,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       return true;
     }
 
-    attachment.put("uploadStatus", uploadStatus);
     return false;
   }
 

@@ -86,6 +86,14 @@ public class SDMUtils {
             for (Object item : list) {
               if (item instanceof Map) {
                 Map<String, Object> mapItem = (Map<String, Object>) item;
+                // Extract uploadStatus from SDM_READONLY_CONTEXT before removing it
+                Object readonlyContext = mapItem.get(SDM_READONLY_CONTEXT);
+                if (readonlyContext instanceof Map) {
+                  Map<String, Object> readonlyData = (Map<String, Object>) readonlyContext;
+                  if (readonlyData.containsKey("uploadStatus")) {
+                    mapItem.put("uploadStatus", readonlyData.get("uploadStatus"));
+                  }
+                }
                 // Remove SDM_READONLY_CONTEXT from current level
                 mapItem.remove(SDM_READONLY_CONTEXT);
                 // Recursively process nested structures
@@ -94,6 +102,14 @@ public class SDMUtils {
             }
           } else if (value instanceof Map) {
             Map<String, Object> mapValue = (Map<String, Object>) value;
+            // Extract uploadStatus from SDM_READONLY_CONTEXT before removing it
+            Object readonlyContext = mapValue.get(SDM_READONLY_CONTEXT);
+            if (readonlyContext instanceof Map) {
+              Map<String, Object> readonlyData = (Map<String, Object>) readonlyContext;
+              if (readonlyData.containsKey("uploadStatus")) {
+                mapValue.put("uploadStatus", readonlyData.get("uploadStatus"));
+              }
+            }
             // Remove SDM_READONLY_CONTEXT from current level
             mapValue.remove(SDM_READONLY_CONTEXT);
             // Recursively process nested structures
