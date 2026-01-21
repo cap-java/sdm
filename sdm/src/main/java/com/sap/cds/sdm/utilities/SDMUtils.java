@@ -303,35 +303,32 @@ public class SDMUtils {
       return;
     }
 
-    data.forEach(
-        (key, value) -> {
-          if (value instanceof List) {
-            List<?> list = (List<?>) value;
-            for (Object item : list) {
-              if (item instanceof Map) {
-                Map<String, Object> mapItem = (Map<String, Object>) item;
-                // Preserve uploadStatus if it exists
-                if (mapItem.containsKey("uploadStatus") && mapItem.get("uploadStatus") != null) {
-                  Map<String, Object> readonlyData = new HashMap<>();
-                  readonlyData.put("uploadStatus", mapItem.get("uploadStatus"));
-                  mapItem.put(SDM_READONLY_CONTEXT, readonlyData);
-                }
-                // Recursively process nested structures
-                preserveReadonlyFieldsRecursive(mapItem);
-              }
-            }
-          } else if (value instanceof Map) {
-            Map<String, Object> mapValue = (Map<String, Object>) value;
-            // Preserve uploadStatus if it exists
-            if (mapValue.containsKey("uploadStatus") && mapValue.get("uploadStatus") != null) {
-              Map<String, Object> readonlyData = new HashMap<>();
-              readonlyData.put("uploadStatus", mapValue.get("uploadStatus"));
-              mapValue.put(SDM_READONLY_CONTEXT, readonlyData);
-            }
+    // Preserve uploadStatus if it exists at current level
+    if (data.containsKey("uploadStatus") && data.get("uploadStatus") != null) {
+      Map<String, Object> readonlyData = new HashMap<>();
+      readonlyData.put("uploadStatus", data.get("uploadStatus"));
+      data.put(SDM_READONLY_CONTEXT, readonlyData);
+    }
+
+    // Process nested structures - create a copy of entries to avoid ConcurrentModificationException
+    List<Map.Entry<String, Object>> entries = new ArrayList<>(data.entrySet());
+    for (Map.Entry<String, Object> entry : entries) {
+      Object value = entry.getValue();
+      if (value instanceof List) {
+        List<?> list = (List<?>) value;
+        for (Object item : list) {
+          if (item instanceof Map) {
+            Map<String, Object> mapItem = (Map<String, Object>) item;
             // Recursively process nested structures
-            preserveReadonlyFieldsRecursive(mapValue);
+            preserveReadonlyFieldsRecursive(mapItem);
           }
-        });
+        }
+      } else if (value instanceof Map) {
+        Map<String, Object> mapValue = (Map<String, Object>) value;
+        // Recursively process nested structures
+        preserveReadonlyFieldsRecursive(mapValue);
+      }
+    }
   }
 
   public static String getErrorMessage(String errorKey) {
