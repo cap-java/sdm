@@ -348,8 +348,6 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
 
     attachment.put("uploadStatus", uploadStatus);
-    // Remove SDM_READONLY_CONTEXT immediately after extracting the data
-    attachment.remove(SDM_READONLY_CONTEXT);
     return false;
   }
 
