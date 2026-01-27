@@ -15,6 +15,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Custom properties : Provides the capability to define custom properties for attachments.
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Maximum file size: Provides the capability to specify the maximum file size for attachments.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
@@ -34,6 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Support for Maximum File Size](#support-for-maximum-file-size)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
@@ -491,6 +493,24 @@ SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 > **Note**
 >
 > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+
+## Support for Maximum File Size
+
+This plugin allows you to specify the maximum file size for attachments by using the `@Validation.Maximum` annotation on the attachments content property. When a user attempts to upload a file that exceeds the defined limit, the upload will be rejected with "AttachmentSizeExceeded" error.
+
+Refer the following example from a sample Bookshop app:
+
+```cds
+
+entity Books {
+  ...
+  attachments: Composition of many Attachments;
+}
+
+annotate Books.attachments with {
+  content @Validation.Maximum : '200MB';
+}
+```
 
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
