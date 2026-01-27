@@ -511,6 +511,7 @@ annotate Books.attachments with {
   content @Validation.Maximum : '200MB';
 }
 ```
+Supports both decimal (KB, MB, GB, TB) and binary (KiB, MiB, GiB, TiB) units with comprehensive validation and error handling.
 
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
