@@ -581,7 +581,9 @@ public class SDMServiceImpl implements SDMService {
       String responseString = EntityUtils.toString(response.getEntity());
       return new JSONObject(responseString);
     } catch (IOException e) {
-      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"));
+      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
+    } catch (Exception e) {
+      throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
     }
   }
 

@@ -62,6 +62,8 @@ annotate Attachments with @UI: {
     objectId  @UI.Hidden ;
     mimeType @UI.Hidden;
     status @UI.Hidden;
+    linkUrl @UI.Hidden;
+    type @UI.Hidden;
 }
 
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
