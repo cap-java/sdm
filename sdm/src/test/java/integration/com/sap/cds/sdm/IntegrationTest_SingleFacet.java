@@ -6650,6 +6650,7 @@ class IntegrationTest_SingleFacet {
     api.deleteEntity(appUrl, entityName, moveTargetEntity);
     api.deleteEntity(appUrl, entityName, moveSourceEntity);
   }
+
   @Test
   @Order(76)
   void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
