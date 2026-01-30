@@ -465,7 +465,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       createResult =
           documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser, null);
     } catch (Exception e) {
-      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
