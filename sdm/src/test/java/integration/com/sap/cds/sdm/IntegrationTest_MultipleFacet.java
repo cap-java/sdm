@@ -7210,4 +7210,61 @@ class IntegrationTest_MultipleFacet {
       api.deleteEntity(appUrl, entityName, moveSourceEntity);
     }
   }
+
+  @Test
+  @Order(76)
+  void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
+    System.out.println(
+        "Test (76) : Upload attachment exceeding maximum file size in references facet");
+
+    // Create a new entity
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+    String testEntityID = response;
+
+    // Load the 150MB sample file
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample32mb.pdf").getFile());
+
+    for (int i = 0; i < facet.length; i++) {
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testEntityID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      List<String> createResponse =
+          api.createAttachment(appUrl, entityName, facet[i], testEntityID, srvpath, postData, file);
+      String check = createResponse.get(0);
+
+      // Only 'references' facet has 100MB limit, others should succeed
+      if (facet[i].equals("references")) {
+        // The upload should fail with AttachmentSizeExceeded error
+        if (!check.equals("Attachment created")) {
+          try {
+            JSONObject json = new JSONObject(check);
+            String errorCode = json.getJSONObject("error").getString("code");
+            String errorMessage = json.getJSONObject("error").getString("message");
+            assertEquals("413", errorCode);
+            assertEquals("AttachmentSizeExceeded", errorMessage);
+          } catch (Exception e) {
+            fail("Failed to parse error response for references facet: " + e.getMessage());
+          }
+        } else {
+          fail("Attachment got created in references facet with file size exceeding maximum limit");
+        }
+      } else {
+        // For attachments and footnotes, expect success
+        if (!check.equals("Attachment created")) {
+          fail("Attachment upload failed in " + facet[i] + " facet: " + check);
+        }
+      }
+    }
+
+    // delete the draft entity
+    api.deleteEntityDraft(appUrl, entityName, testEntityID);
+  }
 }
