@@ -1299,6 +1299,17 @@ public class SDMCustomServiceHandler {
       return;
     }
 
+    // Check if this is an association field (e.g., customProperty1)
+    // For associations, we should only populate the foreign key field (e.g., customProperty1_code)
+    // Skip the association field itself as CDS will resolve it from the _code field
+    CdsElement element = targetEntity.getElement(dbPropertyName);
+    if (element != null && element.getType().isAssociation()) {
+      logger.info(
+          "Skipping association field '{}' - association will be resolved from corresponding _code field",
+          dbPropertyName);
+      return;
+    }
+
     Object convertedValue = convertValueIfNeeded(value, dbPropertyName, targetEntity);
     filteredProperties.put(dbPropertyName, convertedValue);
     logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, convertedValue);
