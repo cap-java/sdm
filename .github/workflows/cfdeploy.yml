@@ -55,12 +55,12 @@ jobs:
       - name: Verify and Checkout Deploy Branch 🔄
         run: |
           git fetch origin
-          echo "📂 Verifying 'ui5LatestDeploy' branch..."
-          if git rev-parse --verify origin/ui5LatestDeploy; then
-            git checkout ui5LatestDeploy
+          echo "📂 Verifying 'local_deploy_pre_trend_micro' branch..."
+          if git rev-parse --verify origin/local_deploy_pre_trend_micro; then
+            git checkout local_deploy_pre_trend_micro
             echo "✅ Branch checked out successfully!"
           else
-            echo "❌ Branch 'ui5LatestDeploy' not found. Please verify the branch name."
+            echo "❌ Branch 'local_deploy_pre_trend_micro' not found. Please verify the branch name."
             exit 1
           fi
 
