@@ -496,7 +496,7 @@ SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 
 ## Support for Maximum File Size
 
-This plugin allows you to specify the maximum file size for attachments by using the `@Validation.Maximum` annotation on the attachments content property. When a user attempts to upload a file that exceeds the defined limit, the upload will be rejected with "AttachmentSizeExceeded" error.
+This plugin allows you to customize the maximum file size for attachments that a user can upload. Once the defined file size limit is exceeded, the upload is rejected and an error is triggered. The error message displayed to the user is fully customizable. The `@Validation.Maximum` annotation is used to define the maximum allowed file size.
 
 Refer the following example from a sample Bookshop app:
 
@@ -508,10 +508,20 @@ entity Books {
 }
 
 annotate Books.attachments with {
-  content @Validation.Maximum : '200MB';
+  content @Validation.Maximum : '30MB';
 }
 ```
+
+#### Customizing the Maximum File Size Error Message
+
+To customize the error message displayed when the file upload size limit is exceeded, add the following key to your `messages.properties` file under `srv/src/main/resources`:
+
+```properties
+AttachmentSizeExceeded = File size exceeds the limit of {0}.
+```
+
 Supports both decimal (KB, MB, GB, TB) and binary (KiB, MiB, GiB, TiB) units with comprehensive validation and error handling.
+
 
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
