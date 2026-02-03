@@ -18,7 +18,7 @@ currency : Currency;
 image : LargeBinary @Core.MediaType: 'image/png';
 
 // top-level chapters composition (root of the nested hierarchy)
-chapters : Composition of many Chapters on chapters.book = $self;
+cHapters : Composition of many Chapters on cHapters.book = $self;
 
 // top-level pages composition (same pattern as chapters)
 pages : Composition of many Pages on pages.book = $self;
