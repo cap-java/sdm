@@ -122,16 +122,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       try {
         // update the uploadStatus of all blank attachments with success this is for existing
         // attachments
-        RepoValue repoValue = null;
-        try {
-          repoValue =
-              sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
-        } catch (Exception e) {
-          logger.warn(
-              "Failed to check repository type, proceeding without repository info: {}",
-              e.getMessage());
-          // Proceed without repository info - continue with limited functionality
-        }
+        RepoValue repoValue = checkRepositoryTypeWithFallback(repositoryId, context);
 
         // Only process virus scan logic if repository info is available
         if (repoValue != null) {
@@ -357,6 +348,26 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           "Unexpected error processing attachment with objectId: {}, error: {}",
           attachment.getObjectId(),
           e.getMessage());
+    }
+  }
+
+  /**
+   * Checks the repository type with fallback handling. Returns null if the check fails, allowing
+   * the caller to proceed with limited functionality.
+   *
+   * @param repositoryId the repository ID to check
+   * @param context the CDS read event context containing user information
+   * @return the RepoValue if successful, null otherwise
+   */
+  private RepoValue checkRepositoryTypeWithFallback(
+      String repositoryId, CdsReadEventContext context) {
+    try {
+      return sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to check repository type, proceeding without repository info: {}",
+          e.getMessage());
+      return null;
     }
   }
 }
