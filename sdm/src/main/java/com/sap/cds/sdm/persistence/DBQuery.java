@@ -296,9 +296,11 @@ public class DBQuery {
     CdsEntity entity = attachmentEntity.get();
 
     // Get secondary properties annotations
+    // Filter out associations - only include actual database columns
     Map<String, String> secondaryProperties = new HashMap<>();
     entity
         .elements()
+        .filter(element -> !element.getType().isAssociation())
         .forEach(
             element -> {
               Optional<com.sap.cds.reflect.CdsAnnotation<Object>> annotation =
