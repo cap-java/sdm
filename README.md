@@ -1138,7 +1138,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   type       @(title: '{i18n>Type}');
-  linkUrl       @(title: '{i18n>LinkURL}');
+  linkUrl       @UI.Hidden;
   fileName  @(title: '{i18n>Filename}');
   modifiedAt @(odata.etag: null);
   content
@@ -1254,7 +1254,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   type       @(title: '{i18n>Type}');
-  linkUrl       @(title: '{i18n>LinkURL}');
+  linkUrl       @UI.Hidden;
   fileName  @(title: '{i18n>Filename}');
   modifiedAt @(odata.etag: null);
   content

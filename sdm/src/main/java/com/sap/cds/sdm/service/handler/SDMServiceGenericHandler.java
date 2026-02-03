@@ -1,10 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -420,18 +417,23 @@ public class SDMServiceGenericHandler implements EventHandler {
             ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
             : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    // Get parent entity to extract its key names dynamically
+
+    // Derive the parent entity name from the target qualified name
+    // Target is like "AdminService.Chapters.attachments", parent is "AdminService.Chapters"
+    String targetQualifiedName = context.getTarget().getQualifiedName();
     String parentEntityName = null;
-    ObjectMapper mapper = new ObjectMapper();
-    JsonNode root = mapper.readTree(select.toString());
-    JsonNode refArray = root.path("SELECT").path("from").path("ref");
-    if (refArray.isArray() && refArray.size() >= 2) {
-      JsonNode parentNode = refArray.get(refArray.size() - 2);
-      parentEntityName = parentNode.path("id").asText();
+    int lastDotIndex = targetQualifiedName.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+      parentEntityName = targetQualifiedName.substring(0, lastDotIndex);
     }
 
     Optional<CdsEntity> parentEntity =
         parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+
+    if (parentEntity.isEmpty()) {
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
+    }
+
     String upID = SDMUtils.fetchUPIDFromCQN(select, parentEntity.get());
     String filenameInRequest = context.get("name").toString();
 
@@ -463,8 +465,7 @@ public class SDMServiceGenericHandler implements EventHandler {
       createResult =
           documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser, null);
     } catch (Exception e) {
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
