@@ -15,6 +15,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Custom properties : Provides the capability to define custom properties for attachments.
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Maximum file size: Provides the capability to specify the maximum file size for attachments.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
@@ -34,6 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Support for Maximum File Size](#support-for-maximum-file-size)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
@@ -491,6 +493,35 @@ SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 > **Note**
 >
 > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+
+## Support for Maximum File Size
+
+This plugin allows you to customize the maximum file size for attachments that a user can upload. Once the defined file size limit is exceeded, the upload is rejected and an error is triggered. The error message displayed to the user is fully customizable. The `@Validation.Maximum` annotation is used to define the maximum allowed file size.
+
+Refer the following example from a sample Bookshop app:
+
+```cds
+
+entity Books {
+  ...
+  attachments: Composition of many Attachments;
+}
+
+annotate Books.attachments with {
+  content @Validation.Maximum : '30MB';
+}
+```
+
+#### Customizing the Maximum File Size Error Message
+
+To customize the error message displayed when the file upload size limit is exceeded, add the following key to your `messages.properties` file under `srv/src/main/resources`:
+
+```properties
+AttachmentSizeExceeded = File size exceeds the limit of {0}.
+```
+
+Supports both decimal (KB, MB, GB, TB) and binary (KiB, MiB, GiB, TiB) units with comprehensive validation and error handling.
+
 
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
