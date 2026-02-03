@@ -4,14 +4,64 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.7.0
+
+### Added
+- ChangeLog support
+- MoveAttachments support
+- Upload Status support in Attachments
+- Internationalization support for error messages
+
+### Fixed
+- Prevent unwanted update calls on edit without changes
+- Heap Out of Memory error in Large file upload
+
+## Version 1.6.2
+
+### Fixed
+- Deep copying of custom properties and notes when copying attachments
+- Dynamic primary key extraction from entity schema
+- Facet parsing for parent entity and composition extraction during attachment copy
+- Draft discard operation with attachments
+- Service namespace support in createLink feature
+
+## Version 1.6.1
+
+### Fixed
+- Incorrect filename shown after copying attachment
+- Defensive EhCache initialization
+- Improved filename validation
+- Removed harcoded ServiceName type 
+- Improved error handling for nested entities
+- Link doesn't get reverted in SDM when changes are discarded on the UI 
+- Support for entities defined with namespace  
+
+## Version 1.6.0
+
+### Added
+- Support for Link type Attachments.
+- Support to Edit URL in Link type Attachments.
+- Support for translation of error messages in the plugin.
+
+### Fixed
+- Allow update or creation of subscription in case a repository with the configured external ID already exists by skipping the onboarding step.
+- Improved error handling for cases where the mimetype of the uploaded attachment is blocked on a repository level.
+- Improved error handling for cases where repository offboarding fails during unsubscription.
+- Issue where repository offboarding was failing if the instance only contains a single repository.
+- Improved error handling for repository onboarding during subscription.
+- Blocked upload for scenarios where file size > 400mb and repository is virus scan enabled.
+- Improved error handling for large file upload. 
+- Update of attachments present in entities which are not direct compositions to the root entity.
+- Copying of attachments present in projection entities. 
+
 ## Version 1.5.0
 
 ### Added
-- Ability to copy attachments between entities
+- Ability to copy attachments between entities.
 
 ### Fixed
-- Added authorities to token to improve logging during deletion of attachment
-- Improved error handling for cases where the user lacks SDM roles
+- Added authorities to token to improve logging during deletion of attachment.
+- Improved error handling for cases where the user lacks SDM roles.
 
 ## Version 1.4.1
 

@@ -10,6 +10,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.json.JSONObject;
 
 public interface SDMService {
@@ -46,7 +47,7 @@ public interface SDMService {
       boolean isSystemUser)
       throws ServiceException;
 
-  public String getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
+  public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public List<String> getSecondaryTypes(
@@ -59,11 +60,24 @@ public interface SDMService {
       boolean isSystemUser)
       throws IOException;
 
-  public List<String> copyAttachment(
+  public Map<String, String> copyAttachment(
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      Set<String> customPropertiesInSDM)
+      throws IOException;
+
+  public String moveAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 
   public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      throws IOException;
+
+  public JSONObject getChangeLog(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
+
+  public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
 }

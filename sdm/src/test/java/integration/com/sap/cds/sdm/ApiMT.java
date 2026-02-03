@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import okio.ByteString;
 
@@ -12,11 +13,62 @@ public class ApiMT implements ApiInterface {
   private final OkHttpClient httpClient;
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
+  private static final int MAX_RETRIES = 3;
+  private static final int RETRY_DELAY_MS = 1000;
 
   public ApiMT(Map<String, String> config) {
     this.config = new HashMap<>(config);
-    this.httpClient = new OkHttpClient();
+    this.httpClient =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .build();
     this.token = this.config.get("Authorization");
+  }
+
+  private Response executeWithRetry(Request request) throws IOException {
+    IOException lastException = null;
+    for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        Response response = httpClient.newCall(request).execute();
+        if (response.code() == 502 && attempt < MAX_RETRIES) {
+          System.out.println(
+              "Received 502 Bad Gateway, retrying... (attempt "
+                  + attempt
+                  + "/"
+                  + MAX_RETRIES
+                  + ")");
+          response.close();
+          Thread.sleep(RETRY_DELAY_MS);
+          continue;
+        }
+        return response;
+      } catch (java.net.SocketTimeoutException e) {
+        lastException = e;
+        if (attempt < MAX_RETRIES) {
+          System.out.println(
+              "Socket timeout occurred, retrying... (attempt "
+                  + attempt
+                  + "/"
+                  + MAX_RETRIES
+                  + "): "
+                  + e.getMessage());
+          try {
+            Thread.sleep(RETRY_DELAY_MS);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Retry interrupted", ie);
+          }
+        } else {
+          throw e;
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Retry interrupted", e);
+      }
+    }
+    throw lastException;
   }
 
   public String createEntityDraft(
@@ -39,7 +91,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         if (response.code() == 401) {
           System.out.println(
@@ -74,7 +126,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Edit entity failed. Error : " + response.body().string());
         throw new IOException("Could not edit entity");
@@ -105,7 +157,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Save entity failed. Error : " + response.body().string());
         throw new IOException("Could not save entity");
@@ -126,7 +178,7 @@ public class ApiMT implements ApiInterface {
                 .addHeader("Authorization", token)
                 .build();
 
-        try (Response draftResponse = httpClient.newCall(request).execute()) {
+        try (Response draftResponse = executeWithRetry(request)) {
           if (draftResponse.code() != 200) {
             String draftResponseBodyString = draftResponse.body().string();
             System.out.println("Save entity failed. Error : " + draftResponseBodyString);
@@ -164,7 +216,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -191,7 +243,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         System.out.println("Delete entity failed. Error : " + response.body().string());
         throw new IOException("Could not delete entity");
@@ -217,7 +269,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response checkResponse = httpClient.newCall(request).execute()) {
+    try (Response checkResponse = executeWithRetry(request)) {
       if (checkResponse.code() != 200) {
         System.out.println("Verify entity failed. Error : " + checkResponse.body().string());
         throw new IOException("Entity doesn't exist");
@@ -265,7 +317,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response response = httpClient.newCall(postRequest).execute()) {
+    try (Response response = executeWithRetry(postRequest)) {
       if (response.code() != 201) {
         System.out.println(
             "Create Attachment in the section: "
@@ -298,7 +350,7 @@ public class ApiMT implements ApiInterface {
               .addHeader("Authorization", token)
               .build();
 
-      try (Response fileResponse = httpClient.newCall(fileRequest).execute()) {
+      try (Response fileResponse = executeWithRetry(fileRequest)) {
         if (fileResponse.code() != 204) {
           String responseBodyString = fileResponse.body().string();
           System.out.println(
@@ -325,7 +377,7 @@ public class ApiMT implements ApiInterface {
                   .addHeader("Authorization", token)
                   .build();
 
-          try (Response deleteResponse = httpClient.newCall(request).execute()) {
+          try (Response deleteResponse = executeWithRetry(request)) {
             if (deleteResponse.code() != 204) {
               System.out.println(
                   "Delete Attachment in section :"
@@ -390,7 +442,7 @@ public class ApiMT implements ApiInterface {
             .build();
 
     try {
-      Response response = httpClient.newCall(request).execute();
+      Response response = executeWithRetry(request);
       if (!response.isSuccessful()) {
         System.out.println(
             "Read Attachment failed in the "
@@ -430,7 +482,7 @@ public class ApiMT implements ApiInterface {
             .build();
 
     try {
-      Response response = httpClient.newCall(request).execute();
+      Response response = executeWithRetry(request);
       if (!response.isSuccessful()) {
         System.out.println("Read draft attachment failed. Error : " + response.body().string());
         throw new IOException("Could not read attachment");
@@ -462,7 +514,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response deleteResponse = httpClient.newCall(request).execute()) {
+    try (Response deleteResponse = executeWithRetry(request)) {
       if (deleteResponse.code() != 204) {
         System.out.println(
             "Delete Attachment failed in the "
@@ -503,8 +555,8 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response renameResponse = httpClient.newCall(request).execute()) {
-      if (renameResponse.code() != 200) {
+    try (Response renameResponse = executeWithRetry(request)) {
+      if (!renameResponse.isSuccessful()) {
         throw new IOException("Attachment was not renamed in section: " + facetName);
       }
       return "Renamed";
@@ -541,7 +593,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
+    try (Response updateResponse = executeWithRetry(request)) {
       if (updateResponse.code() != 200) {
         System.out.println(
             "Updating secondary property failed. Error: " + updateResponse.body().string());
@@ -583,7 +635,7 @@ public class ApiMT implements ApiInterface {
             .addHeader("Authorization", token)
             .build();
 
-    try (Response updateResponse = httpClient.newCall(request).execute()) {
+    try (Response updateResponse = executeWithRetry(request)) {
       if (updateResponse.code() != 200) {
         System.out.println(
             "Updating secondary property failed. Error : " + updateResponse.body().string());
@@ -626,12 +678,70 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not copy attachments: " + response.code() + " - " + response.body().string());
       }
       return "Attachments copied successfully";
+    }
+  }
+
+  public Map<String, Object> moveAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String targetEntityID,
+      String sourceFolderId,
+      List<String> objectIds,
+      String sourceFacet)
+      throws IOException {
+    String objectIdsString = String.join(",", objectIds);
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + targetEntityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + "AdminService.moveAttachments";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    StringBuilder jsonPayload = new StringBuilder();
+    jsonPayload.append("{");
+    jsonPayload.append("\"sourceFolderId\": \"").append(sourceFolderId).append("\",");
+    jsonPayload.append("\"up__ID\": \"").append(targetEntityID).append("\",");
+    jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\"");
+
+    if (sourceFacet != null && !sourceFacet.isEmpty()) {
+      jsonPayload.append(",\"sourceFacet\": \"").append(sourceFacet).append("\"");
+    }
+
+    jsonPayload.append("}");
+
+    RequestBody body = RequestBody.create(jsonPayload.toString(), mediaType);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      String responseBody = response.body().string();
+
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not move attachments: " + response.code() + " - " + responseBody);
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> result = objectMapper.readValue(responseBody, Map.class);
+      return result;
+    } catch (IOException e) {
+      System.out.println("Error while moving attachments: " + e.getMessage());
+      throw new IOException(e);
     }
   }
 
@@ -665,7 +775,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not create link: " + response.code() + " - " + response.body().string());
@@ -708,7 +818,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not edit link: " + response.code() + " - " + response.body().string());
@@ -749,7 +859,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (!response.isSuccessful()) {
         throw new IOException(
             "Could not open attachment: " + response.code() + " - " + response.body().string());
@@ -782,7 +892,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -821,7 +931,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -857,7 +967,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -899,7 +1009,7 @@ public class ApiMT implements ApiInterface {
     Request request =
         new Request.Builder().url(url).get().addHeader("Authorization", token).build();
 
-    try (Response response = httpClient.newCall(request).execute()) {
+    try (Response response = executeWithRetry(request)) {
       if (response.code() != 200) {
         System.out.println("Response code: " + response.code());
         System.out.println(
@@ -920,6 +1030,60 @@ public class ApiMT implements ApiInterface {
                 new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
         return result;
       }
+    }
+  }
+
+  public Map<String, Object> fetchChangelog(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/AdminService.changelog";
+
+    RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+
+    Request request =
+        new Request.Builder().url(url).addHeader("Authorization", token).post(body).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (response.isSuccessful() && response.body() != null) {
+        String responseBody = response.body().string();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> changelogResponse = objectMapper.readValue(responseBody, Map.class);
+
+        // Check if response is wrapped in a "value" field containing a JSON string
+        if (changelogResponse.containsKey("value")) {
+          Object valueObj = changelogResponse.get("value");
+          if (valueObj instanceof String) {
+            // Parse the JSON string
+            @SuppressWarnings("unchecked")
+            Map<String, Object> actualResponse =
+                objectMapper.readValue((String) valueObj, Map.class);
+            return actualResponse;
+          }
+        }
+
+        return changelogResponse;
+      } else {
+        throw new IOException(
+            "Failed to fetch changelog: "
+                + response.code()
+                + " - "
+                + (response.body() != null ? response.body().string() : "No response body"));
+      }
+    } catch (IOException e) {
+      throw new IOException("Error fetching changelog: " + e.getMessage(), e);
     }
   }
 }

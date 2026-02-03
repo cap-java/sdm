@@ -1,8 +1,9 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
-import com.sap.cds.feature.attachments.service.AttachmentService;
+import com.sap.cds.Row;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.ql.cqn.CqnAnalyzer;
 import com.sap.cds.ql.cqn.CqnSelect;
@@ -11,7 +12,9 @@ import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
+import com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils;
 import com.sap.cds.sdm.model.*;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.DocumentUploadService;
@@ -20,8 +23,11 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.EventContext;
 import com.sap.cds.services.ServiceException;
+import com.sap.cds.services.cds.ApplicationService;
+import com.sap.cds.services.draft.DraftCancelEventContext;
 import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.On;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
@@ -36,7 +42,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ServiceName({"*"})
+@ServiceName(value = "*", type = ApplicationService.class)
 public class SDMServiceGenericHandler implements EventHandler {
   private final RegisterService attachmentService;
   private final PersistenceService persistenceService;
@@ -64,14 +70,82 @@ public class SDMServiceGenericHandler implements EventHandler {
     this.tokenHandler = tokenHandler;
   }
 
+  @On(event = "changelog")
+  public void changelog(AttachmentLogContext context) throws IOException {
+    CdsModel cdsModel = context.getModel();
+
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+
+    Optional<CdsEntity> attachmentEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+
+    // get the objectId against the Id
+    String id = targetKeys.get("ID").toString();
+
+    CmisDocument cmisDocument =
+        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+
+    if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
+      // open attachment is triggered on non-draft entity
+      attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
+
+      cmisDocument =
+          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    }
+
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    JSONObject jsonObject =
+        sdmService.getChangeLog(
+            cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+
+    jsonObject.put("filename", cmisDocument.getFileName());
+
+    context.setResult(jsonObject);
+  }
+
   @On(event = "copyAttachments")
   public void copyAttachments(EventContext context) throws IOException {
     String upID = context.get("up__ID").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
-    var copyEventInput =
-        new CopyAttachmentInput(upID, context.getTarget().getQualifiedName(), objectIds);
+
+    // Use the full target qualified name as the facet
+    String facet = context.getTarget().getQualifiedName();
+
+    var copyEventInput = new CopyAttachmentInput(upID, facet, objectIds);
+
     attachmentService.copyAttachments(copyEventInput, context.getUserInfo().isSystemUser());
+    context.setCompleted();
+  }
+
+  @On(event = "moveAttachments")
+  public void moveAttachments(AttachmentMoveRequestContext context) throws IOException {
+    String upID = context.get("up__ID").toString();
+    String sourceFolderId = context.get("sourceFolderId").toString();
+    String objectIdsString = context.get("objectIds").toString();
+    List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
+
+    // Get sourceFacet if provided, otherwise null (cleanup won't be performed)
+    String sourceFacet =
+        context.get("sourceFacet") != null ? context.get("sourceFacet").toString() : null;
+
+    // Use the full target qualified name as the targetFacet
+    String targetFacet = context.getTarget().getQualifiedName();
+
+    // Pass String directly - the constructor will automatically wrap it in Optional
+    var moveEventInput =
+        new MoveAttachmentInput(sourceFolderId, upID, targetFacet, objectIds, sourceFacet);
+
+    Map<String, Object> result =
+        attachmentService.moveAttachments(moveEventInput, context.getUserInfo().isSystemUser());
+
+    logger.info("Move operation result: {}", result);
+
+    context.setResult(result);
     context.setCompleted();
   }
 
@@ -87,6 +161,186 @@ public class SDMServiceGenericHandler implements EventHandler {
     editLink(context);
   }
 
+  @Before(event = DraftService.EVENT_DRAFT_CANCEL)
+  public void handleDraftDiscardForLinks(DraftCancelEventContext context) throws IOException {
+    CdsEntity parentDraftEntity = context.getTarget();
+    CqnAnalyzer analyzer = CqnAnalyzer.create(context.getModel());
+    Map<String, Object> parentKeys = analyzer.analyze(context.getCqn()).rootKeys();
+    String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
+
+    Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
+    Map<String, String> compositionPathMapping =
+        parentActiveEntityOpt
+            .map(
+                cdsEntity ->
+                    AttachmentsHandlerUtils.getAttachmentPathMapping(
+                        context.getModel(), cdsEntity, persistenceService))
+            .orElse(new HashMap<>());
+
+    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+      String attachmentCompositionDefinition = entry.getKey();
+      revertLinksForComposition(context, parentKeys, attachmentCompositionDefinition);
+    }
+    revertNestedEntityLinks(context);
+  }
+
+  private void revertNestedEntityLinks(DraftCancelEventContext context) throws IOException {
+
+    CdsEntity parentDraftEntity = context.getTarget();
+    String parentEntityName = parentDraftEntity.getQualifiedName().replace("_drafts", "");
+    Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
+
+    if (parentActiveEntityOpt.isPresent()) {
+      CdsEntity parentActiveEntity = parentActiveEntityOpt.get();
+
+      parentActiveEntity
+          .compositions()
+          .forEach(
+              composition -> {
+                try {
+                  processNestedEntityComposition(context, composition);
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              });
+    }
+  }
+
+  private void processNestedEntityComposition(
+      DraftCancelEventContext context, CdsElement composition) throws IOException {
+
+    CdsAssociationType associationType = (CdsAssociationType) composition.getType();
+    String targetEntityName = associationType.getTarget().getQualifiedName();
+    String draftTargetEntityName = targetEntityName + "_drafts";
+
+    Optional<CdsEntity> nestedDraftEntity = context.getModel().findEntity(draftTargetEntityName);
+
+    if (nestedDraftEntity.isPresent()) {
+      Map<String, String> nestedAttachmentMapping =
+          AttachmentsHandlerUtils.getAttachmentPathMapping(
+              context.getModel(), associationType.getTarget(), persistenceService);
+
+      if (nestedAttachmentMapping.isEmpty()) {
+        return;
+      }
+
+      // Get the actual key field names from the entity instead of hardcoding "ID"
+      List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
+
+      Result nestedRecords =
+          persistenceService.run(
+              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
+
+      for (Row nestedRecord : nestedRecords) {
+        Map<String, Object> nestedEntityKeys = new HashMap<>();
+
+        // Populate the key map with all actual key field names and values
+        for (String keyName : keyElementNames) {
+          nestedEntityKeys.put(keyName, nestedRecord.get(keyName));
+        }
+        nestedEntityKeys.put("IsActiveEntity", false);
+
+        for (Map.Entry<String, String> entry : nestedAttachmentMapping.entrySet()) {
+          String attachmentPath = entry.getKey();
+          revertLinksForComposition(context, nestedEntityKeys, attachmentPath);
+        }
+      }
+    }
+  }
+
+  private void revertLinksForComposition(
+      DraftCancelEventContext context,
+      Map<String, Object> parentKeys,
+      String attachmentCompositionDefinition)
+      throws IOException {
+
+    CdsModel model = context.getModel();
+    String draftEntityName = attachmentCompositionDefinition + "_drafts";
+    CdsEntity draftEntity = model.findEntity(draftEntityName).get();
+    CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
+
+    final String upIdKey = SDMUtils.getUpIdKey(draftEntity);
+    if (upIdKey == null || upIdKey.isEmpty()) {
+      return;
+    }
+    String parentKeyName = upIdKey.replaceFirst("^up__", "");
+    Object parentId = parentKeys.get(parentKeyName);
+
+    CqnSelect selectDraftLinks =
+        Select.from(draftEntity)
+            .where(
+                a ->
+                    a.get(upIdKey)
+                        .eq(parentId)
+                        .and(a.get("mimeType").eq(SDMConstants.MIMETYPE_INTERNET_SHORTCUT))
+                        .and(a.get("IsActiveEntity").eq(false)));
+
+    Result draftLinks = persistenceService.run(selectDraftLinks);
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    Boolean isSystemUser = context.getUserInfo().isSystemUser();
+
+    for (Row draftLinkRow : draftLinks) {
+      Map<String, Object> draftLink = new HashMap<>();
+      draftLink.put("ID", draftLinkRow.get("ID"));
+      draftLink.put("linkUrl", draftLinkRow.get("linkUrl"));
+      draftLink.put("objectId", draftLinkRow.get("objectId"));
+      draftLink.put("fileName", draftLinkRow.get("fileName"));
+      String attachmentId = (String) draftLink.get("ID");
+      String draftLinkUrl = (String) draftLink.get("linkUrl");
+      String objectId = (String) draftLink.get("objectId");
+      String filename = (String) draftLink.get("fileName");
+
+      String originalUrl =
+          getOriginalUrlFromActiveTable(activeEntity, attachmentId, parentId, upIdKey);
+
+      if (originalUrl != null && !originalUrl.equals(draftLinkUrl)) {
+        revertLinkInSDM(objectId, filename, originalUrl, sdmCredentials, isSystemUser);
+      }
+    }
+  }
+
+  private String getOriginalUrlFromActiveTable(
+      CdsEntity activeEntity, String attachmentId, Object parentId, String upIdKey) {
+    CqnSelect selectActiveLink =
+        Select.from(activeEntity)
+            .columns("linkUrl")
+            .where(
+                a ->
+                    a.get("ID")
+                        .eq(attachmentId)
+                        .and(a.get(upIdKey).eq(parentId))
+                        .and(a.get("IsActiveEntity").eq(true))
+                        .and(a.get("mimeType").eq(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)));
+
+    Result activeResult = persistenceService.run(selectActiveLink);
+
+    if (activeResult.rowCount() > 0) {
+      Row activeRow = activeResult.single();
+      String originalUrl =
+          activeRow.get("linkUrl") != null ? activeRow.get("linkUrl").toString() : null;
+      return originalUrl;
+    } else {
+      return null;
+    }
+  }
+
+  private void revertLinkInSDM(
+      String objectId,
+      String filename,
+      String originalUrl,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser)
+      throws IOException {
+
+    CmisDocument cmisDocToRevert = new CmisDocument();
+    cmisDocToRevert.setObjectId(objectId);
+    cmisDocToRevert.setFileName(filename);
+
+    cmisDocToRevert.setUrl(originalUrl);
+    cmisDocToRevert.setRepositoryId(SDMConstants.REPOSITORY_ID);
+    sdmService.editLink(cmisDocToRevert, sdmCredentials, isSystemUser);
+  }
+
   @On(event = "openAttachment")
   public void openAttachment(AttachmentReadContext context) throws Exception {
     CdsModel cdsModel = context.getModel();
@@ -99,6 +353,17 @@ public class SDMServiceGenericHandler implements EventHandler {
     String id = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_DETECTED_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
@@ -106,7 +371,25 @@ public class SDMServiceGenericHandler implements EventHandler {
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
-    if (cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")) {
+
+    if (cmisDocument.getMimeType().equalsIgnoreCase(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)) {
+      // Verify access to the object by calling getObject from SDMService
+      try {
+        SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+        JSONObject objectResponse =
+            sdmService.getObject(
+                cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+
+        if (objectResponse == null) {
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        }
+      } catch (ServiceException e) {
+        if (e.getMessage() != null
+            && e.getMessage().contains("User does not have required scope")) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_OPEN_LINK);
+        }
+        throw e;
+      }
       context.setResult(cmisDocument.getUrl());
     } else {
       context.setResult("None");
@@ -118,7 +401,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     RepoValue repoValue =
         sdmService.checkRepositoryType(repositoryId, eventContext.getUserInfo().getTenant());
     if (repoValue.getVersionEnabled()) {
-      throw new ServiceException(SDMConstants.VERSIONED_REPO_ERROR);
+      throw new ServiceException(SDMUtils.getErrorMessage("VERSIONED_REPO_ERROR"));
     }
   }
 
@@ -130,11 +413,28 @@ public class SDMServiceGenericHandler implements EventHandler {
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
     String upIdKey =
-        attachmentDraftEntity.isPresent() ? getUpIdKey(attachmentDraftEntity.get()) : "up__ID";
+        attachmentDraftEntity.isPresent()
+            ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+            : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
-    String id = upIdKey.replaceFirst("^up__", "");
-    String upID = cqnAnalyzer.analyze(select).rootKeys().get(id).toString();
+
+    // Derive the parent entity name from the target qualified name
+    // Target is like "AdminService.Chapters.attachments", parent is "AdminService.Chapters"
+    String targetQualifiedName = context.getTarget().getQualifiedName();
+    String parentEntityName = null;
+    int lastDotIndex = targetQualifiedName.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+      parentEntityName = targetQualifiedName.substring(0, lastDotIndex);
+    }
+
+    Optional<CdsEntity> parentEntity =
+        parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+
+    if (parentEntity.isEmpty()) {
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
+    }
+
+    String upID = SDMUtils.fetchUPIDFromCQN(select, parentEntity.get());
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -145,7 +445,8 @@ public class SDMServiceGenericHandler implements EventHandler {
     validateLinkName(filenameInRequest, result);
 
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
-    String entityName = context.getTarget().getQualifiedName().split("\\.")[2];
+    String[] parts = context.getTarget().getQualifiedName().split("\\.");
+    String entityName = parts[parts.length - 1];
     String folderName = upID + "__" + entityName;
 
     String folderId = sdmService.getFolderId(result, persistenceService, folderName, isSystemUser);
@@ -153,7 +454,7 @@ public class SDMServiceGenericHandler implements EventHandler {
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFolderId(folderId);
     cmisDocument.setFileName(filenameInRequest);
-    cmisDocument.setMimeType("application/internet-shortcut");
+    cmisDocument.setMimeType(SDMConstants.MIMETYPE_INTERNET_SHORTCUT);
     cmisDocument.setRepositoryId(repositoryId);
     cmisDocument.setUrl(context.get("url").toString());
 
@@ -161,10 +462,10 @@ public class SDMServiceGenericHandler implements EventHandler {
     JSONObject createResult = null;
 
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
+      createResult =
+          documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser, null);
     } catch (Exception e) {
-      throw new ServiceException(
-          SDMConstants.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
@@ -196,26 +497,24 @@ public class SDMServiceGenericHandler implements EventHandler {
       logger.info("Successfully edited link");
     } else {
       if (status.equals("unauthorized")) {
-        throw new ServiceException(SDMConstants.SDM_MISSING_ROLES_EXCEPTION_MSG);
+        throw new ServiceException(SDMUtils.getErrorMessage("SDM_MISSING_ROLES_EXCEPTION"));
       } else {
-        throw new ServiceException("Failed to edit link");
+        throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_EDIT_LINK"));
       }
     }
     context.setCompleted();
   }
 
-  private String getUpIdKey(CdsEntity attachmentDraftEntity) {
-    String upIdKey = "";
-    Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
-    if (upAssociation.isPresent()) {
-      CdsElement association = upAssociation.get();
-      // get association type
-      CdsAssociationType assocType = association.getType();
-      // get the refs of the association
-      List<String> fkElements = assocType.refs().map(ref -> "up__" + ref.path()).toList();
-      upIdKey = fkElements.get(0);
-    }
-    return upIdKey;
+  /**
+   * Retrieves the key element names from a CdsEntity. This method extracts the names of all key
+   * fields defined in the entity, allowing for dynamic key field handling instead of hardcoding
+   * "ID".
+   *
+   * @param entity the CdsEntity to extract key element names from
+   * @return a list of key element names
+   */
+  private List<String> getKeyElementNames(CdsEntity entity) {
+    return entity.elements().filter(CdsElement::isKey).map(CdsElement::getName).toList();
   }
 
   private void checkAttachmentConstraints(
@@ -229,27 +528,25 @@ public class SDMServiceGenericHandler implements EventHandler {
         dbQuery.getAttachmentsForUPIDAndRepository(
             attachmentDraftEntity, persistenceService, upID, upIdKey);
     long rowCount = result.rowCount();
-    String errorMessageAndCount =
+    Long maxCount =
         SDMUtils.getAttachmentCountAndMessage(
             context.getModel().entities().toList(), attachmentEntity);
-    String[] maxCountArr = errorMessageAndCount.split("__");
-    long maxCount = Long.parseLong(maxCountArr[0]);
-    String message = maxCountArr.length > 1 ? maxCountArr[1] : null;
     if (maxCount > 0 && rowCount >= maxCount) {
-      if (message != null && !"null".equalsIgnoreCase(message)) {
-        throw new ServiceException(message);
-      }
-      throw new ServiceException(String.format(SDMConstants.MAX_COUNT_ERROR_MESSAGE, maxCount));
+      throw new ServiceException(
+          String.format(SDMUtils.getErrorMessage("MAX_COUNT_ERROR_MESSAGE"), maxCount.toString()));
     }
   }
 
   private void validateLinkName(String filename, Result result) throws ServiceException {
-    if (SDMUtils.isRestrictedCharactersInName(filename)) {
+    if (filename == null || filename.isBlank()) {
+      throw new ServiceException(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE"));
+    }
+    if (SDMUtils.hasRestrictedCharactersInName(filename)) {
       throw new ServiceException(
-          SDMConstants.linkNameConstraintMessage(Collections.singletonList(filename), "created"));
+          SDMErrorMessages.nameConstraintMessage(Collections.singletonList(filename)));
     }
     if (duplicateCheck(filename, result)) {
-      throw new ServiceException(SDMConstants.getDuplicateFilesError(filename));
+      throw new ServiceException(SDMErrorMessages.getDuplicateFilesError(filename));
     }
   }
 
@@ -275,11 +572,12 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     switch (status) {
       case "duplicate":
-        throw new ServiceException(SDMConstants.getDuplicateFilesError(cmisDocument.getFileName()));
+        throw new ServiceException(
+            SDMErrorMessages.getDuplicateFilesError(cmisDocument.getFileName()));
       case "fail":
         throw new ServiceException(createResult.get("message").toString());
       case "unauthorized":
-        throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_LINK);
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR_LINK"));
       default:
         cmisDocument.setObjectId(createResult.get("objectId").toString());
         cmisDocument.setParentId(upID);
@@ -303,13 +601,17 @@ public class SDMServiceGenericHandler implements EventHandler {
                 + cmisDocument.getFolderId()
                 + ":"
                 + context.getTarget());
+        updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
 
-        var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
-        for (DraftService draftS : draftService) {
-          // Process each draftService object
-          if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
-            draftS.newDraft(insert);
+        try {
+          var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
+          for (DraftService draftS : draftService) {
+            if (context.getTarget().getQualifiedName().contains(draftS.getName())) {
+              draftS.newDraft(insert);
+            }
           }
+        } catch (Exception e) {
+          logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
     }

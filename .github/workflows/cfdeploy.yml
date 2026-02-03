@@ -20,6 +20,10 @@ on:
       repository_id:
         description: 'Specify the Repository ID (leave blank if deploying to developcap)'
         required: false
+      cds_services_version:
+        description: 'Optional override for <cds.services.version> (e.g. 4.3.1). Leave blank to use existing value.'
+        required: false
+        default: ''
 
 permissions:
   pull-requests: read
@@ -32,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.deploy_branch }}
 
@@ -128,7 +132,7 @@ jobs:
 
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           ref: develop
 
@@ -149,6 +153,24 @@ jobs:
             echo "❌ Branch 'develop_deploy' not found. Please verify the branch name."
             exit 1
           fi
+
+      - name: Override cds.services.version (runtime only)
+        if: ${{ github.event.inputs.cds_services_version != '' }}
+        env:
+          TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
+        run: |
+          echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
+          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          if [ -z "$FILES" ]; then
+            echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
+          fi
+          echo "Updating files:"; echo "$FILES" | sed 's/^/  - /'
+          for f in $FILES; do
+            sed -i "s|<cds.services.version>[^<]*</cds.services.version>|<cds.services.version>${TARGET_CDS_SERVICES_VERSION}</cds.services.version>|" "$f"
+          done
+          echo "Post-update values:"; grep -R "<cds.services.version>" $FILES || true
+          echo "(Not committing these changes)"
+        shell: bash
 
       - name: Deleting the sdm directory for fresh build ⚙️
         run: |
