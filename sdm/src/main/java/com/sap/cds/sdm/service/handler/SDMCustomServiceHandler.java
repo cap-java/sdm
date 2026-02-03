@@ -1395,7 +1395,7 @@ public class SDMCustomServiceHandler {
     try {
       // Handle DateTime fields - convert Long timestamp to Instant
       if ("cds.DateTime".equals(fieldType)) {
-        Long timestamp = Long.parseLong(value);
+        long timestamp = Long.parseLong(value);
         Object converted = Instant.ofEpochMilli(timestamp);
         logger.info(
             "Converted String timestamp '{}' to Instant {} for DateTime field '{}'",
@@ -1407,7 +1407,7 @@ public class SDMCustomServiceHandler {
 
       // Handle Integer fields
       if ("cds.Integer".equals(fieldType)) {
-        Integer convertedInt = Integer.parseInt(value);
+        int convertedInt = Integer.parseInt(value);
         logger.info(
             "Converted String '{}' to Integer {} for field '{}'",
             value,
@@ -1418,7 +1418,7 @@ public class SDMCustomServiceHandler {
 
       // Handle Boolean fields
       if ("cds.Boolean".equals(fieldType)) {
-        Boolean convertedBool = Boolean.parseBoolean(value);
+        boolean convertedBool = Boolean.parseBoolean(value);
         logger.info(
             "Converted String '{}' to Boolean {} for field '{}'",
             value,
