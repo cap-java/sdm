@@ -161,7 +161,9 @@ public class SDMCustomServiceHandler {
             .customPropertyValues(null)
             .build();
 
-    createDraftEntries(draftRequest, customPropertyDefinitions);
+    // Pass the entity for type conversion
+    CdsEntity targetEntity = entity.isPresent() ? entity.get() : null;
+    createDraftEntries(draftRequest, customPropertyDefinitions, targetEntity);
 
     context.setCompleted();
   }
@@ -1297,6 +1299,17 @@ public class SDMCustomServiceHandler {
       return;
     }
 
+    // Check if this is an association field (e.g., customProperty1)
+    // For associations, we should only populate the foreign key field (e.g., customProperty1_code)
+    // Skip the association field itself as CDS will resolve it from the _code field
+    CdsElement element = targetEntity.getElement(dbPropertyName);
+    if (element != null && element.getType().isAssociation()) {
+      logger.info(
+          "Skipping association field '{}' - association will be resolved from corresponding _code field",
+          dbPropertyName);
+      return;
+    }
+
     Object convertedValue = convertValueIfNeeded(value, dbPropertyName, targetEntity);
     filteredProperties.put(dbPropertyName, convertedValue);
     logger.info("Added to DB map: '{}' = '{}'", dbPropertyName, convertedValue);
@@ -1312,28 +1325,36 @@ public class SDMCustomServiceHandler {
    * @return converted value or original value if no conversion needed
    */
   private Object convertValueIfNeeded(Object value, String dbPropertyName, CdsEntity targetEntity) {
-    if (!(value instanceof Long)) {
+    // Handle Long values - convert to Instant for DateTime fields
+    if (value instanceof Long) {
+      CdsElement element = targetEntity.getElement(dbPropertyName);
+      if (isDateTimeField(element)) {
+        Object converted = Instant.ofEpochMilli((Long) value);
+        logger.info(
+            "Converted Long timestamp {} to Instant {} for DateTime field '{}'",
+            value,
+            converted,
+            dbPropertyName);
+        return converted;
+      }
+
+      logger.info(
+          "Keeping Long value {} as-is for non-DateTime field '{}' (type: {})",
+          value,
+          dbPropertyName,
+          element != null && element.getType() != null
+              ? element.getType().getQualifiedName()
+              : "unknown");
       return value;
     }
 
-    CdsElement element = targetEntity.getElement(dbPropertyName);
-    if (isDateTimeField(element)) {
-      Object converted = Instant.ofEpochMilli((Long) value);
-      logger.info(
-          "Converted Long timestamp {} to Instant {} for DateTime field '{}'",
-          value,
-          converted,
-          dbPropertyName);
-      return converted;
-    }
-
+    // For all other types (String, Integer, Boolean, etc.), return as-is
+    // This ensures codelist/dropdown String values are properly handled
     logger.info(
-        "Keeping Long value {} as-is for non-DateTime field '{}' (type: {})",
+        "Keeping value {} (type: {}) as-is for field '{}'",
         value,
-        dbPropertyName,
-        element != null && element.getType() != null
-            ? element.getType().getQualifiedName()
-            : "unknown");
+        value != null ? value.getClass().getSimpleName() : "null",
+        dbPropertyName);
     return value;
   }
 
@@ -1347,6 +1368,81 @@ public class SDMCustomServiceHandler {
     return element != null
         && element.getType() != null
         && "cds.DateTime".equals(element.getType().getQualifiedName());
+  }
+
+  /**
+   * Converts custom property value from String to appropriate type based on CDS field definition.
+   * Used for copy operations where values come as String from SDM response.
+   *
+   * @param value the String value from SDM
+   * @param dbPropertyName the DB field name
+   * @param targetEntity the target entity for type checking
+   * @return converted value or original value if no conversion needed
+   */
+  private Object convertCustomPropertyValue(
+      String value, String dbPropertyName, CdsEntity targetEntity) {
+    if (value == null || value.isEmpty() || targetEntity == null) {
+      return value;
+    }
+
+    CdsElement element = targetEntity.getElement(dbPropertyName);
+    if (element == null || element.getType() == null) {
+      return value;
+    }
+
+    String fieldType = element.getType().getQualifiedName();
+
+    try {
+      // Handle DateTime fields - convert Long timestamp to Instant
+      if ("cds.DateTime".equals(fieldType)) {
+        long timestamp = Long.parseLong(value);
+        Object converted = Instant.ofEpochMilli(timestamp);
+        logger.info(
+            "Converted String timestamp '{}' to Instant {} for DateTime field '{}'",
+            value,
+            converted,
+            dbPropertyName);
+        return converted;
+      }
+
+      // Handle Integer fields
+      if ("cds.Integer".equals(fieldType)) {
+        int convertedInt = Integer.parseInt(value);
+        logger.info(
+            "Converted String '{}' to Integer {} for field '{}'",
+            value,
+            convertedInt,
+            dbPropertyName);
+        return convertedInt;
+      }
+
+      // Handle Boolean fields
+      if ("cds.Boolean".equals(fieldType)) {
+        boolean convertedBool = Boolean.parseBoolean(value);
+        logger.info(
+            "Converted String '{}' to Boolean {} for field '{}'",
+            value,
+            convertedBool,
+            dbPropertyName);
+        return convertedBool;
+      }
+
+    } catch (NumberFormatException e) {
+      logger.warn(
+          "Failed to convert value '{}' for field '{}' of type '{}', keeping as String: {}",
+          value,
+          dbPropertyName,
+          fieldType,
+          e.getMessage());
+    }
+
+    // For String fields (including codelist/dropdown) and other types, return as-is
+    logger.info(
+        "Keeping String value '{}' as-is for field '{}' (type: {})",
+        value,
+        dbPropertyName,
+        fieldType);
+    return value;
   }
 
   // Rollback a single attachment to source folder
@@ -1521,7 +1617,9 @@ public class SDMCustomServiceHandler {
    * copy operations where custom properties come from the SDM copyAttachment response.
    */
   private void createDraftEntries(
-      CreateDraftEntriesRequest request, Map<String, String> customPropertyDefinitions) {
+      CreateDraftEntriesRequest request,
+      Map<String, String> customPropertyDefinitions,
+      CdsEntity targetEntity) {
 
     for (int i = 0; i < request.getAttachmentsMetadata().size(); i++) {
       Map<String, String> attachmentMetadata = request.getAttachmentsMetadata().get(i);
@@ -1565,7 +1663,9 @@ public class SDMCustomServiceHandler {
 
           if (attachmentMetadata.containsKey(sdmPropertyName)) {
             String value = attachmentMetadata.get(sdmPropertyName);
-            updatedFields.put(columnName, value);
+            // Convert value based on CDS field type
+            Object convertedValue = convertCustomPropertyValue(value, columnName, targetEntity);
+            updatedFields.put(columnName, convertedValue);
           }
         }
       }
