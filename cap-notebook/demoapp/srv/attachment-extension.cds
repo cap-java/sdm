@@ -50,7 +50,7 @@ annotate Books.attachments with {
 
 
 annotate Books.references with {
-  content @Validation.Maximum : '100MB';
+  content @Validation.Maximum : '30MB';
   status @(
     Common.Text: {
       $value: ![statusText.text],
