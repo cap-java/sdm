@@ -114,67 +114,77 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   @HandlerOrder(HandlerOrder.EARLY + 500)
   public void processBefore(CdsReadEventContext context) throws IOException {
     String repositoryId = SDMConstants.REPOSITORY_ID;
+    if (repositoryId == null) {
+      return;
+    }
+    setErrorMessagesInCache(context);
     if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
       try {
         // update the uploadStatus of all blank attachments with success this is for existing
         // attachments
-        RepoValue repoValue =
-            sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
-        Optional<CdsEntity> attachmentDraftEntity =
-            context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-        String upIdKey = "", upID = "";
-        if (attachmentDraftEntity.isPresent()) {
-          upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-          CqnSelect select = (CqnSelect) context.get("cqn");
-          upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+        RepoValue repoValue = checkRepositoryTypeWithFallback(repositoryId, context);
 
-          if (!repoValue.getIsAsyncVirusScanEnabled()) {
+        // Only process virus scan logic if repository info is available
+        if (repoValue != null) {
+          Optional<CdsEntity> attachmentDraftEntity =
+              context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+          String upIdKey = "", upID = "";
+          if (attachmentDraftEntity.isPresent()) {
+            upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
+            CqnSelect select = (CqnSelect) context.get("cqn");
+            upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
 
-            dbQuery.updateInProgressUploadStatusToSuccess(
-                attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+            if (!repoValue.getIsAsyncVirusScanEnabled()) {
+
+              dbQuery.updateInProgressUploadStatusToSuccess(
+                  attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
+            }
+            if (repoValue.getIsAsyncVirusScanEnabled()) {
+              processVirusScanInProgressAttachments(context, upID, upIdKey);
+            }
           }
-          if (repoValue.getIsAsyncVirusScanEnabled()) {
-            processVirusScanInProgressAttachments(context, upID, upIdKey);
-          }
-        }
 
-        // Get attachment associations to handle deep reads with expand
-        CdsModel cdsModel = context.getModel();
-        List<String> fieldNames =
-            getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
+          // Get attachment associations to handle deep reads with expand
+          CdsModel cdsModel = context.getModel();
+          List<String> fieldNames =
+              getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
 
-        // Create a combined modifier that handles both expand scenarios and repositoryId filter
-        final SDMBeforeReadItemsModifier itemsModifier = new SDMBeforeReadItemsModifier(fieldNames);
-        final Predicate repositoryFilter =
-            CQL.or(CQL.get("repositoryId").eq(repositoryId), CQL.get("repositoryId").isNull());
+          // Create a combined modifier that handles both expand scenarios and repositoryId filter
+          final SDMBeforeReadItemsModifier itemsModifier =
+              new SDMBeforeReadItemsModifier(fieldNames);
+          final Predicate repositoryFilter =
+              CQL.or(CQL.get("repositoryId").eq(repositoryId), CQL.get("repositoryId").isNull());
 
-        CqnSelect modifiedCqn =
-            CQL.copy(
-                context.getCqn(),
-                new Modifier() {
-                  @SuppressWarnings({"rawtypes", "unchecked"})
-                  @Override
-                  public List items(List items) {
-                    // Always handle items for expand scenarios
-                    return itemsModifier.items(items);
-                  }
-
-                  @Override
-                  public Predicate where(Predicate where) {
-                    // Always apply repositoryId filter for all reads
-                    if (where == null) {
-                      return repositoryFilter;
+          CqnSelect modifiedCqn =
+              CQL.copy(
+                  context.getCqn(),
+                  new Modifier() {
+                    @SuppressWarnings({"rawtypes", "unchecked"})
+                    @Override
+                    public List items(List items) {
+                      // Always handle items for expand scenarios
+                      return itemsModifier.items(items);
                     }
-                    return CQL.and(where, repositoryFilter);
-                  }
-                });
-        setErrorMessagesInCache(context);
-        context.setCqn(modifiedCqn);
+
+                    @Override
+                    public Predicate where(Predicate where) {
+                      // Always apply repositoryId filter for all reads
+                      if (where == null) {
+                        return repositoryFilter;
+                      }
+                      return CQL.and(where, repositoryFilter);
+                    }
+                  });
+          context.setCqn(modifiedCqn);
+        } else {
+          context.setCqn(context.getCqn());
+        }
       } catch (Exception e) {
         logger.error("Error in SDMReadAttachmentsHandler.processBefore: {}", e.getMessage(), e);
         // Re-throw to maintain error handling behavior
         throw e;
       }
+
     } else {
       context.setCqn(context.getCqn());
     }
@@ -338,6 +348,26 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           "Unexpected error processing attachment with objectId: {}, error: {}",
           attachment.getObjectId(),
           e.getMessage());
+    }
+  }
+
+  /**
+   * Checks the repository type with fallback handling. Returns null if the check fails, allowing
+   * the caller to proceed with limited functionality.
+   *
+   * @param repositoryId the repository ID to check
+   * @param context the CDS read event context containing user information
+   * @return the RepoValue if successful, null otherwise
+   */
+  private RepoValue checkRepositoryTypeWithFallback(
+      String repositoryId, CdsReadEventContext context) {
+    try {
+      return sdmService.checkRepositoryType(repositoryId, context.getUserInfo().getTenant());
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to check repository type, proceeding without repository info: {}",
+          e.getMessage());
+      return null;
     }
   }
 }

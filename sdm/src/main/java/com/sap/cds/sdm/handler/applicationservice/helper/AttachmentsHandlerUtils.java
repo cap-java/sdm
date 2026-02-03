@@ -201,13 +201,13 @@ public class AttachmentsHandlerUtils {
       String targetEntity, Map<String, Object> entity, String attachmentCompositionName) {
     String[] targetEntityPath = targetEntity.split("\\.");
     targetEntity = targetEntityPath[targetEntityPath.length - 1];
-    entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity.toLowerCase());
+    entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity);
     String[] compositionParts = attachmentCompositionName.split("\\.");
     String attachmentKeyFromComposition =
         compositionParts[compositionParts.length - 1]; // Last part (e.g., "attachments")
     String parentKeyFromComposition =
         compositionParts.length >= 2
-            ? compositionParts[compositionParts.length - 2].toLowerCase()
+            ? compositionParts[compositionParts.length - 2]
             : null; // Second last part (e.g., "chapters")
 
     // Find all attachment arrays in the nested entity structure
@@ -445,12 +445,11 @@ public class AttachmentsHandlerUtils {
 
     String[] targetEntityPath = targetEntity.split("\\.");
     String entityName = targetEntityPath[targetEntityPath.length - 1];
-    Map<String, Object> wrappedEntity = wrapEntityWithParent(entity, entityName.toLowerCase());
+    Map<String, Object> wrappedEntity = wrapEntityWithParent(entity, entityName);
 
     for (Map.Entry<String, String> compositionEntry : compositionPathMapping.entrySet()) {
       String compositionPath = compositionEntry.getValue();
-      String parentTitle =
-          findParentTitle(wrappedEntity, compositionPath, entityName.toLowerCase());
+      String parentTitle = findParentTitle(wrappedEntity, compositionPath, entityName);
       if (parentTitle != null) {
         parentTitles.put(compositionPath, parentTitle);
       }
