@@ -1071,6 +1071,19 @@ public class SDMCustomServiceHandler {
       String movedObjectId = succinctProperties.optString("cmis:objectId");
       String objectTypeId = succinctProperties.optString("cmis:objectTypeId");
 
+      // Extract managed fields from SDM response to retain original timestamps and users
+      String createdBy = succinctProperties.optString("cmis:createdBy", null);
+      Instant creationDate = null;
+      if (succinctProperties.has("cmis:creationDate")) {
+        creationDate = Instant.ofEpochMilli(succinctProperties.getLong("cmis:creationDate"));
+      }
+      String lastModifiedBy = succinctProperties.optString("cmis:lastModifiedBy", null);
+      Instant lastModificationDate = null;
+      if (succinctProperties.has("cmis:lastModificationDate")) {
+        lastModificationDate =
+            Instant.ofEpochMilli(succinctProperties.getLong("cmis:lastModificationDate"));
+      }
+
       // Determine attachment type based on cmis:objectTypeId from SDM response
       // Link attachments: "sap:link" -> "sap-icon://internet-browser"
       // Document attachments: "cmis:document" -> "sap-icon://document"
@@ -1161,7 +1174,11 @@ public class SDMCustomServiceHandler {
                 moveContext.getProcessingResults().getSuccessfulObjectIds(),
                 moveContext.getProcessingResults().getMovedAttachmentsMetadata(),
                 moveContext.getProcessingResults().getPopulatedDocuments(),
-                cmisDocument);
+                cmisDocument,
+                createdBy,
+                creationDate,
+                lastModifiedBy,
+                lastModificationDate);
         processValidatedAttachment(validatedData);
       }
 
@@ -1229,7 +1246,13 @@ public class SDMCustomServiceHandler {
             data.getFileName(),
             data.getMimeType(),
             data.getDescription(),
-            data.getMovedObjectId()));
+            data.getMovedObjectId(),
+            data.getCreatedBy() != null ? data.getCreatedBy() : "",
+            data.getCreationDate() != null ? data.getCreationDate().toString() : "",
+            data.getLastModifiedBy() != null ? data.getLastModifiedBy() : "",
+            data.getLastModificationDate() != null
+                ? data.getLastModificationDate().toString()
+                : ""));
     data.addPopulatedDocument(populatedDocument);
   }
 
@@ -1443,6 +1466,11 @@ public class SDMCustomServiceHandler {
       String mimeType = attachmentMetadata.get(1);
       String description = attachmentMetadata.get(2);
       String newObjectId = attachmentMetadata.get(3);
+      String createdBy = attachmentMetadata.size() > 4 ? attachmentMetadata.get(4) : null;
+      String creationDate = attachmentMetadata.size() > 5 ? attachmentMetadata.get(5) : null;
+      String lastModifiedBy = attachmentMetadata.size() > 6 ? attachmentMetadata.get(6) : null;
+      String lastModificationDate =
+          attachmentMetadata.size() > 7 ? attachmentMetadata.get(7) : null;
 
       updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", data.getRepositoryId());
@@ -1454,6 +1482,7 @@ public class SDMCustomServiceHandler {
       updatedFields.put("note", description);
       updatedFields.put("HasDraftEntity", false);
       updatedFields.put("HasActiveEntity", false);
+      updatedFields.put("IsActiveEntity", true);
       updatedFields.put("linkUrl", cmisDocument.getUrl());
       updatedFields.put(
           "contentId",
@@ -1467,6 +1496,20 @@ public class SDMCustomServiceHandler {
               + ":"
               + mimeType);
       updatedFields.put(data.getUpIdKey(), data.getUpID());
+
+      // Add managed fields if available (parse Instant from string)
+      if (createdBy != null && !"".equals(createdBy)) {
+        updatedFields.put("createdBy", createdBy);
+      }
+      if (creationDate != null && !"".equals(creationDate)) {
+        updatedFields.put("createdAt", java.time.Instant.parse(creationDate));
+      }
+      if (lastModifiedBy != null && !"".equals(lastModifiedBy)) {
+        updatedFields.put("modifiedBy", lastModifiedBy);
+      }
+      if (lastModificationDate != null && !"".equals(lastModificationDate)) {
+        updatedFields.put("modifiedAt", java.time.Instant.parse(lastModificationDate));
+      }
 
       // Include secondary properties from moved attachment
       // Properties are already filtered and validated in processValidatedAttachment()
@@ -1499,29 +1542,19 @@ public class SDMCustomServiceHandler {
                           .to(data.getCompositionName()))
               .entry(updatedFields);
 
-      DraftService matchingService =
-          draftService.stream()
-              .filter(ds -> data.getParentEntity().contains(ds.getName()))
-              .findFirst()
-              .orElse(null);
-
-      if (matchingService != null) {
-        // Wrap DB insert with retry logic to handle transient DB failures
-        try {
-          Flowable.fromCallable(
-                  () -> {
-                    matchingService.newDraft(insert);
-                    return true;
-                  })
-              .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
-              .blockingFirst();
-        } catch (Exception e) {
-          throw new ServiceException(
-              "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
-        }
-      } else {
+      // Insert directly into active entity (not draft) using persistenceService
+      // Wrap DB insert with retry logic to handle transient DB failures
+      try {
+        Flowable.fromCallable(
+                () -> {
+                  persistenceService.run(insert);
+                  return true;
+                })
+            .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
+            .blockingFirst();
+      } catch (Exception e) {
         throw new ServiceException(
-            "No suitable service found for entity: " + data.getParentEntity());
+            "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
       }
     }
   }
@@ -1590,29 +1623,19 @@ public class SDMCustomServiceHandler {
                           .to(request.getCompositionName()))
               .entry(updatedFields);
 
-      DraftService matchingService =
-          draftService.stream()
-              .filter(ds -> request.getParentEntity().contains(ds.getName()))
-              .findFirst()
-              .orElse(null);
-
-      if (matchingService != null) {
-        // Wrap DB insert with retry logic to handle transient DB failures
-        try {
-          Flowable.fromCallable(
-                  () -> {
-                    matchingService.newDraft(insert);
-                    return true;
-                  })
-              .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
-              .blockingFirst();
-        } catch (Exception e) {
-          throw new ServiceException(
-              "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
-        }
-      } else {
+      // Insert directly into active entity (not draft) using persistenceService
+      // Wrap DB insert with retry logic to handle transient DB failures
+      try {
+        Flowable.fromCallable(
+                () -> {
+                  persistenceService.run(insert);
+                  return true;
+                })
+            .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
+            .blockingFirst();
+      } catch (Exception e) {
         throw new ServiceException(
-            "No suitable service found for entity: " + request.getParentEntity());
+            "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
       }
     }
   }

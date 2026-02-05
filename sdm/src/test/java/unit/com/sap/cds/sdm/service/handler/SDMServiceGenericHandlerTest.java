@@ -3191,6 +3191,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("source-folder-id");
     when(mockContext.get("objectIds")).thenReturn("obj1, obj2, obj3");
     when(mockContext.get("sourceFacet")).thenReturn("MyService.SourceEntity.attachments");
+    when(mockContext.get("targetFacet")).thenReturn("MyService.TargetEntity.attachments");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.TargetEntity.attachments");
 
@@ -3230,6 +3231,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder-123");
     when(mockContext.get("objectIds")).thenReturn("objA, objB");
     when(mockContext.get("sourceFacet")).thenReturn(null); // No source facet
+    when(mockContext.get("targetFacet")).thenReturn("MyService.NewEntity.attachments");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.NewEntity.attachments");
 
@@ -3268,6 +3270,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("src-folder");
     when(mockContext.get("objectIds")).thenReturn("single-obj-id");
     when(mockContext.get("sourceFacet")).thenReturn("Source.Entity");
+    when(mockContext.get("targetFacet")).thenReturn("Target.Entity");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target.Entity");
 
@@ -3302,6 +3305,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder-id");
     when(mockContext.get("objectIds")).thenReturn("  obj1  ,  obj2  ,obj3,  obj4  ");
     when(mockContext.get("sourceFacet")).thenReturn(null);
+    when(mockContext.get("targetFacet")).thenReturn("Entity.attachments");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Entity.attachments");
 
@@ -3332,6 +3336,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1");
     when(mockContext.get("sourceFacet")).thenReturn("Source");
+    when(mockContext.get("targetFacet")).thenReturn("Target");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3358,6 +3363,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1");
     when(mockContext.get("sourceFacet")).thenReturn(null);
+    when(mockContext.get("targetFacet")).thenReturn("Target");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3384,6 +3390,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1, obj2");
     when(mockContext.get("sourceFacet")).thenReturn("Source");
+    when(mockContext.get("targetFacet")).thenReturn("Target");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3416,6 +3423,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1");
     when(mockContext.get("sourceFacet")).thenReturn(null);
+    when(mockContext.get("targetFacet")).thenReturn("Target");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3443,6 +3451,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1");
     when(mockContext.get("sourceFacet")).thenReturn(null);
+    when(mockContext.get("targetFacet")).thenReturn("Target");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3467,6 +3476,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockContext.get("sourceFolderId")).thenReturn("folder");
     when(mockContext.get("objectIds")).thenReturn("obj1");
     when(mockContext.get("sourceFacet")).thenReturn(null);
+    when(mockContext.get("targetFacet")).thenReturn("com.example.MyService.MyEntity.attachments");
     when(mockContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName())
         .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name
