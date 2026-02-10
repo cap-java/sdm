@@ -66,6 +66,10 @@ class IntegrationTest_SingleFacet {
   private static String editLinkEntity;
   private static List<String> sourceObjectIds = new ArrayList<>();
   private static List<String> targetAttachmentIds = new ArrayList<>();
+  private static String moveSourceEntity;
+  private static String moveTargetEntity;
+  private static List<String> moveObjectIds = new ArrayList<>();
+  private static String moveSourceFolderId;
 
   private static IntegrationTestUtils integrationTestUtils;
 
@@ -190,6 +194,91 @@ class IntegrationTest_SingleFacet {
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
+  }
+
+  /**
+   * Helper method to wait for attachment upload completion.
+   *
+   * @param entityId The ID of the entity containing the attachment
+   * @param attachmentId The ID of the attachment to check
+   * @param timeoutSeconds Maximum time to wait in seconds
+   * @return true if upload completed successfully, false if failed or timed out
+   */
+  private boolean waitForUploadCompletion(
+      String entityId, String attachmentId, int timeoutSeconds) {
+    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
+    for (int i = 0; i < maxIterations; i++) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadataDraft(appUrl, entityName, facetName, entityId, attachmentId);
+        String uploadStatus = (String) metadata.get("uploadStatus");
+
+        if ("Success".equals(uploadStatus)) {
+          return true;
+        } else if ("Failed".equals(uploadStatus)) {
+          System.err.println("Upload failed for attachment: " + attachmentId);
+          return false;
+        }
+
+        // Still uploading, wait before checking again
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        System.err.println(
+            "Error checking upload status for attachment " + attachmentId + ": " + e.getMessage());
+        return false;
+      }
+    }
+
+    System.err.println("Upload timed out for attachment: " + attachmentId);
+    return false;
+  }
+
+  /**
+   * Helper method to wait for all attachments in an entity to complete upload.
+   *
+   * @param entityId The ID of the entity containing the attachments
+   * @param timeoutSeconds Maximum time to wait in seconds
+   * @return true if all uploads completed successfully, false if any failed or timed out
+   */
+  private boolean waitForAllUploadsCompletion(String entityId, int timeoutSeconds) {
+    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
+    for (int i = 0; i < maxIterations; i++) {
+      try {
+        List<Map<String, Object>> attachmentsMetadata =
+            api.fetchEntityMetadataDraft(appUrl, entityName, facetName, entityId);
+
+        boolean allComplete = true;
+        boolean anyFailed = false;
+
+        for (Map<String, Object> metadata : attachmentsMetadata) {
+          String uploadStatus = (String) metadata.get("uploadStatus");
+          if (uploadStatus == null || "InProgress".equals(uploadStatus)) {
+            allComplete = false;
+          } else if ("Failed".equals(uploadStatus)) {
+            anyFailed = true;
+            System.err.println("Upload failed for attachment: " + metadata.get("ID"));
+          }
+        }
+
+        if (anyFailed) {
+          return false;
+        }
+
+        if (allComplete) {
+          return true;
+        }
+
+        // Still uploading, wait before checking again
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        System.err.println(
+            "Error checking upload status for entity " + entityId + ": " + e.getMessage());
+        return false;
+      }
+    }
+
+    System.err.println("Upload timed out for entity: " + entityId);
+    return false;
   }
 
   @Test
@@ -2341,6 +2430,10 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
+          // Wait for all uploads to complete before saving
+          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
+            fail("Upload did not complete in time after copying attachments");
+          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
@@ -2516,6 +2609,11 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy attachment to target entity: " + copyResponse);
     }
 
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
+      fail("Upload did not complete in time after copying attachment");
+    }
+
     // Save target entity
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
@@ -2687,6 +2785,11 @@ class IntegrationTest_SingleFacet {
 
     if (!copyResponse.equals("Attachments copied successfully")) {
       fail("Could not copy attachment to target entity: " + copyResponse);
+    }
+
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
+      fail("Upload did not complete in time after copying attachment");
     }
 
     // Save target entity
@@ -2915,6 +3018,11 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy attachment to target entity: " + copyResponse);
     }
 
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
+      fail("Upload did not complete in time after copying attachment");
+    }
+
     // Save target entity
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
@@ -2995,6 +3103,8 @@ class IntegrationTest_SingleFacet {
       fail(
           "Could not verify that notes field and all secondary properties were copied from source to target attachment");
     }
+    api.deleteEntity(appUrl, entityName, copyCustomSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyCustomTargetEntity);
   }
 
   @Test
@@ -3063,6 +3173,10 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
+          // Wait for all uploads to complete before saving
+          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
+            fail("Upload did not complete in time after copying attachments");
+          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
@@ -3748,6 +3862,7 @@ class IntegrationTest_SingleFacet {
     if (!testStatus) {
       fail("Link got edited without SDM roles");
     }
+    api.deleteEntity(appUrl, entityName, editLinkEntity);
   }
 
   @Test
@@ -3788,6 +3903,11 @@ class IntegrationTest_SingleFacet {
         api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, sourceObjectIds);
     if (!copyResponse.equals("Attachments copied successfully")) {
       fail("Could not copy link: " + copyResponse);
+    }
+
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(copyLinkTargetEntity, 60)) {
+      fail("Upload did not complete in time after copying link");
     }
 
     String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
@@ -3910,6 +4030,11 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy link from new source entity to existing target entity: " + copyResponse);
     }
 
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(copyLinkTargetEntity, 60)) {
+      fail("Upload did not complete in time after copying link");
+    }
+
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
 
@@ -3990,6 +4115,7 @@ class IntegrationTest_SingleFacet {
       System.out.println("Caught expected error while copying invalid link: " + e.getMessage());
     }
 
+    // No need to wait for upload completion as copy failed, but ensure clean state
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
     if (!saveTargetResponse.equals("Saved")) {
@@ -4138,6 +4264,10 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
+          // Wait for all uploads to complete before saving
+          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
+            fail("Upload did not complete in time after copying attachments");
+          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
@@ -4174,6 +4304,8 @@ class IntegrationTest_SingleFacet {
     } else {
       fail("Could not create entities");
     }
+    api.deleteEntityDraft(appUrl, entityName, copyAttachmentSourceEntity);
+    api.deleteEntity(appUrl, entityName, copyAttachmentTargetEntity);
   }
 
   @Test
@@ -4576,4 +4708,1996 @@ class IntegrationTest_SingleFacet {
     // Clean up the new entity
     api.deleteEntity(appUrl, entityName, newEntityID);
   }
+
+  @Test
+  @Order(65)
+  void testMoveAttachmentsWithSourceFacet() throws IOException {
+    System.out.println(
+        "Test (65): Move attachments from Source Entity to Target Entity with sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        } else {
+          fail("Attachment metadata does not contain objectId");
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Move attachments from source to target with sourceFacet
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    api.moveAttachment(
+        appUrl,
+        entityName,
+        facetName,
+        moveTargetEntity,
+        moveSourceFolderId,
+        moveObjectIds,
+        sourceFacet);
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // All attachments moved to target entity in SDM & UI
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(
+        sourceAttachmentIds.size(),
+        targetMetadataAfterMove.size(),
+        "Target entity should have all attachments after move");
+
+    // Verify attachments can be read from target entity
+    for (Map<String, Object> metadata : targetMetadataAfterMove) {
+      String targetAttachmentId = (String) metadata.get("ID");
+      String readResponse =
+          api.readAttachment(appUrl, entityName, facetName, moveTargetEntity, targetAttachmentId);
+      if (!readResponse.equals("OK")) {
+        fail("Could not read moved attachment from target entity");
+      }
+    }
+
+    // All attachments removed from source entity in SDM & UI
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        0, sourceMetadataAfterMove.size(), "Source entity should have 0 attachments after move");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(66)
+  public void testMoveAttachmentsToEntityWithDuplicateWithSourceFacet() throws Exception {
+    System.out.println(
+        "Test (66): Move attachments to entity with duplicate attachment with sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (Exception e) {
+        fail("Could not fetch metadata for attachment: " + attachmentId);
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch all objectIds from source entity");
+    }
+
+    // Create target entity and add attachment
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    Map<String, Object> targetPostData = new HashMap<>();
+    targetPostData.put("up__ID", moveTargetEntity);
+    targetPostData.put("mimeType", "application/pdf");
+    targetPostData.put("createdAt", new Date().toString());
+    targetPostData.put("createdBy", "test@test.com");
+    targetPostData.put("modifiedBy", "test@test.com");
+
+    File duplicateFile = new File(classLoader.getResource("sample.pdf").getFile());
+    List<String> targetCreateResponse =
+        api.createAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            srvpath,
+            targetPostData,
+            duplicateFile);
+
+    if (!targetCreateResponse.get(0).equals("Attachment created")) {
+      fail("Could not create attachment on target entity");
+    }
+
+    // Save target entity to persist the attachment
+    String saveTargetBeforeMoveResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetBeforeMoveResponse.equals("Saved")) {
+      fail("Could not save target entity before move: " + saveTargetBeforeMoveResponse);
+    }
+
+    // Fetch target metadata before move (target entity is now saved with 1 attachment)
+    List<Map<String, Object>> targetMetadataBeforeMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    int targetCountBeforeMove = targetMetadataBeforeMove.size();
+
+    // Edit target entity to put it back in draft mode for move operation
+    String editTargetResponse = api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!editTargetResponse.equals("Entity in draft mode")) {
+      fail("Could not edit target entity for move operation");
+    }
+
+    // Move attachments from source to target with sourceFacet
+    api.moveAttachment(
+        appUrl,
+        entityName,
+        facetName,
+        moveTargetEntity,
+        moveSourceFolderId,
+        moveObjectIds,
+        "AdminService.Books.attachments");
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveMoveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveMoveResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveMoveResponse);
+    }
+
+    // Verify target has duplicate skipped, other attachments moved
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+
+    // Expected: original attachments + non-duplicate moved attachments
+    int expectedTargetCount = targetCountBeforeMove + (sourceAttachmentIds.size() - 1);
+    assertEquals(
+        expectedTargetCount,
+        targetMetadataAfterMove.size(),
+        "Target should have duplicate skipped, other attachments moved");
+
+    // Verify source entity has only the duplicate attachment remaining
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    // Calculate expected source count: number of duplicates that couldn't be moved
+    int expectedSourceCount =
+        sourceAttachmentIds.size() - (targetMetadataAfterMove.size() - targetCountBeforeMove);
+    assertEquals(
+        expectedSourceCount,
+        sourceMetadataAfterMove.size(),
+        "Source should have duplicate attachment remaining");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(67)
+  public void testMoveAttachmentsWithNotesAndSecondaryProperties() throws Exception {
+    System.out.println(
+        "Test (67): Move attachments with notes and secondary properties with sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Add notes to attachments
+    String notesValue = "Test note for verification";
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+    RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
+
+    for (String attachmentId : sourceAttachmentIds) {
+      String updateNotesResponse =
+          api.updateSecondaryProperty(
+              appUrl, entityName, facetName, moveSourceEntity, attachmentId, updateNotesBody);
+      if (!updateNotesResponse.equals("Updated")) {
+        fail("Could not update notes for attachment: " + attachmentId);
+      }
+    }
+
+    // Add custom property to attachments
+    Integer customProperty2Value = 54321;
+    RequestBody bodyInt =
+        RequestBody.create(
+            "{\"customProperty2\": " + customProperty2Value + "}",
+            MediaType.parse("application/json"));
+
+    for (String attachmentId : sourceAttachmentIds) {
+      String updateCustomPropertyResponse =
+          api.updateSecondaryProperty(
+              appUrl, entityName, facetName, moveSourceEntity, attachmentId, bodyInt);
+      if (!updateCustomPropertyResponse.equals("Updated")) {
+        fail("Could not update custom property for attachment: " + attachmentId);
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (Exception e) {
+        fail("Could not fetch metadata for attachment: " + attachmentId);
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch all objectIds from source entity");
+    }
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Move attachments from source to target with sourceFacet
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            sourceFacet);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify all attachments moved to target
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(
+        sourceAttachmentIds.size(),
+        targetMetadataAfterMove.size(),
+        "Target entity should have all attachments after move");
+
+    // Verify notes and secondary properties are preserved
+    for (Map<String, Object> metadata : targetMetadataAfterMove) {
+      String targetAttachmentId = (String) metadata.get("ID");
+      assertNotNull(targetAttachmentId, "Target attachment ID should not be null");
+
+      Map<String, Object> detailedMetadata =
+          api.fetchMetadata(appUrl, entityName, facetName, moveTargetEntity, targetAttachmentId);
+
+      // Verify notes are preserved
+      if (detailedMetadata.containsKey("note")) {
+        assertEquals(
+            notesValue,
+            detailedMetadata.get("note"),
+            "Notes should be preserved after move for attachment: " + targetAttachmentId);
+      } else {
+        fail("Notes property missing after move for attachment: " + targetAttachmentId);
+      }
+
+      // Verify custom property is preserved
+      if (detailedMetadata.containsKey("customProperty2")) {
+        assertEquals(
+            customProperty2Value,
+            detailedMetadata.get("customProperty2"),
+            "Custom property should be preserved after move for attachment: " + targetAttachmentId);
+      } else {
+        fail("Custom property missing after move for attachment: " + targetAttachmentId);
+      }
+    }
+
+    // Verify source entity has no attachments (all moved with sourceFacet)
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(0, sourceMetadataAfterMove.size(), "Source entity has no attachments after move");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(68)
+  public void testMoveAttachmentsWithoutSourceFacet() throws Exception {
+    System.out.println(
+        "Test (68): Move valid attachments from Source Entity to Target Entity without sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID from first attachment
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        } else {
+          fail("Attachment metadata does not contain objectId");
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Move attachments without sourceFacet (pass null for sourceFacet parameter)
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            null);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify attachments are in target entity
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(
+        moveObjectIds.size(),
+        targetMetadataAfterMove.size(),
+        "Target entity should have all moved attachments");
+
+    // Verify attachments can be read from target entity
+    for (Map<String, Object> metadata : targetMetadataAfterMove) {
+      String targetAttachmentId = (String) metadata.get("ID");
+      String readResponse =
+          api.readAttachment(appUrl, entityName, facetName, moveTargetEntity, targetAttachmentId);
+      if (!readResponse.equals("OK")) {
+        fail("Could not read moved attachment from target entity");
+      }
+    }
+
+    // Expected Behavior: Attachments remain in source entity UI (without sourceFacet)
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        moveObjectIds.size(),
+        sourceMetadataAfterMove.size(),
+        "Source entity should still have attachments in UI when sourceFacet is not specified");
+
+    // Verify the same objectIds are still visible in source
+    for (Map<String, Object> metadata : sourceMetadataAfterMove) {
+      String objectId = (String) metadata.get("objectId");
+      assertTrue(
+          moveObjectIds.contains(objectId),
+          "Source entity should still show attachment with objectId: " + objectId);
+    }
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(69)
+  public void testMoveAttachmentsToEntityWithDuplicateWithoutSourceFacet() throws Exception {
+    System.out.println(
+        "Test (69): Move attachments into existing Target Entity when duplicate exists without sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID from first attachment
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        } else {
+          fail("Attachment metadata does not contain objectId");
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    // Create target entity and add duplicate attachment (sample.pdf)
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Add the same first file (sample.pdf) to target entity to create duplicate
+    Map<String, Object> targetPostData = new HashMap<>();
+    targetPostData.put("up__ID", moveTargetEntity);
+    targetPostData.put("mimeType", "application/pdf");
+    targetPostData.put("createdAt", new Date().toString());
+    targetPostData.put("createdBy", "test@test.com");
+    targetPostData.put("modifiedBy", "test@test.com");
+
+    List<String> createTargetResponse =
+        api.createAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            srvpath,
+            targetPostData,
+            files.get(0)); // Add same file (sample.pdf)
+    if (!createTargetResponse.get(0).equals("Attachment created")) {
+      fail("Could not create duplicate attachment in target entity");
+    }
+
+    // Save target entity before move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity: " + saveTargetResponse);
+    }
+
+    // Get initial target metadata count
+    List<Map<String, Object>> targetMetadataBeforeMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    int initialTargetCount = targetMetadataBeforeMove.size();
+
+    // Edit target entity to put it back in draft mode for move operation
+    String editTargetResponse = api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!editTargetResponse.equals("Entity in draft mode")) {
+      fail("Could not edit target entity for move operation");
+    }
+
+    // Step 3: Move attachments without sourceFacet (duplicate should be skipped)
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            null);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Expected Behavior - Verify duplicate was skipped, other attachments moved
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+
+    int nonDuplicateCount = moveObjectIds.size() - 1;
+    int expectedTargetCount = initialTargetCount + nonDuplicateCount;
+
+    assertEquals(
+        expectedTargetCount,
+        targetMetadataAfterMove.size(),
+        "Target entity should have initial attachments plus non-duplicate moved attachments");
+
+    // Verify at least one non-duplicate attachment was moved
+    assertTrue(
+        targetMetadataAfterMove.size() > initialTargetCount,
+        "Target should have more attachments after move (non-duplicates added)");
+
+    // Verify all attachments still remain in source entity UI (without sourceFacet)
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        moveObjectIds.size(),
+        sourceMetadataAfterMove.size(),
+        "Source entity should still have all attachments in UI when sourceFacet is not specified");
+
+    // Verify all original objectIds are still visible in source
+    List<String> sourceObjectIds = new ArrayList<>();
+    for (Map<String, Object> metadata : sourceMetadataAfterMove) {
+      sourceObjectIds.add((String) metadata.get("objectId"));
+    }
+    for (String objectId : moveObjectIds) {
+      assertTrue(
+          sourceObjectIds.contains(objectId),
+          "Source entity should still show attachment with objectId: " + objectId);
+    }
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(70)
+  public void testMoveAttachmentsWithNotesAndSecondaryPropertiesWithoutSourceFacet()
+      throws Exception {
+    System.out.println(
+        "Test (70): Move attachments with notes and secondary properties without sourceFacet");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Add notes to attachments
+    String notesValue = "Test note for migration verification";
+    MediaType mediaType = MediaType.parse("application/json");
+    String jsonPayload = "{\"note\": \"" + notesValue + "\"}";
+    RequestBody updateNotesBody = RequestBody.create(jsonPayload, mediaType);
+
+    for (String attachmentId : sourceAttachmentIds) {
+      String updateNotesResponse =
+          api.updateSecondaryProperty(
+              appUrl, entityName, facetName, moveSourceEntity, attachmentId, updateNotesBody);
+      if (!updateNotesResponse.equals("Updated")) {
+        fail("Could not update notes for attachment: " + attachmentId);
+      }
+    }
+
+    // Add custom property to attachments
+    Integer customProperty2Value = 54321;
+    RequestBody bodyInt =
+        RequestBody.create(
+            "{\"customProperty2\": " + customProperty2Value + "}",
+            MediaType.parse("application/json"));
+
+    for (String attachmentId : sourceAttachmentIds) {
+      String updateCustomPropertyResponse =
+          api.updateSecondaryProperty(
+              appUrl, entityName, facetName, moveSourceEntity, attachmentId, bodyInt);
+      if (!updateCustomPropertyResponse.equals("Updated")) {
+        fail("Could not update custom property for attachment: " + attachmentId);
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (Exception e) {
+        fail("Could not fetch metadata for attachment: " + attachmentId);
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch all objectIds from source entity");
+    }
+
+    // Get source attachment count before move
+    List<Map<String, Object>> sourceMetadataBeforeMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    int sourceCountBeforeMove = sourceMetadataBeforeMove.size();
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Get target attachment count before move
+    List<Map<String, Object>> targetMetadataBeforeMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    int targetCountBeforeMove = targetMetadataBeforeMove.size();
+
+    // Move attachments from source to target WITHOUT sourceFacet
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            null);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify expected number of attachments moved to target
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    int expectedTargetCount = targetCountBeforeMove + sourceAttachmentIds.size();
+    assertEquals(
+        expectedTargetCount,
+        targetMetadataAfterMove.size(),
+        "Target entity should have " + expectedTargetCount + " attachments after move");
+
+    // Verify notes and secondary properties are preserved
+    for (Map<String, Object> metadata : targetMetadataAfterMove) {
+      String targetAttachmentId = (String) metadata.get("ID");
+      assertNotNull(targetAttachmentId, "Target attachment ID should not be null");
+
+      Map<String, Object> detailedMetadata =
+          api.fetchMetadata(appUrl, entityName, facetName, moveTargetEntity, targetAttachmentId);
+
+      // Verify notes are preserved
+      if (detailedMetadata.containsKey("note")) {
+        assertEquals(
+            notesValue,
+            detailedMetadata.get("note"),
+            "Notes should be preserved after move for attachment: " + targetAttachmentId);
+      } else {
+        fail("Notes property missing after move for attachment: " + targetAttachmentId);
+      }
+
+      // Verify custom property is preserved
+      if (detailedMetadata.containsKey("customProperty2")) {
+        assertEquals(
+            customProperty2Value,
+            detailedMetadata.get("customProperty2"),
+            "Custom property should be preserved after move for attachment: " + targetAttachmentId);
+      } else {
+        fail("Custom property missing after move for attachment: " + targetAttachmentId);
+      }
+    }
+
+    // Verify source entity still has all attachments (without sourceFacet)
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        sourceCountBeforeMove,
+        sourceMetadataAfterMove.size(),
+        "Source entity should still have "
+            + sourceCountBeforeMove
+            + " attachments (without sourceFacet)");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(71)
+  public void testMoveAttachmentsWithInvalidOrUndefinedSecondaryProperties() throws Exception {
+    System.out.println(
+        "Test (71): Move attachments with invalid or undefined secondary properties");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+    files.add(new File(classLoader.getResource("WDIRSCodeList.csv").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Add valid secondary properties to first attachment (customProperty2)
+    String validAttachmentId = sourceAttachmentIds.get(0);
+    Integer validCustomProperty2Value = 12345;
+    RequestBody validPropertyBody =
+        RequestBody.create(
+            "{\"customProperty2\": " + validCustomProperty2Value + "}",
+            MediaType.parse("application/json"));
+
+    String validPropertyResponse =
+        api.updateSecondaryProperty(
+            appUrl, entityName, facetName, moveSourceEntity, validAttachmentId, validPropertyBody);
+    if (!validPropertyResponse.equals("Updated")) {
+      fail("Could not update valid property for attachment: " + validAttachmentId);
+    }
+
+    // add invalid secondary properties to second attachment (non-existent property)
+    String invalidAttachmentId = sourceAttachmentIds.get(1);
+    RequestBody invalidPropertyBody =
+        RequestBody.create(
+            "{\"nonExistentProperty\": \"invalid\"}", MediaType.parse("application/json"));
+
+    api.updateSecondaryProperty(
+        appUrl, entityName, facetName, moveSourceEntity, invalidAttachmentId, invalidPropertyBody);
+
+    // add undefined properties to third attachment
+    String undefinedAttachmentId = sourceAttachmentIds.get(2);
+    RequestBody undefinedPropertyBody =
+        RequestBody.create(
+            "{\"undefinedField\": \"test\", \"anotherUndefined\": 999}",
+            MediaType.parse("application/json"));
+
+    api.updateSecondaryProperty(
+        appUrl,
+        entityName,
+        facetName,
+        moveSourceEntity,
+        undefinedAttachmentId,
+        undefinedPropertyBody);
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (Exception e) {
+        fail("Could not fetch metadata for attachment: " + attachmentId);
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch all objectIds from source entity");
+    }
+
+    // Get source attachment count before move
+    List<Map<String, Object>> sourceMetadataBeforeMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    int sourceCountBeforeMove = sourceMetadataBeforeMove.size();
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Move attachments from source to target with sourceFacet
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            sourceFacet);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify attachments moved to target
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+
+    assertTrue(
+        targetMetadataAfterMove.size() > 0, "Target entity should have attachments after move");
+    assertEquals(
+        sourceCountBeforeMove,
+        targetMetadataAfterMove.size(),
+        "All attachments should move (invalid properties are ignored)");
+
+    // Verify only allowed properties are populated in target
+    for (Map<String, Object> metadata : targetMetadataAfterMove) {
+      String targetAttachmentId = (String) metadata.get("ID");
+      assertNotNull(targetAttachmentId, "Target attachment ID should not be null");
+
+      // Fetch detailed metadata to verify properties
+      Map<String, Object> detailedMetadata =
+          api.fetchMetadata(appUrl, entityName, facetName, moveTargetEntity, targetAttachmentId);
+
+      // Check if this is the attachment with valid customProperty2
+      if (detailedMetadata.containsKey("customProperty2")
+          && detailedMetadata.get("customProperty2") != null) {
+        assertEquals(
+            validCustomProperty2Value,
+            detailedMetadata.get("customProperty2"),
+            "Valid customProperty2 should be preserved");
+      }
+    }
+
+    // Verify source entity has no attachments
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        0,
+        sourceMetadataAfterMove.size(),
+        "Source entity should have no attachments after move with sourceFacet");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(72)
+  public void testMoveAttachmentsFromSourceEntityInDraftMode() throws Exception {
+    System.out.println(
+        "Test (72): Move attachments from Source Entity when Source Entity is in draft mode");
+
+    // Create source entity and keep it in draft mode
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+    files.add(new File(classLoader.getResource("WDIRSCodeList.csv").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Verify attachments are added to source entity
+    int sourceCountBeforeMove = sourceAttachmentIds.size();
+    assertTrue(sourceCountBeforeMove > 0, "Source entity should have attachments before move");
+    assertEquals(
+        files.size(), sourceCountBeforeMove, "Source should have " + files.size() + " attachments");
+
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID from first attachment
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    assertNotNull(moveSourceFolderId, "Source folder ID should not be null");
+
+    String editSourceResponse = api.editEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!editSourceResponse.equals("Entity in draft mode")) {
+      fail("Could not edit source entity back to draft mode");
+    }
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity: " + saveTargetResponse);
+    }
+
+    String editTargetResponse = api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!editTargetResponse.equals("Entity in draft mode")) {
+      fail("Could not edit target entity for move operation");
+    }
+
+    // Move attachments from draft source to target using sourceFacet
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            facetName);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Wait for all uploads to complete before saving
+    if (!waitForAllUploadsCompletion(moveTargetEntity, 60)) {
+      fail("Upload did not complete in time after moving attachments");
+    }
+
+    // Save target entity after move
+    saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify attachments moved to target
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertTrue(
+        targetMetadataAfterMove.size() > 0, "Target entity should have attachments after move");
+    assertEquals(
+        sourceCountBeforeMove,
+        targetMetadataAfterMove.size(),
+        "Target should have " + sourceCountBeforeMove + " attachments after move");
+
+    // Verify all expected attachments are in target
+    Set<String> targetFileNames =
+        targetMetadataAfterMove.stream()
+            .map(m -> (String) m.get("fileName"))
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (File file : files) {
+      assertTrue(
+          targetFileNames.contains(file.getName()),
+          "Target should contain attachment: " + file.getName());
+    }
+
+    // Now save the source entity
+    String saveSourceAfterMoveResponse =
+        api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceAfterMoveResponse.equals("Saved")) {
+      fail("Could not save source entity after move: " + saveSourceAfterMoveResponse);
+    }
+
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        sourceCountBeforeMove,
+        sourceMetadataAfterMove.size(),
+        "Source entity in draft mode retains attachments after move (copy behavior)");
+
+    Set<String> sourceFileNamesAfterMove =
+        sourceMetadataAfterMove.stream()
+            .map(m -> (String) m.get("fileName"))
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (File file : files) {
+      assertTrue(
+          sourceFileNamesAfterMove.contains(file.getName()),
+          "Source (draft) should still contain attachment: " + file.getName());
+    }
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(73)
+  public void testEditAttachmentFileNameAndMoveToTarget() throws Exception {
+    System.out.println(
+        "Test (73): Edit attachment file name in Source Entity and move it to Target Entity");
+
+    // Create source entity and add attachment
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Add attachment with original name (sample.txt)
+    ClassLoader classLoader = getClass().getClassLoader();
+    File originalFile = new File(classLoader.getResource("sample.txt").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, originalFile);
+    if (!createResponse.get(0).equals("Attachment created")) {
+      fail("Could not create attachment in source entity");
+    }
+
+    String attachmentId = createResponse.get(1);
+    assertNotNull(attachmentId, "Attachment ID should not be null");
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Verify original filename
+    List<Map<String, Object>> metadataBeforeRename =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(1, metadataBeforeRename.size(), "Source should have 1 attachment");
+    assertEquals(
+        "sample.txt",
+        metadataBeforeRename.get(0).get("fileName"),
+        "Original filename should be sample.txt");
+
+    // Edit source entity back to draft mode
+    String editSourceResponse = api.editEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!editSourceResponse.equals("Entity in draft mode")) {
+      fail("Could not edit source entity to draft mode");
+    }
+
+    // Rename the attachment to testEdited.txt
+    String newFileName = "testEdited.txt";
+    String renameResponse =
+        api.renameAttachment(
+            appUrl, entityName, facetName, moveSourceEntity, attachmentId, newFileName);
+    assertEquals("Renamed", renameResponse, "Attachment should be renamed successfully");
+
+    // Save source entity after rename
+    saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity after rename: " + saveSourceResponse);
+    }
+
+    // Verify renamed filename in source
+    List<Map<String, Object>> metadataAfterRename =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(1, metadataAfterRename.size(), "Source should still have 1 attachment");
+    assertEquals(
+        newFileName,
+        metadataAfterRename.get(0).get("fileName"),
+        "Filename should be updated to " + newFileName);
+
+    // Get objectId and folderId for move operation
+    Map<String, Object> metadata =
+        api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+    String objectId = metadata.get("objectId").toString();
+    moveSourceFolderId = metadata.get("folderId").toString();
+    assertNotNull(objectId, "Object ID should not be null");
+    assertNotNull(moveSourceFolderId, "Folder ID should not be null");
+
+    moveObjectIds.clear();
+    moveObjectIds.add(objectId);
+
+    // Create target entity
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity");
+    }
+
+    // Move attachment from source to target with sourceFacet
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            sourceFacet);
+
+    if (moveResult == null) {
+      fail("Move operation returned null result");
+    }
+
+    // Fetch moved attachment IDs from target draft
+    List<Map<String, Object>> movedMetadataResponse =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds =
+        movedMetadataResponse.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete
+    for (String movedAttachmentId : movedAttachmentIds) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity after move
+    String saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTargetResponse.equals("Saved")) {
+      fail("Could not save target entity after move: " + saveTargetResponse);
+    }
+
+    // Verify attachment moved to target with renamed filename
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(1, targetMetadataAfterMove.size(), "Target should have 1 attachment after move");
+    assertEquals(
+        newFileName,
+        targetMetadataAfterMove.get(0).get("fileName"),
+        "Target should have attachment with renamed filename: " + newFileName);
+
+    // Verify attachment removed from source
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        0,
+        sourceMetadataAfterMove.size(),
+        "Source entity should have no attachments after move with sourceFacet");
+
+    // Clean up - delete both entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(74)
+  public void testChainMoveAttachmentsFromSourceToTarget1ToTarget2() throws Exception {
+    System.out.println(
+        "Test (74): Move attachments from Source Entity to Target Entity 1 and then to Target Entity 2");
+
+    // Create source entity and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Get count of attachments in source
+    int sourceCountInitial = sourceAttachmentIds.size();
+    assertTrue(sourceCountInitial > 0, "Source should have attachments");
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID from first attachment
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    assertNotNull(moveSourceFolderId, "Source folder ID should not be null");
+
+    // Create Target Entity 1
+    moveTargetEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity 1");
+    }
+
+    // Move attachments from source to Target Entity 1 with sourceFacet
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    Map<String, Object> moveResult1 =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity,
+            moveSourceFolderId,
+            moveObjectIds,
+            sourceFacet);
+
+    if (moveResult1 == null) {
+      fail("Move operation from source to target 1 returned null result");
+    }
+
+    // Fetch moved attachment IDs from target 1 draft
+    List<Map<String, Object>> movedMetadata1Response =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    List<String> movedAttachmentIds1 =
+        movedMetadata1Response.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete in target 1
+    for (String movedAttachmentId : movedAttachmentIds1) {
+      if (!waitForUploadCompletion(moveTargetEntity, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity 1 after move
+    String saveTarget1Response = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+    if (!saveTarget1Response.equals("Saved")) {
+      fail("Could not save target entity 1 after move: " + saveTarget1Response);
+    }
+
+    // Verify attachments moved to Target Entity 1
+    List<Map<String, Object>> target1MetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertTrue(
+        target1MetadataAfterMove.size() > 0, "Target entity 1 should have attachments after move");
+    assertEquals(
+        sourceCountInitial,
+        target1MetadataAfterMove.size(),
+        "Target 1 should have " + sourceCountInitial + " attachments");
+
+    // Verify all expected files are in Target Entity 1
+    Set<String> target1FileNames =
+        target1MetadataAfterMove.stream()
+            .map(m -> (String) m.get("fileName"))
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (File file : files) {
+      assertTrue(
+          target1FileNames.contains(file.getName()),
+          "Target 1 should contain attachment: " + file.getName());
+    }
+
+    // Verify attachments removed from source
+    List<Map<String, Object>> sourceMetadataAfterFirstMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        0,
+        sourceMetadataAfterFirstMove.size(),
+        "Source entity should have no attachments after move to target 1");
+
+    // Create Target Entity 2
+    String moveTargetEntity2 = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity2.equals("Could not create entity")) {
+      fail("Could not create target entity 2");
+    }
+
+    // Get new object IDs and folder ID from Target Entity 1 for second move
+    List<String> target1AttachmentIds = new ArrayList<>();
+    for (Map<String, Object> metadata : target1MetadataAfterMove) {
+      String attachmentId = metadata.get("ID").toString();
+      target1AttachmentIds.add(attachmentId);
+    }
+
+    moveObjectIds.clear();
+    String target1FolderId = null;
+    for (String attachmentId : target1AttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveTargetEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get folder ID from first attachment
+          if (target1FolderId == null && metadata.containsKey("folderId")) {
+            target1FolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata from target 1: " + e.getMessage());
+      }
+    }
+
+    assertNotNull(target1FolderId, "Target 1 folder ID should not be null");
+
+    // Move attachments from Target Entity 1 to Target Entity 2 with sourceFacet
+    Map<String, Object> moveResult2 =
+        api.moveAttachment(
+            appUrl,
+            entityName,
+            facetName,
+            moveTargetEntity2,
+            target1FolderId,
+            moveObjectIds,
+            sourceFacet);
+
+    if (moveResult2 == null) {
+      fail("Move operation from target 1 to target 2 returned null result");
+    }
+
+    // Fetch moved attachment IDs from target 2 draft
+    List<Map<String, Object>> movedMetadata2Response =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity2);
+    List<String> movedAttachmentIds2 =
+        movedMetadata2Response.stream()
+            .map(item -> (String) item.get("ID"))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    // Wait for moved uploads to complete in target 2
+    for (String movedAttachmentId : movedAttachmentIds2) {
+      if (!waitForUploadCompletion(moveTargetEntity2, movedAttachmentId, 30)) {
+        fail("Moved upload did not complete in time for attachment: " + movedAttachmentId);
+      }
+    }
+
+    // Save target entity 2 after move
+    String saveTarget2Response =
+        api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity2);
+    if (!saveTarget2Response.equals("Saved")) {
+      fail("Could not save target entity 2 after move: " + saveTarget2Response);
+    }
+
+    // Verify attachments moved to Target Entity 2
+    List<Map<String, Object>> target2MetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity2);
+    assertTrue(
+        target2MetadataAfterMove.size() > 0, "Target entity 2 should have attachments after move");
+    assertEquals(
+        sourceCountInitial,
+        target2MetadataAfterMove.size(),
+        "Target 2 should have " + sourceCountInitial + " attachments");
+
+    // Verify all expected files are in Target Entity 2
+    Set<String> target2FileNames =
+        target2MetadataAfterMove.stream()
+            .map(m -> (String) m.get("fileName"))
+            .collect(java.util.stream.Collectors.toSet());
+
+    for (File file : files) {
+      assertTrue(
+          target2FileNames.contains(file.getName()),
+          "Target 2 should contain attachment: " + file.getName());
+    }
+
+    // Verify attachments removed from Target Entity 1
+    List<Map<String, Object>> target1MetadataAfterSecondMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(
+        0,
+        target1MetadataAfterSecondMove.size(),
+        "Target entity 1 should have no attachments after move to target 2");
+
+    // Clean up - delete all three entities
+    api.deleteEntity(appUrl, entityName, moveTargetEntity2);
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  @Test
+  @Order(75)
+  public void testMoveAttachmentsWithoutSDMRole() throws Exception {
+    System.out.println("Test (75): Move attachments when user does not have SDM Role");
+
+    // Create source entity with SDM role and add attachments
+    moveSourceEntity = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveSourceEntity.equals("Could not create entity")) {
+      fail("Could not create source entity");
+    }
+
+    // Prepare sample files
+    ClassLoader classLoader = getClass().getClassLoader();
+    List<File> files = new ArrayList<>();
+    files.add(new File(classLoader.getResource("sample.pdf").getFile()));
+    files.add(new File(classLoader.getResource("sample.txt").getFile()));
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", moveSourceEntity);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Create attachments in source entity with SDM role
+    List<String> sourceAttachmentIds = new ArrayList<>();
+    for (File file : files) {
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, entityName, facetName, moveSourceEntity, srvpath, postData, file);
+      if (createResponse.get(0).equals("Attachment created")) {
+        sourceAttachmentIds.add(createResponse.get(1));
+      } else {
+        fail("Could not create attachment in source entity");
+      }
+    }
+
+    // Save source entity with SDM role
+    String saveSourceResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveSourceEntity);
+    if (!saveSourceResponse.equals("Saved")) {
+      fail("Could not save source entity: " + saveSourceResponse);
+    }
+
+    // Get count of attachments in source
+    int sourceCountInitial = sourceAttachmentIds.size();
+    assertTrue(sourceCountInitial > 0, "Source should have attachments");
+
+    // Fetch object IDs from source entity
+    moveObjectIds.clear();
+    for (String attachmentId : sourceAttachmentIds) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, moveSourceEntity, attachmentId);
+        if (metadata.containsKey("objectId")) {
+          moveObjectIds.add(metadata.get("objectId").toString());
+          // Get source folder ID from first attachment
+          if (moveSourceFolderId == null && metadata.containsKey("folderId")) {
+            moveSourceFolderId = metadata.get("folderId").toString();
+          }
+        }
+      } catch (IOException e) {
+        fail("Could not fetch attachment metadata: " + e.getMessage());
+      }
+    }
+
+    if (moveObjectIds.size() != sourceAttachmentIds.size()) {
+      fail("Could not fetch object IDs for all attachments");
+    }
+
+    assertNotNull(moveSourceFolderId, "Source folder ID should not be null");
+
+    // Create target entity with no SDM role
+    moveTargetEntity = apiNoRoles.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (moveTargetEntity.equals("Could not create entity")) {
+      fail("Could not create target entity with no SDM role");
+    }
+
+    // Try to move attachments from source to target using user without SDM role
+    String sourceFacet = serviceName + "." + entityName + "." + facetName;
+    Map<String, Object> moveResult = null;
+    boolean moveOperationFailed = false;
+    String errorMessage = null;
+
+    try {
+      moveResult =
+          apiNoRoles.moveAttachment(
+              appUrl,
+              entityName,
+              facetName,
+              moveTargetEntity,
+              moveSourceFolderId,
+              moveObjectIds,
+              sourceFacet);
+
+      if (moveResult == null) {
+        moveOperationFailed = true;
+        errorMessage = "Move operation returned null";
+      } else if (moveResult.containsKey("error")) {
+        moveOperationFailed = true;
+        errorMessage = moveResult.get("error").toString();
+      }
+    } catch (Exception e) {
+      moveOperationFailed = true;
+      errorMessage = e.getMessage();
+    }
+
+    // Verify move operation failed
+    assertTrue(moveOperationFailed, "Move operation should fail when user does not have SDM role");
+    assertNotNull(errorMessage, "Error message should be present when move operation fails");
+    System.out.println("Move operation failed as expected. Error: " + errorMessage);
+
+    // Verify attachments are still in source entity (not moved)
+    List<Map<String, Object>> sourceMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveSourceEntity);
+    assertEquals(
+        sourceCountInitial,
+        sourceMetadataAfterMove.size(),
+        "Source should still have all attachments after failed move");
+
+    // Verify target entity has no attachments
+    List<Map<String, Object>> targetMetadataAfterMove =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, moveTargetEntity);
+    assertEquals(
+        0, targetMetadataAfterMove.size(), "Target should have no attachments after failed move");
+
+    // Clean up - delete both entities using SDM role
+    api.deleteEntity(appUrl, entityName, moveTargetEntity);
+    api.deleteEntity(appUrl, entityName, moveSourceEntity);
+  }
+
+  // @Test
+  // @Order(76)
+  // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
+  //   System.out.println(
+  //       "Test (76) : Upload attachment exceeding maximum file size in references facet");
+
+  //   // Create a new entity
+  //   String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+  //   if (response.equals("Could not create entity")) {
+  //     fail("Could not create entity");
+  //   }
+  //   String testEntityID = response;
+
+  //   // Load the 150MB sample file
+  //   ClassLoader classLoader = getClass().getClassLoader();
+  //   File file = new File(classLoader.getResource("sample32mb.pdf").getFile());
+
+  //   Map<String, Object> postData = new HashMap<>();
+  //   postData.put("up__ID", testEntityID);
+  //   postData.put("mimeType", "application/pdf");
+  //   postData.put("createdAt", new Date().toString());
+  //   postData.put("createdBy", "test@test.com");
+  //   postData.put("modifiedBy", "test@test.com");
+
+  //   // Try to upload to the 'references' facet which has the 100MB limit
+  //   String referencesFacet = "references";
+  //   List<String> createResponse =
+  //       api.createAttachment(
+  //           appUrl, entityName, referencesFacet, testEntityID, srvpath, postData, file);
+  //   String check = createResponse.get(0);
+
+  //   // The upload should fail with AttachmentSizeExceeded error
+  //   if (!check.equals("Attachment created")) {
+  //     try {
+  //       JSONObject json = new JSONObject(check);
+  //       String errorCode = json.getJSONObject("error").getString("code");
+  //       String errorMessage = json.getJSONObject("error").getString("message");
+  //       assertEquals("413", errorCode);
+  //       assertEquals("File size exceeds the limit of 30MB.", errorMessage);
+  //     } catch (Exception e) {
+  //       fail("Failed to parse error response: " + e.getMessage());
+  //     }
+  //   } else {
+  //     fail("Attachment got created with file size exceeding maximum limit");
+  //   }
+
+  //   // delete the test entity draft
+  //   api.deleteEntityDraft(appUrl, entityName, testEntityID);
+  // }
 }

@@ -3,6 +3,7 @@ package com.sap.cds.sdm.service;
 import static com.sap.cds.sdm.constants.SDMConstants.NAMED_USER_FLOW;
 import static com.sap.cds.sdm.constants.SDMConstants.TECHNICAL_USER_FLOW;
 
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
@@ -52,7 +53,10 @@ public class DocumentUploadService {
    * Implementation to create document.
    */
   public JSONObject createDocument(
-      CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
+      CmisDocument cmisDocument,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser,
+      AttachmentCreateEventContext eventContext)
       throws IOException {
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
@@ -61,8 +65,9 @@ public class DocumentUploadService {
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
-
+      cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       if (totalSize <= 400 * 1024 * 1024) {
+
         // Upload directly if file is ≤ 400MB
         return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
       } else {
@@ -92,7 +97,7 @@ public class DocumentUploadService {
   /*
    * CMIS call to appending content stream
    */
-  private void appendContentStream(
+  private JSONObject appendContentStream(
       CmisDocument cmisDocument,
       String sdmUrl,
       byte[] chunkBuffer,
@@ -131,7 +136,7 @@ public class DocumentUploadService {
     try {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
       cmisDocument.setMimeType(finalResponse.get("mimeType"));
-
+      return new JSONObject(finalResponse);
     } catch (Exception e) {
       logger.error("Error in appending content: {}", e.getMessage());
       throw new IOException("Error in appending content: " + e.getMessage(), e);
@@ -227,7 +232,6 @@ public class DocumentUploadService {
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
       logger.info("Response Body: {}", responseBody);
-
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
       logger.info("objectId of empty doc is {}", objectId);
@@ -269,8 +273,27 @@ public class DocumentUploadService {
 
         // Step 7: Append Chunk. Call cmis api to append content stream
         if (bytesRead > 0) {
-          appendContentStream(
-              cmisDocument, sdmUrl, chunkBuffer, bytesRead, isLastChunk, chunkIndex, isSystemUser);
+          // Only capture response from the last chunk to avoid unnecessary object allocation
+          if (isLastChunk) {
+            responseBody =
+                appendContentStream(
+                    cmisDocument,
+                    sdmUrl,
+                    chunkBuffer,
+                    bytesRead,
+                    isLastChunk,
+                    chunkIndex,
+                    isSystemUser);
+          } else {
+            appendContentStream(
+                cmisDocument,
+                sdmUrl,
+                chunkBuffer,
+                bytesRead,
+                isLastChunk,
+                chunkIndex,
+                isSystemUser);
+          }
         }
 
         long endChunkUploadTime = System.currentTimeMillis();
@@ -301,7 +324,7 @@ public class DocumentUploadService {
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
-    String objectId = "", mimeType = "";
+    String objectId = "", mimeType = "", scanStatus = "";
     String error = "";
     try {
       String responseString = EntityUtils.toString(response.getEntity());
@@ -311,6 +334,10 @@ public class DocumentUploadService {
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
         objectId = succinctProperties.getString("cmis:objectId");
+        scanStatus =
+            succinctProperties.has("sap:virusScanStatus")
+                ? succinctProperties.getString("sap:virusScanStatus")
+                : null;
         mimeType =
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
@@ -347,6 +374,32 @@ public class DocumentUploadService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
         finalResponse.put("mimeType", mimeType);
+
+        // Determine upload status based on scan status using enum
+        SDMConstants.ScanStatus scanStatusEnum = SDMConstants.ScanStatus.fromValue(scanStatus);
+        String uploadStatus;
+        switch (scanStatusEnum) {
+          case QUARANTINED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+            break;
+          case SCANNING:
+            uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
+            break;
+          case FAILED:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SCAN_FAILED;
+            break;
+          case CLEAN:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+            break;
+          case PENDING:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+            break;
+          case BLANK:
+          default:
+            uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+            break;
+        }
+        finalResponse.put("uploadStatus", uploadStatus);
       }
     } catch (IOException e) {
       throw new ServiceException(

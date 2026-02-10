@@ -74,15 +74,28 @@ public class Api implements ApiInterface {
 
   public String createEntityDraft(
       String appUrl, String entityName, String entityName2, String srvpath) {
+    return createEntityDraft(appUrl, entityName, entityName2, srvpath, null);
+  }
+
+  public String createEntityDraft(
+      String appUrl, String entityName, String entityName2, String srvpath, String bookID) {
     MediaType mediaType = MediaType.parse("application/json");
 
     // Creating the Entity (draft)
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
-                + entityName2
-                + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}");
+    String jsonBody;
+    if (bookID != null && !bookID.isEmpty()) {
+      // Creating a Chapter within a Book
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \"book_ID\": \"" + bookID + "\"\n}";
+    } else {
+      // Creating a Book or other entity
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+              + entityName2
+              + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}";
+    }
+
+    RequestBody body = RequestBody.create(mediaType, jsonBody);
 
     Request request =
         new Request.Builder()
@@ -728,6 +741,67 @@ public class Api implements ApiInterface {
     }
   }
 
+  public Map<String, Object> moveAttachment(
+      String appUrl,
+      String entityName,
+      String facetName,
+      String targetEntityID,
+      String sourceFolderId,
+      List<String> objectIds,
+      String sourceFacet)
+      throws IOException {
+    String objectIdsString = String.join(",", objectIds);
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + targetEntityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "/"
+            + serviceName
+            + ".moveAttachments";
+
+    MediaType mediaType = MediaType.parse("application/json");
+
+    StringBuilder jsonPayload = new StringBuilder();
+    jsonPayload.append("{");
+    jsonPayload.append("\"sourceFolderId\": \"").append(sourceFolderId).append("\",");
+    jsonPayload.append("\"up__ID\": \"").append(targetEntityID).append("\",");
+    jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\"");
+
+    if (sourceFacet != null && !sourceFacet.isEmpty()) {
+      jsonPayload.append(",\"sourceFacet\": \"").append(sourceFacet).append("\"");
+    }
+
+    jsonPayload.append("}");
+
+    RequestBody body = RequestBody.create(jsonPayload.toString(), mediaType);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      String responseBody = response.body().string();
+
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not move attachments: " + response.code() + " - " + responseBody);
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> result = objectMapper.readValue(responseBody, Map.class);
+      return result;
+    } catch (IOException e) {
+      System.out.println("Error while moving attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
   public String createLink(
       String appUrl,
       String entityName,
@@ -781,7 +855,9 @@ public class Api implements ApiInterface {
             + appUrl
             + "/odata/v4/"
             + serviceName
-            + "/Books(ID="
+            + "/"
+            + entityName
+            + "(ID="
             + entityID
             + ",IsActiveEntity=true)"
             + "/"

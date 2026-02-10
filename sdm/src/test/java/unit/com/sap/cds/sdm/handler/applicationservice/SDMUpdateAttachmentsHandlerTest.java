@@ -32,6 +32,7 @@ import com.sap.cds.services.request.UserInfo;
 import java.io.IOException;
 import java.util.*;
 import org.ehcache.Cache;
+import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -186,11 +187,14 @@ public class SDMUpdateAttachmentsHandlerTest {
               () ->
                   AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
                       any(), anyString(), any(), anyBoolean()))
-          .thenReturn(Arrays.asList("fileInSDM.txt", "descriptionInSDM"));
+          .thenReturn(
+              new JSONObject().put("name", "fileInSDM.txt").put("description", "descriptionInSDM"));
 
       // Mock dbQuery methods
+      CmisDocument mockCmisDoc = new CmisDocument();
+      mockCmisDoc.setFileName("file1.txt");
       when(dbQuery.getAttachmentForID(any(CdsEntity.class), any(PersistenceService.class), any()))
-          .thenReturn("file1.txt");
+          .thenReturn(mockCmisDoc);
       when(dbQuery.getPropertiesForID(
               any(CdsEntity.class), any(PersistenceService.class), any(), any(Map.class)))
           .thenReturn(new HashMap<>());
@@ -362,9 +366,11 @@ public class SDMUpdateAttachmentsHandlerTest {
       when(context.getUserInfo()).thenReturn(userInfo);
       when(userInfo.isSystemUser()).thenReturn(false);
       when(tokenHandler.getSDMCredentials()).thenReturn(mockCredentials);
+      CmisDocument mockCmisDoc2 = new CmisDocument();
+      mockCmisDoc2.setFileName("file123.txt");
       when(dbQuery.getAttachmentForID(
               any(CdsEntity.class), any(PersistenceService.class), anyString()))
-          .thenReturn("file123.txt");
+          .thenReturn(mockCmisDoc2);
 
       when(dbQuery.getPropertiesForID(
               any(CdsEntity.class), any(PersistenceService.class), anyString(), any(Map.class)))

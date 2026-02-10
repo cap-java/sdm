@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentCreateEventContext;
+import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
@@ -33,6 +36,9 @@ class DocumentUploadServiceTest {
   @Mock private CloseableHttpResponse httpResponse;
   @Mock private StatusLine statusLine;
   @Mock private HttpEntity httpEntity;
+  @Mock private AttachmentCreateEventContext mockEventContext;
+  @Mock private CdsModel mockModel;
+  @Mock private CdsEntity mockEntity;
 
   private DocumentUploadService documentUploadService;
 
@@ -40,6 +46,11 @@ class DocumentUploadServiceTest {
   void setUp() {
     MockitoAnnotations.openMocks(this);
     documentUploadService = new DocumentUploadService(serviceBinding, connectionPool, tokenHandler);
+    // Setup default mock behavior for eventContext
+    when(mockEventContext.getModel()).thenReturn(mockModel);
+    when(mockEventContext.getAttachmentEntity()).thenReturn(mockEntity);
+    when(mockEntity.toString()).thenReturn("TestEntity");
+    when(mockModel.findEntity("TestEntity_drafts")).thenReturn(java.util.Optional.of(mockEntity));
   }
 
   @Test
@@ -108,7 +119,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -139,7 +151,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -162,7 +175,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -184,7 +198,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -298,7 +313,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, true);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, true, mockEventContext);
             });
 
     // Then
@@ -324,7 +340,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -543,7 +560,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -574,7 +592,9 @@ class DocumentUploadServiceTest {
       mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
 
       // When - Should attempt single chunk upload for exactly 400MB
-      var result = documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+      var result =
+          documentUploadService.createDocument(
+              cmisDocument, sdmCredentials, false, mockEventContext);
 
       // Then
       assertNotNull(result);
@@ -712,7 +732,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -784,7 +805,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -873,7 +895,8 @@ class DocumentUploadServiceTest {
         assertThrows(
             IOException.class,
             () -> {
-              documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+              documentUploadService.createDocument(
+                  cmisDocument, sdmCredentials, false, mockEventContext);
             });
 
     // Then
@@ -933,7 +956,9 @@ class DocumentUploadServiceTest {
       mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
 
       // When
-      var result = documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+      var result =
+          documentUploadService.createDocument(
+              cmisDocument, sdmCredentials, false, mockEventContext);
 
       // Then
       assertNotNull(result);
@@ -992,7 +1017,9 @@ class DocumentUploadServiceTest {
       mockedEntityUtils.when(() -> EntityUtils.toString(httpEntity)).thenReturn(jsonResponse);
 
       // When
-      var result = documentUploadService.createDocument(cmisDocument, sdmCredentials, false);
+      var result =
+          documentUploadService.createDocument(
+              cmisDocument, sdmCredentials, false, mockEventContext);
 
       // Then - Should handle negative content length gracefully
       assertNotNull(result);

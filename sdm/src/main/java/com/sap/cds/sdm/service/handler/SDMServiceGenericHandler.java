@@ -1,10 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.cds.Result;
 import com.sap.cds.Row;
-import com.sap.cds.feature.attachments.service.AttachmentService;
 import com.sap.cds.ql.Insert;
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
@@ -356,6 +353,17 @@ public class SDMServiceGenericHandler implements EventHandler {
     String id = targetKeys.get("ID").toString();
     CmisDocument cmisDocument =
         dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED))
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_DETECTED_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))
+      throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
       // open attachment is triggered on non-draft entity
@@ -363,7 +371,25 @@ public class SDMServiceGenericHandler implements EventHandler {
       cmisDocument =
           dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
     }
+
     if (cmisDocument.getMimeType().equalsIgnoreCase(SDMConstants.MIMETYPE_INTERNET_SHORTCUT)) {
+      // Verify access to the object by calling getObject from SDMService
+      try {
+        SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+        JSONObject objectResponse =
+            sdmService.getObject(
+                cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+
+        if (objectResponse == null) {
+          throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+        }
+      } catch (ServiceException e) {
+        if (e.getMessage() != null
+            && e.getMessage().contains("User does not have required scope")) {
+          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR_OPEN_LINK);
+        }
+        throw e;
+      }
       context.setResult(cmisDocument.getUrl());
     } else {
       context.setResult("None");
@@ -391,20 +417,24 @@ public class SDMServiceGenericHandler implements EventHandler {
             ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
             : "up__ID";
     CqnSelect select = (CqnSelect) context.get("cqn");
-    // Get parent entity to extract its key names dynamically
+
+    // Derive the parent entity name from the target qualified name
+    // Target is like "AdminService.Chapters.attachments", parent is "AdminService.Chapters"
+    String targetQualifiedName = context.getTarget().getQualifiedName();
     String parentEntityName = null;
-    ObjectMapper mapper = new ObjectMapper();
-    JsonNode root = mapper.readTree(select.toString());
-    JsonNode refArray = root.path("SELECT").path("from").path("ref");
-    if (refArray.isArray() && refArray.size() >= 2) {
-      JsonNode parentNode = refArray.get(refArray.size() - 2);
-      parentEntityName = parentNode.path("id").asText();
+    int lastDotIndex = targetQualifiedName.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+      parentEntityName = targetQualifiedName.substring(0, lastDotIndex);
     }
 
     Optional<CdsEntity> parentEntity =
         parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
 
-    String upID = fetchUPIDFromCQN(select, parentEntity.orElse(null));
+    if (parentEntity.isEmpty()) {
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
+    }
+
+    String upID = SDMUtils.fetchUPIDFromCQN(select, parentEntity.get());
     String filenameInRequest = context.get("name").toString();
 
     Result result =
@@ -432,10 +462,10 @@ public class SDMServiceGenericHandler implements EventHandler {
     JSONObject createResult = null;
 
     try {
-      createResult = documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser);
+      createResult =
+          documentService.createDocument(cmisDocument, sdmCredentials, isSystemUser, null);
     } catch (Exception e) {
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
     handleCreateLinkResult(cmisDocument, createResult, context, upID, upIdKey);
   }
@@ -571,6 +601,7 @@ public class SDMServiceGenericHandler implements EventHandler {
                 + cmisDocument.getFolderId()
                 + ":"
                 + context.getTarget());
+        updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
 
         try {
           var insert = Insert.into(context.getTarget().getQualifiedName()).entry(updatedFields);
@@ -583,41 +614,6 @@ public class SDMServiceGenericHandler implements EventHandler {
           logger.info("Exception in insert : " + e.getMessage());
         }
         context.setCompleted();
-    }
-  }
-
-  private String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
-    try {
-      String upID = null;
-      ObjectMapper mapper = new ObjectMapper();
-      JsonNode root = mapper.readTree(select.toString());
-      JsonNode refArray = root.path("SELECT").path("from").path("ref");
-      JsonNode secondLast = refArray.get(refArray.size() - 2);
-      JsonNode whereArray = secondLast.path("where");
-
-      // Get the actual key field names from the parent entity
-      List<String> keyElementNames = getKeyElementNames(parentEntity);
-
-      for (int i = 0; i < whereArray.size(); i++) {
-        JsonNode node = whereArray.get(i);
-
-        if (node.has("ref") && node.get("ref").isArray()) {
-          String fieldName = node.get("ref").get(0).asText();
-
-          if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
-            JsonNode valNode = whereArray.get(i + 2);
-            upID = valNode.path("val").asText();
-            break;
-          }
-        }
-      }
-      if (upID == null) {
-        throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"));
-      }
-      return upID;
-    } catch (Exception e) {
-      logger.error(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
-      throw new ServiceException(SDMUtils.getErrorMessage("ENTITY_PROCESSING_ERROR_LINK"), e);
     }
   }
 }

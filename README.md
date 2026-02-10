@@ -10,11 +10,12 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Read attachment : Provides the capability to preview attachments.
 - Delete attachment : Provides the capability to remove attachments.
 - Rename attachment : Provides the capability to rename attachments.
-- Virus scanning : Provides the capability to support virus scan for virus scan enabled repositories.
+- Virus scanning : Provides the capability to support malware scan and Trend Micro scan for virus scan enabled repositories.
 - Draft functionality : Provides the capability of working with draft attachments.
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Custom properties : Provides the capability to define custom properties for attachments.
 - Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Maximum file size: Provides the capability to specify the maximum file size for attachments.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
 - Copy attachments: Provides the capability to copy attachments from one entity to another entity.
@@ -23,6 +24,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Move attachments: Provides the capability to move attachments from one entity to another entity.
 - Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
+- Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
+
 ## Table of Contents
 
 - [Pre-Requisites](#pre-requisites)
@@ -32,6 +35,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Support for Maximum File Size](#support-for-maximum-file-size)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
 - [Support for Copy attachments](#support-for-copy-attachments)
@@ -40,6 +44,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Link type attachments](#support-for-link-type-attachments)
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
+- [Support for Attachment Upload Status](#support-for-attachment-upload-status)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -53,10 +58,10 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 > **cds-services**
 >
-> The behaviour of clicking attachment and previewing it varies based on the version of cds-services used by the CAP application. 
+> The behaviour of clicking attachment and previewing it varies based on the version of cds-services used by the CAP application.
 >
 > - For cds-services version >= 3.4.0, clicking on attachment will
->   - open the file in new browser tab, if browser supports the file type.
+    >   - open the file in new browser tab, if browser supports the file type.
 >   - download the file to the computer, if browser does not support the file type.
 >
 > - For cds-services version < 3.4.0, clicking on attachment will download the file to the computer
@@ -65,7 +70,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 
 ## Setup
 
-In this guide, we use the Bookshop sample app in the [deploy branch](https://github.com/cap-java/sdm/tree/deploy) of this repository, to integrate SDM CAP plugin.  Follow the steps in this section for a quick way to deploy and test the plugin without needing to create your own custom CAP application.
+In this guide, we use the Bookshop sample app in the [local_deploy branch](https://github.com/cap-java/sdm/tree/local_deploy) of this repository, to integrate SDM CAP plugin.  Follow the steps in this section for a quick way to deploy and test the plugin without needing to create your own custom CAP application.
 
 ### Using the released version
 If you want to use the version of SDM CAP plugin released on the central maven repository follow the below steps:
@@ -78,10 +83,10 @@ If you want to use the version of SDM CAP plugin released on the central maven r
    git clone https://github.com/cap-java/sdm
 ```
 
-3. Checkout to the branch **deploy**:
+3. Checkout to the branch **local_deploy**:
 
 ```sh
-   git checkout deploy
+   git checkout local_deploy
 ```
 
 4. Navigate to the demoapp folder:
@@ -90,7 +95,7 @@ If you want to use the version of SDM CAP plugin released on the central maven r
    cd cap-notebook/demoapp
 ```
 
-5. Configure the [REPOSITORY_ID](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) with the repository you want to use for deploying the application. Set the SDM instance name to match the SAP Document Management integration option instance you created in BTP and update this in the mta.yaml file under the [srv module](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L31) and the [resources section](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L98) values in the **mta.yaml**. 
+5. Configure the [REPOSITORY_ID](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) with the repository you want to use for deploying the application. Set the SDM instance name to match the SAP Document Management integration option instance you created in BTP and update this in the mta.yaml file under the [srv module](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L31) and the [resources section](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L98) values in the **mta.yaml**.
 
 6. Build the application:
 
@@ -125,10 +130,10 @@ To use a development version of the SDM CAP plugin, follow these steps. This is 
 ```
 The plugin is now added to your local .m2 repository, giving it priority over the version available in the central Maven repository during the application build.
 
-3. Checkout to the branch **deploy**:
+3. Checkout to the branch **local_deploy**:
 
 ```sh
-   git checkout deploy
+   git checkout local_deploy
 ```
 
 4. Navigate to the demoapp folder:
@@ -137,7 +142,7 @@ The plugin is now added to your local .m2 repository, giving it priority over th
    cd cap-notebook/demoapp
 ```
 
-5. Configure the [REPOSITORY_ID](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) with the repository you want to use for deploying the application. Set the SDM instance name to match the SAP Document Management integration option instance you created in BTP and update this in the mta.yaml file under the [srv module](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L31) and the [resources section](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L98) values in the **mta.yaml**. 
+5. Configure the [REPOSITORY_ID](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L21) with the repository you want to use for deploying the application. Set the SDM instance name to match the SAP Document Management integration option instance you created in BTP and update this in the mta.yaml file under the [srv module](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L31) and the [resources section](https://github.com/cap-java/sdm/blob/4180e501ecd792770174aa4972b06aff54ac139d/cap-notebook/demoapp/mta.yaml#L98) values in the **mta.yaml**.
 
 6. Build the application:
 
@@ -156,10 +161,10 @@ The plugin is now added to your local .m2 repository, giving it priority over th
 ```
 
 ## Use com.sap.cds:sdm dependency
-Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP application. 
+Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP application.
 
 1. Add the following dependency in pom.xml in the srv folder
-   
+
    ```xml
    <dependency>
       <groupId>com.sap.cds</groupId>
@@ -201,7 +206,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
    ````
 
    After that the models can be used.
-   
+
 2. To use sdm plugin in your CAP application, create an element with an `Attachments` type. Following the [best practice of separation of concerns](https://cap.cloud.sap/docs/guides/domain-modeling#separation-of-concerns), create a separate file _srv/attachment-extension.cds_ and extend your entity with attachments. Refer the following example from a sample Bookshop app:
 
    ```cds
@@ -231,7 +236,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
          service-plan: standard
    ```
 
-4. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. Refer the following example from a sample Bookshop app. Currently only non versioned repositories are supported. 
+4. Using the created SDM instance's credentials from key [onboard a repository](https://help.sap.com/docs/document-management-service/sap-document-management-service/onboarding-repository). In mta.yaml, under properties of the srv module add the repository id. Refer the following example from a sample Bookshop app. Currently only non versioned repositories are supported.
 
     ```yaml
     modules:
@@ -317,7 +322,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
    <img width="1300" alt="Delete an attachment" style="border-radius:0.5rem;" src="resources/read.gif">
 
-8. **Rename a file** by going into Edit mode and setting a new name for the file in the filename field. Then click the **Save** button to have that file renamed in SAP Document Management Integration Option. We demonstrate this by renaming the previously uploaded TXT file: 
+8. **Rename a file** by going into Edit mode and setting a new name for the file in the filename field. Then click the **Save** button to have that file renamed in SAP Document Management Integration Option. We demonstrate this by renaming the previously uploaded TXT file:
 
    <img width="1300" alt="Delete an attachment" style="border-radius:0.5rem;" src="resources/rename.gif">
 
@@ -327,7 +332,7 @@ Follow these steps if you want to integrate the SDM CAP Plugin with your own CAP
 
 ## Support for Multitenancy
 
-This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications. 
+This plugin provides APIs for onboarding and offboarding of repositories for multitenant CAP SaaS applications.
 
 GetDependencies, subscribe and unsubscribe are the mandatory steps to be performed to support multitenancy.
 
@@ -356,7 +361,7 @@ return  sdmBinding.getCredentials();
     }
  ```
 Refer the below example where onboarding and offboarding APIs are used on tenant subscription and tenant unsubscription events of SaaS application.
-  
+
 ```java
 @After(event = DeploymentService.EVENT_SUBSCRIBE)
 public void onSubscribe(SubscribeEventContext context) {
@@ -371,6 +376,10 @@ public void onSubscribe(SubscribeEventContext context) {
    repository.setDisplayName(" Test Onboarding repo");
    repository.setSubdomain(subdomain);
    repository.setHashAlgorithms("SHA-256");
+   // To enable malware scan, uncomment the following line
+   repository.setIsVirusScanEnabled(true);
+   // To enable Trend Micro scan, uncomment the following line
+   repository.setIsAsyncVirusScanEnabled(true);
 
    // Using SDMAdminServiceImpl onboardRepository() to onboard repository
    SDMAdminService sdmAdminService =  new SDMAdminServiceImpl();
@@ -435,10 +444,10 @@ Custom properties are supported via the usage of CMIS secondary type properties.
       ```
 
 2. Using secondary properties in CAP Application.
-   - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file. 
-   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty.name`. 
-   - In this field set the name of the secondary property in SDM. 
-   
+   - Extend the `Attachments` aspect with the secondary properties in the previously created _attachment-extension.cds_ file.
+   - Annotate the secondary properties with `@SDM.Attachments.AdditionalProperty.name`.
+   - In this field set the name of the secondary property in SDM.
+
    Refer the following example from a sample Bookshop app:
 
       ```cds
@@ -453,7 +462,7 @@ Custom properties are supported via the usage of CMIS secondary type properties.
 
    > **Note**
    >
-   > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
+   > SDM supports secondary properties with data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.
 
 ## Support for Maximum allowed uploads
 This plugin allows you to customize the maximum number of uploads a user can perform. Once a user exceeds the defined limit, any further upload attempts will trigger an error. The error message shown to the user is also fully customizable. The annotation `@SDM.Attachments` should be used for defining the maximum upload limit.
@@ -481,9 +490,38 @@ Example for German language in `messages_de.properties`:
 SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 ```
 
-   > **Note**
-   >
-   > Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+> **Note**
+>
+> Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+
+## Support for Maximum File Size
+
+This plugin allows you to customize the maximum file size for attachments that a user can upload. Once the defined file size limit is exceeded, the upload is rejected and an error is triggered. The error message displayed to the user is fully customizable. The `@Validation.Maximum` annotation is used to define the maximum allowed file size.
+
+Refer the following example from a sample Bookshop app:
+
+```cds
+
+entity Books {
+  ...
+  attachments: Composition of many Attachments;
+}
+
+annotate Books.attachments with {
+  content @Validation.Maximum : '30MB';
+}
+```
+
+#### Customizing the Maximum File Size Error Message
+
+To customize the error message displayed when the file upload size limit is exceeded, add the following key to your `messages.properties` file under `srv/src/main/resources`:
+
+```properties
+AttachmentSizeExceeded = File size exceeds the limit of {0}.
+```
+
+Supports both decimal (KB, MB, GB, TB) and binary (KiB, MiB, GiB, TiB) units with comprehensive validation and error handling.
+
 
 ## Support for Multiple attachment facets
 The plugin supports creating multiple attachment facets or sections, each allowing various documents to be uploaded. The names of these facets are fully customizable. All existing operations available for the default attachment facet are also supported for any additional facets you create.
@@ -522,9 +560,9 @@ Add the following facet in _fiori-service.cds_ in the _app_ folder. Refer the fo
     }
     
   ``` 
-   > **Note**
-   >
-   > Once a facet or section name is defined in the CDS file, it is strongly recommended not to modify it. For instance, in the example provided, section names such as attachments, references, and footnotes should remain unchanged after initial configuration. Renaming these sections will result in the creation of new tables, causing any data associated with the original sections to become inaccessible in the UI.
+> **Note**
+>
+> Once a facet or section name is defined in the CDS file, it is strongly recommended not to modify it. For instance, in the example provided, section names such as attachments, references, and footnotes should remain unchanged after initial configuration. Renaming these sections will result in the creation of new tables, causing any data associated with the original sections to become inaccessible in the UI.
 
 ## Support for technical user
 The CAP OData operations can be performed on attachments using a technical user. This flow can be used for machine-to-machine (M2M) interactions, where user involvement is not necessary.
@@ -549,7 +587,7 @@ request =
 This plugin provides capability to copy attachments from one entity to another. This capability will copy attachments metadata on CAP as well as actual content on the SAP Document Management service repository. This feature can be used in following two ways.
 
 1. **A helper method to copy attachments from one entity to another**
-   
+
    The `AttachmentService` instance can be used to call `copyAttachments` method. This method expects an object of `CopyAttachmentInput` which requires new entity's Id (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be copied.
 
    Example usage:
@@ -563,7 +601,7 @@ This plugin provides capability to copy attachments from one entity to another. 
       attachmentService.copyAttachments(copyEventInput, isSystemUser);
    ```
 2. **OData API to copy attachments from one entity to another**
-   
+
    You can also use an OData API call to trigger the copy operation.
    `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.copyAttachments` . This request expects the following request body:
    ```json
@@ -573,7 +611,7 @@ This plugin provides capability to copy attachments from one entity to another. 
    }
    ```
 
-   Example usage:  
+   Example usage:
    ```
    HTTP Method: POST
    Request URL:
@@ -600,7 +638,7 @@ This plugin provides capability to move attachments from one entity to another e
 ### Usage Methods
 
 1. **A helper method to move attachments from one entity to another**
-   
+
    The `AttachmentService` instance can be used to call `moveAttachments` method. This method expects an object of `MoveAttachmentInput` which requires the source folder ID, target entity's ID (`up__Id`), the `attachments facet name` and the `list of objectIds` corresponding to attachments that are to be moved.
 
    Example usage:
@@ -632,7 +670,7 @@ This plugin provides capability to move attachments from one entity to another e
    ```
 
 2. **OData API to move attachments from one entity to another**
-   
+
    You can also use an OData API call to trigger the move operation.
    `AttachmentsService` endpoint URL can be used with suffix `/<Service_name>.moveAttachments`. This request expects the following request body:
    ```json
@@ -657,7 +695,7 @@ This plugin provides capability to move attachments from one entity to another e
       "objectIds": ["abc", "xyz"]
    }
    ```
-   
+
    Note: The `facet` parameter should be the fully qualified name of the target attachment composition (e.g., `AdminService.Books.attachments`).
 
 ### Optional Parameters
@@ -740,12 +778,12 @@ The changelog functionality retrieves the complete history of an attachment from
 
 To enable changelog viewing in your CAP application:
 
-1. **Add a custom controller extension** 
+1. **Add a custom controller extension**
 
    In webapp/controller/custom.controller.js, copy and paste below content.
-   
+
    See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
-   
+
    ```js
    sap.ui.define(
     [
@@ -818,7 +856,7 @@ To enable changelog viewing in your CAP application:
       });
    });
    ```
-   
+
    - Replace `books` in `ControllerExtension.extend` with the `SAPUI5.Component` name from your `app/appconfig/fioriSandboxConfig.json` file. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86).
    - Replace `AdminService` in `invokeAction("AdminService.changelog")` with the name of your service.
 
@@ -889,7 +927,7 @@ To enable changelog viewing in your CAP application:
 
    To add a custom action button (e.g., "Change Log") to your table that is enabled only when a single row is selected, add the following configuration to your `manifest.json`.
    See this [example](https://github.com/cap-java/sdm/blob/396339d3182f1debe96a3134c42b17b609357d9a/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L143) from a sample Bookshop app.
-   
+
    ```json
    "controlConfiguration": {
       "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
@@ -915,13 +953,13 @@ To enable changelog viewing in your CAP application:
    ```
    - Replace `attachments` with your entity’s facet name as needed.
    - Repeat for other facets's if required.
-   - Replace `books` in `"press": ".extension.books.controller.custom.onChangelogPress"` with the SAPUI5.Component name from your 
-   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+   - Replace `books` in `"press": ".extension.books.controller.custom.onChangelogPress"` with the SAPUI5.Component name from your
+     `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
 
    ### Configuration Properties
 
    | Property | Value | Description |
-   |----------|-------|-------------|
+      |----------|-------|-------------|
    | `enableOnSelect` | `"single"` | Button is enabled only when exactly one row is selected |
    | `requiresSelection` | `true` | Button is disabled when no rows are selected |
    | `press` | `".extension.books.controller.custom.onChangelogPress"` | Reference to the controller method that handles the button click |
@@ -933,11 +971,11 @@ To enable changelog viewing in your CAP application:
    The button will automatically be:
 
    | Status | Condition |
-   |--------|-----------|
+      |--------|-----------|
    | ✅ Enabled | When exactly one item is selected |
    | ❌ Disabled | When no items are selected |
    | ❌ Disabled | When multiple items are selected |
-   
+
 
 
 ## Support for link type attachments
@@ -949,19 +987,19 @@ This plugin provides the capability to create, open, rename and delete attachmen
 ### Steps to Enable Row-Press for Open Link
 
 1. **Add the `openAttachment` action to application's service definition**
-   
+
    See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L19) from a sample Bookshop app.
 
    ```cds
    action openAttachment() returns String;
    ```
 
-2. **Add a custom controller extension** 
+2. **Add a custom controller extension**
 
    In webapp/controller/custom.controller.js, copy and paste below content.
-   
+
    See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
-   
+
    ```js
    sap.ui.define(
       [
@@ -997,7 +1035,7 @@ This plugin provides the capability to create, open, rename and delete attachmen
       }
    );
    ```
-   
+
    - Replace `books` in `ControllerExtension.extend` with the `SAPUI5.Component` name from your `app/appconfig/fioriSandboxConfig.json` file. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86).
    - Replace `AdminService` in `invokeAction("AdminService.openAttachment")` with the name of your service.
 
@@ -1018,11 +1056,11 @@ This plugin provides the capability to create, open, rename and delete attachmen
    ```
    - Replace `attachments` with your entity’s facet name as needed.
    - Repeat for other facets's if required.
-   - Replace `books` in `"rowPress": ".extension.books.controller.custom.onRowPress"` with the SAPUI5.Component name from your 
-   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+   - Replace `books` in `"rowPress": ".extension.books.controller.custom.onRowPress"` with the SAPUI5.Component name from your
+     `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
 
 4. **Register the Custom Controller Extension**
-   
+
    In the root of your `sap.ui5` section, add or extend the `extends` property to register your custom controller by copy and pasting below content. See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L159)
 
    ```json
@@ -1036,18 +1074,18 @@ This plugin provides the capability to create, open, rename and delete attachmen
       }
    }
    ```
-   - Replace `books` in `"sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList"` with the SAPUI5.Component name from your 
-   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+   - Replace `books` in `"sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList"` with the SAPUI5.Component name from your
+     `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
    - Replace `BooksDetailsList` in `"sap.fe.templates.ObjectPage.ObjectPageController#books::BooksDetailsList"` with id of the relevant Object Page (e.g., BooksDetails). Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/admin-books/webapp/manifest.json#L109) from a sample Bookshop app.
-   - Replace `books` in `"controllerName": "books.controller.custom"` with the SAPUI5.Component name from your 
-   `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
+   - Replace `books` in `"controllerName": "books.controller.custom"` with the SAPUI5.Component name from your
+     `app/appconfig/fioriSandboxConfig.json` file. Refer this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/app/appconfig/fioriSandboxConfig.json#L86) from a sample Bookshop app.
 
 ### Steps to Enable Create Link Feature in CAP Application
 
 > **Note:** Enabling row-press for open link (see steps above) is a prerequisite for link support.
 
-1. **Add the `createLink` action to application's service definition** 
-   
+1. **Add the `createLink` action to application's service definition**
+
    See this [example](https://github.com/cap-java/sdm/blob/90cfc716967d844e114457a710daebdd55431965/cap-notebook/demoapp/srv/admin-service.cds#L12) from a sample Bookshop app:
 
    ```cds
@@ -1100,7 +1138,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   type       @(title: '{i18n>Type}');
-  linkUrl       @(title: '{i18n>LinkURL}');
+  linkUrl       @UI.Hidden;
   fileName  @(title: '{i18n>Filename}');
   modifiedAt @(odata.etag: null);
   content
@@ -1149,8 +1187,8 @@ This plugin provides the capability to update/edit the URL of attachments of lin
 
 ### Steps to Enable Edit Link Feature in CAP Application
 
-1. **Add the `editLink` action to application's service definition** 
-   
+1. **Add the `editLink` action to application's service definition**
+
    See this [example](https://github.com/cap-java/sdm/blob/a1fc26f3aa92ffd4f9203d815f51107838d5f677/cap-notebook/demoapp/srv/admin-service.cds#L18) from a sample Bookshop app:
 
    ```cds
@@ -1178,11 +1216,17 @@ annotate my.Books.attachments with @UI: {
   },
   LineItem  : [
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
-    {Value: fileName, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
     {Value: createdBy, @HTML5.CssDefaults: {width: '20%'}},
-    {Value: note, @HTML5.CssDefaults: {width: '25%'}},
+    {Value: note, @HTML5.CssDefaults: {width: '20%'}},
+    {
+        Value             : uploadStatus,
+        Criticality: uploadStatusNav.criticality,
+        @Common.FieldControl: #ReadOnly,
+        @HTML5.CssDefaults: {width: '10%'}
+      },
     {
       $Type  : 'UI.DataFieldForActionGroup',
       ID     : 'TableActionGroup',
@@ -1210,7 +1254,7 @@ annotate my.Books.attachments with @UI: {
 {
   note       @(title: '{i18n>Note}');
   type       @(title: '{i18n>Type}');
-  linkUrl       @(title: '{i18n>LinkURL}');
+  linkUrl       @UI.Hidden;
   fileName  @(title: '{i18n>Filename}');
   modifiedAt @(odata.etag: null);
   content
@@ -1267,12 +1311,31 @@ SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
 SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 ```
 
+
+## Support for Attachment Upload Status
+
+The attachment upload process displays a status indicator for each file being uploaded.
+
+**For repositories without virus scanning:**
+The upload status transitions from "Uploading" to "Success".
+
+**For repositories with malware scanning:**
+The upload status transitions from "Uploading" to "Success" if no virus is detected. If a virus is detected, the attachment is automatically deleted.
+
+To display color-coded status indicators in the UI, create a `sap.attachments-UploadScanStates.csv` file in the `db/data` folder with the following content:
+```
+code;name;criticality
+uploading;Uploading;5
+Success;Success;3
+Failed;Scan Failed;2
+ ```
+
 ## Known Restrictions
 
 - UI5 Version 1.135.0: This version causes error in upload of attachments.
 - Repository : This plugin does not support the use of versioned repositories.
-- File size : If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scanning, only attachments upto 400 MB will be scanned for virus. 
-- Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.  
+- File size : If the repository is [onboarded](https://help.sap.com/docs/document-management-service/sap-document-management-service/internal-repository?version=Cloud&locale=en-US) with virus scanning, only attachments upto 400 MB will be scanned for virus.
+- Datatypes for custom properties : Custom properties are supported for the following data types `String`, `Boolean`, `Decimal`, `Integer` and `DateTime`.
 
 ## Support, Feedback, Contributing
 
@@ -1285,4 +1348,3 @@ We as members, contributors, and leaders pledge to make participation in our com
 ## Licensing
 
 Copyright 2024 SAP SE or an SAP affiliate company and <your-project> contributors. Please see our [LICENSE](LICENSE) for copyright and license information. Detailed information including third-party components and their licensing/copyright information is available [via the REUSE tool](https://api.reuse.software/info/github.com/cap-java/sdm).
-
