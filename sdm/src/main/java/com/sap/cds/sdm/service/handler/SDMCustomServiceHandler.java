@@ -1542,106 +1542,195 @@ public class SDMCustomServiceHandler {
    * @param data encapsulated draft entry creation data
    */
   private void createDraftEntriesForMove(DraftEntryMoveData data) {
-
     for (int i = 0; i < data.getMovedAttachmentsMetadata().size(); i++) {
       List<String> attachmentMetadata = data.getMovedAttachmentsMetadata().get(i);
       CmisDocument cmisDocument = data.getPopulatedDocuments().get(i);
-      Map<String, Object> updatedFields = new HashMap<>();
 
-      String fileName = attachmentMetadata.get(0);
-      String mimeType = attachmentMetadata.get(1);
-      String description = attachmentMetadata.get(2);
-      String newObjectId = attachmentMetadata.get(3);
-      String createdBy = attachmentMetadata.size() > 4 ? attachmentMetadata.get(4) : null;
-      String creationDate = attachmentMetadata.size() > 5 ? attachmentMetadata.get(5) : null;
-      String lastModifiedBy = attachmentMetadata.size() > 6 ? attachmentMetadata.get(6) : null;
-      String lastModificationDate =
-          attachmentMetadata.size() > 7 ? attachmentMetadata.get(7) : null;
+      Map<String, Object> updatedFields =
+          buildUpdatedFieldsForMove(attachmentMetadata, cmisDocument, data);
 
-      updatedFields.put(OBJECT_ID_KEY, newObjectId);
-      updatedFields.put("repositoryId", data.getRepositoryId());
-      updatedFields.put("folderId", data.getFolderId());
-      updatedFields.put("status", "Clean");
-      updatedFields.put("mimeType", mimeType);
-      updatedFields.put("type", cmisDocument.getType());
-      updatedFields.put("fileName", fileName);
-      updatedFields.put("note", description);
-      updatedFields.put("HasDraftEntity", false);
-      updatedFields.put("HasActiveEntity", false);
-      updatedFields.put("IsActiveEntity", true);
-      updatedFields.put("linkUrl", cmisDocument.getUrl());
-      updatedFields.put(
-          "contentId",
-          newObjectId
-              + ":"
-              + data.getFolderId()
-              + ":"
-              + data.getParentEntity()
-              + "."
-              + data.getCompositionName()
-              + ":"
-              + mimeType);
-      updatedFields.put(data.getUpIdKey(), data.getUpID());
+      performDraftInsertWithRetry(updatedFields, data);
+    }
+  }
 
-      // Add managed fields if available (parse Instant from string)
-      if (createdBy != null && !"".equals(createdBy)) {
-        updatedFields.put("createdBy", createdBy);
-      }
-      if (creationDate != null && !"".equals(creationDate)) {
-        updatedFields.put("createdAt", java.time.Instant.parse(creationDate));
-      }
-      if (lastModifiedBy != null && !"".equals(lastModifiedBy)) {
-        updatedFields.put("modifiedBy", lastModifiedBy);
-      }
-      if (lastModificationDate != null && !"".equals(lastModificationDate)) {
-        updatedFields.put("modifiedAt", java.time.Instant.parse(lastModificationDate));
-      }
+  /**
+   * Builds the complete map of fields to be inserted for a moved attachment.
+   *
+   * @param attachmentMetadata metadata list from SDM response
+   * @param cmisDocument the CMIS document with type and URL
+   * @param data the draft entry move data
+   * @return map of fields ready for database insertion
+   */
+  private Map<String, Object> buildUpdatedFieldsForMove(
+      List<String> attachmentMetadata, CmisDocument cmisDocument, DraftEntryMoveData data) {
 
-      // Include secondary properties from moved attachment
-      // Properties are already filtered and validated in processValidatedAttachment()
-      // to only include those annotated with @SDM.Attachments.AdditionalProperty
-      // and present in valid secondary properties list
-      if (cmisDocument.getSecondaryProperties() != null) {
-        logger.info(
-            "Adding {} secondary properties to DB insert for attachment {}: {}",
-            cmisDocument.getSecondaryProperties().size(),
-            newObjectId,
-            cmisDocument.getSecondaryProperties());
-        updatedFields.putAll(cmisDocument.getSecondaryProperties());
-      } else {
-        logger.warn("No secondary properties to add for attachment {}", newObjectId);
-      }
+    String fileName = attachmentMetadata.get(0);
+    String mimeType = attachmentMetadata.get(1);
+    String description = attachmentMetadata.get(2);
+    String newObjectId = attachmentMetadata.get(3);
 
+    Map<String, Object> updatedFields =
+        buildBasicFields(newObjectId, fileName, mimeType, description, cmisDocument, data);
+
+    addManagedFieldsForMove(updatedFields, attachmentMetadata);
+    addSecondaryPropertiesForMove(updatedFields, cmisDocument, newObjectId);
+
+    logger.info(
+        "Final DB insert map for attachment {} contains {} fields: {}",
+        newObjectId,
+        updatedFields.size(),
+        updatedFields.keySet());
+
+    return updatedFields;
+  }
+
+  /**
+   * Builds the basic field map with core attachment properties.
+   *
+   * @param newObjectId the new object ID
+   * @param fileName the file name
+   * @param mimeType the MIME type
+   * @param description the description
+   * @param cmisDocument the CMIS document
+   * @param data the draft entry move data
+   * @return map with basic fields
+   */
+  private Map<String, Object> buildBasicFields(
+      String newObjectId,
+      String fileName,
+      String mimeType,
+      String description,
+      CmisDocument cmisDocument,
+      DraftEntryMoveData data) {
+
+    Map<String, Object> fields = new HashMap<>();
+    fields.put(OBJECT_ID_KEY, newObjectId);
+    fields.put("repositoryId", data.getRepositoryId());
+    fields.put("folderId", data.getFolderId());
+    fields.put("status", "Clean");
+    fields.put("mimeType", mimeType);
+    fields.put("type", cmisDocument.getType());
+    fields.put("fileName", fileName);
+    fields.put("note", description);
+    fields.put("HasDraftEntity", false);
+    fields.put("HasActiveEntity", false);
+    fields.put("IsActiveEntity", true);
+    fields.put("linkUrl", cmisDocument.getUrl());
+    fields.put(
+        "contentId",
+        newObjectId
+            + ":"
+            + data.getFolderId()
+            + ":"
+            + data.getParentEntity()
+            + "."
+            + data.getCompositionName()
+            + ":"
+            + mimeType);
+    fields.put(data.getUpIdKey(), data.getUpID());
+
+    return fields;
+  }
+
+  /**
+   * Adds managed fields (createdBy, createdAt, modifiedBy, modifiedAt) to the fields map.
+   *
+   * @param fields the fields map to update
+   * @param attachmentMetadata the metadata list containing managed field values
+   */
+  private void addManagedFieldsForMove(
+      Map<String, Object> fields, List<String> attachmentMetadata) {
+
+    String createdBy = attachmentMetadata.size() > 4 ? attachmentMetadata.get(4) : null;
+    String creationDate = attachmentMetadata.size() > 5 ? attachmentMetadata.get(5) : null;
+    String lastModifiedBy = attachmentMetadata.size() > 6 ? attachmentMetadata.get(6) : null;
+    String lastModificationDate = attachmentMetadata.size() > 7 ? attachmentMetadata.get(7) : null;
+
+    addFieldIfPresent(fields, "createdBy", createdBy);
+    addInstantFieldIfPresent(fields, "createdAt", creationDate);
+    addFieldIfPresent(fields, "modifiedBy", lastModifiedBy);
+    addInstantFieldIfPresent(fields, "modifiedAt", lastModificationDate);
+  }
+
+  /**
+   * Adds a field to the map if the value is present and not empty.
+   *
+   * @param fields the fields map to update
+   * @param fieldName the field name
+   * @param value the field value
+   */
+  private void addFieldIfPresent(Map<String, Object> fields, String fieldName, String value) {
+    if (value != null && !"".equals(value)) {
+      fields.put(fieldName, value);
+    }
+  }
+
+  /**
+   * Adds an Instant field to the map if the value is present and not empty.
+   *
+   * @param fields the fields map to update
+   * @param fieldName the field name
+   * @param value the string representation of the Instant
+   */
+  private void addInstantFieldIfPresent(
+      Map<String, Object> fields, String fieldName, String value) {
+    if (value != null && !"".equals(value)) {
+      fields.put(fieldName, java.time.Instant.parse(value));
+    }
+  }
+
+  /**
+   * Adds secondary properties from the CMIS document to the fields map.
+   *
+   * @param fields the fields map to update
+   * @param cmisDocument the CMIS document with secondary properties
+   * @param objectId the object ID for logging
+   */
+  private void addSecondaryPropertiesForMove(
+      Map<String, Object> fields, CmisDocument cmisDocument, String objectId) {
+
+    if (cmisDocument.getSecondaryProperties() != null) {
       logger.info(
-          "Final DB insert map for attachment {} contains {} fields: {}",
-          newObjectId,
-          updatedFields.size(),
-          updatedFields.keySet());
+          "Adding {} secondary properties to DB insert for attachment {}: {}",
+          cmisDocument.getSecondaryProperties().size(),
+          objectId,
+          cmisDocument.getSecondaryProperties());
+      fields.putAll(cmisDocument.getSecondaryProperties());
+    } else {
+      logger.warn("No secondary properties to add for attachment {}", objectId);
+    }
+  }
 
-      String baseKeyField =
-          data.getUpIdKey() != null ? data.getUpIdKey().replace("up__", "") : "ID";
-      var insert =
-          Insert.into(
-                  data.getParentEntity(),
-                  e ->
-                      e.filter(e.get(baseKeyField).eq(data.getUpID()))
-                          .to(data.getCompositionName()))
-              .entry(updatedFields);
+  /**
+   * Performs database insert with retry logic for the given fields.
+   *
+   * @param updatedFields the fields to insert
+   * @param data the draft entry move data containing entity information
+   * @throws ServiceException if insert fails after retries
+   */
+  private void performDraftInsertWithRetry(
+      Map<String, Object> updatedFields, DraftEntryMoveData data) {
 
-      // Insert directly into active entity (not draft) using persistenceService
-      // Wrap DB insert with retry logic to handle transient DB failures
-      try {
-        Flowable.fromCallable(
-                () -> {
-                  persistenceService.run(insert);
-                  return true;
-                })
-            .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
-            .blockingFirst();
-      } catch (Exception e) {
-        throw new ServiceException(
-            "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
-      }
+    String baseKeyField = data.getUpIdKey() != null ? data.getUpIdKey().replace("up__", "") : "ID";
+    var insert =
+        Insert.into(
+                data.getParentEntity(),
+                e -> e.filter(e.get(baseKeyField).eq(data.getUpID())).to(data.getCompositionName()))
+            .entry(updatedFields);
+
+    // Insert directly into active entity (not draft) using persistenceService
+    // Wrap DB insert with retry logic to handle transient DB failures
+    try {
+      Flowable.fromCallable(
+              () -> {
+                persistenceService.run(insert);
+                return true;
+              })
+          .retryWhen(com.sap.cds.sdm.service.RetryUtils.retryLogic(5)) // Retry up to 5 times
+          .blockingFirst();
+    } catch (Exception e) {
+      throw new ServiceException(
+          "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
     }
   }
 
