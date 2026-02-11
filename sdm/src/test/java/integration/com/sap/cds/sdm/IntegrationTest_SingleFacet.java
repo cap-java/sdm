@@ -5918,7 +5918,6 @@ class IntegrationTest_SingleFacet {
     }
 
     // Move attachments from draft source to target using sourceFacet
-    String sourceFacet = serviceName + "." + entityName + "." + facetName;
     String targetFacet = serviceName + "." + entityName + "." + facetName;
     Map<String, Object> moveResult =
         api.moveAttachment(

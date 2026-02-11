@@ -1660,7 +1660,7 @@ public class SDMCustomServiceHandler {
    * @param value the field value
    */
   private void addFieldIfPresent(Map<String, Object> fields, String fieldName, String value) {
-    if (value != null && !"".equals(value)) {
+    if (value != null && !value.isEmpty()) {
       fields.put(fieldName, value);
     }
   }
@@ -1674,7 +1674,7 @@ public class SDMCustomServiceHandler {
    */
   private void addInstantFieldIfPresent(
       Map<String, Object> fields, String fieldName, String value) {
-    if (value != null && !"".equals(value)) {
+    if (value != null && !value.isEmpty()) {
       fields.put(fieldName, java.time.Instant.parse(value));
     }
   }

@@ -6633,7 +6633,6 @@ class IntegrationTest_MultipleFacet {
         fail("Could not save target entity: " + saveTargetResponse);
       }
 
-      String sourceFacet = serviceName + "." + entityName + "." + facet[i];
       String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
