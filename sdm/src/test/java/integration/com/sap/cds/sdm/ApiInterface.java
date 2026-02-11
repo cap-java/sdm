@@ -76,6 +76,7 @@ public interface ApiInterface {
       String targetEntityID,
       String sourceFolderId,
       List<String> objectIds,
+      String targetFacet,
       String sourceFacet)
       throws IOException;
 

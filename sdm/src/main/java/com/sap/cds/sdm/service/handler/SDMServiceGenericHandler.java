@@ -128,15 +128,9 @@ public class SDMServiceGenericHandler implements EventHandler {
     String sourceFolderId = context.get("sourceFolderId").toString();
     String objectIdsString = context.get("objectIds").toString();
     List<String> objectIds = Arrays.stream(objectIdsString.split(",")).map(String::trim).toList();
-
-    // Get sourceFacet if provided, otherwise null (cleanup won't be performed)
     String sourceFacet =
         context.get("sourceFacet") != null ? context.get("sourceFacet").toString() : null;
-
-    // Use the full target qualified name as the targetFacet
-    String targetFacet = context.getTarget().getQualifiedName();
-
-    // Pass String directly - the constructor will automatically wrap it in Optional
+    String targetFacet = context.get("targetFacet").toString();
     var moveEventInput =
         new MoveAttachmentInput(sourceFolderId, upID, targetFacet, objectIds, sourceFacet);
 

@@ -707,6 +707,7 @@ public class ApiMT implements ApiInterface {
       String targetEntityID,
       String sourceFolderId,
       List<String> objectIds,
+      String targetFacet,
       String sourceFacet)
       throws IOException {
     String objectIdsString = String.join(",", objectIds);
@@ -717,7 +718,7 @@ public class ApiMT implements ApiInterface {
             + entityName
             + "(ID="
             + targetEntityID
-            + ",IsActiveEntity=false)/"
+            + ",IsActiveEntity=true)/"
             + facetName
             + "/"
             + "AdminService.moveAttachments";
@@ -729,6 +730,10 @@ public class ApiMT implements ApiInterface {
     jsonPayload.append("\"sourceFolderId\": \"").append(sourceFolderId).append("\",");
     jsonPayload.append("\"up__ID\": \"").append(targetEntityID).append("\",");
     jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\"");
+
+    if (targetFacet != null && !targetFacet.isEmpty()) {
+      jsonPayload.append(",\"targetFacet\": \"").append(targetFacet).append("\"");
+    }
 
     if (sourceFacet != null && !sourceFacet.isEmpty()) {
       jsonPayload.append(",\"sourceFacet\": \"").append(sourceFacet).append("\"");
