@@ -405,7 +405,7 @@ public class AttachmentsHandlerUtils {
 
     // Get parent titles
     Map<String, String> parentTitles =
-        getAttachmentParentTitles(targetEntity, entityData, compositionPathMapping);
+        getAttachmentParentTitles(model, targetEntity, entityData, compositionPathMapping);
 
     // Combine into comprehensive details
     for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
@@ -432,6 +432,7 @@ public class AttachmentsHandlerUtils {
    * composition. It handles both direct attachments at the root level and nested attachments within
    * composed entities.
    *
+   * @param model the CDS model containing entity definitions and relationships
    * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
    * @param entity the entity data structure containing potential attachment information
    * @param compositionPathMapping the mapping of attachment composition paths obtained from
@@ -440,7 +441,10 @@ public class AttachmentsHandlerUtils {
    *     titles, or an empty map if no attachments are found
    */
   public static Map<String, String> getAttachmentParentTitles(
-      String targetEntity, Map<String, Object> entity, Map<String, String> compositionPathMapping) {
+      CdsModel model,
+      String targetEntity,
+      Map<String, Object> entity,
+      Map<String, String> compositionPathMapping) {
     Map<String, String> parentTitles = new HashMap<>();
 
     String[] targetEntityPath = targetEntity.split("\\.");
@@ -449,7 +453,8 @@ public class AttachmentsHandlerUtils {
 
     for (Map.Entry<String, String> compositionEntry : compositionPathMapping.entrySet()) {
       String compositionPath = compositionEntry.getValue();
-      String parentTitle = findParentTitle(wrappedEntity, compositionPath, entityName);
+      String parentTitle =
+          findParentTitle(model, wrappedEntity, compositionPath, entityName, targetEntity);
       if (parentTitle != null) {
         parentTitles.put(compositionPath, parentTitle);
       }
@@ -461,15 +466,21 @@ public class AttachmentsHandlerUtils {
   /**
    * Finds the parent title for a given attachment composition path.
    *
+   * @param model the CDS model containing entity definitions and relationships
    * @param entity the wrapped entity data structure
    * @param compositionPath the composition path (e.g., "AdminService.chapters123.attachments" or
    *     "AdminService.Books.references")
    * @param rootEntityName the name of the root entity
+   * @param targetEntity the qualified name of the target entity
    * @return the title of the parent entity containing the attachment composition, or null if not
    *     found
    */
   private static String findParentTitle(
-      Map<String, Object> entity, String compositionPath, String rootEntityName) {
+      CdsModel model,
+      Map<String, Object> entity,
+      String compositionPath,
+      String rootEntityName,
+      String targetEntity) {
     try {
       String[] pathParts = compositionPath.split("\\.");
 
@@ -479,7 +490,7 @@ public class AttachmentsHandlerUtils {
         // Check if this is a direct composition (entity matches root entity)
         if (entityPart.equalsIgnoreCase(rootEntityName)) {
           // Direct attachment at root level (e.g., "AdminService.Books.references")
-          return extractTitleFromEntity(entity.get(rootEntityName));
+          return extractTitleFromEntity(model, targetEntity, entity.get(rootEntityName));
         } else {
           // Nested attachment (e.g., "AdminService.chapters123.attachments")
           // Navigate to the parent entity
@@ -494,7 +505,10 @@ public class AttachmentsHandlerUtils {
               List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
               if (!parentList.isEmpty()) {
                 // Get title from the first item in the collection
-                return extractTitleFromEntity(parentList.get(0));
+                // For nested entities, try to determine the entity type from the composition path
+                String nestedEntityName =
+                    determineNestedEntityName(model, targetEntity, entityPart);
+                return extractTitleFromEntity(model, nestedEntityName, parentList.get(0));
               }
             }
           }
@@ -508,37 +522,194 @@ public class AttachmentsHandlerUtils {
   }
 
   /**
-   * Extracts the title field from an entity object, with fallback options.
+   * Determines the fully qualified entity name for a nested composition.
    *
-   * @param entityObj the entity object to extract title from
-   * @return the title string, or a fallback identifier, or null if not found
+   * @param model the CDS model
+   * @param parentEntityName the parent entity name
+   * @param compositionName the composition property name
+   * @return the fully qualified nested entity name, or null if not found
    */
-  private static String extractTitleFromEntity(Object entityObj) {
+  private static String determineNestedEntityName(
+      CdsModel model, String parentEntityName, String compositionName) {
+    try {
+      Optional<CdsEntity> parentEntity = model.findEntity(parentEntityName);
+      if (parentEntity.isPresent()) {
+        Optional<com.sap.cds.reflect.CdsElement> composition =
+            parentEntity.get().findElement(compositionName);
+        if (composition.isPresent() && composition.get().getType().isAssociation()) {
+          CdsAssociationType associationType = (CdsAssociationType) composition.get().getType();
+          return associationType.getTarget().getQualifiedName();
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Error determining nested entity name for composition: " + compositionName, e);
+    }
+    return null;
+  }
+
+  /**
+   * Extracts the title field from an entity object using CDS metadata annotations.
+   *
+   * <p>This method attempts to determine the entity title using the following approach:
+   *
+   * <ol>
+   *   <li><b>UI.HeaderInfo.Title annotation</b> - The official SAP Fiori recommended method for
+   *       defining object page titles. This is the only documented standard approach.
+   *   <li><b>Common.SemanticKey annotation</b> - Uses the first semantic key field as a fallback.
+   *       While SemanticKey is documented for entity identification, its use for titles is a
+   *       pragmatic fallback, not an official standard.
+   * </ol>
+   *
+   * <p><b>Important:</b> If neither annotation is defined, this method returns an empty string.
+   * Always define {@code UI.HeaderInfo.Title} annotation in your CDS models for proper object page
+   * title display. Example:
+   *
+   * <pre>{@code
+   * annotate Books with @(UI.HeaderInfo: {
+   *   Title: { Value: title }
+   * });
+   * }</pre>
+   *
+   * @param model the CDS model containing entity definitions and annotations
+   * @param entityName the qualified name of the entity (e.g., "AdminService.Books")
+   * @param entityObj the entity object to extract title from
+   * @return the title string from annotations, or empty string if not found
+   */
+  private static String extractTitleFromEntity(
+      CdsModel model, String entityName, Object entityObj) {
     if (!(entityObj instanceof Map)) {
-      return null;
+      return "";
     }
 
     @SuppressWarnings("unchecked")
     Map<String, Object> entityMap = (Map<String, Object>) entityObj;
 
-    // Priority order: title -> name -> ID -> first non-null string value
-    String[] titleFields = {"title", "name", "ID", "id"};
-
-    for (String field : titleFields) {
-      Object value = entityMap.get(field);
+    // 1. Try to get title field from UI.HeaderInfo.Title annotation
+    String titleFieldFromAnnotation = getTitleFieldFromAnnotation(model, entityName);
+    if (titleFieldFromAnnotation != null) {
+      Object value = getNestedValue(entityMap, titleFieldFromAnnotation);
       if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
         return (String) value;
       }
     }
 
-    // Fallback: find any string value
-    for (Object value : entityMap.values()) {
+    // 2. Try to get title field from Common.SemanticKey annotation
+    String titleFieldFromSemanticKey = getSemanticKeyField(model, entityName);
+    if (titleFieldFromSemanticKey != null) {
+      Object value = entityMap.get(titleFieldFromSemanticKey);
       if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
         return (String) value;
       }
+    }
+
+    // Return empty string if no annotation-based title is found
+    return "";
+  }
+
+  /**
+   * Extracts the title field name from UI.HeaderInfo.Title annotation.
+   *
+   * @param model the CDS model
+   * @param entityName the qualified entity name
+   * @return the field name configured as title, or null if not found
+   */
+  private static String getTitleFieldFromAnnotation(CdsModel model, String entityName) {
+    if (model == null || entityName == null) {
+      return null;
+    }
+
+    try {
+      Optional<CdsEntity> entityOpt = model.findEntity(entityName);
+      if (entityOpt.isPresent()) {
+        CdsEntity entity = entityOpt.get();
+        Optional<com.sap.cds.reflect.CdsAnnotation<Object>> headerInfoOpt =
+            entity.findAnnotation("UI.HeaderInfo");
+
+        if (headerInfoOpt.isPresent()) {
+          Object headerInfo = headerInfoOpt.get().getValue();
+          if (headerInfo instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> headerMap = (Map<String, Object>) headerInfo;
+            Object titleObj = headerMap.get("Title");
+
+            if (titleObj instanceof Map) {
+              @SuppressWarnings("unchecked")
+              Map<String, Object> titleMap = (Map<String, Object>) titleObj;
+              Object value = titleMap.get("Value");
+              if (value != null) {
+                return value.toString();
+              }
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.debug("Error extracting title field from UI.HeaderInfo annotation: " + e.getMessage());
     }
 
     return null;
+  }
+
+  /**
+   * Extracts the first field from Common.SemanticKey annotation.
+   *
+   * @param model the CDS model
+   * @param entityName the qualified entity name
+   * @return the first semantic key field name, or null if not found
+   */
+  private static String getSemanticKeyField(CdsModel model, String entityName) {
+    if (model == null || entityName == null) {
+      return null;
+    }
+
+    try {
+      Optional<CdsEntity> entityOpt = model.findEntity(entityName);
+      if (entityOpt.isPresent()) {
+        CdsEntity entity = entityOpt.get();
+        Optional<com.sap.cds.reflect.CdsAnnotation<Object>> semanticKeyOpt =
+            entity.findAnnotation("Common.SemanticKey");
+
+        if (semanticKeyOpt.isPresent() && semanticKeyOpt.get().getValue() instanceof List) {
+          @SuppressWarnings("unchecked")
+          List<?> keys = (List<?>) semanticKeyOpt.get().getValue();
+          if (!keys.isEmpty()) {
+            return keys.get(0).toString();
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.debug("Error extracting semantic key field: " + e.getMessage());
+    }
+
+    return null;
+  }
+
+  /**
+   * Gets a nested value from a map using a path (e.g., "author.name").
+   *
+   * @param map the map to extract value from
+   * @param path the path to the value (can include dots for nested access)
+   * @return the value at the path, or null if not found
+   */
+  private static Object getNestedValue(Map<String, Object> map, String path) {
+    if (path == null || map == null) {
+      return null;
+    }
+
+    String[] parts = path.split("\\.");
+    Object current = map;
+
+    for (String part : parts) {
+      if (current instanceof Map) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> currentMap = (Map<String, Object>) current;
+        current = currentMap.get(part);
+      } else {
+        return null;
+      }
+    }
+
+    return current;
   }
 
   /**
