@@ -21,10 +21,10 @@ jobs:
 
     steps:
     
-      - name: Wait for 5 minutes ⏳
-        run: |
-          sleep 300
-          echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
+      # - name: Wait for 5 minutes ⏳
+      #   run: |
+      #     sleep 300
+      #     echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
 
       - name: Checkout this repository 📁
         uses: actions/checkout@v6
