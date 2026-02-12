@@ -3511,6 +3511,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("source-folder-id");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2, obj3");
     when(mockMoveContext.get("sourceFacet")).thenReturn("MyService.SourceEntity.attachments");
+    when(mockMoveContext.get("targetFacet")).thenReturn("MyService.TargetEntity.attachments");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.TargetEntity.attachments");
 
@@ -3550,6 +3551,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-123");
     when(mockMoveContext.get("objectIds")).thenReturn("objA, objB");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null); // No source facet
+    when(mockMoveContext.get("targetFacet")).thenReturn("MyService.NewEntity.attachments");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("MyService.NewEntity.attachments");
 
@@ -3588,6 +3590,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("src-folder");
     when(mockMoveContext.get("objectIds")).thenReturn("single-obj-id");
     when(mockMoveContext.get("sourceFacet")).thenReturn("Source.Entity");
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target.Entity");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target.Entity");
 
@@ -3622,6 +3625,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder-id");
     when(mockMoveContext.get("objectIds")).thenReturn("  obj1  ,  obj2  ,obj3,  obj4  ");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.get("targetFacet")).thenReturn("Entity.attachments");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Entity.attachments");
 
@@ -3652,6 +3656,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1");
     when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3678,6 +3683,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3704,6 +3710,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1, obj2");
     when(mockMoveContext.get("sourceFacet")).thenReturn("Source");
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3734,6 +3741,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3762,6 +3770,7 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.get("targetFacet")).thenReturn("Target");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName()).thenReturn("Target");
 
@@ -3786,6 +3795,8 @@ public class SDMServiceGenericHandlerTest {
     when(mockMoveContext.get("sourceFolderId")).thenReturn("folder");
     when(mockMoveContext.get("objectIds")).thenReturn("obj1");
     when(mockMoveContext.get("sourceFacet")).thenReturn(null);
+    when(mockMoveContext.get("targetFacet"))
+        .thenReturn("com.example.MyService.MyEntity.attachments");
     when(mockMoveContext.getTarget()).thenReturn(cdsEntity);
     when(cdsEntity.getQualifiedName())
         .thenReturn("com.example.MyService.MyEntity.attachments"); // Full qualified name

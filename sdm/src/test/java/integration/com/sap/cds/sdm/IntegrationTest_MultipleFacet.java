@@ -5570,7 +5570,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveTest65 =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveTest65.equals("Saved")) {
+        fail("Could not save target entity before move: " + saveTargetBeforeMoveTest65);
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -5579,21 +5587,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move");
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -5709,13 +5707,8 @@ class IntegrationTest_MultipleFacet {
           api.fetchEntityMetadata(appUrl, entityName, facet[i], moveTargetEntity);
       int targetCountBeforeMove = targetMetadataBeforeMove.size();
 
-      String editTargetResponse =
-          api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!editTargetResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target entity for move operation");
-      }
-
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -5724,19 +5717,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveMoveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveMoveResponse.equals("Saved")) {
-        fail("Could not save target entity after move");
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -5859,7 +5844,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveTest67 =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveTest67.equals("Saved")) {
+        fail("Could not save target entity before move: " + saveTargetBeforeMoveTest67);
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -5868,20 +5861,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -5998,6 +5982,14 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveResponse.equals("Saved")) {
+        fail("Could not save target entity before move");
+      }
+
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6006,20 +5998,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               null);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6157,12 +6140,7 @@ class IntegrationTest_MultipleFacet {
           api.fetchEntityMetadata(appUrl, entityName, facet[i], moveTargetEntity);
       int initialTargetCount = targetMetadataBeforeMove.size();
 
-      String editTargetResponse =
-          api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!editTargetResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target entity for move operation");
-      }
-
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6171,19 +6149,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               null);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6325,10 +6295,18 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveResponse.equals("Saved")) {
+        fail("Could not save target entity before move");
+      }
+
       List<Map<String, Object>> targetMetadataBeforeMove =
           api.fetchEntityMetadata(appUrl, entityName, facet[i], moveTargetEntity);
       int targetCountBeforeMove = targetMetadataBeforeMove.size();
 
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6337,20 +6315,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               null);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6511,7 +6480,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveResponseTest72 =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveResponseTest72.equals("Saved")) {
+        fail("Could not save target entity before move: " + saveTargetBeforeMoveResponseTest72);
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6520,20 +6497,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6658,18 +6626,14 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
         fail("Could not save target entity: " + saveTargetResponse);
       }
 
-      String editTargetResponse =
-          api.editEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!editTargetResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target entity for move operation");
-      }
-
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6678,19 +6642,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
-              facet[i]);
+              targetFacet,
+              null);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      saveTargetResponse = api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6828,7 +6784,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveResponseTest73 =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveResponseTest73.equals("Saved")) {
+        fail("Could not save target entity before move: " + saveTargetBeforeMoveResponseTest73);
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -6837,20 +6801,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments");
-      }
-
-      String saveTargetResponse =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTargetResponse.equals("Saved")) {
-        fail("Could not save target entity after move: " + saveTargetResponse);
       }
 
       List<Map<String, Object>> targetMetadataAfterMove =
@@ -6946,7 +6901,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity 1");
       }
 
+      // Save target1 before move
+      String saveTarget1BeforeMoveResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTarget1BeforeMoveResponse.equals("Saved")) {
+        fail("Could not save target entity 1 before move");
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult1 =
           api.moveAttachment(
               appUrl,
@@ -6955,21 +6918,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity,
               moveSourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult1 == null) {
         fail("Move operation from source to target 1 returned null result");
-      }
-
-      // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments to target 1");
-      }
-
-      String saveTarget1Response =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
-      if (!saveTarget1Response.equals("Saved")) {
-        fail("Could not save target entity 1 after move: " + saveTarget1Response);
       }
 
       List<Map<String, Object>> target1MetadataAfterMove =
@@ -7005,6 +6958,13 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity 2");
       }
 
+      // Save target2 before move
+      String saveTarget2BeforeMoveResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity2);
+      if (!saveTarget2BeforeMoveResponse.equals("Saved")) {
+        fail("Could not save target entity 2 before move");
+      }
+
       List<String> target1AttachmentIds = new ArrayList<>();
       for (Map<String, Object> metadata : target1MetadataAfterMove) {
         String attachmentId = metadata.get("ID").toString();
@@ -7038,21 +6998,11 @@ class IntegrationTest_MultipleFacet {
               moveTargetEntity2,
               target1FolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult2 == null) {
         fail("Move operation from target 1 to target 2 returned null result");
-      }
-
-      // Wait for all uploads to complete before saving
-      if (!waitForAllUploadsCompletion(moveTargetEntity2, facet[i], 300)) {
-        fail("Upload did not complete in time after moving attachments to target 2");
-      }
-
-      String saveTarget2Response =
-          api.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity2);
-      if (!saveTarget2Response.equals("Saved")) {
-        fail("Could not save target entity 2 after move: " + saveTarget2Response);
       }
 
       List<Map<String, Object>> target2MetadataAfterMove =
@@ -7161,7 +7111,15 @@ class IntegrationTest_MultipleFacet {
         fail("Could not create target entity with no SDM role");
       }
 
+      // Save target before move
+      String saveTargetBeforeMoveResponse =
+          apiNoRoles.saveEntityDraft(appUrl, entityName, srvpath, moveTargetEntity);
+      if (!saveTargetBeforeMoveResponse.equals("Saved")) {
+        fail("Could not save target entity before move");
+      }
+
       String sourceFacet = serviceName + "." + entityName + "." + facet[i];
+      String targetFacet = serviceName + "." + entityName + "." + facet[i];
       Map<String, Object> moveResult = null;
       boolean moveOperationFailed = false;
       String errorMessage = null;
@@ -7175,6 +7133,7 @@ class IntegrationTest_MultipleFacet {
                 moveTargetEntity,
                 moveSourceFolderId,
                 moveObjectIds,
+                targetFacet,
                 sourceFacet);
 
         if (moveResult == null) {
