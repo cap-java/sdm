@@ -455,7 +455,7 @@ public class AttachmentsHandlerUtils {
       String compositionPath = compositionEntry.getValue();
       String parentTitle =
           findParentTitle(model, wrappedEntity, compositionPath, entityName, targetEntity);
-      if (parentTitle != null) {
+      if (parentTitle != null && !parentTitle.isEmpty()) {
         parentTitles.put(compositionPath, parentTitle);
       }
     }
@@ -526,7 +526,9 @@ public class AttachmentsHandlerUtils {
                 // For nested entities, try to determine the entity type from the composition path
                 String nestedEntityName =
                     determineNestedEntityName(model, targetEntity, entityPart);
-                return extractTitleFromEntity(model, nestedEntityName, parentList.get(0));
+                if (nestedEntityName != null) {
+                  return extractTitleFromEntity(model, nestedEntityName, parentList.get(0));
+                }
               }
             }
           }
