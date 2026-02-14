@@ -677,75 +677,108 @@ public class AttachmentsHandlerUtils {
 
     try {
       Optional<CdsEntity> entityOpt = model.findEntity(entityName);
-      if (entityOpt.isPresent()) {
-        CdsEntity entity = entityOpt.get();
-
-        // Find the field element
-        Optional<com.sap.cds.reflect.CdsElement> elementOpt = entity.findElement(fieldName);
-        if (elementOpt.isPresent()) {
-          com.sap.cds.reflect.CdsElement element = elementOpt.get();
-          logger.info(
-              "getTitleFromCommonTextOnField: Found element '{}', checking for Common annotation",
-              fieldName);
-
-          // Check for Common annotation (which contains Text property)
-          Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonAnnotationOpt =
-              element.findAnnotation("Common");
-          if (commonAnnotationOpt.isPresent()) {
-            Object commonValue = commonAnnotationOpt.get().getValue();
-            logger.info(
-                "getTitleFromCommonTextOnField: Common annotation value type = {}",
-                commonValue != null ? commonValue.getClass().getSimpleName() : "null");
-
-            if (commonValue instanceof Map) {
-              @SuppressWarnings("unchecked")
-              Map<String, Object> commonMap = (Map<String, Object>) commonValue;
-              logger.info(
-                  "getTitleFromCommonTextOnField: Common map keys = {}", commonMap.keySet());
-
-              // Get the Text property
-              Object textValue = commonMap.get("Text");
-              logger.info("getTitleFromCommonTextOnField: Text value = {}", textValue);
-
-              if (textValue != null) {
-                String result = textValue.toString();
-                // Parse CDS element reference if needed
-                if (result.startsWith("{==") && result.endsWith("}")) {
-                  result = result.substring(3, result.length() - 1);
-                } else if (result.startsWith("{") && result.endsWith("}")) {
-                  result = result.substring(1, result.length() - 1);
-                }
-                logger.info("getTitleFromCommonTextOnField: Parsed title field = {}", result);
-                return result;
-              }
-            }
-          } else {
-            // Also try Common.Text directly (alternate format)
-            Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonTextOpt =
-                element.findAnnotation("Common.Text");
-            if (commonTextOpt.isPresent()) {
-              Object textValue = commonTextOpt.get().getValue();
-              logger.info("getTitleFromCommonTextOnField: Common.Text value = {}", textValue);
-
-              if (textValue != null) {
-                String result = textValue.toString();
-                // Parse CDS element reference if needed
-                if (result.startsWith("{==") && result.endsWith("}")) {
-                  result = result.substring(3, result.length() - 1);
-                } else if (result.startsWith("{") && result.endsWith("}")) {
-                  result = result.substring(1, result.length() - 1);
-                }
-                logger.info("getTitleFromCommonTextOnField: Parsed title field = {}", result);
-                return result;
-              }
-            }
-          }
-        }
+      if (!entityOpt.isPresent()) {
+        return null;
       }
+
+      Optional<com.sap.cds.reflect.CdsElement> elementOpt = entityOpt.get().findElement(fieldName);
+      if (!elementOpt.isPresent()) {
+        return null;
+      }
+
+      com.sap.cds.reflect.CdsElement element = elementOpt.get();
+      logger.info(
+          "getTitleFromCommonTextOnField: Found element '{}', checking for Common annotation",
+          fieldName);
+
+      // Try Common annotation first (contains Text property)
+      String result = extractTextFromCommonAnnotation(element);
+      if (result != null) {
+        return result;
+      }
+
+      // Try Common.Text directly as alternate format
+      return extractTextFromCommonTextAnnotation(element);
+
     } catch (Exception e) {
       logger.info("getTitleFromCommonTextOnField: Error - {}", e.getMessage(), e);
+      return null;
     }
-    return null;
+  }
+
+  /**
+   * Extracts text value from Common annotation's Text property.
+   *
+   * @param element the CDS element to check
+   * @return the parsed text field name, or null if not found
+   */
+  private static String extractTextFromCommonAnnotation(com.sap.cds.reflect.CdsElement element) {
+    Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonAnnotationOpt =
+        element.findAnnotation("Common");
+    if (!commonAnnotationOpt.isPresent()) {
+      return null;
+    }
+
+    Object commonValue = commonAnnotationOpt.get().getValue();
+    logger.info(
+        "getTitleFromCommonTextOnField: Common annotation value type = {}",
+        commonValue != null ? commonValue.getClass().getSimpleName() : "null");
+
+    if (!(commonValue instanceof Map)) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> commonMap = (Map<String, Object>) commonValue;
+    logger.info("getTitleFromCommonTextOnField: Common map keys = {}", commonMap.keySet());
+
+    Object textValue = commonMap.get("Text");
+    logger.info("getTitleFromCommonTextOnField: Text value = {}", textValue);
+
+    return parseTextValue(textValue, "getTitleFromCommonTextOnField");
+  }
+
+  /**
+   * Extracts text value from Common.Text annotation directly.
+   *
+   * @param element the CDS element to check
+   * @return the parsed text field name, or null if not found
+   */
+  private static String extractTextFromCommonTextAnnotation(
+      com.sap.cds.reflect.CdsElement element) {
+    Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonTextOpt =
+        element.findAnnotation("Common.Text");
+    if (!commonTextOpt.isPresent()) {
+      return null;
+    }
+
+    Object textValue = commonTextOpt.get().getValue();
+    logger.info("getTitleFromCommonTextOnField: Common.Text value = {}", textValue);
+
+    return parseTextValue(textValue, "getTitleFromCommonTextOnField");
+  }
+
+  /**
+   * Parses a text value by removing CDS element reference markers.
+   *
+   * @param textValue the raw text value from annotation
+   * @param logContext context string for logging
+   * @return the parsed field name, or null if textValue is null
+   */
+  private static String parseTextValue(Object textValue, String logContext) {
+    if (textValue == null) {
+      return null;
+    }
+
+    String result = textValue.toString();
+    // Remove CDS annotation wrapper syntax to extract the actual field name
+    if (result.startsWith("{==") && result.endsWith("}")) {
+      result = result.substring(3, result.length() - 1);
+    } else if (result.startsWith("{") && result.endsWith("}")) {
+      result = result.substring(1, result.length() - 1);
+    }
+    logger.info("{}: Parsed title field = {}", logContext, result);
+    return result;
   }
 
   /**
@@ -774,7 +807,8 @@ public class AttachmentsHandlerUtils {
             String rawValue = keys.get(0).toString();
             logger.info("getSemanticKeyField: Raw value from annotation = {}", rawValue);
 
-            // Parse CDS element references like {==ID} or {path}
+            // Extract field name from CDS annotation format (e.g., curly braces with equals
+            // prefix)
             String fieldName = rawValue;
             if (rawValue.startsWith("{==") && rawValue.endsWith("}")) {
               fieldName = rawValue.substring(3, rawValue.length() - 1);
