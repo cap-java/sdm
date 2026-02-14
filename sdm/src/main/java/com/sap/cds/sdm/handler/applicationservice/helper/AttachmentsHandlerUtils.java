@@ -481,65 +481,120 @@ public class AttachmentsHandlerUtils {
       String compositionPath,
       String rootEntityName,
       String targetEntity) {
+    logFindParentTitleStart(entity, compositionPath, rootEntityName, targetEntity);
+
+    try {
+      String[] pathParts = compositionPath.split("\\.");
+      logger.info("findParentTitle: pathParts={}", String.join(",", pathParts));
+
+      if (pathParts.length < 3) {
+        logger.info("findParentTitle: Returning null - insufficient path parts");
+        return null;
+      }
+
+      String entityPart = pathParts[pathParts.length - 2];
+      logger.info("findParentTitle: entityPart={} (second to last)", entityPart);
+
+      if (entityPart.equalsIgnoreCase(rootEntityName)) {
+        return handleDirectAttachment(model, entity, rootEntityName, targetEntity);
+      } else {
+        return handleNestedAttachment(model, entity, rootEntityName, entityPart, targetEntity);
+      }
+    } catch (Exception e) {
+      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
+      return null;
+    }
+  }
+
+  /**
+   * Logs the start of findParentTitle operation.
+   *
+   * @param entity the entity data structure
+   * @param compositionPath the composition path
+   * @param rootEntityName the root entity name
+   * @param targetEntity the target entity name
+   */
+  private static void logFindParentTitleStart(
+      Map<String, Object> entity,
+      String compositionPath,
+      String rootEntityName,
+      String targetEntity) {
     logger.info(
         "findParentTitle: compositionPath={}, rootEntityName={}, targetEntity={}",
         compositionPath,
         rootEntityName,
         targetEntity);
     logger.info("findParentTitle: entity keys={}", entity.keySet());
+  }
 
-    try {
-      String[] pathParts = compositionPath.split("\\.");
-      logger.info("findParentTitle: pathParts={}", String.join(",", pathParts));
+  /**
+   * Handles direct attachment title extraction.
+   *
+   * @param model the CDS model
+   * @param entity the entity data structure
+   * @param rootEntityName the root entity name
+   * @param targetEntity the target entity name
+   * @return the extracted title, or null if not found
+   */
+  private static String handleDirectAttachment(
+      CdsModel model, Map<String, Object> entity, String rootEntityName, String targetEntity) {
+    logger.info(
+        "findParentTitle: Direct attachment detected, looking up entity.get({})", rootEntityName);
+    Object entityData = entity.get(rootEntityName);
+    logger.info(
+        "findParentTitle: entityData type={}, isNull={}",
+        entityData != null ? entityData.getClass().getSimpleName() : "null",
+        entityData == null);
+    return extractTitleFromEntity(model, targetEntity, entityData);
+  }
 
-      if (pathParts.length >= 3) {
-        String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
-        logger.info("findParentTitle: entityPart={} (second to last)", entityPart);
+  /**
+   * Handles nested attachment title extraction.
+   *
+   * @param model the CDS model
+   * @param entity the entity data structure
+   * @param rootEntityName the root entity name
+   * @param entityPart the entity part from the path
+   * @param targetEntity the target entity name
+   * @return the extracted title, or null if not found
+   */
+  private static String handleNestedAttachment(
+      CdsModel model,
+      Map<String, Object> entity,
+      String rootEntityName,
+      String entityPart,
+      String targetEntity) {
+    logger.info("findParentTitle: Nested attachment detected");
 
-        // Check if this is a direct composition (entity matches root entity)
-        if (entityPart.equalsIgnoreCase(rootEntityName)) {
-          // Direct attachment at root level (e.g., "AdminService.Books.references")
-          logger.info(
-              "findParentTitle: Direct attachment detected, looking up entity.get({})",
-              rootEntityName);
-          Object entityData = entity.get(rootEntityName);
-          logger.info(
-              "findParentTitle: entityData type={}, isNull={}",
-              entityData != null ? entityData.getClass().getSimpleName() : "null",
-              entityData == null);
-          return extractTitleFromEntity(model, targetEntity, entityData);
-        } else {
-          // Nested attachment (e.g., "AdminService.chapters123.attachments")
-          logger.info("findParentTitle: Nested attachment detected");
-          // Navigate to the parent entity
-          Object rootEntity = entity.get(rootEntityName);
-          if (rootEntity instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
-            Object parentCollection = rootMap.get(entityPart);
-
-            if (parentCollection instanceof List) {
-              @SuppressWarnings("unchecked")
-              List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
-              if (!parentList.isEmpty()) {
-                // Get title from the first item in the collection
-                // For nested entities, try to determine the entity type from the composition path
-                String nestedEntityName =
-                    determineNestedEntityName(model, targetEntity, entityPart);
-                if (nestedEntityName != null) {
-                  return extractTitleFromEntity(model, nestedEntityName, parentList.get(0));
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (Exception e) {
-      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
+    Object rootEntity = entity.get(rootEntityName);
+    if (!(rootEntity instanceof Map)) {
+      logger.info("findParentTitle: Returning null - rootEntity is not a Map");
+      return null;
     }
 
-    logger.info("findParentTitle: Returning null");
-    return null;
+    @SuppressWarnings("unchecked")
+    Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
+    Object parentCollection = rootMap.get(entityPart);
+
+    if (!(parentCollection instanceof List)) {
+      logger.info("findParentTitle: Returning null - parentCollection is not a List");
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
+    if (parentList.isEmpty()) {
+      logger.info("findParentTitle: Returning null - parentList is empty");
+      return null;
+    }
+
+    String nestedEntityName = determineNestedEntityName(model, targetEntity, entityPart);
+    if (nestedEntityName == null) {
+      logger.info("findParentTitle: Returning null - nestedEntityName is null");
+      return null;
+    }
+
+    return extractTitleFromEntity(model, nestedEntityName, parentList.get(0));
   }
 
   /**
