@@ -481,18 +481,36 @@ public class AttachmentsHandlerUtils {
       String compositionPath,
       String rootEntityName,
       String targetEntity) {
+    logger.info(
+        "findParentTitle: compositionPath={}, rootEntityName={}, targetEntity={}",
+        compositionPath,
+        rootEntityName,
+        targetEntity);
+    logger.info("findParentTitle: entity keys={}", entity.keySet());
+
     try {
       String[] pathParts = compositionPath.split("\\.");
+      logger.info("findParentTitle: pathParts={}", String.join(",", pathParts));
 
       if (pathParts.length >= 3) {
         String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
+        logger.info("findParentTitle: entityPart={} (second to last)", entityPart);
 
         // Check if this is a direct composition (entity matches root entity)
         if (entityPart.equalsIgnoreCase(rootEntityName)) {
           // Direct attachment at root level (e.g., "AdminService.Books.references")
-          return extractTitleFromEntity(model, targetEntity, entity.get(rootEntityName));
+          logger.info(
+              "findParentTitle: Direct attachment detected, looking up entity.get({})",
+              rootEntityName);
+          Object entityData = entity.get(rootEntityName);
+          logger.info(
+              "findParentTitle: entityData type={}, isNull={}",
+              entityData != null ? entityData.getClass().getSimpleName() : "null",
+              entityData == null);
+          return extractTitleFromEntity(model, targetEntity, entityData);
         } else {
           // Nested attachment (e.g., "AdminService.chapters123.attachments")
+          logger.info("findParentTitle: Nested attachment detected");
           // Navigate to the parent entity
           Object rootEntity = entity.get(rootEntityName);
           if (rootEntity instanceof Map) {
@@ -518,6 +536,7 @@ public class AttachmentsHandlerUtils {
       logger.warn("Error finding parent title for composition path: " + compositionPath, e);
     }
 
+    logger.info("findParentTitle: Returning null");
     return null;
   }
 
@@ -550,71 +569,109 @@ public class AttachmentsHandlerUtils {
   /**
    * Extracts the title field from an entity object using CDS metadata annotations.
    *
-   * <p>This method attempts to determine the entity title using the following approach:
+   * <p>This method extracts entity titles using @Common.Text annotation on the semantic key field,
+   * which is the only mechanism proven to work reliably in both Fiori UI and Java backend through
+   * empirical testing.
+   *
+   * <p><b>How it works:</b>
    *
    * <ol>
-   *   <li><b>UI.HeaderInfo.Title annotation</b> - The official SAP Fiori recommended method for
-   *       defining object page titles. This is the only documented standard approach.
-   *   <li><b>Common.SemanticKey annotation</b> - Uses the first semantic key field as a fallback.
-   *       While SemanticKey is documented for entity identification, its use for titles is a
-   *       pragmatic fallback, not an official standard.
+   *   <li>Finds the semantic key field from @Common.SemanticKey annotation
+   *   <li>Checks if that field has a @Common.Text annotation pointing to a title field
+   *   <li>Extracts and returns the value of the title field
    * </ol>
    *
-   * <p><b>Important:</b> If neither annotation is defined, this method returns an empty string.
-   * Always define {@code UI.HeaderInfo.Title} annotation in your CDS models for proper object page
-   * title display. Example:
+   * <p><b>Important:</b> Define your CDS model as follows for proper title extraction:
    *
    * <pre>{@code
-   * annotate Books with @(UI.HeaderInfo: {
-   *   Title: { Value: title }
-   * });
+   * entity Books {
+   *   key ID : UUID;
+   *   title  : String;
+   * }
+   *
+   * annotate Books with @Common.SemanticKey: [ID] {
+   *   ID @Common.Text: title;
+   * }
    * }</pre>
+   *
+   * <p><b>Note:</b> UI.HeaderInfo.Title annotations defined in app/common.cds are NOT accessible to
+   * Java backend code via CDS Reflection API. They are only used by Fiori UI layer for OData
+   * metadata generation.
    *
    * @param model the CDS model containing entity definitions and annotations
    * @param entityName the qualified name of the entity (e.g., "AdminService.Books")
    * @param entityObj the entity object to extract title from
-   * @return the title string from annotations, or empty string if not found
+   * @return the title string from annotations, or null if not found
    */
   private static String extractTitleFromEntity(
       CdsModel model, String entityName, Object entityObj) {
     if (!(entityObj instanceof Map)) {
-      return "";
+      logger.info("extractTitleFromEntity: entityObj is not a Map for entity: {}", entityName);
+      return null;
     }
 
     @SuppressWarnings("unchecked")
     Map<String, Object> entityMap = (Map<String, Object>) entityObj;
 
-    // 1. Try to get title field from UI.HeaderInfo.Title annotation
-    String titleFieldFromAnnotation = getTitleFieldFromAnnotation(model, entityName);
-    if (titleFieldFromAnnotation != null) {
-      Object value = getNestedValue(entityMap, titleFieldFromAnnotation);
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
-      }
-    }
+    logger.info(
+        "extractTitleFromEntity: Extracting title for entity: {}, data keys: {}",
+        entityName,
+        entityMap.keySet());
 
-    // 2. Try to get title field from Common.SemanticKey annotation
+    // Get title field from Common.Text annotation on semantic key field
+    // This is proven to work in both Fiori UI and Java backend
     String titleFieldFromSemanticKey = getSemanticKeyField(model, entityName);
+    logger.info(
+        "extractTitleFromEntity: titleFieldFromSemanticKey = {} for entity: {}",
+        titleFieldFromSemanticKey,
+        entityName);
+
     if (titleFieldFromSemanticKey != null) {
-      Object value = entityMap.get(titleFieldFromSemanticKey);
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
+      // Check if the semantic key field has a Common.Text annotation pointing to another field
+      String titleFieldFromCommonText =
+          getTitleFromCommonTextOnField(model, entityName, titleFieldFromSemanticKey);
+      logger.info(
+          "extractTitleFromEntity: titleFieldFromCommonText = {} for entity: {}",
+          titleFieldFromCommonText,
+          entityName);
+
+      if (titleFieldFromCommonText != null) {
+        // Use the field specified by Common.Text annotation
+        Object value = getNestedValue(entityMap, titleFieldFromCommonText);
+        logger.info(
+            "extractTitleFromEntity: Value for Common.Text field '{}' = {}",
+            titleFieldFromCommonText,
+            value);
+        if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+          logger.info(
+              "extractTitleFromEntity: Returning title from Common.Text annotation: {}", value);
+          return (String) value;
+        }
       }
     }
 
-    // Return empty string if no annotation-based title is found
-    return "";
+    logger.info("extractTitleFromEntity: No title found for entity: {}", entityName);
+    // Return null if no annotation-based title is found
+    return null;
   }
 
   /**
-   * Extracts the title field name from UI.HeaderInfo.Title annotation.
+   * Extracts the title field name from @Common.Text annotation on a specific field. This mirrors
+   * how Fiori determines page titles when UI.HeaderInfo is not present.
+   *
+   * <p>Example: If field "ID" has @Common.Text: title, this returns "title"
    *
    * @param model the CDS model
    * @param entityName the qualified entity name
-   * @return the field name configured as title, or null if not found
+   * @param fieldName the field to check for @Common.Text annotation
+   * @return the field name from Common.Text annotation, or null if not found
    */
-  private static String getTitleFieldFromAnnotation(CdsModel model, String entityName) {
-    if (model == null || entityName == null) {
+  private static String getTitleFromCommonTextOnField(
+      CdsModel model, String entityName, String fieldName) {
+    logger.info(
+        "getTitleFromCommonTextOnField: Checking field '{}' on entity '{}'", fieldName, entityName);
+
+    if (model == null || entityName == null || fieldName == null) {
       return null;
     }
 
@@ -622,31 +679,72 @@ public class AttachmentsHandlerUtils {
       Optional<CdsEntity> entityOpt = model.findEntity(entityName);
       if (entityOpt.isPresent()) {
         CdsEntity entity = entityOpt.get();
-        Optional<com.sap.cds.reflect.CdsAnnotation<Object>> headerInfoOpt =
-            entity.findAnnotation("UI.HeaderInfo");
 
-        if (headerInfoOpt.isPresent()) {
-          Object headerInfo = headerInfoOpt.get().getValue();
-          if (headerInfo instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> headerMap = (Map<String, Object>) headerInfo;
-            Object titleObj = headerMap.get("Title");
+        // Find the field element
+        Optional<com.sap.cds.reflect.CdsElement> elementOpt = entity.findElement(fieldName);
+        if (elementOpt.isPresent()) {
+          com.sap.cds.reflect.CdsElement element = elementOpt.get();
+          logger.info(
+              "getTitleFromCommonTextOnField: Found element '{}', checking for Common annotation",
+              fieldName);
 
-            if (titleObj instanceof Map) {
+          // Check for Common annotation (which contains Text property)
+          Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonAnnotationOpt =
+              element.findAnnotation("Common");
+          if (commonAnnotationOpt.isPresent()) {
+            Object commonValue = commonAnnotationOpt.get().getValue();
+            logger.info(
+                "getTitleFromCommonTextOnField: Common annotation value type = {}",
+                commonValue != null ? commonValue.getClass().getSimpleName() : "null");
+
+            if (commonValue instanceof Map) {
               @SuppressWarnings("unchecked")
-              Map<String, Object> titleMap = (Map<String, Object>) titleObj;
-              Object value = titleMap.get("Value");
-              if (value != null) {
-                return value.toString();
+              Map<String, Object> commonMap = (Map<String, Object>) commonValue;
+              logger.info(
+                  "getTitleFromCommonTextOnField: Common map keys = {}", commonMap.keySet());
+
+              // Get the Text property
+              Object textValue = commonMap.get("Text");
+              logger.info("getTitleFromCommonTextOnField: Text value = {}", textValue);
+
+              if (textValue != null) {
+                String result = textValue.toString();
+                // Parse CDS element reference if needed
+                if (result.startsWith("{==") && result.endsWith("}")) {
+                  result = result.substring(3, result.length() - 1);
+                } else if (result.startsWith("{") && result.endsWith("}")) {
+                  result = result.substring(1, result.length() - 1);
+                }
+                logger.info("getTitleFromCommonTextOnField: Parsed title field = {}", result);
+                return result;
+              }
+            }
+          } else {
+            // Also try Common.Text directly (alternate format)
+            Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonTextOpt =
+                element.findAnnotation("Common.Text");
+            if (commonTextOpt.isPresent()) {
+              Object textValue = commonTextOpt.get().getValue();
+              logger.info("getTitleFromCommonTextOnField: Common.Text value = {}", textValue);
+
+              if (textValue != null) {
+                String result = textValue.toString();
+                // Parse CDS element reference if needed
+                if (result.startsWith("{==") && result.endsWith("}")) {
+                  result = result.substring(3, result.length() - 1);
+                } else if (result.startsWith("{") && result.endsWith("}")) {
+                  result = result.substring(1, result.length() - 1);
+                }
+                logger.info("getTitleFromCommonTextOnField: Parsed title field = {}", result);
+                return result;
               }
             }
           }
         }
       }
     } catch (Exception e) {
-      logger.debug("Error extracting title field from UI.HeaderInfo annotation: " + e.getMessage());
+      logger.info("getTitleFromCommonTextOnField: Error - {}", e.getMessage(), e);
     }
-
     return null;
   }
 
@@ -673,12 +771,24 @@ public class AttachmentsHandlerUtils {
           @SuppressWarnings("unchecked")
           List<?> keys = (List<?>) semanticKeyOpt.get().getValue();
           if (!keys.isEmpty()) {
-            return keys.get(0).toString();
+            String rawValue = keys.get(0).toString();
+            logger.info("getSemanticKeyField: Raw value from annotation = {}", rawValue);
+
+            // Parse CDS element references like {==ID} or {path}
+            String fieldName = rawValue;
+            if (rawValue.startsWith("{==") && rawValue.endsWith("}")) {
+              fieldName = rawValue.substring(3, rawValue.length() - 1);
+            } else if (rawValue.startsWith("{") && rawValue.endsWith("}")) {
+              fieldName = rawValue.substring(1, rawValue.length() - 1);
+            }
+
+            logger.info("getSemanticKeyField: Parsed field name = {}", fieldName);
+            return fieldName;
           }
         }
       }
     } catch (Exception e) {
-      logger.debug("Error extracting semantic key field: " + e.getMessage());
+      logger.info("getSemanticKeyField: Error - {}", e.getMessage(), e);
     }
 
     return null;
@@ -995,6 +1105,7 @@ public class AttachmentsHandlerUtils {
   public static String getContextInfo(String compositionName, String parentTitle) {
     return String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
         + String.format(
-            SDMErrorMessages.CONTEXT_INFO_PAGE, (parentTitle != null ? parentTitle : "Unknown"));
+            SDMErrorMessages.CONTEXT_INFO_PAGE,
+            (parentTitle != null && !parentTitle.trim().isEmpty() ? parentTitle : "Unknown"));
   }
 }
