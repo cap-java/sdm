@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.8.0
+
+### Added
+- Support for Maximum File Size during upload
+
+### Fixed
+- Move attachemnts support for Active entities
+- Copy attachments issue when date type custom property is added with attachment
+- Move attachment issue when drop-down codeList type custom property is added with attachment
+- Link creation in nested entities
+- Issue with parsing nested entity when entities name is camel case
+
 ## Version 1.7.0
 
 ### Added

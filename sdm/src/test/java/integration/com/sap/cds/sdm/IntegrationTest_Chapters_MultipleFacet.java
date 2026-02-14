@@ -5697,8 +5697,15 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not create target chapter");
       }
 
-      // Move attachments
+      // Save target book before moving attachments (moveAttachments requires Active entity)
+      saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+      if (!saveResponse.equals("Saved")) {
+        fail("Could not save target book before move");
+      }
+
+      // Move attachments to Active entity
       String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[i];
+      String targetFacet = serviceName + "." + chapterEntityName + "." + facet[i];
       Map<String, Object> moveResult =
           api.moveAttachment(
               appUrl,
@@ -5707,20 +5714,11 @@ class IntegrationTest_Chapters_MultipleFacet {
               targetChapterID,
               sourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null) {
         fail("Move operation returned null result");
-      }
-
-      // Wait and save
-      if (!waitForAllUploadsCompletion(targetChapterID, facet[i], 300)) {
-        fail("Upload did not complete after move");
-      }
-
-      saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
-      if (!saveResponse.equals("Saved")) {
-        fail("Could not save target book after move");
       }
 
       // Verify
@@ -5800,13 +5798,9 @@ class IntegrationTest_Chapters_MultipleFacet {
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(objectId);
 
-    // Edit target and try to move
-    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit target book");
-    }
-
+    // Move to saved target
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -5815,10 +5809,10 @@ class IntegrationTest_Chapters_MultipleFacet {
             targetChapterID,
             sourceFolderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
 
     // Move should handle duplicate - attachment stays in source
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
 
     // Verify source still has attachment (duplicate not moved)
     List<Map<String, Object>> sourceMetadataAfter =
@@ -5901,11 +5895,15 @@ class IntegrationTest_Chapters_MultipleFacet {
     String targetChapterID =
         api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
 
+    // Save target before move
+    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(objectId);
 
     // Move
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -5914,17 +5912,12 @@ class IntegrationTest_Chapters_MultipleFacet {
             targetChapterID,
             sourceFolderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
 
     if (moveResult == null) {
       fail("Move operation returned null");
     }
-
-    if (!waitForAllUploadsCompletion(targetChapterID, facet[0], 300)) {
-      fail("Upload did not complete after move");
-    }
-
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
 
     // Verify note was preserved
     List<Map<String, Object>> targetMetadata =
@@ -5995,12 +5988,16 @@ class IntegrationTest_Chapters_MultipleFacet {
     String targetChapterID =
         api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
 
+    // Save target before move
+    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+
     // Try to move with mix of valid and invalid object IDs
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(realObjectId);
     moveObjectIds.add("invalidObjectId123");
 
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -6009,6 +6006,7 @@ class IntegrationTest_Chapters_MultipleFacet {
             targetChapterID,
             sourceFolderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
 
     // Should handle partial failure
@@ -6043,6 +6041,7 @@ class IntegrationTest_Chapters_MultipleFacet {
     // Try to move with empty list
     List<String> emptyObjectIds = new ArrayList<>();
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
 
     try {
       api.moveAttachment(
@@ -6052,6 +6051,7 @@ class IntegrationTest_Chapters_MultipleFacet {
           targetChapterID,
           "someFolderId",
           emptyObjectIds,
+          targetFacet,
           sourceFacet);
       // Should either fail or do nothing
     } catch (Exception e) {
@@ -6110,13 +6110,9 @@ class IntegrationTest_Chapters_MultipleFacet {
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(objectId);
 
-    // Edit and try to move to same chapter
-    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit book");
-    }
-
+    // Move to same chapter
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -6125,6 +6121,7 @@ class IntegrationTest_Chapters_MultipleFacet {
             testChapterID,
             folderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
 
     // Should handle gracefully - attachment stays in place
@@ -6190,12 +6187,8 @@ class IntegrationTest_Chapters_MultipleFacet {
     moveObjectIds.add(objectId);
 
     // Move from attachments to references facet
-    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit book");
-    }
-
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[1];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -6204,13 +6197,8 @@ class IntegrationTest_Chapters_MultipleFacet {
             targetChapterID,
             sourceFolderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
-
-    if (!waitForAllUploadsCompletion(targetChapterID, facet[1], 300)) {
-      System.out.println("Warning: Upload may not have completed");
-    }
-
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
 
     // Verify moved to different facet
     List<Map<String, Object>> targetMetadata =
@@ -6291,8 +6279,12 @@ class IntegrationTest_Chapters_MultipleFacet {
     String targetChapterID =
         api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
 
+    // Save target before move
+    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+
     // Move all at once
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     Map<String, Object> moveResult =
         api.moveAttachment(
             appUrl,
@@ -6301,13 +6293,8 @@ class IntegrationTest_Chapters_MultipleFacet {
             targetChapterID,
             sourceFolderId,
             moveObjectIds,
+            targetFacet,
             sourceFacet);
-
-    if (!waitForAllUploadsCompletion(targetChapterID, facet[0], 300)) {
-      System.out.println("Warning: Some uploads may not have completed");
-    }
-
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
 
     // Verify all moved
     List<Map<String, Object>> targetMetadata =
@@ -6392,12 +6379,8 @@ class IntegrationTest_Chapters_MultipleFacet {
       List<String> moveObjectIds = new ArrayList<>();
       moveObjectIds.add(objectId);
 
-      String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
-      if (!editResponse.equals("Entity in draft mode")) {
-        fail("Could not edit target book");
-      }
-
       String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[i];
+      String targetFacet = serviceName + "." + chapterEntityName + "." + facet[i];
       api.moveAttachment(
           appUrl,
           chapterEntityName,
@@ -6405,10 +6388,8 @@ class IntegrationTest_Chapters_MultipleFacet {
           targetChapterID,
           sourceFolderId,
           moveObjectIds,
+          targetFacet,
           sourceFacet);
-
-      waitForAllUploadsCompletion(targetChapterID, facet[i], 300);
-      api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
     }
 
     // Verify all facets have attachments in target
@@ -6481,13 +6462,9 @@ class IntegrationTest_Chapters_MultipleFacet {
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(objectId);
 
-    // Put target1 book in draft mode before move
-    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, target1BookID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit target1 book");
-    }
-
+    // Move to target1
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     api.moveAttachment(
         appUrl,
         chapterEntityName,
@@ -6495,10 +6472,8 @@ class IntegrationTest_Chapters_MultipleFacet {
         target1ChapterID,
         sourceFolderId,
         moveObjectIds,
+        targetFacet,
         sourceFacet);
-
-    waitForAllUploadsCompletion(target1ChapterID, facet[0], 300);
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, target1BookID);
 
     // Verify in target1
     List<Map<String, Object>> target1Metadata =
@@ -6516,11 +6491,7 @@ class IntegrationTest_Chapters_MultipleFacet {
     moveObjectIds.clear();
     moveObjectIds.add(target1ObjectId);
 
-    editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, target2BookID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      fail("Could not edit target2 book");
-    }
-
+    // Move to target2
     api.moveAttachment(
         appUrl,
         chapterEntityName,
@@ -6528,10 +6499,8 @@ class IntegrationTest_Chapters_MultipleFacet {
         target2ChapterID,
         target1FolderId,
         moveObjectIds,
+        targetFacet,
         sourceFacet);
-
-    waitForAllUploadsCompletion(target2ChapterID, facet[0], 300);
-    api.saveEntityDraft(appUrl, bookEntityName, srvpath, target2BookID);
 
     // Verify final state
     List<Map<String, Object>> target2Metadata =
@@ -6607,10 +6576,14 @@ class IntegrationTest_Chapters_MultipleFacet {
     String targetChapterID =
         apiNoRoles.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
 
+    // Save target before move
+    apiNoRoles.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+
     List<String> moveObjectIds = new ArrayList<>();
     moveObjectIds.add(objectId);
 
     String sourceFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
     boolean moveFailed = false;
     String errorMessage = null;
 
@@ -6623,6 +6596,7 @@ class IntegrationTest_Chapters_MultipleFacet {
               targetChapterID,
               sourceFolderId,
               moveObjectIds,
+              targetFacet,
               sourceFacet);
 
       if (moveResult == null || moveResult.containsKey("error")) {
