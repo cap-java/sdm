@@ -587,7 +587,7 @@ public class AttachmentsHandlerUtils {
     try {
       String[] pathParts = compositionPath.split("\\.");
       if (pathParts.length < 3) {
-        return null;
+        return parentTitleMap;
       }
 
       String entityPart = pathParts[pathParts.length - 2];
@@ -602,7 +602,7 @@ public class AttachmentsHandlerUtils {
       logger.warn("Error finding all parent titles for composition path: " + compositionPath, e);
     }
 
-    return parentTitleMap.isEmpty() ? null : parentTitleMap;
+    return parentTitleMap;
   }
 
   /**
