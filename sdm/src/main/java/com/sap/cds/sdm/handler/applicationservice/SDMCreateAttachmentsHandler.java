@@ -142,6 +142,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       String attachmentCompositionDefinition = entry.getKey();
       String attachmentCompositionName = entry.getValue().get("name");
       String parentTitle = entry.getValue().get("parentTitle");
+      String parentTitleMap = entry.getValue().get("parentTitleMap");
       Map<String, String> propertyTitles = new HashMap<>();
       Map<String, String> secondaryPropertiesWithInvalidDefinitions = new HashMap<>();
       String targetEntity = context.getTarget().getQualifiedName();
@@ -160,7 +161,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           context.getModel().findEntity(attachmentCompositionDefinition);
       isError =
           AttachmentsHandlerUtils.validateFileNames(
-              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+              context,
+              data,
+              attachmentCompositionName,
+              contextInfo,
+              attachmentEntity,
+              parentTitleMap);
       if (!isError) {
         List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
         List<String> duplicateFileNameList = new ArrayList<>();
