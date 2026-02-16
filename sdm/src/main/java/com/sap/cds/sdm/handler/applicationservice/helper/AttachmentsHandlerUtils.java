@@ -586,44 +586,17 @@ public class AttachmentsHandlerUtils {
 
     try {
       String[] pathParts = compositionPath.split("\\.");
-      if (pathParts.length >= 3) {
-        String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
+      if (pathParts.length < 3) {
+        return null;
+      }
 
-        // Check if this is a direct composition (entity matches root entity)
-        if (entityPart.equalsIgnoreCase(rootEntityName)) {
-          // Direct attachment at root level (e.g., "AdminService.Books.references")
-          Object entityData = entity.get(rootEntityName);
-          String title = extractTitleFromEntity(model, targetEntity, entityData);
-          if (title != null && !title.trim().isEmpty()) {
-            parentTitleMap.put("root", title);
-          }
-        } else {
-          // Nested attachment (e.g., "AdminService.chapters.attachments")
-          Object rootEntity = entity.get(rootEntityName);
-          if (rootEntity instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
-            Object parentCollection = rootMap.get(entityPart);
+      String entityPart = pathParts[pathParts.length - 2];
 
-            if (parentCollection instanceof List) {
-              @SuppressWarnings("unchecked")
-              List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
-              String nestedEntityName = determineNestedEntityName(model, targetEntity, entityPart);
-
-              for (Map<String, Object> parentInstance : parentList) {
-                String title = extractTitleFromEntity(model, nestedEntityName, parentInstance);
-                if (title != null && !title.trim().isEmpty()) {
-                  Object parentId = parentInstance.get("ID");
-                  String parentIdStr =
-                      (parentId != null)
-                          ? parentId.toString()
-                          : String.valueOf(parentTitleMap.size());
-                  parentTitleMap.put(parentIdStr, title);
-                }
-              }
-            }
-          }
-        }
+      if (entityPart.equalsIgnoreCase(rootEntityName)) {
+        handleDirectAttachmentTitles(model, entity, rootEntityName, targetEntity, parentTitleMap);
+      } else {
+        handleNestedAttachmentTitles(
+            model, entity, rootEntityName, entityPart, targetEntity, parentTitleMap);
       }
     } catch (Exception e) {
       logger.warn("Error finding all parent titles for composition path: " + compositionPath, e);
@@ -633,111 +606,47 @@ public class AttachmentsHandlerUtils {
   }
 
   /**
-   * Finds the parent title for a given attachment composition path.
-   *
-   * @param model the CDS model containing entity definitions and relationships
-   * @param entity the wrapped entity data structure
-   * @param compositionPath the composition path (e.g., "AdminService.chapters123.attachments" or
-   *     "AdminService.Books.references")
-   * @param rootEntityName the name of the root entity
-   * @param targetEntity the qualified name of the target entity
-   * @return the title of the parent entity containing the attachment composition, or null if not
-   *     found
-   */
-  private static String findParentTitle(
-      CdsModel model,
-      Map<String, Object> entity,
-      String compositionPath,
-      String rootEntityName,
-      String targetEntity) {
-    logFindParentTitleStart(entity, compositionPath, rootEntityName, targetEntity);
-
-    try {
-      String[] pathParts = compositionPath.split("\\.");
-      logger.info("findParentTitle: pathParts={}", String.join(",", pathParts));
-
-      if (pathParts.length < 3) {
-        logger.info("findParentTitle: Returning null - insufficient path parts");
-        return null;
-      }
-
-      String entityPart = pathParts[pathParts.length - 2];
-      logger.info("findParentTitle: entityPart={} (second to last)", entityPart);
-
-      if (entityPart.equalsIgnoreCase(rootEntityName)) {
-        return handleDirectAttachment(model, entity, rootEntityName, targetEntity);
-      } else {
-        return handleNestedAttachment(model, entity, rootEntityName, entityPart, targetEntity);
-      }
-    } catch (Exception e) {
-      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
-      return null;
-    }
-  }
-
-  /**
-   * Logs the start of findParentTitle operation.
-   *
-   * @param entity the entity data structure
-   * @param compositionPath the composition path
-   * @param rootEntityName the root entity name
-   * @param targetEntity the target entity name
-   */
-  private static void logFindParentTitleStart(
-      Map<String, Object> entity,
-      String compositionPath,
-      String rootEntityName,
-      String targetEntity) {
-    logger.info(
-        "findParentTitle: compositionPath={}, rootEntityName={}, targetEntity={}",
-        compositionPath,
-        rootEntityName,
-        targetEntity);
-    logger.info("findParentTitle: entity keys={}", entity.keySet());
-  }
-
-  /**
-   * Handles direct attachment title extraction.
+   * Handles title extraction for direct attachments at root level.
    *
    * @param model the CDS model
    * @param entity the entity data structure
    * @param rootEntityName the root entity name
    * @param targetEntity the target entity name
-   * @return the extracted title, or null if not found
+   * @param parentTitleMap the map to populate with titles
    */
-  private static String handleDirectAttachment(
-      CdsModel model, Map<String, Object> entity, String rootEntityName, String targetEntity) {
-    logger.info(
-        "findParentTitle: Direct attachment detected, looking up entity.get({})", rootEntityName);
+  private static void handleDirectAttachmentTitles(
+      CdsModel model,
+      Map<String, Object> entity,
+      String rootEntityName,
+      String targetEntity,
+      Map<String, String> parentTitleMap) {
     Object entityData = entity.get(rootEntityName);
-    logger.info(
-        "findParentTitle: entityData type={}, isNull={}",
-        entityData != null ? entityData.getClass().getSimpleName() : "null",
-        entityData == null);
-    return extractTitleFromEntity(model, targetEntity, entityData);
+    String title = extractTitleFromEntity(model, targetEntity, entityData);
+    if (title != null && !title.trim().isEmpty()) {
+      parentTitleMap.put("root", title);
+    }
   }
 
   /**
-   * Handles nested attachment title extraction.
+   * Handles title extraction for nested attachments.
    *
    * @param model the CDS model
    * @param entity the entity data structure
    * @param rootEntityName the root entity name
    * @param entityPart the entity part from the path
    * @param targetEntity the target entity name
-   * @return the extracted title, or null if not found
+   * @param parentTitleMap the map to populate with titles
    */
-  private static String handleNestedAttachment(
+  private static void handleNestedAttachmentTitles(
       CdsModel model,
       Map<String, Object> entity,
       String rootEntityName,
       String entityPart,
-      String targetEntity) {
-    logger.info("findParentTitle: Nested attachment detected");
-
+      String targetEntity,
+      Map<String, String> parentTitleMap) {
     Object rootEntity = entity.get(rootEntityName);
     if (!(rootEntity instanceof Map)) {
-      return null;
+      return;
     }
 
     @SuppressWarnings("unchecked")
@@ -745,36 +654,37 @@ public class AttachmentsHandlerUtils {
     Object parentCollection = rootMap.get(entityPart);
 
     if (!(parentCollection instanceof List)) {
-      return null;
+      return;
     }
 
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
-    if (parentList.isEmpty()) {
-      return null;
-    }
-
     String nestedEntityName = determineNestedEntityName(model, targetEntity, entityPart);
-    if (nestedEntityName == null) {
-      return null;
-    }
 
-    List<String> allTitles = new ArrayList<>();
+    extractTitlesFromParentList(model, nestedEntityName, parentList, parentTitleMap);
+  }
+
+  /**
+   * Extracts titles from a list of parent instances.
+   *
+   * @param model the CDS model
+   * @param nestedEntityName the nested entity name
+   * @param parentList the list of parent instances
+   * @param parentTitleMap the map to populate with titles
+   */
+  private static void extractTitlesFromParentList(
+      CdsModel model,
+      String nestedEntityName,
+      List<Map<String, Object>> parentList,
+      Map<String, String> parentTitleMap) {
     for (Map<String, Object> parentInstance : parentList) {
       String title = extractTitleFromEntity(model, nestedEntityName, parentInstance);
       if (title != null && !title.trim().isEmpty()) {
-        allTitles.add(title);
+        Object parentId = parentInstance.get("ID");
+        String parentIdStr =
+            (parentId != null) ? parentId.toString() : String.valueOf(parentTitleMap.size());
+        parentTitleMap.put(parentIdStr, title);
       }
-    }
-
-    if (allTitles.isEmpty()) {
-      return null;
-    }
-
-    if (allTitles.size() == 1) {
-      return allTitles.get(0);
-    } else {
-      return allTitles.get(0);
     }
   }
 
