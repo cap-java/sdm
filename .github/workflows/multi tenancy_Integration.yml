@@ -23,6 +23,10 @@ jobs:
       matrix:
         tokenFlow: [namedUser, technicalUser]
         tenant: [TENANT1, TENANT2]
+        testClass: 
+          - IntegrationTest_SingleFacet
+          - IntegrationTest_MultipleFacet
+          - IntegrationTest_Chapters_MultipleFacet
 
     steps:
       - name: Checkout repository ✅
@@ -35,14 +39,29 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
 
       - name: Install Cloud Foundry CLI and jq 📦
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          echo "🔧 Installing Cloud Foundry CLI and jq..."
+          echo "🔧 Installing Cloud Foundry CLI..."
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
-          sudo apt-get install cf8-cli jq
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
@@ -196,17 +215,17 @@ jobs:
           EOL
           echo "✅ Credentials file prepared!"
 
-      - name: Run integration tests (${{ matrix.tokenFlow }} - ${{ matrix.tenant }}) 🎯
+      - name: Run integration tests (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}) 🎯
         run: |
-          echo "🎯 Running Maven integration tests: tokenFlow=${{ matrix.tokenFlow }}, tenant=${{ matrix.tenant }}"
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests
-          echo "✅ Integration tests completed for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}!"
+          echo "🎯 Running Maven integration tests: testClass=${{ matrix.testClass }}, tokenFlow=${{ matrix.tokenFlow }}, tenant=${{ matrix.tenant }}"
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          echo "✅ Integration tests completed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}!"
 
       - name: Upload test results 📊
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.tokenFlow }}-${{ matrix.tenant }}
+          name: test-results-${{ matrix.testClass }}-${{ matrix.tokenFlow }}-${{ matrix.tenant }}
           path: |
             sdm/target/surefire-reports/
             sdm/target/failsafe-reports/
