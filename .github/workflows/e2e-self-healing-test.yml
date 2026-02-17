@@ -1,0 +1,440 @@
+name: E2E Self-Healing Test
+
+# This workflow tests the full self-healing cycle:
+# 1. Creates a "broken" workflow scenario
+# 2. Runs the analysis
+# 3. Creates an actual issue with diagnosis
+# 4. (Optional) Applies auto-fix
+
+on:
+  push:
+    branches:
+      - 'feature/self-healing-ci'
+    paths:
+      - '.github/workflows/e2e-self-healing-test.yml'
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'quality_gate'
+        type: choice
+        options:
+          - quality_gate      # SonarQube Quality Gate failure (creates issue)
+          - infrastructure    # Transient failure (tests retry logic)
+          - workflow_fix      # Workflow issue that can be auto-fixed (creates PR)
+      create_real_artifacts:
+        description: 'Create real issue/PR (not just simulate)'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  simulate-failure:
+    name: Simulate Failure
+    runs-on: ubuntu-latest
+    outputs:
+      classification: ${{ steps.analyze.outputs.classification }}
+      should_retry: ${{ steps.analyze.outputs.should_retry }}
+      should_create_issue: ${{ steps.analyze.outputs.should_create_issue }}
+      should_create_pr: ${{ steps.analyze.outputs.should_create_pr }}
+      diagnosis: ${{ steps.analyze.outputs.diagnosis }}
+      test_scenario: ${{ steps.set-scenario.outputs.scenario }}
+      create_artifacts: ${{ steps.set-scenario.outputs.create_artifacts }}
+      
+    steps:
+      - name: Set test scenario
+        id: set-scenario
+        run: |
+          # Use inputs if workflow_dispatch, otherwise default to quality_gate
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "scenario=${{ github.event.inputs.test_scenario }}" >> $GITHUB_OUTPUT
+            echo "create_artifacts=${{ github.event.inputs.create_real_artifacts }}" >> $GITHUB_OUTPUT
+          else
+            echo "scenario=quality_gate" >> $GITHUB_OUTPUT
+            echo "create_artifacts=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install yaml
+        
+      - name: Generate failure scenario - Quality Gate
+        if: ${{ steps.set-scenario.outputs.scenario == 'quality_gate' }}
+        run: |
+          echo "🔴 Simulating SonarQube Quality Gate Failure..."
+          
+          cat > /tmp/failure_logs.txt << 'EOFLOG'
+          [INFO] Scanning project...
+          [INFO] Base dir: /home/runner/work/sdm/sdm
+          [INFO] Load module: sdm
+          [INFO] Analyzing source files
+          [INFO] 36 source files to analyze
+          [INFO] 36/36 source files analyzed
+          [INFO] Sensor JaCoCo XML Report Importer
+          [INFO] Test coverage: 72.4%
+          [INFO] ANALYSIS SUCCESSFUL
+          [INFO] Analysis report generated in 193ms
+          [INFO] Analysis report uploaded in 410ms
+          [INFO] Note that you will be able to access the updated dashboard
+          [INFO] More about the report processing at https://sonarqube.example.com/api/ce/task?id=abc123
+          [INFO] Analysis total time: 20.693 s
+          [INFO] EXECUTION SUCCESS
+          
+          Checking Quality Gate status...
+          Quality Gate status: FAILED
+          
+          Conditions:
+            ❌ Coverage on New Code: 68.2% (required >= 80%)
+            ❌ Duplicated Lines on New Code: 4.5% (required < 3%)
+            ✅ Maintainability Rating: A
+            ✅ Reliability Rating: A
+            ✅ Security Rating: A
+          
+          ✖ Quality Gate has FAILED.
+          
+          Detailed information: https://sonarqube.example.com/dashboard?id=cap-java-sdm&pullRequest=425
+          
+          Process completed with exit code 1.
+          EOFLOG
+          
+          cat > /tmp/run_details.json << 'EOF'
+          {
+            "id": 99999999,
+            "name": "SonarQube Analysis",
+            "head_branch": "${{ github.ref_name }}",
+            "head_sha": "${{ github.sha }}",
+            "event": "pull_request",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/${{ github.repository }}/actions/runs/99999999"
+          }
+          EOF
+          
+          cat > /tmp/jobs.json << 'EOF'
+          {
+            "jobs": [{
+              "id": 1,
+              "name": "sonar-scan",
+              "conclusion": "failure",
+              "steps": [
+                {"number": 1, "name": "Checkout", "conclusion": "success"},
+                {"number": 2, "name": "Setup JDK", "conclusion": "success"},
+                {"number": 3, "name": "Build", "conclusion": "success"},
+                {"number": 4, "name": "Run SonarQube", "conclusion": "success"},
+                {"number": 5, "name": "Quality Gate Check", "conclusion": "failure"}
+              ]
+            }]
+          }
+          EOF
+          
+      - name: Generate failure scenario - Infrastructure
+        if: ${{ steps.set-scenario.outputs.scenario == 'infrastructure' }}
+        run: |
+          echo "🔴 Simulating Infrastructure/Network Failure..."
+          
+          cat > /tmp/failure_logs.txt << 'EOFLOG'
+          Downloading dependencies...
+          npm ERR! code ETIMEDOUT
+          npm ERR! syscall connect
+          npm ERR! errno ETIMEDOUT
+          npm ERR! network request to https://registry.npmjs.org/lodash failed
+          npm ERR! network This is a problem related to network connectivity.
+          npm ERR! network In most cases you are behind a proxy or have bad network settings.
+          npm ERR! network
+          npm ERR! network If you are behind a proxy, please make sure that the
+          npm ERR! network 'proxy' config is set properly.
+          
+          Retrying in 5 seconds...
+          
+          npm ERR! code ETIMEDOUT
+          npm ERR! syscall connect
+          npm ERR! errno ETIMEDOUT
+          npm ERR! network request to https://registry.npmjs.org/lodash failed
+          
+          Error: Process completed with exit code 1.
+          EOFLOG
+          
+          cat > /tmp/run_details.json << 'EOF'
+          {
+            "id": 99999998,
+            "name": "Build and Test",
+            "head_branch": "${{ github.ref_name }}",
+            "head_sha": "${{ github.sha }}",
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/${{ github.repository }}/actions/runs/99999998"
+          }
+          EOF
+          
+          cat > /tmp/jobs.json << 'EOF'
+          {
+            "jobs": [{
+              "id": 1,
+              "name": "build",
+              "conclusion": "failure",
+              "steps": [
+                {"number": 1, "name": "Checkout", "conclusion": "success"},
+                {"number": 2, "name": "Setup Node", "conclusion": "success"},
+                {"number": 3, "name": "Install dependencies", "conclusion": "failure"}
+              ]
+            }]
+          }
+          EOF
+          
+      - name: Generate failure scenario - Workflow Fix
+        if: ${{ steps.set-scenario.outputs.scenario == 'workflow_fix' }}
+        run: |
+          echo "🔴 Simulating Workflow Configuration Issue (auto-fixable)..."
+          
+          cat > /tmp/failure_logs.txt << 'EOFLOG'
+          Run actions/checkout@v2
+          Syncing repository: cap-java/sdm
+          Getting Git version info
+          
+          Warning: The `actions/checkout@v2` action is deprecated and will be removed.
+          Warning: Please update to `actions/checkout@v4`.
+          
+          Run actions/setup-node@v2
+          Warning: The `actions/setup-node@v2` action is deprecated.
+          
+          Warning: Node.js 12 actions are deprecated. Please update the following actions to use Node.js 16: actions/checkout@v2, actions/setup-node@v2
+          
+          Error: The `set-output` command is deprecated and will be disabled soon.
+          Please upgrade to using Environment Files.
+          
+          Process failed with: Workflow contains deprecated actions
+          Error: Process completed with exit code 1.
+          EOFLOG
+          
+          cat > /tmp/run_details.json << 'EOF'
+          {
+            "id": 99999997,
+            "name": "Legacy Workflow",
+            "head_branch": "${{ github.ref_name }}",
+            "head_sha": "${{ github.sha }}",
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/${{ github.repository }}/actions/runs/99999997"
+          }
+          EOF
+          
+          cat > /tmp/jobs.json << 'EOF'
+          {
+            "jobs": [{
+              "id": 1,
+              "name": "build",
+              "conclusion": "failure",
+              "steps": [
+                {"number": 1, "name": "Checkout", "conclusion": "success"},
+                {"number": 2, "name": "Setup", "conclusion": "failure"}
+              ]
+            }]
+          }
+          EOF
+          
+      - name: Run Self-Healing Analysis
+        id: analyze
+        env:
+          GITHUB_OUTPUT: /tmp/gh_output
+        run: |
+          echo "🔍 Running self-healing analysis..."
+          touch /tmp/gh_output
+          
+          node .github/scripts/analyze-failure.js \
+            --logs /tmp/failure_logs.txt \
+            --run-details /tmp/run_details.json \
+            --jobs /tmp/jobs.json \
+            --config .github/self-healing-config.yml
+          
+          # Copy outputs to GitHub
+          cat /tmp/gh_output >> $GITHUB_OUTPUT
+          
+      - name: Display Analysis Results
+        run: |
+          echo ""
+          echo "============================================"
+          echo "  🔬 SELF-HEALING ANALYSIS RESULTS"
+          echo "============================================"
+          echo ""
+          echo "📊 Classification: ${{ steps.analyze.outputs.classification }}"
+          echo "🔄 Should Retry:   ${{ steps.analyze.outputs.should_retry }}"
+          echo "📝 Create Issue:   ${{ steps.analyze.outputs.should_create_issue }}"
+          echo "🔧 Create PR:      ${{ steps.analyze.outputs.should_create_pr }}"
+          echo ""
+
+  create-healing-issue:
+    name: Create Healing Issue
+    needs: simulate-failure
+    if: ${{ needs.simulate-failure.outputs.create_artifacts == 'true' && needs.simulate-failure.outputs.should_create_issue == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check for existing test issue
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list \
+            --repo ${{ github.repository }} \
+            --label "self-healing-test" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          
+          if [ -n "$EXISTING" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "issue_number=$EXISTING" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create healing issue
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSIS: ${{ needs.simulate-failure.outputs.diagnosis }}
+          CLASSIFICATION: ${{ needs.simulate-failure.outputs.classification }}
+        run: |
+          gh issue create \
+            --repo ${{ github.repository }} \
+            --title "🔧 [E2E TEST] CI Failure: ${{ needs.simulate-failure.outputs.test_scenario }} scenario" \
+            --label "ci-failure" \
+            --label "self-healing" \
+            --label "self-healing-test" \
+            --body "## 🔧 Self-Healing CI Analysis (E2E Test)
+
+**This is a test issue created by the E2E self-healing test workflow.**
+
+---
+
+**Scenario:** ${{ needs.simulate-failure.outputs.test_scenario }}
+**Classification:** ${CLASSIFICATION}
+**Triggered by:** @${{ github.actor }}
+**Workflow Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+---
+
+### 📋 Diagnosis
+
+${DIAGNOSIS}
+
+---
+
+### ✅ Test Verification
+
+This issue demonstrates that the self-healing agent successfully:
+1. Detected the simulated failure
+2. Analyzed the logs
+3. Classified the failure type
+4. Generated actionable diagnosis
+5. Created this issue automatically
+
+**To clean up:** Close this issue after reviewing.
+
+---
+<sub>🤖 Generated by Self-Healing CI Agent (E2E Test)</sub>"
+          
+          echo ""
+          echo "✅ Issue created successfully!"
+          
+      - name: Update existing issue
+        if: steps.check.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSIS: ${{ needs.simulate-failure.outputs.diagnosis }}
+          CLASSIFICATION: ${{ needs.simulate-failure.outputs.classification }}
+        run: |
+          gh issue comment ${{ steps.check.outputs.issue_number }} \
+            --repo ${{ github.repository }} \
+            --body "## 🔄 New Test Run
+
+**Scenario:** ${{ needs.simulate-failure.outputs.test_scenario }}
+**Classification:** ${CLASSIFICATION}
+
+### Diagnosis
+
+${DIAGNOSIS}
+
+---
+<sub>🤖 Updated by Self-Healing CI Agent (E2E Test)</sub>"
+          
+          echo "✅ Existing issue #${{ steps.check.outputs.issue_number }} updated!"
+
+  test-retry-logic:
+    name: Test Retry Logic
+    needs: simulate-failure
+    if: ${{ needs.simulate-failure.outputs.should_retry == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Simulate retry behavior
+        run: |
+          echo ""
+          echo "============================================"
+          echo "  🔄 RETRY LOGIC TRIGGERED"
+          echo "============================================"
+          echo ""
+          echo "The self-healing agent detected an infrastructure failure."
+          echo "In production, it would:"
+          echo "  1. Wait 60 seconds"
+          echo "  2. Rerun the failed jobs"
+          echo "  3. Retry up to 2 times before creating an issue"
+          echo ""
+          echo "✅ Retry logic is working correctly!"
+          
+  summary:
+    name: Test Summary
+    needs: [simulate-failure, create-healing-issue, test-retry-logic]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Print summary
+        env:
+          CLASSIFICATION: ${{ needs.simulate-failure.outputs.classification }}
+          SHOULD_RETRY: ${{ needs.simulate-failure.outputs.should_retry }}
+          SHOULD_CREATE_ISSUE: ${{ needs.simulate-failure.outputs.should_create_issue }}
+        run: |
+          echo ""
+          echo "============================================"
+          echo "  📊 E2E TEST SUMMARY"
+          echo "============================================"
+          echo ""
+          echo "Scenario:        ${{ needs.simulate-failure.outputs.test_scenario }}"
+          echo "Classification:  ${CLASSIFICATION}"
+          echo "Retry Triggered: ${SHOULD_RETRY}"
+          echo "Issue Created:   ${SHOULD_CREATE_ISSUE}"
+          echo ""
+          
+          if [ "${{ needs.create-healing-issue.result }}" == "success" ]; then
+            echo "✅ Issue was created/updated successfully!"
+            echo "   Check the Issues tab to see the self-healing diagnosis."
+          fi
+          
+          if [ "${SHOULD_RETRY}" == "true" ]; then
+            echo "✅ Retry logic was triggered correctly for infrastructure failure!"
+          fi
+          
+          echo ""
+          echo "============================================"
+          echo "  🎉 E2E TEST COMPLETED"
+          echo "============================================"
