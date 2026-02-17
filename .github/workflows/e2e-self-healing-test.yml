@@ -353,9 +353,6 @@ jobs:
           gh issue create \
             --repo ${{ github.repository }} \
             --title "🔧 [E2E TEST] CI Failure: ${SCENARIO} scenario" \
-            --label "ci-failure" \
-            --label "self-healing" \
-            --label "self-healing-test" \
             --body-file /tmp/issue_body.md
           
           echo ""
