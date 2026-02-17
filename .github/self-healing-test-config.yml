@@ -1,0 +1,18 @@
+# TEST CONFIG FILE - FIXED by Self-Healing CI
+# All deprecated settings have been updated
+
+version: "2.0"  # UPDATED from 1.0
+
+settings:
+  node_version: "20"  # UPDATED from 12
+  java_version: "17"  # UPDATED from 8
+  timeout: 60         # UPDATED from 30
+  
+dependencies:
+  checkout: "v4"      # UPDATED from v2
+  setup-node: "v4"    # UPDATED from v3
+  setup-java: "v4"    # UPDATED from v2
+  
+features:
+  auto_retry: true    # UPDATED from false
+  notifications: true # UPDATED from false
