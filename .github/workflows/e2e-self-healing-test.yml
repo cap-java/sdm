@@ -173,18 +173,25 @@ jobs:
         run: |
           echo "🔧 Applying automated fixes..."
           
-          # Run the apply-fix script
+          # Run the apply-fix script (it outputs changes_made to GITHUB_OUTPUT)
           node .github/scripts/apply-fix.js
           
-          # Check if changes were made
-          if git diff --quiet .github/workflows/test-broken-workflow.yml; then
-            echo "changes_made=false" >> $GITHUB_OUTPUT
-            echo "⚠️ No changes needed (file already up to date)"
+          # For new files, git diff doesn't work, so check if file was modified
+          # The apply-fix script already reported changes
+          if [ -f .github/workflows/test-broken-workflow.yml ]; then
+            # Check content to verify fixes were applied
+            if grep -q "actions/checkout@v4" .github/workflows/test-broken-workflow.yml; then
+              echo "changes_made=true" >> $GITHUB_OUTPUT
+              echo ""
+              echo "✅ Fixes applied! Test workflow now uses v4 actions:"
+              grep "uses:" .github/workflows/test-broken-workflow.yml
+            else
+              echo "changes_made=false" >> $GITHUB_OUTPUT
+              echo "⚠️ No changes detected"
+            fi
           else
-            echo "changes_made=true" >> $GITHUB_OUTPUT
-            echo ""
-            echo "✅ Fixes applied! Here's the diff:"
-            git diff .github/workflows/test-broken-workflow.yml
+            echo "changes_made=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Test workflow file not found"
           fi
           
       - name: "Step 5: Create fix branch"
