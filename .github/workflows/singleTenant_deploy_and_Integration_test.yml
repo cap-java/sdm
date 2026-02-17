@@ -113,6 +113,14 @@ jobs:
   integration-test:
     needs: deploy
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tokenFlow: [namedUser, technicalUser]
+        testClass: 
+          - IntegrationTest_SingleFacet
+          - IntegrationTest_MultipleFacet
+          - IntegrationTest_Chapters_MultipleFacet
 
     steps:
       - name: Checkout repository
@@ -123,13 +131,29 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
+          cache: 'maven'
 
-      - name: Install Cloud Foundry CLI and jq
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
+
+      - name: Install Cloud Foundry CLI
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
-          sudo apt-get install cf8-cli jq
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
       - name: Login to Cloud Foundry
         run: |
           cf login -a ${{ secrets.CF_API }} \
@@ -137,6 +161,7 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ secrets.CF_SPACE }}
+
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
         run: |
@@ -162,15 +187,15 @@ jobs:
             echo "❌ Error: clientID is not set or is null"; exit 1;
           fi
           echo "::add-mask::$clientID"
-          echo "::set-output name=CLIENT_SECRET::$escapedClientSecret"
-          echo "::set-output name=CLIENT_ID::$clientID"
+          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
           echo "✅ Client details fetched successfully!"
-      - name: Run integration tests 🎯
+      - name: Run integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
         run: |
-          echo "🚀 Starting integration tests..."
+          echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
           appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
@@ -205,10 +230,8 @@ jobs:
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
-          echo "🎯 Running Maven integration tests"
-          # Run Maven integration tests
-          mvn clean verify -P integration-tests -DtokenFlow=namedUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Technical User Flow"; exit 1; }
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=single -DskipUnitTests || { echo "Maven tests failed for Named User Flow"; exit 1; }
+          echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
     
       
 
