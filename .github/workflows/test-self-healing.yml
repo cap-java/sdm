@@ -1,0 +1,288 @@
+name: Test Self-Healing Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode'
+        required: true
+        default: 'simulate'
+        type: choice
+        options:
+          - simulate          # Simulate a failure and analyze it
+          - analyze-recent    # Analyze the most recent failed run
+          - analyze-specific  # Analyze a specific run ID
+      run_id:
+        description: 'Run ID to analyze (only for analyze-specific mode)'
+        required: false
+        type: string
+      failure_type:
+        description: 'Failure type to simulate (only for simulate mode)'
+        required: false
+        default: 'quality_gate'
+        type: choice
+        options:
+          - code
+          - workflow
+          - infrastructure
+          - quality_gate
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  test-simulate:
+    name: Simulate Failure Analysis
+    if: ${{ github.event.inputs.test_mode == 'simulate' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install yaml
+        
+      - name: Generate simulated failure logs
+        id: generate-logs
+        run: |
+          FAILURE_TYPE="${{ github.event.inputs.failure_type }}"
+          
+          case $FAILURE_TYPE in
+            code)
+              cat > /tmp/failed_logs.txt << 'EOF'
+          [INFO] BUILD FAILURE
+          [ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile
+          [ERROR] COMPILATION ERROR : 
+          [ERROR] /src/main/java/com/example/Service.java:[45,23] error: cannot find symbol
+          [ERROR]   symbol:   method getData()
+          [ERROR]   location: variable client of type HttpClient
+          Tests run: 15, Failures: 3, Errors: 0, Skipped: 2
+          ##[error]Process completed with exit code 1.
+          EOF
+              ;;
+            workflow)
+              cat > /tmp/failed_logs.txt << 'EOF'
+          ##[error]Invalid workflow file: .github/workflows/test.yml
+          The workflow is not valid. .github/workflows/test.yml: Unexpected input(s) 'sonar_host_url'
+          ##[error]action 'old-action/deprecated@v1' not found
+          Required secret 'MY_SECRET' not found
+          ##[error]Process completed with exit code 1.
+          EOF
+              ;;
+            infrastructure)
+              cat > /tmp/failed_logs.txt << 'EOF'
+          npm ERR! code ETIMEDOUT
+          npm ERR! syscall connect
+          npm ERR! errno ETIMEDOUT
+          npm ERR! network request to https://registry.npmjs.org failed, reason: connect ETIMEDOUT
+          Error: 503 Service Unavailable
+          Connection reset by peer
+          ##[error]Process completed with exit code 1.
+          EOF
+              ;;
+            quality_gate)
+              cat > /tmp/failed_logs.txt << 'EOF'
+          INFO: ANALYSIS SUCCESSFUL, you can find the results at: https://sonarqube.example.com/dashboard?id=my-project&pullRequest=123
+          INFO: Analysis total time: 20.693 s
+          ##[warning]Unexpected input(s) 'sonar_host_url', valid inputs are ['scanMetadataReportFile', 'pollingTimeoutSec']
+          ✖ Quality Gate has FAILED.
+          Detailed information can be found at: https://sonarqube.example.com/dashboard?id=my-project&pullRequest=123
+          ##[error]Process completed with exit code 1.
+          EOF
+              ;;
+          esac
+          
+          # Create mock run details
+          cat > /tmp/run_details.json << EOF
+          {
+            "id": 12345678,
+            "name": "Test Workflow",
+            "head_branch": "test-branch",
+            "head_sha": "abc123def456",
+            "event": "pull_request",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/${{ github.repository }}/actions/runs/12345678"
+          }
+          EOF
+          
+          # Create mock jobs
+          cat > /tmp/jobs.json << EOF
+          {
+            "jobs": [
+              {
+                "id": 1,
+                "name": "test-job",
+                "conclusion": "failure",
+                "steps": [
+                  {"number": 1, "name": "Checkout", "conclusion": "success"},
+                  {"number": 2, "name": "Build", "conclusion": "failure"}
+                ]
+              }
+            ]
+          }
+          EOF
+          
+          echo "logs_path=/tmp/failed_logs.txt" >> $GITHUB_OUTPUT
+          echo "Generated simulated $FAILURE_TYPE failure logs"
+          
+      - name: Run failure analysis
+        id: analyze
+        env:
+          FAILED_WORKFLOW: "Simulated Test Workflow"
+          FAILED_WORKFLOW_ID: "12345678"
+          FAILED_RUN_URL: "https://github.com/${{ github.repository }}/actions/runs/12345678"
+          HEAD_BRANCH: "test-branch"
+          HEAD_SHA: "abc123def456"
+        run: |
+          echo "=== Running Self-Healing Analysis ==="
+          echo ""
+          
+          node .github/scripts/analyze-failure.js \
+            --logs "/tmp/failed_logs.txt" \
+            --run-details "/tmp/run_details.json" \
+            --jobs "/tmp/jobs.json" \
+            --config ".github/self-healing-config.yml"
+            
+      - name: Display results
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "  TEST COMPLETE - Self-Healing Analysis"
+          echo "=========================================="
+          echo ""
+          echo "The self-healing agent successfully analyzed the simulated failure."
+          echo ""
+          echo "In production (after merging to default branch):"
+          echo "- This analysis would run automatically on real failures"
+          echo "- Issues would be created for code/quality failures"
+          echo "- Infrastructure failures would trigger auto-retry"
+          echo "- Workflow issues could generate auto-fix PRs (in auto-fix mode)"
+          
+  test-analyze-recent:
+    name: Analyze Recent Failure
+    if: ${{ github.event.inputs.test_mode == 'analyze-recent' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install yaml
+        
+      - name: Find most recent failed run
+        id: find-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Finding most recent failed workflow run..."
+          
+          RECENT_FAILURE=$(gh run list --status failure --limit 1 --json databaseId,name,headBranch,conclusion,createdAt)
+          
+          if [ "$RECENT_FAILURE" == "[]" ]; then
+            echo "No recent failures found!"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          RUN_ID=$(echo "$RECENT_FAILURE" | jq -r '.[0].databaseId')
+          RUN_NAME=$(echo "$RECENT_FAILURE" | jq -r '.[0].name')
+          
+          echo "Found failed run: $RUN_NAME (ID: $RUN_ID)"
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "run_name=$RUN_NAME" >> $GITHUB_OUTPUT
+          echo "found=true" >> $GITHUB_OUTPUT
+          
+      - name: Download logs
+        if: steps.find-run.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ steps.find-run.outputs.run_id }}"
+          
+          echo "Downloading logs for run $RUN_ID..."
+          gh run view "$RUN_ID" --log-failed > /tmp/failed_logs.txt 2>&1 || true
+          gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID" > /tmp/run_details.json
+          gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs" > /tmp/jobs.json
+          
+          echo "Logs downloaded successfully"
+          
+      - name: Run failure analysis
+        if: steps.find-run.outputs.found == 'true'
+        env:
+          FAILED_WORKFLOW: "${{ steps.find-run.outputs.run_name }}"
+          FAILED_WORKFLOW_ID: "${{ steps.find-run.outputs.run_id }}"
+        run: |
+          echo "=== Running Self-Healing Analysis ==="
+          echo ""
+          
+          node .github/scripts/analyze-failure.js \
+            --logs "/tmp/failed_logs.txt" \
+            --run-details "/tmp/run_details.json" \
+            --jobs "/tmp/jobs.json" \
+            --config ".github/self-healing-config.yml"
+            
+      - name: No failures found
+        if: steps.find-run.outputs.found == 'false'
+        run: |
+          echo "No recent failed workflow runs found in this repository."
+          echo "The self-healing agent has nothing to analyze."
+          
+  test-analyze-specific:
+    name: Analyze Specific Run
+    if: ${{ github.event.inputs.test_mode == 'analyze-specific' && github.event.inputs.run_id != '' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install yaml
+        
+      - name: Download logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.inputs.run_id }}"
+          
+          echo "Downloading logs for run $RUN_ID..."
+          gh run view "$RUN_ID" --log-failed > /tmp/failed_logs.txt 2>&1 || true
+          gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID" > /tmp/run_details.json
+          gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs" > /tmp/jobs.json
+          
+          echo "Logs downloaded successfully"
+          
+      - name: Run failure analysis
+        env:
+          FAILED_WORKFLOW: "Specified Run"
+          FAILED_WORKFLOW_ID: "${{ github.event.inputs.run_id }}"
+        run: |
+          echo "=== Running Self-Healing Analysis ==="
+          echo ""
+          
+          node .github/scripts/analyze-failure.js \
+            --logs "/tmp/failed_logs.txt" \
+            --run-details "/tmp/run_details.json" \
+            --jobs "/tmp/jobs.json" \
+            --config ".github/self-healing-config.yml"

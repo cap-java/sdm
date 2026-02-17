@@ -1,0 +1,342 @@
+name: Self-Healing CI Pipeline
+
+on:
+  workflow_run:
+    workflows: ["*"]  # Monitor all workflows
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  analyze-failure:
+    name: Analyze Workflow Failure
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    
+    outputs:
+      classification: ${{ steps.analyze.outputs.classification }}
+      should_retry: ${{ steps.analyze.outputs.should_retry }}
+      should_create_issue: ${{ steps.analyze.outputs.should_create_issue }}
+      should_create_pr: ${{ steps.analyze.outputs.should_create_pr }}
+      diagnosis: ${{ steps.analyze.outputs.diagnosis }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: |
+          npm install yaml @octokit/rest
+          
+      - name: Download workflow logs
+        id: download-logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Downloading logs for run ${{ github.event.workflow_run.id }}"
+          
+          # Get the failed run logs
+          gh run view ${{ github.event.workflow_run.id }} --log-failed > /tmp/failed_logs.txt 2>&1 || true
+          
+          # Get workflow run details
+          gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }} > /tmp/run_details.json
+          
+          # Get jobs for the run
+          gh api /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs > /tmp/jobs.json
+          
+          echo "logs_path=/tmp/failed_logs.txt" >> $GITHUB_OUTPUT
+          echo "run_details_path=/tmp/run_details.json" >> $GITHUB_OUTPUT
+          echo "jobs_path=/tmp/jobs.json" >> $GITHUB_OUTPUT
+          
+      - name: Analyze failure
+        id: analyze
+        env:
+          FAILED_WORKFLOW: ${{ github.event.workflow_run.name }}
+          FAILED_WORKFLOW_ID: ${{ github.event.workflow_run.id }}
+          FAILED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          node .github/scripts/analyze-failure.js \
+            --logs "${{ steps.download-logs.outputs.logs_path }}" \
+            --run-details "${{ steps.download-logs.outputs.run_details_path }}" \
+            --jobs "${{ steps.download-logs.outputs.jobs_path }}" \
+            --config ".github/self-healing-config.yml"
+            
+  retry-workflow:
+    name: Retry Failed Workflow
+    needs: analyze-failure
+    if: ${{ needs.analyze-failure.outputs.should_retry == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check retry count
+        id: check-retry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if this workflow has been retried too many times
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          
+          # Count recent runs of the same workflow on the same commit
+          RETRY_COUNT=$(gh api "/repos/${{ github.repository }}/actions/runs?head_sha=${HEAD_SHA}" \
+            --jq "[.workflow_runs[] | select(.name == \"${WORKFLOW_NAME}\")] | length")
+          
+          echo "Current retry count: $RETRY_COUNT"
+          
+          if [ "$RETRY_COUNT" -ge 3 ]; then
+            echo "Max retries reached, will not retry"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Will proceed with retry"
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Wait before retry
+        if: steps.check-retry.outputs.should_proceed == 'true'
+        run: sleep 60
+        
+      - name: Rerun failed workflow
+        if: steps.check-retry.outputs.should_proceed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Rerunning workflow ${{ github.event.workflow_run.id }}"
+          gh run rerun ${{ github.event.workflow_run.id }} --failed
+          
+  create-issue:
+    name: Create Failure Issue
+    needs: analyze-failure
+    if: ${{ needs.analyze-failure.outputs.should_create_issue == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check for existing issue
+        id: check-issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if an issue already exists for this failure
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          
+          EXISTING_ISSUE=$(gh issue list \
+            --label "ci-failure" \
+            --label "self-healing" \
+            --state open \
+            --search "in:title ${WORKFLOW_NAME} ${HEAD_BRANCH}" \
+            --json number \
+            --jq '.[0].number // empty')
+          
+          if [ -n "$EXISTING_ISSUE" ]; then
+            echo "Existing issue found: #${EXISTING_ISSUE}"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "issue_number=${EXISTING_ISSUE}" >> $GITHUB_OUTPUT
+          else
+            echo "No existing issue found"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create or update issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSIS: ${{ needs.analyze-failure.outputs.diagnosis }}
+          CLASSIFICATION: ${{ needs.analyze-failure.outputs.classification }}
+        run: |
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          
+          ISSUE_BODY=$(cat <<EOF
+          ## 🔧 CI Failure Analysis - Self-Healing Agent
+          
+          **Workflow:** ${WORKFLOW_NAME}
+          **Branch:** ${HEAD_BRANCH}
+          **Commit:** ${HEAD_SHA}
+          **Run URL:** ${RUN_URL}
+          **Classification:** ${CLASSIFICATION}
+          
+          ---
+          
+          ### 📋 Diagnosis
+          
+          ${DIAGNOSIS}
+          
+          ---
+          
+          ### 🤖 Self-Healing Actions
+          
+          This issue was automatically created by the self-healing CI agent.
+          
+          - [ ] Review the diagnosis above
+          - [ ] Apply the suggested fix (if provided)
+          - [ ] Re-run the workflow
+          - [ ] Close this issue when resolved
+          
+          ---
+          
+          <details>
+          <summary>ℹ️ About Self-Healing CI</summary>
+          
+          This repository has a self-healing CI/CD pipeline that:
+          - Monitors all workflow failures
+          - Analyzes logs to determine root cause
+          - Classifies failures (code, workflow, infrastructure, quality)
+          - Suggests or auto-applies fixes when safe
+          
+          Configuration: \`.github/self-healing-config.yml\`
+          </details>
+          EOF
+          )
+          
+          if [ "${{ steps.check-issue.outputs.exists }}" == "true" ]; then
+            # Update existing issue with a comment
+            gh issue comment "${{ steps.check-issue.outputs.issue_number }}" \
+              --body "## 🔄 New Failure Detected
+              
+          **Run URL:** ${RUN_URL}
+          **Commit:** ${HEAD_SHA}
+          
+          ### Updated Diagnosis
+          
+          ${DIAGNOSIS}"
+          else
+            # Create new issue
+            gh issue create \
+              --title "🔧 CI Failure: ${WORKFLOW_NAME} on ${HEAD_BRANCH}" \
+              --body "${ISSUE_BODY}" \
+              --label "ci-failure" \
+              --label "self-healing"
+          fi
+          
+  create-fix-pr:
+    name: Create Fix Pull Request
+    needs: analyze-failure
+    if: ${{ needs.analyze-failure.outputs.should_create_pr == 'true' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install yaml
+        
+      - name: Apply fix
+        id: apply-fix
+        env:
+          DIAGNOSIS: ${{ needs.analyze-failure.outputs.diagnosis }}
+          CLASSIFICATION: ${{ needs.analyze-failure.outputs.classification }}
+        run: |
+          node .github/scripts/apply-fix.js
+          
+      - name: Create Pull Request
+        if: steps.apply-fix.outputs.changes_made == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="self-healing/fix-${{ github.event.workflow_run.id }}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout -b "${BRANCH_NAME}"
+          git add -A
+          git commit -m "fix: Auto-fix CI failure in ${{ github.event.workflow_run.name }}
+          
+          This fix was automatically generated by the self-healing CI agent.
+          
+          Workflow: ${{ github.event.workflow_run.name }}
+          Original run: ${{ github.event.workflow_run.html_url }}
+          Classification: ${{ needs.analyze-failure.outputs.classification }}"
+          
+          git push origin "${BRANCH_NAME}"
+          
+          gh pr create \
+            --title "🤖 Auto-fix: CI failure in ${{ github.event.workflow_run.name }}" \
+            --body "## 🤖 Self-Healing CI Auto-Fix
+            
+          This PR was automatically generated by the self-healing CI agent.
+          
+          **Original Failure:** ${{ github.event.workflow_run.html_url }}
+          **Classification:** ${{ needs.analyze-failure.outputs.classification }}
+          
+          ### Diagnosis
+          
+          ${{ needs.analyze-failure.outputs.diagnosis }}
+          
+          ### Changes Made
+          
+          ${{ steps.apply-fix.outputs.changes_description }}
+          
+          ---
+          
+          ⚠️ **Please review these changes carefully before merging.**" \
+            --label "self-healing" \
+            --label "auto-fix"
+
+  comment-on-pr:
+    name: Comment on PR
+    needs: analyze-failure
+    if: ${{ github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Get PR number
+        id: get-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the PR number from the workflow run
+          PR_NUMBER=$(gh api "/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" \
+            --jq '.pull_requests[0].number // empty')
+          
+          if [ -n "$PR_NUMBER" ]; then
+            echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "has_pr=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_pr=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Add comment to PR
+        if: steps.get-pr.outputs.has_pr == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSIS: ${{ needs.analyze-failure.outputs.diagnosis }}
+          CLASSIFICATION: ${{ needs.analyze-failure.outputs.classification }}
+        run: |
+          gh pr comment "${{ steps.get-pr.outputs.pr_number }}" \
+            --body "## 🔧 CI Failure Analysis
+            
+          **Workflow:** ${{ github.event.workflow_run.name }}
+          **Classification:** ${CLASSIFICATION}
+          **Run:** ${{ github.event.workflow_run.html_url }}
+          
+          ### 📋 Diagnosis
+          
+          ${DIAGNOSIS}
+          
+          ---
+          <sub>🤖 Generated by Self-Healing CI Agent</sub>"

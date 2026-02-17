@@ -1,0 +1,137 @@
+# Self-Healing Pipeline Configuration
+# This file controls the behavior of the self-healing CI/CD agent
+
+# Operating mode:
+# - "assist": Creates issues/comments with diagnosis and proposed fixes (default, safer)
+# - "auto-fix": Automatically creates PRs with fixes for certain failure types
+mode: "assist"
+
+# Workflows to monitor (empty means all workflows)
+# Add workflow filenames to restrict monitoring
+monitored_workflows: []
+
+# Excluded workflows - these will never be auto-fixed
+excluded_workflows:
+  - "self-healing.yml"  # Never self-heal the self-healer
+
+# Failure classification rules
+classification:
+  # Code failures - test failures, compilation errors, lint issues
+  code:
+    patterns:
+      - "BUILD FAILURE"
+      - "COMPILATION ERROR"
+      - "Tests run:.*Failures: [1-9]"  # Only match when there are actual failures
+      - "Tests run:.*Errors: [1-9]"    # Only match when there are actual errors
+      - "error: cannot find symbol"
+      - "error: incompatible types"
+      - "SyntaxError"
+      - "TypeError"
+      - "eslint.*error"
+      - "checkstyle.*ERROR"
+      - "spotless.*failed"
+    auto_fix_enabled: false  # Code fixes need human review
+    
+  # Workflow failures - YAML issues, action versions, permissions
+  workflow:
+    patterns:
+      - "Invalid workflow file"
+      - "unexpected value"
+      - "action.*not found"
+      - "uses:.*@.*not found"
+      - "permission.*denied"
+      - "Required secret.*not found"
+      - "matrix.*invalid"
+      - "Unexpected input"
+    auto_fix_enabled: true
+    
+  # Infrastructure failures - flaky services, timeouts, rate limits
+  infrastructure:
+    patterns:
+      - "timeout"
+      - "ETIMEDOUT"
+      - "ECONNREFUSED"
+      - "rate limit"
+      - "503 Service"
+      - "502 Bad Gateway"
+      - "Could not resolve host"
+      - "TLS handshake timeout"
+      - "connection reset"
+      - "No space left on device"
+    auto_fix_enabled: true
+    retry_on_infra_failure: true
+    max_retries: 2
+
+  # Quality gate failures - SonarQube, code coverage thresholds
+  quality_gate:
+    patterns:
+      - "Quality Gate.*FAILED"
+      - "coverage.*below"
+      - "Quality gate status"
+      - "does not meet.*threshold"
+    auto_fix_enabled: false
+    create_issue: true
+
+# Auto-fix rules for specific patterns
+auto_fix_rules:
+  # Retry workflow on transient infrastructure failures
+  - name: "retry-on-transient-failure"
+    match: "ETIMEDOUT|ECONNREFUSED|rate limit|503 Service|502 Bad Gateway"
+    action: "retry"
+    max_retries: 2
+    delay_seconds: 60
+    
+  # Update deprecated action versions
+  - name: "update-deprecated-actions"
+    match: "Node.js 12 actions are deprecated|set-output command is deprecated"
+    action: "create-pr"
+    fix_type: "update-action-version"
+    
+  # Fix missing permissions
+  - name: "fix-permissions"
+    match: "Resource not accessible by integration|permission.*denied"
+    action: "suggest-fix"
+    fix_type: "add-permissions"
+
+# Notification settings
+notifications:
+  # Create GitHub issue for failures
+  create_issue: true
+  issue_labels:
+    - "ci-failure"
+    - "self-healing"
+  
+  # Add comment to PR if failure is on a PR
+  comment_on_pr: true
+  
+  # Assign issues to specific users (GitHub usernames)
+  assignees: []
+
+# Retry configuration
+retry:
+  enabled: true
+  max_attempts: 2
+  delay_minutes: 1
+  # Only retry these failure types automatically
+  auto_retry_types:
+    - "infrastructure"
+
+# Limits and guardrails
+guardrails:
+  # Maximum PRs to create per day
+  max_prs_per_day: 5
+  
+  # Maximum issues to create per day
+  max_issues_per_day: 10
+  
+  # Require approval for auto-fix PRs
+  require_approval: true
+  
+  # Never modify these files automatically
+  protected_files:
+    - ".github/self-healing-config.yml"
+    - "CODEOWNERS"
+    - ".github/workflows/main-build-and-deploy.yml"
+  
+  # Maximum lines of code to change in auto-fix
+  max_lines_changed: 50
