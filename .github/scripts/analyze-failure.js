@@ -346,7 +346,7 @@ const failedComponents = findFailedComponents(jobs);
 const diagnosis = generateDiagnosis(classification, errorLines, failedComponents, logs);
 const actions = determineActions(classification, config);
 
-// Output results for GitHub Actions
+// Output results for GitHub Actions (using GITHUB_OUTPUT file, not deprecated set-output)
 const setOutput = (name, value) => {
   const outputFile = process.env.GITHUB_OUTPUT;
   if (outputFile) {
@@ -358,7 +358,7 @@ const setOutput = (name, value) => {
       fs.appendFileSync(outputFile, `${name}=${value}\n`);
     }
   }
-  console.log(`::set-output name=${name}::${value.replace(/\n/g, '%0A')}`);
+  // Note: Not using deprecated ::set-output command
 };
 
 setOutput('classification', classification.type);

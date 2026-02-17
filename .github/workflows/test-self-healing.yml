@@ -66,12 +66,13 @@ jobs:
         run: |
           echo "=== TEST 1: Simulating Quality Gate Failure ==="
           
-          cat > /tmp/qg_logs.txt << 'EOFLOG'
-          INFO: ANALYSIS SUCCESSFUL
-          ##[warning]Unexpected input(s) 'sonar_host_url'
-          ✖ Quality Gate has FAILED.
-          ##[error]Process completed with exit code 1.
-          EOFLOG
+          # Note: Using printf to avoid GitHub interpreting ##[error] as annotations
+          printf '%s\n' \
+            'INFO: ANALYSIS SUCCESSFUL' \
+            'Warning: Unexpected input sonar_host_url' \
+            'Quality Gate has FAILED.' \
+            'Error: Process completed with exit code 1.' \
+            > /tmp/qg_logs.txt
           
           echo '{"id": 1, "name": "SonarQube", "conclusion": "failure"}' > /tmp/run.json
           echo '{"jobs": [{"id": 1, "name": "sonar-scan", "conclusion": "failure", "steps": [{"number": 1, "name": "Quality Gate", "conclusion": "failure"}]}]}' > /tmp/jobs.json
@@ -88,12 +89,12 @@ jobs:
         run: |
           echo "=== TEST 2: Simulating Infrastructure Failure ==="
           
-          cat > /tmp/infra_logs.txt << 'EOFLOG'
-          npm ERR! code ETIMEDOUT
-          npm ERR! network request failed
-          Error: 503 Service Unavailable
-          ##[error]Process completed with exit code 1.
-          EOFLOG
+          printf '%s\n' \
+            'npm ERR! code ETIMEDOUT' \
+            'npm ERR! network request failed' \
+            'Error: 503 Service Unavailable' \
+            'Error: Process completed with exit code 1.' \
+            > /tmp/infra_logs.txt
           
           echo '{"id": 2, "name": "Build", "conclusion": "failure"}' > /tmp/run.json
           echo '{"jobs": [{"id": 1, "name": "build", "conclusion": "failure", "steps": [{"number": 1, "name": "Install", "conclusion": "failure"}]}]}' > /tmp/jobs.json
@@ -110,13 +111,13 @@ jobs:
         run: |
           echo "=== TEST 3: Simulating Code Failure ==="
           
-          cat > /tmp/code_logs.txt << 'EOFLOG'
-          [INFO] BUILD FAILURE
-          [ERROR] COMPILATION ERROR
-          [ERROR] error: cannot find symbol
-          Tests run: 10, Failures: 2, Errors: 0, Skipped: 0
-          ##[error]Process completed with exit code 1.
-          EOFLOG
+          printf '%s\n' \
+            '[INFO] BUILD FAILURE' \
+            '[ERROR] COMPILATION ERROR' \
+            '[ERROR] error: cannot find symbol' \
+            'Tests run: 10, Failures: 2, Errors: 0, Skipped: 0' \
+            'Error: Process completed with exit code 1.' \
+            > /tmp/code_logs.txt
           
           echo '{"id": 3, "name": "Maven Build", "conclusion": "failure"}' > /tmp/run.json
           echo '{"jobs": [{"id": 1, "name": "build", "conclusion": "failure", "steps": [{"number": 1, "name": "Compile", "conclusion": "failure"}]}]}' > /tmp/jobs.json
