@@ -592,3 +592,4 @@ jobs:
           echo "  gh pr close <PR_NUMBER>"
           echo "  git push origin --delete self-healing/fix-deprecated-actions-*"
           echo ""
+# trigger workflow
