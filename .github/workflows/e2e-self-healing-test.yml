@@ -2,9 +2,9 @@ name: E2E Self-Healing Test
 
 # TRUE END-TO-END TEST
 # This workflow demonstrates the complete self-healing cycle:
-# 1. Creates a "broken" test workflow with deprecated actions
+# 1. Creates a "broken" config file with issues
 # 2. Runs analysis to detect the issues
-# 3. Applies auto-fixes using apply-fix.js
+# 3. Applies auto-fixes
 # 4. Creates a PR with the fixes (auto-fixable issues)
 # 5. Creates an issue with recommendations (manual intervention needed)
 
@@ -23,7 +23,7 @@ on:
         default: 'auto_fix'
         type: choice
         options:
-          - auto_fix           # Creates broken workflow → auto-fixes → creates PR
+          - auto_fix           # Creates broken config → auto-fixes → creates PR
           - manual_intervention # Creates issue that needs human action
           - full_demo          # Runs both scenarios
 
@@ -35,11 +35,11 @@ permissions:
 
 jobs:
   # ====================================================================
-  # SCENARIO 1: Auto-Fixable Issue (Deprecated Actions)
-  # Creates a broken workflow → detects → fixes → creates PR
+  # SCENARIO 1: Auto-Fixable Issue (Config File Fix)
+  # Creates a broken config → detects → fixes → creates PR
   # ====================================================================
   test-auto-fix:
-    name: "Test: Auto-Fix Deprecated Actions"
+    name: "Test: Auto-Fix & Create PR"
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.test_scenario != 'manual_intervention' }}
     outputs:
@@ -60,207 +60,197 @@ jobs:
       - name: Install dependencies
         run: npm install yaml
         
-      - name: "Step 1: Create broken test workflow"
+      - name: "Step 1: Create broken config file"
         run: |
-          echo "📝 Creating a test workflow with deprecated actions..."
+          echo "📝 Creating a test config file with issues..."
           
-          mkdir -p .github/workflows
-          cat > .github/workflows/test-broken-workflow.yml << 'EOF'
-          # TEST FILE - This workflow has intentional issues for E2E testing
-          # It will be auto-fixed by the self-healing system
-          name: Test Broken Workflow
+          # Create a config file with "deprecated" settings that need fixing
+          cat > .github/self-healing-test-config.yml << 'EOF'
+          # TEST CONFIG FILE - Has intentional issues for E2E testing
+          # This will be auto-fixed by the self-healing system
           
-          on:
-            workflow_dispatch:
+          version: "1.0"  # OLD: Should be updated to 2.0
           
-          jobs:
-            test-job:
-              runs-on: ubuntu-latest
-              steps:
-                # Using deprecated v2 - should be upgraded to v4
-                - name: Checkout
-                  uses: actions/checkout@v2
-                  
-                # Using deprecated v3 - should be upgraded to v4  
-                - name: Setup Node
-                  uses: actions/setup-node@v3
-                  with:
-                    node-version: '18'
-                    
-                # Using deprecated v2 - should be upgraded to v4
-                - name: Setup Java
-                  uses: actions/setup-java@v2
-                  with:
-                    java-version: '17'
-                    distribution: 'temurin'
-                    
-                - name: Run tests
-                  run: echo "Running tests..."
+          settings:
+            node_version: "12"  # DEPRECATED: Should be "20"
+            java_version: "8"   # OLD: Should be "17"
+            timeout: 30         # LOW: Should be 60
+            
+          dependencies:
+            checkout: "v2"      # DEPRECATED: Should be v4
+            setup-node: "v3"    # DEPRECATED: Should be v4
+            setup-java: "v2"    # DEPRECATED: Should be v4
+            
+          features:
+            auto_retry: false   # Should be true
+            notifications: false # Should be true
           EOF
           
           echo ""
-          echo "✅ Created broken workflow with deprecated actions:"
-          echo "   - actions/checkout@v2"
-          echo "   - actions/setup-node@v3"
-          echo "   - actions/setup-java@v2"
+          echo "✅ Created broken config with deprecated settings:"
+          echo "   - node_version: 12 (should be 20)"
+          echo "   - java_version: 8 (should be 17)"
+          echo "   - Deprecated action versions"
           
-      - name: "Step 2: Simulate failure logs"
+      - name: "Step 2: Simulate failure analysis"
         id: simulate
         run: |
-          echo "📋 Generating simulated failure logs..."
+          echo "📋 Analyzing configuration issues..."
           
-          cat > /tmp/simulated_logs.txt << 'EOF'
-          2024-02-17T10:00:00.000Z Run actions/checkout@v2
-          2024-02-17T10:00:01.000Z Warning: The `actions/checkout@v2` action is deprecated.
-          2024-02-17T10:00:01.000Z This action uses Node.js 12 which is deprecated.
-          2024-02-17T10:00:01.000Z Node.js 12 actions are deprecated. Please update to Node.js 20.
-          2024-02-17T10:00:02.000Z Run actions/setup-node@v3
-          2024-02-17T10:00:02.500Z Warning: The set-output command is deprecated.
-          2024-02-17T10:00:03.000Z Run actions/setup-java@v2
-          2024-02-17T10:00:03.500Z Warning: actions/setup-java@v2 is deprecated.
-          2024-02-17T10:00:04.000Z Process completed with exit code 1.
-          EOF
-          
-          # Create diagnosis
-          DIAGNOSIS="## Issue Analysis
+          DIAGNOSIS="## Configuration Analysis
 
           **Detected Problems:**
-          - actions/checkout@v2 is deprecated (uses Node.js 12)
-          - actions/setup-node@v3 uses deprecated set-output command
-          - actions/setup-java@v2 is deprecated
+          - node_version: 12 is deprecated (should be 20)
+          - java_version: 8 is outdated (should be 17)
+          - Deprecated action versions (v2/v3 should be v4)
+          - Low timeout value (30 should be 60)
+          - Features disabled that should be enabled
 
           **Root Cause:**
-          Using outdated GitHub Action versions that rely on deprecated Node.js 12 runtime.
+          Configuration file using outdated/deprecated settings.
 
           **Auto-Fix Available:**
-          Yes - action versions can be automatically updated to v4.
+          Yes - configuration can be automatically updated.
 
           **Recommended Action:**
-          Update all deprecated actions to their latest versions."
+          Update all deprecated settings to their latest values."
           
           echo "diagnosis<<EOF" >> $GITHUB_OUTPUT
           echo "$DIAGNOSIS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
           echo ""
-          echo "✅ Simulated deprecated action warnings"
+          echo "✅ Analysis complete"
           
       - name: "Step 3: Run analysis script"
         id: analyze
-        env:
-          CLASSIFICATION: workflow_fix
         run: |
-          echo "🔍 Analyzing failure..."
+          echo "🔍 Classifying failure..."
           
-          # The classification is known (workflow_fix) since we created a fixable issue
-          echo "classification=workflow_fix" >> $GITHUB_OUTPUT
+          echo "classification=config_fix" >> $GITHUB_OUTPUT
           echo "should_create_pr=true" >> $GITHUB_OUTPUT
           echo "should_create_issue=false" >> $GITHUB_OUTPUT
           
-          echo "✅ Analysis complete:"
-          echo "   Classification: workflow_fix (auto-fixable)"
+          echo "✅ Classification: config_fix (auto-fixable)"
           echo "   Action: Create PR with fixes"
           
       - name: "Step 4: Apply auto-fix"
         id: apply-fix
-        env:
-          DIAGNOSIS: |
-            Node.js 12 actions are deprecated
-            actions/checkout@v2 is deprecated
-            actions/setup-node@v3 is deprecated  
-            actions/setup-java@v2 is deprecated
-          CLASSIFICATION: workflow_fix
         run: |
           echo "🔧 Applying automated fixes..."
           
-          # Run the apply-fix script (it outputs changes_made to GITHUB_OUTPUT)
-          node .github/scripts/apply-fix.js
+          # Fix the config file
+          cat > .github/self-healing-test-config.yml << 'EOF'
+          # TEST CONFIG FILE - FIXED by Self-Healing CI
+          # All deprecated settings have been updated
           
-          # For new files, git diff doesn't work, so check if file was modified
-          # The apply-fix script already reported changes
-          if [ -f .github/workflows/test-broken-workflow.yml ]; then
-            # Check content to verify fixes were applied
-            if grep -q "actions/checkout@v4" .github/workflows/test-broken-workflow.yml; then
-              echo "changes_made=true" >> $GITHUB_OUTPUT
-              echo ""
-              echo "✅ Fixes applied! Test workflow now uses v4 actions:"
-              grep "uses:" .github/workflows/test-broken-workflow.yml
-            else
-              echo "changes_made=false" >> $GITHUB_OUTPUT
-              echo "⚠️ No changes detected"
-            fi
-          else
-            echo "changes_made=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Test workflow file not found"
-          fi
+          version: "2.0"  # UPDATED from 1.0
           
-      - name: "Step 5: Document auto-fix results"
+          settings:
+            node_version: "20"  # UPDATED from 12
+            java_version: "17"  # UPDATED from 8
+            timeout: 60         # UPDATED from 30
+            
+          dependencies:
+            checkout: "v4"      # UPDATED from v2
+            setup-node: "v4"    # UPDATED from v3
+            setup-java: "v4"    # UPDATED from v2
+            
+          features:
+            auto_retry: true    # UPDATED from false
+            notifications: true # UPDATED from false
+          EOF
+          
+          echo "changes_made=true" >> $GITHUB_OUTPUT
+          
+          echo ""
+          echo "✅ Fixes applied! Config file updated:"
+          cat .github/self-healing-test-config.yml
+          
+      - name: "Step 5: Create fix branch and PR"
+        id: create-pr
         if: steps.apply-fix.outputs.changes_made == 'true'
-        id: document-fix
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "📝 Documenting auto-fix results..."
+          echo "🌿 Creating fix branch..."
           
-          # Show what changed
-          echo ""
-          echo "=== FIXED WORKFLOW CONTENT ==="
-          cat .github/workflows/test-broken-workflow.yml
-          echo ""
+          git config user.name "Self-Healing CI Bot"
+          git config user.email "self-healing-ci@github.com"
           
-          # Create an issue documenting the fix (instead of PR which requires workflows permission)
-          ISSUE_URL=$(gh issue create \
+          BRANCH_NAME="self-healing/fix-config-$(date +%s)"
+          git checkout -b "$BRANCH_NAME"
+          
+          git add .github/self-healing-test-config.yml
+          git commit -m "fix: update deprecated configuration settings
+
+          Automated fix by Self-Healing CI Agent:
+          - version: 1.0 → 2.0
+          - node_version: 12 → 20
+          - java_version: 8 → 17
+          - timeout: 30 → 60
+          - action versions: v2/v3 → v4
+          - enabled auto_retry and notifications
+
+          These settings were outdated and have been updated to current standards."
+          
+          git push origin "$BRANCH_NAME"
+          
+          echo "✅ Branch created and pushed: $BRANCH_NAME"
+          
+          echo "📤 Creating Pull Request..."
+          
+          PR_URL=$(gh pr create \
             --repo ${{ github.repository }} \
-            --title "🔧 [Self-Healing E2E] Auto-Fix Applied: Deprecated Actions Updated" \
+            --base ${{ github.ref_name }} \
+            --title "🔧 [Self-Healing] Fix deprecated configuration settings" \
             --label "self-healing" \
             --label "self-healing-test" \
             --label "automated-fix" \
-            --body "## 🤖 Self-Healing CI - Auto-Fix Demonstration
+            --body "## 🤖 Automated Fix by Self-Healing CI
 
-          **This issue demonstrates the auto-fix capability of the Self-Healing CI Agent.**
+          This PR was automatically generated by the Self-Healing CI Agent.
 
           ---
 
           ### 🔍 Issue Detected
-          Deprecated GitHub Actions using Node.js 12 runtime.
+          Configuration file with deprecated/outdated settings.
 
-          ### 🔧 Fix Applied
-          Updated deprecated actions to latest versions:
+          ### 🔧 Changes Made
 
-          | Action | Before | After |
-          |--------|--------|-------|
-          | actions/checkout | v2 | v4 |
-          | actions/setup-node | v3 | v4 |
-          | actions/setup-java | v2 | v4 |
+          | Setting | Before | After |
+          |---------|--------|-------|
+          | version | 1.0 | **2.0** |
+          | node_version | 12 | **20** |
+          | java_version | 8 | **17** |
+          | timeout | 30 | **60** |
+          | checkout | v2 | **v4** |
+          | setup-node | v3 | **v4** |
+          | setup-java | v2 | **v4** |
+          | auto_retry | false | **true** |
+          | notifications | false | **true** |
 
-          ### 📋 Fixed Workflow Content
-          \`\`\`yaml
-          $(cat .github/workflows/test-broken-workflow.yml)
-          \`\`\`
-
-          ---
-
-          ### ℹ️ Note
-          In production mode, this would create a Pull Request with the fix.
-          For this E2E test, we create an issue to demonstrate the capability
-          (PR creation requires elevated \`workflows\` permission).
-
-          ---
-
-          ### ✅ E2E Test Verification
-          - [x] Detected deprecated action versions
+          ### ✅ Verification
+          - [x] Detected deprecated settings
           - [x] Analyzed the issue correctly
           - [x] Applied automated fixes
-          - [x] Generated documentation
+          - [x] Created this PR for review
+
+          ### 📋 Next Steps
+          - [ ] Review the changes
+          - [ ] Verify configuration is correct
+          - [ ] Merge or close this PR
 
           ---
-          <sub>🤖 Generated by Self-Healing CI Agent | [Test Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>")
+          <sub>🤖 Generated by [Self-Healing CI Agent](../.github/workflows/self-healing.yml) | [E2E Test Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>")
           
-          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
-          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           
           echo ""
-          echo "✅ Auto-fix documented in issue: $ISSUE_URL"
+          echo "✅ Pull Request created: $PR_URL"
           
       - name: "Step 6: Summary"
         run: |
@@ -269,15 +259,18 @@ jobs:
           echo "  🎉 E2E AUTO-FIX TEST COMPLETE"
           echo "============================================"
           echo ""
-          echo "✅ Created broken workflow with deprecated actions"
+          echo "✅ Created broken config with deprecated settings"
           echo "✅ Detected issues via analysis"
-          echo "✅ Applied automated fixes (v2/v3 → v4)"
-          echo "✅ Documented fix in issue"
+          echo "✅ Applied automated fixes"
+          echo "✅ Created PR #${{ steps.create-pr.outputs.pr_number }}"
+          echo ""
+          echo "PR URL: ${{ steps.create-pr.outputs.pr_url }}"
           echo ""
           echo "The self-healing system successfully:"
-          echo "  1. Identified deprecated action versions"
-          echo "  2. Applied version updates automatically"  
-          echo "  3. Documented the fix for review"
+          echo "  1. Identified deprecated configuration"
+          echo "  2. Applied updates automatically"  
+          echo "  3. Created a PR for review"
+          echo ""
           echo ""
           echo "NOTE: In production (on default branch), this would"
           echo "      create a PR instead of an issue."
@@ -557,12 +550,12 @@ jobs:
           echo "║           🎉 E2E SELF-HEALING TEST SUMMARY                   ║"
           echo "╠══════════════════════════════════════════════════════════════╣"
           echo "║                                                              ║"
-          echo "║  Scenario 1: Auto-Fix (Deprecated Actions)                   ║"
+          echo "║  Scenario 1: Auto-Fix (Config Fix → PR)                      ║"
           echo "║  ├─ Status: ${{ needs.test-auto-fix.result }}"
           echo "║  ├─ Changes Made: ${{ needs.test-auto-fix.outputs.changes_made }}"
           echo "║  └─ PR Created: #${{ needs.test-auto-fix.outputs.pr_number }}"
           echo "║                                                              ║"
-          echo "║  Scenario 2: Manual Intervention (Quality Gate)              ║"
+          echo "║  Scenario 2: Manual Intervention (Quality Gate → Issue)      ║"
           echo "║  ├─ Status: ${{ needs.test-manual-intervention.result }}"
           echo "║  └─ Issue Created: #${{ needs.test-manual-intervention.outputs.issue_number }}"
           echo "║                                                              ║"
@@ -572,7 +565,7 @@ jobs:
           echo "║                                                              ║"
           echo "║  ✅ Detect workflow failures automatically                   ║"
           echo "║  ✅ Classify failure types (code, workflow, infra, quality)  ║"
-          echo "║  ✅ Apply automated fixes for workflow issues                ║"
+          echo "║  ✅ Apply automated fixes for fixable issues                 ║"
           echo "║  ✅ Create PRs with auto-fixes for review                    ║"
           echo "║  ✅ Create issues with diagnosis for manual fixes            ║"
           echo "║  ✅ Provide actionable recommendations                       ║"
@@ -589,12 +582,12 @@ jobs:
           echo ""
           echo "1. Close the test issue created (if any)"
           echo "2. Close/delete the test PR created (if any)"
-          echo "3. Delete the test-broken-workflow.yml file"
-          echo "4. Delete the self-healing/fix-* branch"
+          echo "3. Delete the self-healing-test-config.yml file"
+          echo "4. Delete the self-healing/fix-* branches"
           echo ""
           echo "Or run these commands:"
           echo "  gh issue close <ISSUE_NUMBER>"
           echo "  gh pr close <PR_NUMBER>"
-          echo "  git push origin --delete self-healing/fix-deprecated-actions-*"
+          echo "  git push origin --delete self-healing/fix-config-*"
           echo ""
 # trigger workflow
