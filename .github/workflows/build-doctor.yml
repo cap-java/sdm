@@ -1,9 +1,6 @@
 name: Build Doctor 🩺
 
 on:
-  push:
-    branches: feature/test-build-doctor
-
   workflow_dispatch:
     inputs:
       run_id:
