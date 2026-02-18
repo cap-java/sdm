@@ -1,11 +1,18 @@
 name: Build Doctor 🩺
 
 on:
+  push:
+    branches: feature/test-build-doctor
+
   workflow_dispatch:
     inputs:
       run_id:
         description: 'Run ID of a failed workflow to analyze'
         required: true
+        default: '21935724752'
+  push:
+    branches:
+      - feature/test-build-doctor
 
 jobs:
   diagnose-failure:
