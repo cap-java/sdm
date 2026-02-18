@@ -30,7 +30,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install @actions/github @google/generative-ai @octokit/core
+        run: npm install @actions/github @google/generative-ai @octokit/rest
 
       - name: Run Build Doctor Analysis
         env:
