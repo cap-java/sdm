@@ -36,7 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          WORKFLOW_RUN_ID: ${{ github.event.inputs.run_id || github.event.workflow_run.id }}
+          WORKFLOW_RUN_ID: ${{ github.event.inputs.run_id || github.event.workflow_run.id || '21935724752' }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name || 'Manual Trigger' }}
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
