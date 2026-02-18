@@ -206,8 +206,8 @@ jobs:
             <servers>
               <server>
                 <id>github-snapshot</id>
-                <username>${{ github.actor }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
+                # <username>${{ github.actor }}</username>
+                # <password>${{ secrets.GITHUB_TOKEN }}</password>
               </server>
             </servers>
           </settings>
