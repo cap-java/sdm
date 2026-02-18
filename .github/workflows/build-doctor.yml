@@ -14,7 +14,7 @@ on:
 jobs:
   diagnose-failure:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
+    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
     permissions:
       actions: read
       contents: read
