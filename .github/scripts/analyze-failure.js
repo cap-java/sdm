@@ -1,4 +1,4 @@
-const { getOctokit } = require("@actions/github");
+const { Octokit } = require("@octokit/core");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Configuration
@@ -18,7 +18,9 @@ async function run() {
             throw new Error("Missing required environment variables.");
         }
 
-        const octokit = getOctokit(token);
+        // Use Octokit directly instead of @actions/github to avoid ESM/CJS issues
+        const octokit = new Octokit({ auth: token });
+
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
