@@ -2,7 +2,7 @@ name: Build Doctor 🩺
 
 on:
   workflow_run:
-    workflows: ["Choose and Deploy 🚀", "Main Build"] # Add your main workflow names here
+    workflows: ["Choose and Deploy 🚀", "Main Build", "Demo Build"] # Add your main workflow names here
     types:
       - completed
 
