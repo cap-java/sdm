@@ -1,0 +1,77 @@
+name: Deploy Snapshot to OSSRH
+description: "Deploys a Maven SNAPSHOT package to Sonatype OSSRH Snapshots repository."
+
+inputs:
+  user:
+    description: "Sonatype OSSRH username (same as Maven Central)"
+    required: true
+  password:
+    description: "Sonatype OSSRH password (same as Maven Central)"
+    required: true
+  pgp-pub-key:
+    description: "The public pgp key ID (optional for snapshots but recommended)"
+    required: false
+  pgp-private-key:
+    description: "The private pgp key (optional for snapshots but recommended)"
+    required: false
+  pgp-passphrase:
+    description: "The passphrase for pgp (optional for snapshots but recommended)"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: "Setup Java"
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'sapmachine'
+        java-version: '17'
+        cache: maven
+        server-id: ossrh
+        server-username: OSSRH_USER
+        server-password: OSSRH_PASSWORD
+
+    - name: "Import GPG Key (if provided)"
+      if: inputs.pgp-private-key != ''
+      run: |
+        echo "${{ inputs.pgp-private-key }}" | gpg --batch --passphrase "$PASSPHRASE" --import
+      shell: bash  
+      env:
+        PASSPHRASE: ${{ inputs.pgp-passphrase }}
+
+    - name: "Verify SNAPSHOT version"
+      run: |
+        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        echo "Current version: $VERSION"
+        if [[ ! "$VERSION" == *-SNAPSHOT ]]; then
+          echo "Error: Version $VERSION is not a SNAPSHOT version!"
+          echo "OSSRH Snapshots repository only accepts SNAPSHOT versions."
+          exit 1
+        fi
+        echo "✅ Version $VERSION is a valid SNAPSHOT"
+      shell: bash
+
+    - name: "Deploy Snapshot to OSSRH"
+      run: |
+        echo "🚀 Deploying SNAPSHOT to Sonatype OSSRH..."
+        if [ -n "$GPG_PASSPHRASE" ] && [ -n "$GPG_PUB_KEY" ]; then
+          mvn -B -ntp --show-version \
+            -Dmaven.install.skip=true \
+            -Dmaven.test.skip=true \
+            -Dgpg.passphrase="$GPG_PASSPHRASE" \
+            -Dgpg.keyname="$GPG_PUB_KEY" \
+            clean deploy -P deploy-ossrh-snapshot
+        else
+          mvn -B -ntp --show-version \
+            -Dmaven.install.skip=true \
+            -Dmaven.test.skip=true \
+            -Dgpg.skip=true \
+            clean deploy -P deploy-ossrh-snapshot
+        fi
+        echo "✅ Snapshot deployed successfully!"
+      shell: bash
+      env:
+        OSSRH_USER: ${{ inputs.user }}
+        OSSRH_PASSWORD: ${{ inputs.password }}
+        GPG_PASSPHRASE: ${{ inputs.pgp-passphrase }}
+        GPG_PUB_KEY: ${{ inputs.pgp-pub-key }}
