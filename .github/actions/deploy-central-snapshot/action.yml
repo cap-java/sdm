@@ -1,12 +1,12 @@
-name: Deploy Snapshot to OSSRH
-description: "Deploys a Maven SNAPSHOT package to Sonatype OSSRH Snapshots repository."
+name: Deploy Snapshot to Central Portal
+description: "Deploys a Maven SNAPSHOT package to Sonatype Central Portal Snapshots repository."
 
 inputs:
   user:
-    description: "Sonatype OSSRH username (same as Maven Central)"
+    description: "Sonatype Central Portal username (same as Maven Central)"
     required: true
   password:
-    description: "Sonatype OSSRH password (same as Maven Central)"
+    description: "Sonatype Central Portal password (same as Maven Central)"
     required: true
   pgp-pub-key:
     description: "The public pgp key ID (optional for snapshots but recommended)"
@@ -27,9 +27,9 @@ runs:
         distribution: 'sapmachine'
         java-version: '17'
         cache: maven
-        server-id: ossrh
-        server-username: OSSRH_USER
-        server-password: OSSRH_PASSWORD
+        server-id: central
+        server-username: CENTRAL_USER
+        server-password: CENTRAL_PASSWORD
 
     - name: "Import GPG Key (if provided)"
       if: inputs.pgp-private-key != ''
@@ -45,33 +45,33 @@ runs:
         echo "Current version: $VERSION"
         if [[ ! "$VERSION" == *-SNAPSHOT ]]; then
           echo "Error: Version $VERSION is not a SNAPSHOT version!"
-          echo "OSSRH Snapshots repository only accepts SNAPSHOT versions."
+          echo "Central Portal Snapshots repository only accepts SNAPSHOT versions."
           exit 1
         fi
         echo "✅ Version $VERSION is a valid SNAPSHOT"
       shell: bash
 
-    - name: "Deploy Snapshot to OSSRH"
+    - name: "Deploy Snapshot to Central Portal"
       run: |
-        echo "🚀 Deploying SNAPSHOT to Sonatype OSSRH..."
+        echo "🚀 Deploying SNAPSHOT to Sonatype Central Portal..."
         if [ -n "$GPG_PASSPHRASE" ] && [ -n "$GPG_PUB_KEY" ]; then
           mvn -B -ntp --show-version \
             -Dmaven.install.skip=true \
             -Dmaven.test.skip=true \
             -Dgpg.passphrase="$GPG_PASSPHRASE" \
             -Dgpg.keyname="$GPG_PUB_KEY" \
-            clean deploy -P deploy-ossrh-snapshot
+            clean deploy -P deploy-central-snapshot
         else
           mvn -B -ntp --show-version \
             -Dmaven.install.skip=true \
             -Dmaven.test.skip=true \
             -Dgpg.skip=true \
-            clean deploy -P deploy-ossrh-snapshot
+            clean deploy -P deploy-central-snapshot
         fi
         echo "✅ Snapshot deployed successfully!"
       shell: bash
       env:
-        OSSRH_USER: ${{ inputs.user }}
-        OSSRH_PASSWORD: ${{ inputs.password }}
+        CENTRAL_USER: ${{ inputs.user }}
+        CENTRAL_PASSWORD: ${{ inputs.password }}
         GPG_PASSPHRASE: ${{ inputs.pgp-passphrase }}
         GPG_PUB_KEY: ${{ inputs.pgp-pub-key }}

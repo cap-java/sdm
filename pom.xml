@@ -347,12 +347,12 @@
             </build>
         </profile>
         <profile>
-            <id>deploy-ossrh-snapshot</id>
+            <id>deploy-central-snapshot</id>
             <distributionManagement>
                 <snapshotRepository>
-                    <id>ossrh</id>
-                    <name>Sonatype OSSRH Snapshots</name>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+                    <id>central</id>
+                    <name>Sonatype Central Portal Snapshots</name>
+                    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
                 </snapshotRepository>
             </distributionManagement>
         </profile>
