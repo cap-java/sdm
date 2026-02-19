@@ -1,0 +1,41 @@
+name: Security Remediation Agent 🛡️
+
+on:
+  workflow_dispatch:
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+      security-events: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @octokit/rest @google/generative-ai
+
+      # For testing, we skip the artifact download and use the checked-in mock file
+      # - name: Download SARIF Artifacts
+      #   uses: actions/download-artifact@v4
+
+      - name: Run Security Fix Agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          SARIF_PATH: .  # Use current directory where mock-vuln.sarif is
+          BASE_BRANCH: feature/test-security-agent # Open PR against this branch
+        run: node .github/scripts/fix-security-scan.js
