@@ -32,7 +32,7 @@ public class SDMConstants {
   public static final String USER_NOT_AUTHORISED_ERROR_OPEN_LINK =
       "You do not have the required permissions to open links. Please contact your administrator for access.";
   public static final String FILE_NOT_FOUND_ERROR = "Object not found in repository"
-  public static final Integer MAX_CONNECTIONS = 100;
+  public static final Integer MAX_CONNECTIONS = 100
   public static final int CONNECTION_TIMEOUT = 1200;
   public static final int CHUNK_SIZE = 20 * 1024 * 1024; // 20MB Chunk Size
   public static final String ATTACHMENT_MAXCOUNT = "SDM.Attachments.maxCount";
