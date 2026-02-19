@@ -17,9 +17,9 @@ on:
           - 'false'
   
   # Auto-deploy snapshot on push to develop
-  push:
-    branches:
-      - feature/ossrh-snapshot-deployment
+  # push:
+  #   branches:
+  #     - feature/ossrh-snapshot-deployment
     # paths:
     #   - 'sdm/src/**'
     #   - 'pom.xml'
