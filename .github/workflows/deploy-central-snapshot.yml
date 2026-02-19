@@ -16,19 +16,14 @@ on:
           - 'true'
           - 'false'
   
-  # TEMP: For testing - remove after merge
+  # Auto-deploy snapshot on push to develop
   push:
     branches:
-      - feature/ossrh-snapshot-deployment
-  
-  # Optionally trigger on push to develop (uncomment if desired)
-  # push:
-  #   branches:
-  #     - develop
-  #   paths:
-  #     - 'sdm/src/**'
-  #     - 'pom.xml'
-  #     - 'sdm/pom.xml'
+      - develop
+    paths:
+      - 'sdm/src/**'
+      - 'pom.xml'
+      - 'sdm/pom.xml'
 
 permissions:
   contents: read
