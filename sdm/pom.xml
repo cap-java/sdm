@@ -99,6 +99,19 @@
         </profile>
         <profile>
             <id>deploy-central-snapshot</id>
+            <!-- Override distributionManagement to use Central Portal snapshots -->
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>central</id>
+                    <name>Sonatype Central Portal Snapshots</name>
+                    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                </snapshotRepository>
+                <!-- Intentionally empty to prevent accidental release deployment -->
+                <repository>
+                    <id>disabled-release</id>
+                    <url>file:///dev/null</url>
+                </repository>
+            </distributionManagement>
             <build>
                 <plugins>
                     <plugin>
@@ -107,6 +120,7 @@
                         <configuration>
                             <publishingServerId>central</publishingServerId>
                             <deploymentType>USER_MANAGED</deploymentType>
+                            <skipExistingDeployments>true</skipExistingDeployments>
                         </configuration>
                     </plugin>
                 </plugins>
