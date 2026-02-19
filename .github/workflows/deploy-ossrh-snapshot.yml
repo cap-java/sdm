@@ -16,6 +16,11 @@ on:
           - 'true'
           - 'false'
   
+  # TEMP: For testing - remove after merge
+  push:
+    branches:
+      - feature/ossrh-snapshot-deployment
+  
   # Optionally trigger on push to develop (uncomment if desired)
   # push:
   #   branches:
@@ -100,7 +105,7 @@ jobs:
           name: snapshot-build
 
       - name: Deploy Snapshot (with GPG signing)
-        if: github.event.inputs.sign_artifacts != 'false'
+        if: github.event.inputs.sign_artifacts != 'false' && github.event_name == 'workflow_dispatch'
         uses: ./.github/actions/deploy-ossrh-snapshot
         with:
           user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
@@ -110,7 +115,7 @@ jobs:
           pgp-passphrase: ${{ secrets.PGP_PASSPHRASE }}
 
       - name: Deploy Snapshot (without GPG signing)
-        if: github.event.inputs.sign_artifacts == 'false'
+        if: github.event.inputs.sign_artifacts == 'false' || github.event_name != 'workflow_dispatch'
         uses: ./.github/actions/deploy-ossrh-snapshot
         with:
           user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
