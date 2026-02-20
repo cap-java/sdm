@@ -70,33 +70,81 @@ async function run() {
         console.log(`Extracted log tail (${tailLogs.length} characters). Generating analysis...`);
 
         // 5. Generate Analysis with Gemini
-        const prompt = `
-        You are a DevOps Expert and "Build Doctor".
-        A GitHub Actions workflow '${workflowName}' failed.
+        // const prompt = `
+        // You are a DevOps Expert and "Build Doctor".
+        // A GitHub Actions workflow '${workflowName}' failed.
         
-        Analyze the following log snippet (last ${MAX_LOG_LINES} lines) to identify the root cause.
+        // Analyze the following log snippet (last ${MAX_LOG_LINES} lines) to identify the root cause.
+        
+        // Log Snippet:
+        // \`\`\`
+        // ${tailLogs}
+        // \`\`\`
+        
+        // Your response must be a concise Markdown comment suitable for a developer.
+        // Structure:
+        
+        // ## 🩺 Build Doctor Diagnosis
+        
+        // **1. Root Cause:** 
+        // (Explain what went wrong in 1-2 senteces. Be specific: Syntax error, Dependencies, Test failure, Infra, etc.)
+        
+        // **2. Relevant Log Lines:**
+        // (Quote the specific error message from the logs)
+        
+        // **3. Suggested Fix:**
+        // (Actionable advice. If it's a code fix, show the snippet. If it's a config tweak, show the command or yaml change.)
+        
+        // **Confidence:** (High/Medium/Low)
+        // `;
+        const prompt = `
+        You are an expert DevOps engineer and "Build Doctor".
+        A GitHub Actions workflow '${workflowName}' has failed.
+        
+        Your job:
+        - Read the log snippet carefully.
+        - Identify the **single most likely root cause** of the failure.
+        - Map it to a clear category (Syntax, Dependency, Test, Infra, Config, Credential, Network, Tooling, etc.).
+        - Propose **one** primary fix that a developer can apply quickly.
+        
+        Context:
+        - These are the last ${MAX_LOG_LINES} lines of the job log.
+        - They may contain retries, warnings, and noisy stack traces.
+        - The **true error** is usually near the first occurrence of "error", "exception", "failed", "fatal", non‑zero exit codes, or GitHub Actions step failure messages.
         
         Log Snippet:
         \`\`\`
         ${tailLogs}
         \`\`\`
         
-        Your response must be a concise Markdown comment suitable for a developer.
-        Structure:
+        First, think step by step (do NOT include this reasoning in the final answer):
+        1. Skim for the first real failure signal (error/exception/exit code/failed step).
+        2. Summarize in your own words what actually went wrong.
+        3. Decide which category it belongs to: Syntax, Dependency, Test, Infra, Config, Credential, Network, Tooling, Other.
+        4. Decide the most likely fix a DevOps/dev engineer should try first.
+        5. If there is not enough information, state that clearly and suggest what extra logs/checks are needed.
         
-        ## 🩺 Build Doctor Diagnosis
+        Then, output **only** the following Markdown comment, nothing else:
         
-        **1. Root Cause:** 
-        (Explain what went wrong in 1-2 senteces. Be specific: Syntax error, Dependencies, Test failure, Infra, etc.)
+        # 🩺 Build Doctor Diagnosis
         
-        **2. Relevant Log Lines:**
-        (Quote the specific error message from the logs)
+        ### Diagnosis (${workflowName})
+        **1. Root Cause:**  
+        (Explain what went wrong in 1–2 sentences. Be specific: e.g. "Maven dependency not found", "JUnit test failure", "Docker login failed", "Kubernetes connection timeout". If unsure, say "Most likely ..." and why.)
         
-        **3. Suggested Fix:**
-        (Actionable advice. If it's a code fix, show the snippet. If it's a config tweak, show the command or yaml change.)
+        **2. Relevant Log Lines:**  
+        (Quote the *minimal* most important 1–3 lines from the logs that show the error. Do not paste large blocks.)
         
-        **Confidence:** (High/Medium/Low)
+        **3. Suggested Fix:**  
+        (Give concrete, copy‑pasteable steps. 
+        - For code issues: show the key code or config snippet to change.
+        - For pipeline/config issues: show the YAML or command to adjust.
+        - For infra/credentials: describe exact checks or commands to run, and what to update.)
+        
+        **Confidence:** High | Medium | Low
+        (Choose one based on how clear the error is. If logs are ambiguous or truncated, use Medium or Low and say what’s missing.)
         `;
+
 
         const result = await model.generateContent(prompt);
         const analysis = result.response.text();
