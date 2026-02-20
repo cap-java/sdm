@@ -2,7 +2,22 @@ name: Build Doctor 🩺
 
 on:
   workflow_run:
-    workflows: ["Choose and Deploy 🚀", "Main Build", "Demo Build"] # Add your main workflow names here
+    workflows: [
+      "Choose and Deploy 🚀",
+      "Demo Build",
+      "Blackduck analysis",
+      "CodeQL Analysis",
+      "Deploy to Maven Central",
+      "Main build and snapshot deploy",
+      "Multi Tenancy Deploy & Integration Test🚀",
+      "Multi Tenancy Deploy & Integration Test LatestVersion🚀",
+      "Pull Request Builder",
+      "Single Tenant Deploy and Integration Test",
+      "Single Tenant Deploy and Integration Test LatestVersion",
+      "Single Tenant Integration Test 🚀",
+      "SonarQube Analysis",
+      "UnitTestsWithCodeCoverage"
+    ]
     types:
       - completed
 
