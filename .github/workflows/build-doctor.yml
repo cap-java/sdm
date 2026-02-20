@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Build Doctor Analysis
         env:
-          GITHUB_TOKEN: ${{ secrets.GITREPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
