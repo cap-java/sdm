@@ -69,70 +69,34 @@ async function run() {
 
         console.log(`Extracted log tail (${tailLogs.length} characters). Generating analysis...`);
 
-        // 5. Post Comment with Deduplication
-        const runDetails = await octokit.rest.actions.getWorkflowRun({
-            owner, repo, run_id: runId
-        });
-        const prs = runDetails.data.pull_requests;
-        const headSha = runDetails.data.head_sha;
-
-        let existingComment = null;
-        let isPr = false;
-        let issueNumber = null;
-
-        if (prs && prs.length > 0) {
-            isPr = true;
-            issueNumber = prs[0].number;
-            const comments = await octokit.rest.issues.listComments({ owner, repo, issue_number: issueNumber });
-            existingComment = comments.data.find(c => c.user?.login?.includes('github-actions') && c.body.includes('🩺 Build Doctor Diagnosis'));
-        } else {
-            const comments = await octokit.rest.repos.listCommitComments({ owner, repo, commit_sha: headSha });
-            existingComment = comments.data.find(c => c.user?.login?.includes('github-actions') && c.body.includes('🩺 Build Doctor Diagnosis'));
-        }
-
-        if (existingComment) {
-            console.log("Found existing Build Doctor comment. Checking for duplicate root cause...");
-            const dedupPrompt = `
-            You are a DevOps Expert and "Build Doctor".
-            An existing diagnosis already exists for this code change:
-            \`\`\`
-            ${existingComment.body}
-            \`\`\`
-
-            A new workflow '${workflowName}' also failed with these logs:
-            \`\`\`
-            ${tailLogs}
-            \`\`\`
-
-            If the root cause of this new failure is fundamentally the SAME as the existing diagnosis (e.g., the same syntax error or missing dependency affects both workflows), respond with ONLY the word "DUPLICATE".
-            If it is a fundamentally DIFFERENT root cause, provide a new diagnosis following the standard format:
-            <br>
-            ### 🩺 Build Doctor Diagnosis (${workflowName})
-            **1. Root Cause:** ...
-            **2. Relevant Log Lines:** ...
-            **3. Suggested Fix:** ...
-            **Confidence:** ...
-            `;
-
-            const result = await model.generateContent(dedupPrompt);
-            const text = result.response.text().trim();
-
-            if (text.startsWith("DUPLICATE") || text.includes("DUPLICATE")) {
-                console.log("Failure is a duplicate of existing diagnosis. Skipping comment.");
-                return;
-            } else {
-                console.log("New root cause identified. Appending to existing comment...");
-                const updatedBody = existingComment.body + "\n\n---\n\n" + text;
-                if (isPr) {
-                    await octokit.rest.issues.updateComment({ owner, repo, comment_id: existingComment.id, body: updatedBody });
-                } else {
-                    await octokit.rest.repos.updateCommitComment({ owner, repo, comment_id: existingComment.id, body: updatedBody });
-                }
-                return;
-            }
-        }
-
-        // 6. Generate Standard Analysis if no existing comment
+        // 5. Generate Analysis with Gemini
+        // const prompt = `
+        // You are a DevOps Expert and "Build Doctor".
+        // A GitHub Actions workflow '${workflowName}' failed.
+        
+        // Analyze the following log snippet (last ${MAX_LOG_LINES} lines) to identify the root cause.
+        
+        // Log Snippet:
+        // \`\`\`
+        // ${tailLogs}
+        // \`\`\`
+        
+        // Your response must be a concise Markdown comment suitable for a developer.
+        // Structure:
+        
+        // ## 🩺 Build Doctor Diagnosis
+        
+        // **1. Root Cause:** 
+        // (Explain what went wrong in 1-2 senteces. Be specific: Syntax error, Dependencies, Test failure, Infra, etc.)
+        
+        // **2. Relevant Log Lines:**
+        // (Quote the specific error message from the logs)
+        
+        // **3. Suggested Fix:**
+        // (Actionable advice. If it's a code fix, show the snippet. If it's a config tweak, show the command or yaml change.)
+        
+        // **Confidence:** (High/Medium/Low)
+        // `;
         const prompt = `
         You are an expert DevOps engineer and "Build Doctor".
         A GitHub Actions workflow '${workflowName}' has failed.
@@ -187,11 +151,40 @@ async function run() {
 
         console.log("Analysis generated. Posting comment...");
 
-        if (isPr) {
-            await octokit.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body: analysis });
-            console.log(`Posted analysis to PR #${issueNumber}`);
+        // 6. Post Comment
+        // We need to find where to post.
+        // If triggered by PR, we post to the PR.
+        // If triggered by Push, we post to the Commit.
+
+        // Context is tricky in 'workflow_run'. We have to look at the 'workflow_run' event payload.
+        // We can get the PRs associated with the run.
+        const runDetails = await octokit.rest.actions.getWorkflowRun({
+            owner,
+            repo,
+            run_id: runId
+        });
+
+        const prs = runDetails.data.pull_requests;
+
+        if (prs && prs.length > 0) {
+            // Post to the first associated PR
+            const prNumber = prs[0].number;
+            await octokit.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: analysis
+            });
+            console.log(`Posted analysis to PR #${prNumber}`);
         } else {
-            await octokit.rest.repos.createCommitComment({ owner, repo, commit_sha: headSha, body: analysis });
+            // Post to the Commit
+            const headSha = runDetails.data.head_sha;
+            await octokit.rest.repos.createCommitComment({
+                owner,
+                repo,
+                commit_sha: headSha,
+                body: analysis
+            });
             console.log(`Posted analysis to Commit ${headSha}`);
         }
 
