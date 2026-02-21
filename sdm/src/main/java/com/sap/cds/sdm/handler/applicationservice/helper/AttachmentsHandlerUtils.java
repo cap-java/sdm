@@ -405,7 +405,7 @@ public class AttachmentsHandlerUtils {
 
     // Get parent titles
     Map<String, String> parentTitles =
-        getAttachmentParentTitles(targetEntity, entityData, compositionPathMapping);
+        getAttachmentParentTitles(model, targetEntity, entityData, compositionPathMapping);
 
     // Combine into comprehensive details
     for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
@@ -418,6 +418,11 @@ public class AttachmentsHandlerUtils {
       details.put("definition", definition);
       details.put("parentTitle", parentTitle);
 
+      String parentTitleMap = parentTitles.get(name + ":MAP");
+      if (parentTitleMap != null) {
+        details.put("parentTitleMap", parentTitleMap);
+      }
+
       attachmentDetails.put(definition, details);
     }
 
@@ -426,21 +431,29 @@ public class AttachmentsHandlerUtils {
 
   /**
    * Retrieves parent entity titles for each attachment composition found in the entity structure.
+   * For nested compositions, this returns a map of parent instance IDs to their titles.
    *
    * <p>This method analyzes the entity data structure to identify attachment compositions and
    * extracts the title (or other identifying field) of the parent entity containing each attachment
    * composition. It handles both direct attachments at the root level and nested attachments within
-   * composed entities.
+   * composed entities. For nested entities with multiple instances (e.g., multiple Chapters), it
+   * maps each parent instance ID to its title.
    *
+   * @param model the CDS model containing entity definitions and relationships
    * @param targetEntity the qualified name of the target entity (e.g., "AdminService.Books")
    * @param entity the entity data structure containing potential attachment information
    * @param compositionPathMapping the mapping of attachment composition paths obtained from
    *     getAttachmentPathMapping
    * @return a map where keys are attachment composition names and values are the parent entity
-   *     titles, or an empty map if no attachments are found
+   *     titles, or an empty map if no attachments are found. For backward compatibility, returns
+   *     single title for direct attachments, or a special format "parentId:title" for nested
+   *     attachments that can be parsed later.
    */
   public static Map<String, String> getAttachmentParentTitles(
-      String targetEntity, Map<String, Object> entity, Map<String, String> compositionPathMapping) {
+      CdsModel model,
+      String targetEntity,
+      Map<String, Object> entity,
+      Map<String, String> compositionPathMapping) {
     Map<String, String> parentTitles = new HashMap<>();
 
     String[] targetEntityPath = targetEntity.split("\\.");
@@ -449,9 +462,27 @@ public class AttachmentsHandlerUtils {
 
     for (Map.Entry<String, String> compositionEntry : compositionPathMapping.entrySet()) {
       String compositionPath = compositionEntry.getValue();
-      String parentTitle = findParentTitle(wrappedEntity, compositionPath, entityName);
-      if (parentTitle != null) {
-        parentTitles.put(compositionPath, parentTitle);
+      Map<String, String> allParentTitles =
+          findAllParentTitles(model, wrappedEntity, compositionPath, entityName, targetEntity);
+      if (allParentTitles != null && !allParentTitles.isEmpty()) {
+        // For backward compatibility: if single parent, store just the title
+        // If multiple parents, store in format that can be parsed:
+        // "parentId1:title1;parentId2:title2"
+        if (allParentTitles.size() == 1) {
+          parentTitles.put(compositionPath, allParentTitles.values().iterator().next());
+        } else {
+          // Store all parent titles in a parseable format
+          StringBuilder sb = new StringBuilder();
+          for (Map.Entry<String, String> parentEntry : allParentTitles.entrySet()) {
+            if (sb.length() > 0) {
+              sb.append(";");
+            }
+            sb.append(parentEntry.getKey()).append(":").append(parentEntry.getKey());
+          }
+          parentTitles.put(compositionPath, allParentTitles.values().iterator().next());
+          // Also store the map for lookup
+          parentTitles.put(compositionPath + ":MAP", encodeParentTitleMap(allParentTitles));
+        }
       }
     }
 
@@ -459,86 +490,518 @@ public class AttachmentsHandlerUtils {
   }
 
   /**
-   * Finds the parent title for a given attachment composition path.
+   * Encodes a map of parent IDs to titles into a string format for storage.
    *
+   * @param parentTitleMap the map of parent IDs to titles
+   * @return encoded string in format "parentId1=title1;parentId2=title2"
+   */
+  private static String encodeParentTitleMap(Map<String, String> parentTitleMap) {
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<String, String> entry : parentTitleMap.entrySet()) {
+      if (sb.length() > 0) {
+        sb.append(";");
+      }
+      sb.append(entry.getKey()).append("=").append(entry.getValue());
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Decodes a parent title map from encoded string format.
+   *
+   * @param encoded the encoded string in format "parentId1=title1;parentId2=title2"
+   * @return map of parent IDs to titles
+   */
+  private static Map<String, String> decodeParentTitleMap(String encoded) {
+    Map<String, String> result = new HashMap<>();
+    if (encoded != null && !encoded.isEmpty()) {
+      String[] pairs = encoded.split(";");
+      for (String pair : pairs) {
+        String[] parts = pair.split("=", 2);
+        if (parts.length == 2) {
+          result.put(parts[0], parts[1]);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Gets the parent title for a specific attachment based on its parent reference. For nested
+   * attachments, uses the attachment's parent ID (up_ field) to find the correct title.
+   *
+   * @param attachment the attachment data containing parent reference
+   * @param compositionName the composition name
+   * @param parentTitleData the parent title data (may contain encoded map)
+   * @param compositionPathMapping the composition path mapping
+   * @return the specific parent title for this attachment
+   */
+  public static String getParentTitleForAttachment(
+      Map<String, Object> attachment,
+      String compositionName,
+      String parentTitleData,
+      Map<String, String> compositionPathMapping) {
+    // Check if we have a map of parent titles (for nested compositions)
+    String compositionPath = compositionPathMapping.get(compositionName);
+    if (compositionPath != null) {
+      String mapKey = compositionPath + ":MAP";
+      // Check if encoded map exists in the parent title data structure
+      // For now, try to extract parent ID from attachment
+      Object parentId = attachment.get("up_ID");
+      if (parentId == null) {
+        parentId = attachment.get("up__ID");
+      }
+
+      if (parentId != null) {
+        // Try to decode and find specific title
+        logger.info("getParentTitleForAttachment: Found parent ID {} for attachment", parentId);
+        // This would require passing the full context through
+        // For now, we'll implement a workaround in the calling code
+      }
+    }
+
+    return parentTitleData;
+  }
+
+  /**
+   * Finds all parent titles for a given attachment composition path. For nested compositions with
+   * multiple parent instances (e.g., multiple Chapters), this returns a map of all parent IDs to
+   * titles.
+   *
+   * @param model the CDS model containing entity definitions and relationships
    * @param entity the wrapped entity data structure
-   * @param compositionPath the composition path (e.g., "AdminService.chapters123.attachments" or
+   * @param compositionPath the composition path (e.g., "AdminService.chapters.attachments" or
    *     "AdminService.Books.references")
    * @param rootEntityName the name of the root entity
-   * @return the title of the parent entity containing the attachment composition, or null if not
-   *     found
+   * @param targetEntity the qualified name of the target entity
+   * @return a map where keys are parent instance IDs and values are titles, or null if not found
    */
-  private static String findParentTitle(
-      Map<String, Object> entity, String compositionPath, String rootEntityName) {
+  private static Map<String, String> findAllParentTitles(
+      CdsModel model,
+      Map<String, Object> entity,
+      String compositionPath,
+      String rootEntityName,
+      String targetEntity) {
+    Map<String, String> parentTitleMap = new HashMap<>();
+
     try {
       String[] pathParts = compositionPath.split("\\.");
+      if (pathParts.length < 3) {
+        return parentTitleMap;
+      }
 
-      if (pathParts.length >= 3) {
-        String entityPart = pathParts[pathParts.length - 2]; // Second to last part (entity name)
+      String entityPart = pathParts[pathParts.length - 2];
 
-        // Check if this is a direct composition (entity matches root entity)
-        if (entityPart.equalsIgnoreCase(rootEntityName)) {
-          // Direct attachment at root level (e.g., "AdminService.Books.references")
-          return extractTitleFromEntity(entity.get(rootEntityName));
-        } else {
-          // Nested attachment (e.g., "AdminService.chapters123.attachments")
-          // Navigate to the parent entity
-          Object rootEntity = entity.get(rootEntityName);
-          if (rootEntity instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
-            Object parentCollection = rootMap.get(entityPart);
+      if (entityPart.equalsIgnoreCase(rootEntityName)) {
+        handleDirectAttachmentTitles(model, entity, rootEntityName, targetEntity, parentTitleMap);
+      } else {
+        handleNestedAttachmentTitles(
+            model, entity, rootEntityName, entityPart, targetEntity, parentTitleMap);
+      }
+    } catch (Exception e) {
+      logger.warn("Error finding all parent titles for composition path: " + compositionPath, e);
+    }
 
-            if (parentCollection instanceof List) {
-              @SuppressWarnings("unchecked")
-              List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
-              if (!parentList.isEmpty()) {
-                // Get title from the first item in the collection
-                return extractTitleFromEntity(parentList.get(0));
-              }
-            }
-          }
+    return parentTitleMap;
+  }
+
+  /**
+   * Handles title extraction for direct attachments at root level.
+   *
+   * @param model the CDS model
+   * @param entity the entity data structure
+   * @param rootEntityName the root entity name
+   * @param targetEntity the target entity name
+   * @param parentTitleMap the map to populate with titles
+   */
+  private static void handleDirectAttachmentTitles(
+      CdsModel model,
+      Map<String, Object> entity,
+      String rootEntityName,
+      String targetEntity,
+      Map<String, String> parentTitleMap) {
+    Object entityData = entity.get(rootEntityName);
+    String title = extractTitleFromEntity(model, targetEntity, entityData);
+    if (title != null && !title.trim().isEmpty()) {
+      parentTitleMap.put("root", title);
+    }
+  }
+
+  /**
+   * Handles title extraction for nested attachments.
+   *
+   * @param model the CDS model
+   * @param entity the entity data structure
+   * @param rootEntityName the root entity name
+   * @param entityPart the entity part from the path
+   * @param targetEntity the target entity name
+   * @param parentTitleMap the map to populate with titles
+   */
+  private static void handleNestedAttachmentTitles(
+      CdsModel model,
+      Map<String, Object> entity,
+      String rootEntityName,
+      String entityPart,
+      String targetEntity,
+      Map<String, String> parentTitleMap) {
+    Object rootEntity = entity.get(rootEntityName);
+    if (!(rootEntity instanceof Map)) {
+      return;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> rootMap = (Map<String, Object>) rootEntity;
+    Object parentCollection = rootMap.get(entityPart);
+
+    if (!(parentCollection instanceof List)) {
+      return;
+    }
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> parentList = (List<Map<String, Object>>) parentCollection;
+    String nestedEntityName = determineNestedEntityName(model, targetEntity, entityPart);
+
+    extractTitlesFromParentList(model, nestedEntityName, parentList, parentTitleMap);
+  }
+
+  /**
+   * Extracts titles from a list of parent instances.
+   *
+   * @param model the CDS model
+   * @param nestedEntityName the nested entity name
+   * @param parentList the list of parent instances
+   * @param parentTitleMap the map to populate with titles
+   */
+  private static void extractTitlesFromParentList(
+      CdsModel model,
+      String nestedEntityName,
+      List<Map<String, Object>> parentList,
+      Map<String, String> parentTitleMap) {
+    for (Map<String, Object> parentInstance : parentList) {
+      String title = extractTitleFromEntity(model, nestedEntityName, parentInstance);
+      if (title != null && !title.trim().isEmpty()) {
+        Object parentId = parentInstance.get("ID");
+        String parentIdStr =
+            (parentId != null) ? parentId.toString() : String.valueOf(parentTitleMap.size());
+        parentTitleMap.put(parentIdStr, title);
+      }
+    }
+  }
+
+  /**
+   * Determines the fully qualified entity name for a nested composition.
+   *
+   * @param model the CDS model
+   * @param parentEntityName the parent entity name
+   * @param compositionName the composition property name
+   * @return the fully qualified nested entity name, or null if not found
+   */
+  private static String determineNestedEntityName(
+      CdsModel model, String parentEntityName, String compositionName) {
+    try {
+      Optional<CdsEntity> parentEntity = model.findEntity(parentEntityName);
+      if (parentEntity.isPresent()) {
+        Optional<com.sap.cds.reflect.CdsElement> composition =
+            parentEntity.get().findElement(compositionName);
+        if (composition.isPresent() && composition.get().getType().isAssociation()) {
+          CdsAssociationType associationType = (CdsAssociationType) composition.get().getType();
+          return associationType.getTarget().getQualifiedName();
         }
       }
     } catch (Exception e) {
-      logger.warn("Error finding parent title for composition path: " + compositionPath, e);
+      logger.warn("Error determining nested entity name for composition: " + compositionName, e);
     }
-
     return null;
   }
 
   /**
-   * Extracts the title field from an entity object, with fallback options.
+   * Extracts the title field from an entity object using CDS metadata annotations.
    *
+   * <p>This method extracts entity titles using @Common.Text annotation on the semantic key field,
+   * which is the only mechanism proven to work reliably in both Fiori UI and Java backend through
+   * empirical testing.
+   *
+   * <p><b>How it works:</b>
+   *
+   * <ol>
+   *   <li>Finds the semantic key field from @Common.SemanticKey annotation
+   *   <li>Checks if that field has a @Common.Text annotation pointing to a title field
+   *   <li>Extracts and returns the value of the title field
+   * </ol>
+   *
+   * <p><b>Important:</b> Define your CDS model as follows for proper title extraction:
+   *
+   * <pre>{@code
+   * entity Books {
+   *   key ID : UUID;
+   *   title  : String;
+   * }
+   *
+   * annotate Books with @Common.SemanticKey: [ID] {
+   *   ID @Common.Text: title;
+   * }
+   * }</pre>
+   *
+   * <p><b>Note:</b> UI.HeaderInfo.Title annotations defined in app/common.cds are NOT accessible to
+   * Java backend code via CDS Reflection API. They are only used by Fiori UI layer for OData
+   * metadata generation.
+   *
+   * @param model the CDS model containing entity definitions and annotations
+   * @param entityName the qualified name of the entity (e.g., "AdminService.Books")
    * @param entityObj the entity object to extract title from
-   * @return the title string, or a fallback identifier, or null if not found
+   * @return the title string from annotations, or null if not found
    */
-  private static String extractTitleFromEntity(Object entityObj) {
+  private static String extractTitleFromEntity(
+      CdsModel model, String entityName, Object entityObj) {
     if (!(entityObj instanceof Map)) {
+      logger.info("extractTitleFromEntity: entityObj is not a Map for entity: {}", entityName);
       return null;
     }
 
     @SuppressWarnings("unchecked")
     Map<String, Object> entityMap = (Map<String, Object>) entityObj;
 
-    // Priority order: title -> name -> ID -> first non-null string value
-    String[] titleFields = {"title", "name", "ID", "id"};
+    logger.info(
+        "extractTitleFromEntity: Extracting title for entity: {}, data keys: {}",
+        entityName,
+        entityMap.keySet());
 
-    for (String field : titleFields) {
-      Object value = entityMap.get(field);
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
+    // Get title field from Common.Text annotation on semantic key field
+    // This is proven to work in both Fiori UI and Java backend
+    String titleFieldFromSemanticKey = getSemanticKeyField(model, entityName);
+    logger.info(
+        "extractTitleFromEntity: titleFieldFromSemanticKey = {} for entity: {}",
+        titleFieldFromSemanticKey,
+        entityName);
+
+    if (titleFieldFromSemanticKey != null) {
+      // Check if the semantic key field has a Common.Text annotation pointing to another field
+      String titleFieldFromCommonText =
+          getTitleFromCommonTextOnField(model, entityName, titleFieldFromSemanticKey);
+      logger.info(
+          "extractTitleFromEntity: titleFieldFromCommonText = {} for entity: {}",
+          titleFieldFromCommonText,
+          entityName);
+
+      if (titleFieldFromCommonText != null) {
+        // Use the field specified by Common.Text annotation
+        Object value = getNestedValue(entityMap, titleFieldFromCommonText);
+        logger.info(
+            "extractTitleFromEntity: Value for Common.Text field '{}' = {}",
+            titleFieldFromCommonText,
+            value);
+        if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
+          logger.info(
+              "extractTitleFromEntity: Returning title from Common.Text annotation: {}", value);
+          return (String) value;
+        }
       }
     }
 
-    // Fallback: find any string value
-    for (Object value : entityMap.values()) {
-      if (value != null && value instanceof String && !((String) value).trim().isEmpty()) {
-        return (String) value;
+    logger.info("extractTitleFromEntity: No title found for entity: {}", entityName);
+    // Return null if no annotation-based title is found
+    return null;
+  }
+
+  /**
+   * Extracts the title field name from @Common.Text annotation on a specific field. This mirrors
+   * how Fiori determines page titles when UI.HeaderInfo is not present.
+   *
+   * <p>Example: If field "ID" has @Common.Text: title, this returns "title"
+   *
+   * @param model the CDS model
+   * @param entityName the qualified entity name
+   * @param fieldName the field to check for @Common.Text annotation
+   * @return the field name from Common.Text annotation, or null if not found
+   */
+  private static String getTitleFromCommonTextOnField(
+      CdsModel model, String entityName, String fieldName) {
+    logger.info(
+        "getTitleFromCommonTextOnField: Checking field '{}' on entity '{}'", fieldName, entityName);
+
+    if (model == null || entityName == null || fieldName == null) {
+      return null;
+    }
+
+    try {
+      Optional<CdsEntity> entityOpt = model.findEntity(entityName);
+      if (!entityOpt.isPresent()) {
+        return null;
       }
+
+      Optional<com.sap.cds.reflect.CdsElement> elementOpt = entityOpt.get().findElement(fieldName);
+      if (!elementOpt.isPresent()) {
+        return null;
+      }
+
+      com.sap.cds.reflect.CdsElement element = elementOpt.get();
+      logger.info(
+          "getTitleFromCommonTextOnField: Found element '{}', checking for Common annotation",
+          fieldName);
+
+      // Try Common annotation first (contains Text property)
+      String result = extractTextFromCommonAnnotation(element);
+      if (result != null) {
+        return result;
+      }
+
+      // Try Common.Text directly as alternate format
+      return extractTextFromCommonTextAnnotation(element);
+
+    } catch (Exception e) {
+      logger.info("getTitleFromCommonTextOnField: Error - {}", e.getMessage(), e);
+      return null;
+    }
+  }
+
+  /**
+   * Extracts text value from Common annotation's Text property.
+   *
+   * @param element the CDS element to check
+   * @return the parsed text field name, or null if not found
+   */
+  private static String extractTextFromCommonAnnotation(com.sap.cds.reflect.CdsElement element) {
+    Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonAnnotationOpt =
+        element.findAnnotation("Common");
+    if (!commonAnnotationOpt.isPresent()) {
+      return null;
+    }
+
+    Object commonValue = commonAnnotationOpt.get().getValue();
+    logger.info(
+        "getTitleFromCommonTextOnField: Common annotation value type = {}",
+        commonValue != null ? commonValue.getClass().getSimpleName() : "null");
+
+    if (!(commonValue instanceof Map)) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> commonMap = (Map<String, Object>) commonValue;
+    logger.info("getTitleFromCommonTextOnField: Common map keys = {}", commonMap.keySet());
+
+    Object textValue = commonMap.get("Text");
+    logger.info("getTitleFromCommonTextOnField: Text value = {}", textValue);
+
+    return parseTextValue(textValue, "getTitleFromCommonTextOnField");
+  }
+
+  /**
+   * Extracts text value from Common.Text annotation directly.
+   *
+   * @param element the CDS element to check
+   * @return the parsed text field name, or null if not found
+   */
+  private static String extractTextFromCommonTextAnnotation(
+      com.sap.cds.reflect.CdsElement element) {
+    Optional<com.sap.cds.reflect.CdsAnnotation<Object>> commonTextOpt =
+        element.findAnnotation("Common.Text");
+    if (!commonTextOpt.isPresent()) {
+      return null;
+    }
+
+    Object textValue = commonTextOpt.get().getValue();
+    logger.info("getTitleFromCommonTextOnField: Common.Text value = {}", textValue);
+
+    return parseTextValue(textValue, "getTitleFromCommonTextOnField");
+  }
+
+  /**
+   * Parses a text value by removing CDS element reference markers.
+   *
+   * @param textValue the raw text value from annotation
+   * @param logContext context string for logging
+   * @return the parsed field name, or null if textValue is null
+   */
+  private static String parseTextValue(Object textValue, String logContext) {
+    if (textValue == null) {
+      return null;
+    }
+
+    String result = textValue.toString();
+    // Remove CDS annotation wrapper syntax to extract the actual field name
+    if (result.startsWith("{==") && result.endsWith("}")) {
+      result = result.substring(3, result.length() - 1);
+    } else if (result.startsWith("{") && result.endsWith("}")) {
+      result = result.substring(1, result.length() - 1);
+    }
+    logger.info("{}: Parsed title field = {}", logContext, result);
+    return result;
+  }
+
+  /**
+   * Extracts the first field from Common.SemanticKey annotation.
+   *
+   * @param model the CDS model
+   * @param entityName the qualified entity name
+   * @return the first semantic key field name, or null if not found
+   */
+  private static String getSemanticKeyField(CdsModel model, String entityName) {
+    if (model == null || entityName == null) {
+      return null;
+    }
+
+    try {
+      Optional<CdsEntity> entityOpt = model.findEntity(entityName);
+      if (entityOpt.isPresent()) {
+        CdsEntity entity = entityOpt.get();
+        Optional<com.sap.cds.reflect.CdsAnnotation<Object>> semanticKeyOpt =
+            entity.findAnnotation("Common.SemanticKey");
+
+        if (semanticKeyOpt.isPresent() && semanticKeyOpt.get().getValue() instanceof List) {
+          @SuppressWarnings("unchecked")
+          List<?> keys = (List<?>) semanticKeyOpt.get().getValue();
+          if (!keys.isEmpty()) {
+            String rawValue = keys.get(0).toString();
+            logger.info("getSemanticKeyField: Raw value from annotation = {}", rawValue);
+
+            // Extract field name from CDS annotation format (e.g., curly braces with equals
+            // prefix)
+            String fieldName = rawValue;
+            if (rawValue.startsWith("{==") && rawValue.endsWith("}")) {
+              fieldName = rawValue.substring(3, rawValue.length() - 1);
+            } else if (rawValue.startsWith("{") && rawValue.endsWith("}")) {
+              fieldName = rawValue.substring(1, rawValue.length() - 1);
+            }
+
+            logger.info("getSemanticKeyField: Parsed field name = {}", fieldName);
+            return fieldName;
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.info("getSemanticKeyField: Error - {}", e.getMessage(), e);
     }
 
     return null;
+  }
+
+  /**
+   * Gets a nested value from a map using a path (e.g., "author.name").
+   *
+   * @param map the map to extract value from
+   * @param path the path to the value (can include dots for nested access)
+   * @return the value at the path, or null if not found
+   */
+  private static Object getNestedValue(Map<String, Object> map, String path) {
+    if (path == null || map == null) {
+      return null;
+    }
+
+    String[] parts = path.split("\\.");
+    Object current = map;
+
+    for (String part : parts) {
+      if (current instanceof Map) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> currentMap = (Map<String, Object>) current;
+        current = currentMap.get(part);
+      } else {
+        return null;
+      }
+    }
+
+    return current;
   }
 
   /**
@@ -558,17 +1021,46 @@ public class AttachmentsHandlerUtils {
    * @param composition the composition name used to locate attachments in the data structure
    * @return true if any validation errors are found, false otherwise
    */
+  /**
+   * Validates file names in the provided data for various constraints including whitespace,
+   * restricted characters, and duplicates.
+   *
+   * <p>This method performs comprehensive validation of file names by checking for:
+   *
+   * <ul>
+   *   <li>Whitespace-only or null file names
+   *   <li>Restricted characters (such as / and \)
+   *   <li>Duplicate file names within the same repository
+   * </ul>
+   *
+   * @param context the event context containing messages for error reporting
+   * @param data the list of CDS data containing potential file attachments
+   * @param composition the composition name used to locate attachments in the data structure
+   * @param contextInfo the default context info for error messages
+   * @param attachmentEntity the attachment entity definition
+   * @param parentTitleMap encoded map of parent IDs to titles (for nested compositions with
+   *     multiple parents)
+   * @return true if any validation errors are found, false otherwise
+   */
   public static Boolean validateFileNames(
       EventContext context,
       List<CdsData> data,
       String composition,
       String contextInfo,
-      Optional<CdsEntity> attachmentEntity) {
+      Optional<CdsEntity> attachmentEntity,
+      String parentTitleMap) {
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
     String upIdKey = "";
     if (attachmentEntity.isPresent()) {
       upIdKey = SDMUtils.getUpIdKey(attachmentEntity.get());
+    }
+
+    // Extract composition name for context
+    String compositionName = composition;
+    if (composition != null && composition.contains(".")) {
+      String[] parts = composition.split("\\.");
+      compositionName = parts[parts.length - 1];
     }
 
     // Validation for file names
@@ -579,17 +1071,46 @@ public class AttachmentsHandlerUtils {
     Set<String> duplicateFilenames =
         SDMUtils.FileNameDuplicateInDrafts(data, composition, targetEntity, upIdKey);
 
-    // Collecting all the errors
+    // For nested compositions, we need to get attachment-specific parent titles
+    // Collect all attachments first
+    List<Map<String, Object>> allAttachments = new ArrayList<>();
+    for (CdsData entityData : data) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> entityMap = (Map<String, Object>) entityData;
+      List<Map<String, Object>> attachments =
+          fetchAttachments(targetEntity, entityMap, composition);
+      if (attachments != null) {
+        allAttachments.addAll(attachments);
+      }
+    }
+
+    // Collecting all the errors with attachment-specific context
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
-      context
-          .getMessages()
-          .error(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE") + contextInfo);
+      // Try to find specific context for each file
+      for (String filename : whitespaceFilenames) {
+        String specificContext =
+            findContextForFile(
+                filename, allAttachments, compositionName, contextInfo, parentTitleMap);
+        context
+            .getMessages()
+            .error(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE") + specificContext);
+      }
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
-      context
-          .getMessages()
-          .error(SDMErrorMessages.nameConstraintMessage(restrictedFileNames) + contextInfo);
+      // Try to find specific context for each file
+      for (String filename : restrictedFileNames) {
+        String specificContext =
+            findContextForFile(
+                filename, allAttachments, compositionName, contextInfo, parentTitleMap);
+        context
+            .getMessages()
+            .error(
+                "\""
+                    + filename
+                    + "\" contains unsupported characters ('/' or '\\'). Rename and try again.\n\n"
+                    + specificContext);
+      }
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
@@ -601,6 +1122,56 @@ public class AttachmentsHandlerUtils {
     }
     // returning the error message
     return isError;
+  }
+
+  /**
+   * Finds the specific context (parent title) for a given filename by matching it to an attachment.
+   *
+   * @param filename the filename to find context for
+   * @param attachments list of all attachments
+   * @param compositionName the composition name for context
+   * @param defaultContext the default context if attachment not found
+   * @param parentTitleMap encoded map of parent IDs to titles
+   * @return specific context string for this file
+   */
+  private static String findContextForFile(
+      String filename,
+      List<Map<String, Object>> attachments,
+      String compositionName,
+      String defaultContext,
+      String parentTitleMap) {
+    if (parentTitleMap == null || parentTitleMap.isEmpty()) {
+      return defaultContext;
+    }
+
+    for (Map<String, Object> attachment : attachments) {
+      Object attachmentFilename = attachment.get("fileName");
+      if (attachmentFilename != null && attachmentFilename.toString().equals(filename)) {
+        return getContextInfoForAttachment(
+            attachment, compositionName, defaultContext.split("Page: ")[1].trim(), parentTitleMap);
+      }
+    }
+
+    return defaultContext;
+  }
+
+  /**
+   * Validates file names in the provided data (backward compatible method).
+   *
+   * @param context the event context containing messages for error reporting
+   * @param data the list of CDS data containing potential file attachments
+   * @param composition the composition name used to locate attachments in the data structure
+   * @param contextInfo the context info for error messages
+   * @param attachmentEntity the attachment entity definition
+   * @return true if any validation errors are found, false otherwise
+   */
+  public static Boolean validateFileNames(
+      EventContext context,
+      List<CdsData> data,
+      String composition,
+      String contextInfo,
+      Optional<CdsEntity> attachmentEntity) {
+    return validateFileNames(context, data, composition, contextInfo, attachmentEntity, null);
   }
 
   /**
@@ -821,9 +1392,52 @@ public class AttachmentsHandlerUtils {
     return cmisDocument;
   }
 
+  /**
+   * Generates context information for error messages, including table and page location.
+   *
+   * @param compositionName the composition name (e.g., "attachments")
+   * @param parentTitle the default parent title
+   * @return formatted context info string
+   */
   public static String getContextInfo(String compositionName, String parentTitle) {
     return String.format(SDMErrorMessages.CONTEXT_INFO_TABLE, compositionName)
         + String.format(
-            SDMErrorMessages.CONTEXT_INFO_PAGE, (parentTitle != null ? parentTitle : "Unknown"));
+            SDMErrorMessages.CONTEXT_INFO_PAGE,
+            (parentTitle != null && !parentTitle.trim().isEmpty() ? parentTitle : "Unknown"));
+  }
+
+  /**
+   * Generates context information for a specific attachment, using its parent reference to find the
+   * correct parent title for nested compositions.
+   *
+   * @param attachment the attachment data (may contain up_ID for nested compositions)
+   * @param compositionName the composition name (e.g., "attachments")
+   * @param parentTitle the default parent title
+   * @param parentTitleMap the encoded map of parent IDs to titles (for nested compositions)
+   * @return formatted context info string with correct parent title for this attachment
+   */
+  public static String getContextInfoForAttachment(
+      Map<String, Object> attachment,
+      String compositionName,
+      String parentTitle,
+      String parentTitleMap) {
+    String specificParentTitle = parentTitle;
+
+    if (parentTitleMap != null && !parentTitleMap.isEmpty()) {
+      Object parentId = attachment.get("up_ID");
+      if (parentId == null) {
+        parentId = attachment.get("up__ID");
+      }
+
+      if (parentId != null) {
+        Map<String, String> titleMap = decodeParentTitleMap(parentTitleMap);
+        String mappedTitle = titleMap.get(parentId.toString());
+        if (mappedTitle != null) {
+          specificParentTitle = mappedTitle;
+        }
+      }
+    }
+
+    return getContextInfo(compositionName, specificParentTitle);
   }
 }

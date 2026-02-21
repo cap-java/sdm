@@ -137,6 +137,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionDefinition = entry.getKey();
       String attachmentCompositionName = entry.getValue().get("name");
       String parentTitle = entry.getValue().get("parentTitle");
+      String parentTitleMap = entry.getValue().get("parentTitleMap");
       Boolean isError = false;
 
       // Extract composition name (last part after the final ".")
@@ -154,7 +155,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
       isError =
           AttachmentsHandlerUtils.validateFileNames(
-              context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+              context,
+              data,
+              attachmentCompositionName,
+              contextInfo,
+              attachmentEntity,
+              parentTitleMap);
       if (!isError) {
         renameDocument(
             attachmentEntity,
