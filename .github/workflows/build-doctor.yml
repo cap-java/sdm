@@ -1,0 +1,53 @@
+name: Build Doctor 🩺
+
+on:
+  workflow_run:
+    workflows: [
+      "Choose and Deploy 🚀",
+      "Demo Build",
+      "Blackduck analysis",
+      "CodeQL Analysis",
+      "Deploy to Maven Central",
+      "Main build and snapshot deploy",
+      "Multi Tenancy Deploy & Integration Test🚀",
+      "Multi Tenancy Deploy & Integration Test LatestVersion🚀",
+      "Pull Request Builder",
+      "Single Tenant Deploy and Integration Test",
+      "Single Tenant Deploy and Integration Test LatestVersion",
+      "Single Tenant Integration Test 🚀",
+      "SonarQube Analysis",
+      "UnitTestsWithCodeCoverage"
+    ]
+    types:
+      - completed
+
+jobs:
+  diagnose-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @actions/github@5 @google/generative-ai @octokit/core
+
+      - name: Run Build Doctor Analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: node .github/scripts/analyze-failure.js
