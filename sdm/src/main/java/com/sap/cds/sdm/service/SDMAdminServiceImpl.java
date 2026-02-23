@@ -38,6 +38,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
   @java.lang.Override
   public String onboardRepository(Repository repository)
       throws JsonProcessingException, UnsupportedEncodingException {
+    logger.debug("START: onboardRepository for repository: {}", repository != null ? repository.getDisplayName() : "null");
     if (repository == null) {
       logger.error("Repository object is null. Cannot proceed with onboarding.");
       throw new IllegalArgumentException("Repository object cannot be null.");
@@ -144,6 +145,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
                   repository.getDisplayName())
               + " : "
               + e.getMessage());
+      logger.debug("END: onboardRepository - failed with exception");
       throw new ServiceException(
           String.format(
               SDMUtils.getErrorMessage("ONBOARD_REPO_ERROR_MESSAGE"), repository.getDisplayName()),
@@ -153,6 +155,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
 
   @java.lang.Override
   public String offboardRepository(String subdomain) {
+    logger.debug("START: offboardRepository for subdomain: {}", subdomain);
     SDMCredentials sdmCredentials;
     try {
       sdmCredentials = tokenHandler.getSDMCredentials();
@@ -257,6 +260,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       }
 
       logger.info("Repository " + repoId + " Offboarded");
+      logger.debug("END: offboardRepository - success");
       return "Repository " + repoId + " Offboarded";
     } catch (IOException e) {
       logger.error("Error while offboarding repository: " + e.getMessage());
@@ -269,6 +273,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
   }
 
   private String getRepositoryId(String jsonString) {
+    logger.debug("START: getRepositoryId");
     ObjectMapper objectMapper = new ObjectMapper();
     try {
       JsonNode rootNode = objectMapper.readTree(jsonString);
@@ -284,6 +289,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       for (JsonNode repoInfo : repoInfos) {
         JsonNode repository = repoInfo.path("repository");
         if (repository.path("externalId").asText().equals(SDMConstants.REPOSITORY_ID)) {
+          logger.debug("END: getRepositoryId - found: {}", repository.path("id").asText());
           return repository.path("id").asText();
         }
       }
@@ -291,6 +297,7 @@ public class SDMAdminServiceImpl implements SDMAdminService {
       throw new ServiceException(
           SDMUtils.getErrorMessage("FAILED_TO_PARSE_REPOSITORY_RESPONSE"), e);
     }
+    logger.debug("END: getRepositoryId - not found");
     return null;
   }
 }

@@ -14,6 +14,8 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class {@link SDMAttachmentsReader} is used to deep read attachments from the database for a
@@ -24,36 +26,47 @@ import java.util.List;
  */
 public class SDMAttachmentsReader {
 
+  private static final Logger logger = LoggerFactory.getLogger(SDMAttachmentsReader.class);
   private final SDMAssociationCascader cascader;
   private final PersistenceService persistence;
 
   public SDMAttachmentsReader(SDMAssociationCascader cascader, PersistenceService persistence) {
     this.cascader = requireNonNull(cascader, "cascader must not be null");
     this.persistence = requireNonNull(persistence, "persistence must not be null");
+    logger.debug("SDMAttachmentsReader initialized");
   }
 
   public List<Attachments> readAttachments(
       CdsModel model, CdsEntity entity, CqnFilterableStatement statement) {
+    logger.debug("START: Reading attachments for entity: {}", entity.getQualifiedName());
 
     SDMNodeTree nodePath = cascader.findEntityPath(model, entity);
     List<Expand<?>> expandList = buildExpandList(nodePath);
+    logger.debug("Found {} expand nodes for attachment path", expandList.size());
 
     Select<?> select;
     if (!expandList.isEmpty()) {
+      logger.debug("Building query with expand list for deep read");
       select = Select.from(statement.ref()).columns(expandList);
     } else {
+      logger.debug("Building query without expand list");
       select = Select.from(statement.ref()).columns(StructuredType::_all);
     }
 
     if (statement.where().isPresent()) {
       select.where(statement.where().get());
+      logger.debug("Query includes where clause");
     }
 
     Result result = persistence.run(select);
-    return result.listOf(Attachments.class);
+    List<Attachments> attachmentsList = result.listOf(Attachments.class);
+    logger.info("Read {} attachments for entity: {}", attachmentsList.size(), entity.getQualifiedName());
+    logger.debug("END: Reading attachments");
+    return attachmentsList;
   }
 
   public List<String> getAttachmentEntityPaths(CdsModel model, CdsEntity entity) {
+    logger.debug("Getting attachment entity paths for: {}", entity.getQualifiedName());
     SDMNodeTree nodePath = cascader.findEntityPath(model, entity);
 
     List<String> attachmentPaths = new ArrayList<>();
@@ -61,15 +74,18 @@ public class SDMAttachmentsReader {
     if (nodePath != null) {
       collectAttachmentPaths(nodePath, attachmentPaths, model);
     }
+    logger.debug("Found {} attachment entity paths", attachmentPaths.size());
     return attachmentPaths;
   }
 
   private void collectAttachmentPaths(
       SDMNodeTree node, List<String> attachmentPaths, CdsModel model) {
     String entityName = node.getIdentifier().fullEntityName();
+    logger.debug("Checking entity: {}", entityName);
 
     // Check if this entity is an attachment entity
     if (isAttachmentEntity(model, entityName)) {
+      logger.debug("Found attachment entity: {}", entityName);
       attachmentPaths.add(entityName);
     }
 
@@ -82,22 +98,31 @@ public class SDMAttachmentsReader {
   private boolean isAttachmentEntity(CdsModel model, String entityName) {
     var entityOpt = model.findEntity(entityName);
     if (!entityOpt.isPresent()) {
+      logger.debug("Entity not found in model: {}", entityName);
       return false;
     }
 
     CdsEntity entity = entityOpt.get();
     // Check if this entity has the @_is_media_data annotation (indicating attachment entity)
-    return entity.getAnnotationValue("_is_media_data", false);
+    boolean isMediaData = entity.getAnnotationValue("_is_media_data", false);
+    logger.debug("Entity {} is media entity: {}", entityName, isMediaData);
+    return isMediaData;
   }
 
   private List<Expand<?>> buildExpandList(SDMNodeTree root) {
     List<Expand<?>> expandResultList = new ArrayList<>();
+    if (root == null) {
+      logger.debug("Root node is null, returning empty expand list");
+      return expandResultList;
+    }
+    
     root.getChildren()
         .forEach(
             child -> {
               Expand<?> expand = buildExpandFromTree(child);
               expandResultList.add(expand);
             });
+    logger.debug("Built expand list with {} items", expandResultList.size());
 
     return expandResultList;
   }

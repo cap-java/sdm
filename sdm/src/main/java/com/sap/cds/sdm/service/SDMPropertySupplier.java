@@ -7,8 +7,11 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.ServiceBindingDestinationOpt
 import io.reactivex.annotations.NonNull;
 import java.net.URI;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SDMPropertySupplier extends DefaultOAuth2PropertySupplier {
+  private static final Logger logger = LoggerFactory.getLogger(SDMPropertySupplier.class);
 
   public SDMPropertySupplier(ServiceBindingDestinationOptions options) {
     super(options);
@@ -17,15 +20,20 @@ public class SDMPropertySupplier extends DefaultOAuth2PropertySupplier {
   @NonNull
   @Override
   public URI getServiceUri() {
-    return getCredentialOrThrow(URI.class, "endpoints", "ecmservice", "url");
+    logger.debug("START: getServiceUri");
+    URI uri = getCredentialOrThrow(URI.class, "endpoints", "ecmservice", "url");
+    logger.debug("END: getServiceUri - returning: {}", uri);
+    return uri;
   }
 
   @NotNull
   @Override
   public OAuth2Options getOAuth2Options() {
+    logger.debug("START: getOAuth2Options");
     var builder = OAuth2Options.builder();
     var user = this.options.getOption(SDMUser.class);
     if (!user.isEmpty()) {
+      logger.debug("User option present, adding X-EcmUserEnc and X-EcmAddPrincipals attributes");
       var objectMapper = new ObjectMapper();
       var azAttrNode = objectMapper.createObjectNode();
       // add X-EcmUserEnc attribute
@@ -37,6 +45,7 @@ public class SDMPropertySupplier extends DefaultOAuth2PropertySupplier {
       authoritiesNode.set("az_attr", azAttrNode);
       builder.withTokenRetrievalParameter("authorities", authoritiesNode.toString());
     }
+    logger.debug("END: getOAuth2Options");
     return builder.build();
   }
 }

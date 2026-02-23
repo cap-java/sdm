@@ -59,8 +59,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(HandlerOrder.DEFAULT)
   public void processBefore(CdsCreateEventContext context, List<CdsData> data) throws IOException {
-    logger.info("Target Entity : " + context.getTarget().getQualifiedName());
-    logger.debug("CDS Data attachments : " + data);
+    logger.info(
+        "START: Process attachments before persistence for entity: {}",
+        context.getTarget().getQualifiedName());
+    logger.debug("Number of entities to process: {}", data.size());
 
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
@@ -70,11 +72,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               persistenceService,
               context.getTarget().getQualifiedName(),
               entityData);
-      logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
+      logger.debug("Attachment compositions present: {}", attachmentCompositionDetails.keySet());
       updateName(context, data, attachmentCompositionDetails);
       // Remove uploadStatus from attachment data to prevent validation errors
       cleanupReadonlyContextsForAttachments(context, entityData, attachmentCompositionDetails);
     }
+    logger.info("END: Process attachments before persistence");
   }
 
   @After
@@ -82,9 +85,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   public void processAfter(CdsCreateEventContext context, List<CdsData> data) {
     // Update uploadStatus to Success after entity is persisted
     logger.info(
-        "Post-processing attachments after persistence for entity: {}",
+        "START: Post-processing attachments after persistence for entity: {}",
         context.getTarget().getQualifiedName());
 
+    int totalProcessed = 0;
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
@@ -107,6 +111,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                   targetEntity, entityData, attachmentCompositionName);
 
           if (attachments != null) {
+            logger.debug(
+                "Processing {} attachments for composition: {}",
+                attachments.size(),
+                attachmentCompositionName);
             for (Map<String, Object> attachment : attachments) {
               String id = (String) attachment.get("ID");
               String uploadStatus = (String) attachment.get("uploadStatus");
@@ -114,16 +122,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                 CmisDocument cmisDocument = new CmisDocument();
                 cmisDocument.setAttachmentId(id);
                 cmisDocument.setUploadStatus(uploadStatus);
+                logger.debug("Saving uploadStatus: {} for attachment ID: {}", uploadStatus, id);
                 // Update uploadStatus to Success in database if it was InProgress
                 dbQuery.saveUploadStatusToAttachment(
                     attachmentEntity.get(), persistenceService, cmisDocument);
-                logger.debug("Updated uploadStatus to Success for attachment ID: {}", id);
+                totalProcessed++;
               }
             }
           }
         }
       }
     }
+    logger.info("END: Post-processing completed. Processed {} attachments", totalProcessed);
   }
 
   @Before
@@ -277,10 +287,16 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> scanFailedFiles,
       List<String> uploadInProgressFiles)
       throws IOException {
+    long startTime = System.currentTimeMillis();
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
     String descriptionInRequest = (String) attachment.get("note");
     String objectId = (String) attachment.get("objectId");
+    logger.debug(
+        "START: Process attachment - ID: {}, fileName: {}, objectId: {}",
+        id,
+        filenameInRequest,
+        objectId);
 
     // Fetch original data from DB
     CmisDocument cmisDocument =
@@ -290,6 +306,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     // Check upload status and collect problematic files
     if (checkUploadStatus(
         attachment, fileNameInDB, filenameInRequest, scanFailedFiles, uploadInProgressFiles)) {
+      logger.debug("Upload status check failed, skipping further processing for ID: {}", id);
       return; // Skip further processing if upload status is problematic
     }
 
@@ -316,6 +333,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         filesNotFound,
         filesWithUnsupportedProperties,
         badRequest);
+    logger.debug(
+        "END: Process attachment - ID: {} completed in {} ms",
+        id,
+        (System.currentTimeMillis() - startTime));
   }
 
   private boolean checkUploadStatus(
@@ -333,10 +354,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
 
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      logger.warn("Upload in progress for file: {}", fileName);
       uploadInProgressFiles.add(fileName);
       return true;
     }
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+      logger.warn("Scan failed for file: {}", fileName);
       scanFailedFiles.add(fileName);
       return true;
     }
@@ -348,6 +371,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private SDMAttachmentData fetchSDMData(
       CdsCreateEventContext context, String objectId, SDMCredentials sdmCredentials)
       throws IOException {
+    logger.debug("Fetching attachment data from SDM for objectId: {}", objectId);
     JSONObject sdmAttachmentData =
         AttachmentsHandlerUtils.fetchAttachmentDataFromSDM(
             sdmService, objectId, sdmCredentials, context.getUserInfo().isSystemUser());
@@ -362,6 +386,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (succinctProperties.has("cmis:description")) {
       descriptionInSDM = succinctProperties.getString("cmis:description");
     }
+    logger.debug(
+        "Retrieved from SDM - fileName: {}, hasDescription: {}",
+        fileNameInSDM,
+        descriptionInSDM != null);
 
     return new SDMAttachmentData(fileNameInSDM, descriptionInSDM);
   }
@@ -414,8 +442,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         false);
 
     logger.debug(
-        "Creating attachment in SDM - ID: {}, properties count: {}",
+        "Creating attachment in SDM - ID: {}, fileName: {}, properties count: {}",
         id,
+        filenameInRequest,
         updatedSecondaryProperties.size());
 
     try {
@@ -427,7 +456,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
 
-      logger.debug("SDM create response code: {} for attachment ID: {}", responseCode, id);
+      logger.info("SDM update response code: {} for attachment ID: {}", responseCode, id);
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
           attachment,
@@ -440,6 +469,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           duplicateFileNameList,
           filesNotFound);
     } catch (ServiceException e) {
+      logger.error("Error updating attachment {} in SDM: {}", id, e.getMessage(), e);
       AttachmentsHandlerUtils.handleSDMServiceException(
           e,
           attachment,
@@ -464,6 +494,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles,
       String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      logger.warn(
+          "Files with restricted characters in filename: {}", fileNameWithRestrictedCharacters);
       context
           .getMessages()
           .warn(
@@ -471,6 +503,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                   + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
+      logger.warn("Duplicate filenames detected: {}", duplicateFileNameList);
       context
           .getMessages()
           .warn(
@@ -478,6 +511,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
                   + contextInfo);
     }
     if (!filesNotFound.isEmpty()) {
+      logger.warn("Files not found in SDM: {}", filesNotFound);
       context.getMessages().warn(SDMErrorMessages.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
@@ -494,6 +528,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         invalidPropertyNames.add(propertyTitles.get(file));
       }
       if (!invalidPropertyNames.isEmpty()) {
+        logger.warn("Files with unsupported properties: {}", invalidPropertyNames);
         context
             .getMessages()
             .warn(
@@ -502,9 +537,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     }
 
     if (!badRequest.isEmpty()) {
+      logger.warn("Bad request errors: {}", badRequest.keySet());
       context.getMessages().warn(SDMErrorMessages.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
+      logger.warn("No SDM roles for files: {}", noSDMRoles);
       context
           .getMessages()
           .warn(
@@ -545,7 +582,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
       String attachmentCompositionName = entry.getValue().get("name");
 
-      logger.info(
+      logger.debug(
           "Cleaning up SDM_READONLY_CONTEXT for composition: {}", attachmentCompositionName);
 
       // Fetch attachments for this specific composition
@@ -554,7 +591,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               targetEntity, entityData, attachmentCompositionName);
 
       if (attachments != null && !attachments.isEmpty()) {
-        logger.info(
+        logger.debug(
             "Found {} attachments in composition: {}",
             attachments.size(),
             attachmentCompositionName);
@@ -562,15 +599,15 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         for (int i = 0; i < attachments.size(); i++) {
           Map<String, Object> attachment = attachments.get(i);
           if (attachment.containsKey(SDM_READONLY_CONTEXT)) {
-            logger.info(
-                "  Removing SDM_READONLY_CONTEXT from attachment [{}] in {}",
+            logger.debug(
+                "Removing SDM_READONLY_CONTEXT from attachment [{}] in {}",
                 i,
                 attachmentCompositionName);
             attachment.remove(SDM_READONLY_CONTEXT);
           }
         }
       } else {
-        logger.info("No attachments found for composition: {}", attachmentCompositionName);
+        logger.debug("No attachments found for composition: {}", attachmentCompositionName);
       }
     }
   }

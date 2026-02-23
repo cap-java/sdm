@@ -44,11 +44,19 @@ public class AttachmentsHandlerUtils {
    */
   public static List<String> getAttachmentEntityPaths(
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
+    logger.debug("Getting attachment entity paths for: {}", entity.getQualifiedName());
     try {
       SDMAssociationCascader cascader = new SDMAssociationCascader();
       SDMAttachmentsReader reader = new SDMAttachmentsReader(cascader, persistenceService);
-      return reader.getAttachmentEntityPaths(model, entity);
+      List<String> paths = reader.getAttachmentEntityPaths(model, entity);
+      logger.debug("Found {} attachment entity paths", paths.size());
+      return paths;
     } catch (Exception e) {
+      logger.error(
+          "Error getting attachment entity paths for {}: {}",
+          entity.getQualifiedName(),
+          e.getMessage(),
+          e);
       return new ArrayList<>();
     }
   }
@@ -70,6 +78,7 @@ public class AttachmentsHandlerUtils {
    */
   public static Map<String, String> getAttachmentPathMapping(
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
+    logger.debug("Getting attachment path mapping for entity: {}", entity.getQualifiedName());
     try {
       Map<String, String> pathMapping = new HashMap<>();
       SDMAssociationCascader cascader = new SDMAssociationCascader();
@@ -89,9 +98,10 @@ public class AttachmentsHandlerUtils {
                   processNestedAttachmentComposition(
                       model, entity, reader, pathMapping, composition));
 
+      logger.debug("Found {} attachment path mappings for entity: {}", pathMapping.size(), entity.getQualifiedName());
       return pathMapping;
     } catch (Exception e) {
-      logger.error(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
+      logger.error("Error fetching attachment composition for entity {}: {}", entity.getQualifiedName(), e.getMessage(), e);
       return new HashMap<>();
     }
   }
@@ -199,6 +209,7 @@ public class AttachmentsHandlerUtils {
    */
   public static List<Map<String, Object>> fetchAttachments(
       String targetEntity, Map<String, Object> entity, String attachmentCompositionName) {
+    logger.debug("Fetching attachments for entity: {}, composition: {}", targetEntity, attachmentCompositionName);
     String[] targetEntityPath = targetEntity.split("\\.");
     targetEntity = targetEntityPath[targetEntityPath.length - 1];
     entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity);
@@ -211,8 +222,10 @@ public class AttachmentsHandlerUtils {
             : null; // Second last part (e.g., "chapters")
 
     // Find all attachment arrays in the nested entity structure
-    return AttachmentsHandlerUtils.findNestedAttachments(
+    List<Map<String, Object>> attachments = AttachmentsHandlerUtils.findNestedAttachments(
         entity, attachmentKeyFromComposition, parentKeyFromComposition);
+    logger.debug("Fetched {} attachments for composition: {}", attachments.size(), attachmentCompositionName);
+    return attachments;
   }
 
   private static List<Map<String, Object>> findNestedAttachments(
@@ -397,6 +410,7 @@ public class AttachmentsHandlerUtils {
       PersistenceService persistenceService,
       String targetEntity,
       Map<String, Object> entityData) {
+    logger.debug("Getting attachment composition details for entity: {}", targetEntity);
     Map<String, Map<String, String>> attachmentDetails = new HashMap<>();
 
     // Get the composition path mapping
@@ -421,6 +435,7 @@ public class AttachmentsHandlerUtils {
       attachmentDetails.put(definition, details);
     }
 
+    logger.debug("Found {} attachment composition details", attachmentDetails.size());
     return attachmentDetails;
   }
 
@@ -441,6 +456,7 @@ public class AttachmentsHandlerUtils {
    */
   public static Map<String, String> getAttachmentParentTitles(
       String targetEntity, Map<String, Object> entity, Map<String, String> compositionPathMapping) {
+    logger.debug("Getting parent titles for entity: {}", targetEntity);
     Map<String, String> parentTitles = new HashMap<>();
 
     String[] targetEntityPath = targetEntity.split("\\.");
@@ -564,6 +580,7 @@ public class AttachmentsHandlerUtils {
       String composition,
       String contextInfo,
       Optional<CdsEntity> attachmentEntity) {
+    logger.debug("Validating file names for composition: {}", composition);
     Boolean isError = false;
     String targetEntity = context.getTarget().getQualifiedName();
     String upIdKey = "";
@@ -581,25 +598,28 @@ public class AttachmentsHandlerUtils {
 
     // Collecting all the errors
     if (whitespaceFilenames != null && !whitespaceFilenames.isEmpty()) {
+      logger.warn("File name validation failed: whitespace-only filenames detected");
       context
           .getMessages()
           .error(SDMUtils.getErrorMessage("FILENAME_WHITESPACE_ERROR_MESSAGE") + contextInfo);
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
+      logger.warn("File name validation failed: restricted characters in {} files", restrictedFileNames.size());
       context
           .getMessages()
           .error(SDMErrorMessages.nameConstraintMessage(restrictedFileNames) + contextInfo);
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
+      logger.warn("File name validation failed: {} duplicate filenames found", duplicateFilenames.size());
       String formattedMessage =
           String.format(
               "%s%s", SDMErrorMessages.duplicateFilenameFormat(duplicateFilenames), contextInfo);
       context.getMessages().error(formattedMessage);
       isError = true;
     }
-    // returning the error message
+    logger.debug("File name validation completed. Errors found: {}", isError);
     return isError;
   }
 
@@ -616,7 +636,10 @@ public class AttachmentsHandlerUtils {
   public static JSONObject fetchAttachmentDataFromSDM(
       SDMService sdmService, String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
-    return sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+    logger.debug("Fetching attachment data from SDM for objectId: {}", objectId);
+    JSONObject result = sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+    logger.debug("Successfully fetched attachment data from SDM for objectId: {}", objectId);
+    return result;
   }
 
   /**
@@ -633,18 +656,23 @@ public class AttachmentsHandlerUtils {
       String fileNameInSDM,
       Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
+    logger.debug("Updating filename property - DB: {}, Request: {}, SDM: {}", fileNameInDB, filenameInRequest, fileNameInSDM);
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
         if (!filenameInRequest.equals(fileNameInSDM)) {
+          logger.debug("Filename updated from SDM value: {} to request value: {}", fileNameInSDM, filenameInRequest);
           updatedSecondaryProperties.put("filename", filenameInRequest);
         }
       } else {
+        logger.warn("Filename validation failed: filename cannot be empty");
         throw new ServiceException("Filename cannot be empty");
       }
     } else {
       if (filenameInRequest == null) {
+        logger.warn("Filename validation failed: filename cannot be empty");
         throw new ServiceException("Filename cannot be empty");
       } else if (!fileNameInDB.equals(filenameInRequest)) {
+        logger.debug("Filename updated from DB value: {} to request value: {}", fileNameInDB, filenameInRequest);
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
     }
@@ -657,6 +685,7 @@ public class AttachmentsHandlerUtils {
       Map<String, String> updatedSecondaryProperties,
       Boolean isUpdate)
       throws ServiceException {
+    logger.debug("Updating description property - isUpdate: {}", isUpdate);
     // Normalize null to empty string for comparison
     String normalizedRequest = descriptionInRequest == null ? "" : descriptionInRequest;
     String normalizedDB = descriptionInDB == null ? "" : descriptionInDB;
@@ -676,6 +705,7 @@ public class AttachmentsHandlerUtils {
       }
     } else if (!normalizedDB.equals(
         normalizedRequest)) { // Attachment contained description and is being updated now
+      logger.debug("Description updated from DB value to request value");
       updatedSecondaryProperties.put("description", normalizedRequest);
     }
   }
@@ -705,27 +735,32 @@ public class AttachmentsHandlerUtils {
       List<String> noSDMRoles,
       List<String> duplicateFileNameList,
       List<String> filesNotFound) {
+    logger.debug("Handling SDM update response with code: {}", responseCode);
     switch (responseCode) {
       case 403:
+        logger.warn("SDM update failed with 403 Forbidden for file: {}", fileNameInSDM);
         noSDMRoles.add(fileNameInSDM);
         revertAttachmentProperties(
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         break;
       case 409:
+        logger.warn("SDM update failed with 409 Conflict (duplicate filename): {}", filenameInRequest);
         duplicateFileNameList.add(filenameInRequest);
         revertAttachmentProperties(
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         break;
       case 404:
+        logger.warn("SDM update failed with 404 Not Found for file: {}", fileNameInSDM);
         filesNotFound.add(fileNameInSDM);
         revertAttachmentProperties(
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         break;
       case 200:
       case 201:
-        // Success cases, do nothing
+        logger.debug("SDM update successful with response code: {}", responseCode);
         break;
       default:
+        logger.error("SDM update failed with unexpected response code: {}", responseCode);
         throw new ServiceException(SDMUtils.getErrorMessage("SDM_SERVER_ERROR"), (Object[]) null);
     }
   }
@@ -753,6 +788,7 @@ public class AttachmentsHandlerUtils {
       String descriptionInSDM,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest) {
+    logger.error("SDM service exception occurred for file {}: {}", filenameInRequest, e.getMessage());
     if (e.getMessage().startsWith(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES"))) {
       String unsupportedDetails =
           e.getMessage()
@@ -783,6 +819,7 @@ public class AttachmentsHandlerUtils {
       Map<String, String> propertiesInDB,
       Map<String, String> secondaryTypeProperties,
       String descriptionInSDM) {
+    logger.debug("Reverting attachment properties for file: {}", fileName);
     if (propertiesInDB != null) {
       for (Map.Entry<String, String> entry : propertiesInDB.entrySet()) {
         String dbKey = entry.getKey();
@@ -814,6 +851,7 @@ public class AttachmentsHandlerUtils {
    */
   public static CmisDocument prepareCmisDocument(
       String filenameInRequest, String descriptionInRequest, String objectId) {
+    logger.debug("Preparing CMIS document - filename: {}, objectId: {}", filenameInRequest, objectId);
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setDescription(descriptionInRequest);
