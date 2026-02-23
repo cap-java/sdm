@@ -98,10 +98,17 @@ public class AttachmentsHandlerUtils {
                   processNestedAttachmentComposition(
                       model, entity, reader, pathMapping, composition));
 
-      logger.debug("Found {} attachment path mappings for entity: {}", pathMapping.size(), entity.getQualifiedName());
+      logger.debug(
+          "Found {} attachment path mappings for entity: {}",
+          pathMapping.size(),
+          entity.getQualifiedName());
       return pathMapping;
     } catch (Exception e) {
-      logger.error("Error fetching attachment composition for entity {}: {}", entity.getQualifiedName(), e.getMessage(), e);
+      logger.error(
+          "Error fetching attachment composition for entity {}: {}",
+          entity.getQualifiedName(),
+          e.getMessage(),
+          e);
       return new HashMap<>();
     }
   }
@@ -209,7 +216,10 @@ public class AttachmentsHandlerUtils {
    */
   public static List<Map<String, Object>> fetchAttachments(
       String targetEntity, Map<String, Object> entity, String attachmentCompositionName) {
-    logger.debug("Fetching attachments for entity: {}, composition: {}", targetEntity, attachmentCompositionName);
+    logger.debug(
+        "Fetching attachments for entity: {}, composition: {}",
+        targetEntity,
+        attachmentCompositionName);
     String[] targetEntityPath = targetEntity.split("\\.");
     targetEntity = targetEntityPath[targetEntityPath.length - 1];
     entity = AttachmentsHandlerUtils.wrapEntityWithParent(entity, targetEntity);
@@ -222,9 +232,13 @@ public class AttachmentsHandlerUtils {
             : null; // Second last part (e.g., "chapters")
 
     // Find all attachment arrays in the nested entity structure
-    List<Map<String, Object>> attachments = AttachmentsHandlerUtils.findNestedAttachments(
-        entity, attachmentKeyFromComposition, parentKeyFromComposition);
-    logger.debug("Fetched {} attachments for composition: {}", attachments.size(), attachmentCompositionName);
+    List<Map<String, Object>> attachments =
+        AttachmentsHandlerUtils.findNestedAttachments(
+            entity, attachmentKeyFromComposition, parentKeyFromComposition);
+    logger.debug(
+        "Fetched {} attachments for composition: {}",
+        attachments.size(),
+        attachmentCompositionName);
     return attachments;
   }
 
@@ -605,14 +619,17 @@ public class AttachmentsHandlerUtils {
       isError = true;
     }
     if (restrictedFileNames != null && !restrictedFileNames.isEmpty()) {
-      logger.warn("File name validation failed: restricted characters in {} files", restrictedFileNames.size());
+      logger.warn(
+          "File name validation failed: restricted characters in {} files",
+          restrictedFileNames.size());
       context
           .getMessages()
           .error(SDMErrorMessages.nameConstraintMessage(restrictedFileNames) + contextInfo);
       isError = true;
     }
     if (duplicateFilenames != null && !duplicateFilenames.isEmpty()) {
-      logger.warn("File name validation failed: {} duplicate filenames found", duplicateFilenames.size());
+      logger.warn(
+          "File name validation failed: {} duplicate filenames found", duplicateFilenames.size());
       String formattedMessage =
           String.format(
               "%s%s", SDMErrorMessages.duplicateFilenameFormat(duplicateFilenames), contextInfo);
@@ -656,11 +673,18 @@ public class AttachmentsHandlerUtils {
       String fileNameInSDM,
       Map<String, String> updatedSecondaryProperties)
       throws ServiceException {
-    logger.debug("Updating filename property - DB: {}, Request: {}, SDM: {}", fileNameInDB, filenameInRequest, fileNameInSDM);
+    logger.debug(
+        "Updating filename property - DB: {}, Request: {}, SDM: {}",
+        fileNameInDB,
+        filenameInRequest,
+        fileNameInSDM);
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
         if (!filenameInRequest.equals(fileNameInSDM)) {
-          logger.debug("Filename updated from SDM value: {} to request value: {}", fileNameInSDM, filenameInRequest);
+          logger.debug(
+              "Filename updated from SDM value: {} to request value: {}",
+              fileNameInSDM,
+              filenameInRequest);
           updatedSecondaryProperties.put("filename", filenameInRequest);
         }
       } else {
@@ -672,7 +696,10 @@ public class AttachmentsHandlerUtils {
         logger.warn("Filename validation failed: filename cannot be empty");
         throw new ServiceException("Filename cannot be empty");
       } else if (!fileNameInDB.equals(filenameInRequest)) {
-        logger.debug("Filename updated from DB value: {} to request value: {}", fileNameInDB, filenameInRequest);
+        logger.debug(
+            "Filename updated from DB value: {} to request value: {}",
+            fileNameInDB,
+            filenameInRequest);
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
     }
@@ -744,7 +771,8 @@ public class AttachmentsHandlerUtils {
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
         break;
       case 409:
-        logger.warn("SDM update failed with 409 Conflict (duplicate filename): {}", filenameInRequest);
+        logger.warn(
+            "SDM update failed with 409 Conflict (duplicate filename): {}", filenameInRequest);
         duplicateFileNameList.add(filenameInRequest);
         revertAttachmentProperties(
             attachment, fileNameInSDM, propertiesInDB, secondaryTypeProperties, descriptionInSDM);
@@ -788,7 +816,8 @@ public class AttachmentsHandlerUtils {
       String descriptionInSDM,
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest) {
-    logger.error("SDM service exception occurred for file {}: {}", filenameInRequest, e.getMessage());
+    logger.error(
+        "SDM service exception occurred for file {}: {}", filenameInRequest, e.getMessage());
     if (e.getMessage().startsWith(SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES"))) {
       String unsupportedDetails =
           e.getMessage()
@@ -851,7 +880,8 @@ public class AttachmentsHandlerUtils {
    */
   public static CmisDocument prepareCmisDocument(
       String filenameInRequest, String descriptionInRequest, String objectId) {
-    logger.debug("Preparing CMIS document - filename: {}, objectId: {}", filenameInRequest, objectId);
+    logger.debug(
+        "Preparing CMIS document - filename: {}, objectId: {}", filenameInRequest, objectId);
     CmisDocument cmisDocument = new CmisDocument();
     cmisDocument.setFileName(filenameInRequest);
     cmisDocument.setDescription(descriptionInRequest);

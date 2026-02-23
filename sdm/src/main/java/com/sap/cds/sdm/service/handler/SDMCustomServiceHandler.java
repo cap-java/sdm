@@ -1527,7 +1527,8 @@ public class SDMCustomServiceHandler {
       logger.debug("Deleting newly created folder: {}", folderId);
       sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
     } else {
-      logger.debug("Deleting {} copied attachments from existing folder", attachmentsMetadata.size());
+      logger.debug(
+          "Deleting {} copied attachments from existing folder", attachmentsMetadata.size());
       for (Map<String, String> attachmentMetadata : attachmentsMetadata) {
         sdmService.deleteDocument(
             "delete", attachmentMetadata.get("cmis:objectId"), context.getUserInfo().getName());

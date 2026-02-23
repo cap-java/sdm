@@ -65,7 +65,8 @@ public class SDMUtils {
         }
       }
     }
-    logger.debug("END: FileNameContainsWhitespace - found {} issues", filenamesWithWhitespace.size());
+    logger.debug(
+        "END: FileNameContainsWhitespace - found {} issues", filenamesWithWhitespace.size());
     return filenamesWithWhitespace;
   }
 
@@ -117,7 +118,9 @@ public class SDMUtils {
         }
       }
     }
-    logger.debug("END: FileNameContainsRestrictedCharaters - found {} restricted", restrictedFilenames.size());
+    logger.debug(
+        "END: FileNameContainsRestrictedCharaters - found {} restricted",
+        restrictedFilenames.size());
     return restrictedFilenames;
   }
 
@@ -432,7 +435,8 @@ public class SDMUtils {
 
   public static Long getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
-    logger.debug("START: getAttachmentCountAndMessage for entity: {}", attachmentEntity.getQualifiedName());
+    logger.debug(
+        "START: getAttachmentCountAndMessage for entity: {}", attachmentEntity.getQualifiedName());
     Long maxCount =
         CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
 

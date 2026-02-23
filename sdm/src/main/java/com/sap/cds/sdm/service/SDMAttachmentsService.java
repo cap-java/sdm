@@ -140,7 +140,8 @@ public class SDMAttachmentsService extends ServiceDelegator
     // Return structured result that OData can serialize
     Map<String, Object> result = new HashMap<>();
     result.put("failedAttachments", failedAttachments != null ? failedAttachments : List.of());
-    logger.debug("END: moveAttachments - returning result with {} failed attachments", 
+    logger.debug(
+        "END: moveAttachments - returning result with {} failed attachments",
         failedAttachments != null ? failedAttachments.size() : 0);
     return result;
   }

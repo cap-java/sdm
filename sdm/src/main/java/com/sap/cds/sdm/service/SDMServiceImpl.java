@@ -588,8 +588,10 @@ public class SDMServiceImpl implements SDMService {
       repoKey.setSubdomain(tenant);
       repoKey.setRepoId(repositoryId);
       RepoValue value = repoValueMap.get(repositoryId);
-      logger.debug("Repository info fetched - VersionEnabled: {}, VirusScanEnabled: {}", 
-          value.getVersionEnabled(), value.getVirusScanEnabled());
+      logger.debug(
+          "Repository info fetched - VersionEnabled: {}, VirusScanEnabled: {}",
+          value.getVersionEnabled(),
+          value.getVirusScanEnabled());
       CacheConfig.getRepoCache().put(repoKey, value);
       return repoValueMap.get(repositoryId);
     }
@@ -608,7 +610,9 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getRepoInfoRequest = new HttpGet(getRepoInfoUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepoInfoRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
-        logger.error("Failed to fetch repository info. Status code: {}", response.getStatusLine().getStatusCode());
+        logger.error(
+            "Failed to fetch repository info. Status code: {}",
+            response.getStatusLine().getStatusCode());
         throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"));
       }
       String responseString = EntityUtils.toString(response.getEntity());
@@ -649,14 +653,17 @@ public class SDMServiceImpl implements SDMService {
       }
     }
     repoValueMap.put(repositoryId, repoValue);
-    logger.debug("END: fetchRepositoryData - VersionEnabled: {}, VirusScanEnabled: {}", 
-        repoValue.getVersionEnabled(), repoValue.getVirusScanEnabled());
+    logger.debug(
+        "END: fetchRepositoryData - VersionEnabled: {}, VirusScanEnabled: {}",
+        repoValue.getVersionEnabled(),
+        repoValue.getVirusScanEnabled());
     return repoValueMap;
   }
 
   @Override
   public int deleteDocument(String cmisaction, String objectId, String user) {
-    logger.info("Deleting document - action: {}, objectId: {}, user: {}", cmisaction, objectId, user);
+    logger.info(
+        "Deleting document - action: {}, objectId: {}, user: {}", cmisaction, objectId, user);
     long startTime = System.currentTimeMillis();
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
@@ -678,8 +685,10 @@ public class SDMServiceImpl implements SDMService {
     deleteDocumentRequest.setEntity(multipart);
     try (var response = (CloseableHttpResponse) httpClient.execute(deleteDocumentRequest)) {
       int statusCode = response.getStatusLine().getStatusCode();
-      logger.info("Document deletion completed with status code: {} in {} ms", 
-          statusCode, (System.currentTimeMillis() - startTime));
+      logger.info(
+          "Document deletion completed with status code: {} in {} ms",
+          statusCode,
+          (System.currentTimeMillis() - startTime));
       return statusCode;
     } catch (IOException e) {
       logger.error("Error deleting document {}: {}", objectId, e.getMessage(), e);
@@ -777,7 +786,9 @@ public class SDMServiceImpl implements SDMService {
         }
       }
     }
-    logger.debug("END: getValidSecondaryProperties - found {} valid properties", validSecondaryProperties.size());
+    logger.debug(
+        "END: getValidSecondaryProperties - found {} valid properties",
+        validSecondaryProperties.size());
 
     return validSecondaryProperties;
   }

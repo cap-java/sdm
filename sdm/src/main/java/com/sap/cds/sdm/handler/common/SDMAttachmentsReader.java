@@ -60,7 +60,8 @@ public class SDMAttachmentsReader {
 
     Result result = persistence.run(select);
     List<Attachments> attachmentsList = result.listOf(Attachments.class);
-    logger.info("Read {} attachments for entity: {}", attachmentsList.size(), entity.getQualifiedName());
+    logger.info(
+        "Read {} attachments for entity: {}", attachmentsList.size(), entity.getQualifiedName());
     logger.debug("END: Reading attachments");
     return attachmentsList;
   }
@@ -115,7 +116,7 @@ public class SDMAttachmentsReader {
       logger.debug("Root node is null, returning empty expand list");
       return expandResultList;
     }
-    
+
     root.getChildren()
         .forEach(
             child -> {

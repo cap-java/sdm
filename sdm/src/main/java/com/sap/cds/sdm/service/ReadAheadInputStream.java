@@ -216,7 +216,12 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
-    logger.debug("read(byte[], off={}, len={}) called, position: {}, bufferSize: {}", off, len, position.get(), currentBufferSize);
+    logger.debug(
+        "read(byte[], off={}, len={}) called, position: {}, bufferSize: {}",
+        off,
+        len,
+        position.get(),
+        currentBufferSize);
     if (position.get() >= currentBufferSize) {
       if (lastChunkLoaded.get()) return -1;
       loadNextChunk();

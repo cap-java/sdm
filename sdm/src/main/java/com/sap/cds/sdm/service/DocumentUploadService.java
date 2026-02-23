@@ -59,28 +59,35 @@ public class DocumentUploadService {
       AttachmentCreateEventContext eventContext)
       throws IOException {
     long startTime = System.currentTimeMillis();
-    logger.info("START: Create document - fileName: {}, fileSize: {} bytes", 
-        cmisDocument.getFileName(), cmisDocument.getContentLength());
-    logger.debug("Document properties - repositoryId: {}, mimeType: {}", 
-        cmisDocument.getRepositoryId(), cmisDocument.getMimeType());
-    
+    logger.info(
+        "START: Create document - fileName: {}, fileSize: {} bytes",
+        cmisDocument.getFileName(),
+        cmisDocument.getContentLength());
+    logger.debug(
+        "Document properties - repositoryId: {}, mimeType: {}",
+        cmisDocument.getRepositoryId(),
+        cmisDocument.getMimeType());
+
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
         logger.info("LinkType detected, uploading as single chunk");
         JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
-        logger.info("Link file uploaded successfully in {} ms", (System.currentTimeMillis() - startTime));
+        logger.info(
+            "Link file uploaded successfully in {} ms", (System.currentTimeMillis() - startTime));
         return result;
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       logger.debug("Total file size: {} bytes, Chunk size: {} bytes", totalSize, chunkSize);
-      
+
       if (totalSize <= 400 * 1024 * 1024) {
         // Upload directly if file is ≤ 400MB
         logger.info("File size is <= 400MB, uploading as single chunk");
         JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
-        logger.info("File uploaded successfully as single chunk in {} ms", (System.currentTimeMillis() - startTime));
+        logger.info(
+            "File uploaded successfully as single chunk in {} ms",
+            (System.currentTimeMillis() - startTime));
         return result;
       } else {
         String sdmUrl =
@@ -88,7 +95,9 @@ public class DocumentUploadService {
         // Upload in chunks if file is > 400MB
         logger.info("File size is > 400MB, uploading in chunks of {} bytes", chunkSize);
         JSONObject result = uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
-        logger.info("File uploaded successfully in chunks in {} ms", (System.currentTimeMillis() - startTime));
+        logger.info(
+            "File uploaded successfully in chunks in {} ms",
+            (System.currentTimeMillis() - startTime));
         return result;
       }
     } catch (Exception e) {
@@ -106,7 +115,8 @@ public class DocumentUploadService {
     logger.debug("START: executeHttpPost for file: {}", cmisDocument.getFileName());
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
-      logger.debug("END: executeHttpPost - response formed for file: {}", cmisDocument.getFileName());
+      logger.debug(
+          "END: executeHttpPost - response formed for file: {}", cmisDocument.getFileName());
     } catch (IOException e) {
       throw new ServiceException(SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e);
     }
@@ -126,7 +136,8 @@ public class DocumentUploadService {
       throws IOException, ParseException {
 
     long startTime = System.currentTimeMillis();
-    logger.debug("Appending chunk {} with {} bytes, isLastChunk: {}", chunkIndex, bytesRead, isLastChunk);
+    logger.debug(
+        "Appending chunk {} with {} bytes, isLastChunk: {}", chunkIndex, bytesRead, isLastChunk);
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "appendContent");
@@ -188,7 +199,9 @@ public class DocumentUploadService {
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
-    logger.debug("END: createEmptyDocument - empty document created for file: {}", cmisDocument.getFileName());
+    logger.debug(
+        "END: createEmptyDocument - empty document created for file: {}",
+        cmisDocument.getFileName());
 
     return new JSONObject(finalResponse);
   }
@@ -248,7 +261,10 @@ public class DocumentUploadService {
   private JSONObject uploadLargeFileInChunks(
       CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
       throws IOException {
-    logger.debug("START: uploadLargeFileInChunks for file: {}, chunkSize: {}", cmisDocument.getFileName(), chunkSize);
+    logger.debug(
+        "START: uploadLargeFileInChunks for file: {}, chunkSize: {}",
+        cmisDocument.getFileName(),
+        chunkSize);
 
     try (ReadAheadInputStream chunkedStream =
         new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
@@ -337,7 +353,10 @@ public class DocumentUploadService {
           hasMoreChunks = false;
         }
       }
-      logger.debug("END: uploadLargeFileInChunks - completed {} chunks for file: {}", chunkIndex, cmisDocument.getFileName());
+      logger.debug(
+          "END: uploadLargeFileInChunks - completed {} chunks for file: {}",
+          chunkIndex,
+          cmisDocument.getFileName());
       return responseBody;
     } catch (Exception e) {
       logger.error("Exception in uploadLargeFileInChunks: {}", e.getMessage());
@@ -360,7 +379,7 @@ public class DocumentUploadService {
       String responseString = EntityUtils.toString(response.getEntity());
       int responseCode = response.getStatusLine().getStatusCode();
       logger.debug("SDM response code: {} for file: {}", responseCode, name);
-      
+
       if (responseCode == 201 || responseCode == 200) {
         logger.info("Document created successfully with response code: {}", responseCode);
         JSONObject jsonResponse = new JSONObject(responseString);
