@@ -20,6 +20,10 @@ public class ValidatedAttachmentData {
   private final List<List<String>> movedAttachmentsMetadata;
   private final List<CmisDocument> populatedDocuments;
   private final CmisDocument sourceCmisDocument;
+  private final String createdBy;
+  private final java.time.Instant creationDate;
+  private final String lastModifiedBy;
+  private final java.time.Instant lastModificationDate;
 
   public ValidatedAttachmentData(
       String objectId,
@@ -33,7 +37,11 @@ public class ValidatedAttachmentData {
       List<String> successfulObjectIds,
       List<List<String>> movedAttachmentsMetadata,
       List<CmisDocument> populatedDocuments,
-      CmisDocument sourceCmisDocument) {
+      CmisDocument sourceCmisDocument,
+      String createdBy,
+      java.time.Instant creationDate,
+      String lastModifiedBy,
+      java.time.Instant lastModificationDate) {
     this.objectId = objectId;
     this.fileName = fileName;
     this.mimeType = mimeType;
@@ -46,6 +54,10 @@ public class ValidatedAttachmentData {
     this.movedAttachmentsMetadata = movedAttachmentsMetadata;
     this.populatedDocuments = populatedDocuments;
     this.sourceCmisDocument = sourceCmisDocument;
+    this.createdBy = createdBy;
+    this.creationDate = creationDate;
+    this.lastModifiedBy = lastModifiedBy;
+    this.lastModificationDate = lastModificationDate;
   }
 
   public String getObjectId() {
@@ -118,5 +130,21 @@ public class ValidatedAttachmentData {
 
   public CmisDocument getSourceCmisDocument() {
     return sourceCmisDocument;
+  }
+
+  public String getCreatedBy() {
+    return createdBy;
+  }
+
+  public java.time.Instant getCreationDate() {
+    return creationDate;
+  }
+
+  public String getLastModifiedBy() {
+    return lastModifiedBy;
+  }
+
+  public java.time.Instant getLastModificationDate() {
+    return lastModificationDate;
   }
 }

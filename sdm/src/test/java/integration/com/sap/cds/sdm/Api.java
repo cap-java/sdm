@@ -74,15 +74,28 @@ public class Api implements ApiInterface {
 
   public String createEntityDraft(
       String appUrl, String entityName, String entityName2, String srvpath) {
+    return createEntityDraft(appUrl, entityName, entityName2, srvpath, null);
+  }
+
+  public String createEntityDraft(
+      String appUrl, String entityName, String entityName2, String srvpath, String bookID) {
     MediaType mediaType = MediaType.parse("application/json");
 
     // Creating the Entity (draft)
-    RequestBody body =
-        RequestBody.create(
-            mediaType,
-            "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
-                + entityName2
-                + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}");
+    String jsonBody;
+    if (bookID != null && !bookID.isEmpty()) {
+      // Creating a Chapter within a Book
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \"book_ID\": \"" + bookID + "\"\n}";
+    } else {
+      // Creating a Book or other entity
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+              + entityName2
+              + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \"Akshat\"\n    }\n}";
+    }
+
+    RequestBody body = RequestBody.create(mediaType, jsonBody);
 
     Request request =
         new Request.Builder()
@@ -735,6 +748,7 @@ public class Api implements ApiInterface {
       String targetEntityID,
       String sourceFolderId,
       List<String> objectIds,
+      String targetFacet,
       String sourceFacet)
       throws IOException {
     String objectIdsString = String.join(",", objectIds);
@@ -747,7 +761,7 @@ public class Api implements ApiInterface {
             + entityName
             + "(ID="
             + targetEntityID
-            + ",IsActiveEntity=false)/"
+            + ",IsActiveEntity=true)/"
             + facetName
             + "/"
             + serviceName
@@ -759,7 +773,8 @@ public class Api implements ApiInterface {
     jsonPayload.append("{");
     jsonPayload.append("\"sourceFolderId\": \"").append(sourceFolderId).append("\",");
     jsonPayload.append("\"up__ID\": \"").append(targetEntityID).append("\",");
-    jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\"");
+    jsonPayload.append("\"objectIds\": \"").append(objectIdsString).append("\",");
+    jsonPayload.append("\"targetFacet\": \"").append(targetFacet).append("\"");
 
     if (sourceFacet != null && !sourceFacet.isEmpty()) {
       jsonPayload.append(",\"sourceFacet\": \"").append(sourceFacet).append("\"");
@@ -842,7 +857,9 @@ public class Api implements ApiInterface {
             + appUrl
             + "/odata/v4/"
             + serviceName
-            + "/Books(ID="
+            + "/"
+            + entityName
+            + "(ID="
             + entityID
             + ",IsActiveEntity=true)"
             + "/"

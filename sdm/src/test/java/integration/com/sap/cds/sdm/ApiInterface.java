@@ -10,6 +10,9 @@ public interface ApiInterface {
   public String createEntityDraft(
       String appUrl, String entityName, String entityName2, String srvpath);
 
+  public String createEntityDraft(
+      String appUrl, String entityName, String entityName2, String srvpath, String bookID);
+
   public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID);
 
   public String saveEntityDraft(String appUrl, String entityName, String srvpath, String entityID);
@@ -73,6 +76,7 @@ public interface ApiInterface {
       String targetEntityID,
       String sourceFolderId,
       List<String> objectIds,
+      String targetFacet,
       String sourceFacet)
       throws IOException;
 
