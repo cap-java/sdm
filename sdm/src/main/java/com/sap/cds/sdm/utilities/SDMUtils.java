@@ -197,7 +197,13 @@ public class SDMUtils {
   public static void assembleRequestBodySecondaryTypes(
       MultipartEntityBuilder builder, Map<String, String> requestBody, String objectId) {
     for (Map.Entry<String, String> entry : requestBody.entrySet()) {
-      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
+      String value = entry.getValue();
+      // If value is null, omit it (no update)
+      // If value is empty string, send it (clear the property in CMIS)
+      // For typed properties (int, date), CMIS will clear them if empty is sent
+      if (value != null) {
+        builder.addTextBody(entry.getKey(), value, ContentType.TEXT_PLAIN);
+      }
     }
 
     builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
@@ -343,9 +349,9 @@ public class SDMUtils {
               title = titleAnnotation.get().getValue().toString();
             } else {
               title = element.getName(); /*
-                               * This is in case the user has not specified a title for the column in the cds
-                               * file (which is optional)
-                               */
+                                          * This is in case the user has not specified a title for the column in the cds
+                                          * file (which is optional)
+                                          */
             }
             invalidProperties.put(key, title);
           }
@@ -541,7 +547,8 @@ public class SDMUtils {
         whereArray = refArray;
       }
 
-      // If where condition is not present or empty, return null (valid scenario for select without
+      // If where condition is not present or empty, return null (valid scenario for
+      // select without
       // filter)
       if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
         return null;
