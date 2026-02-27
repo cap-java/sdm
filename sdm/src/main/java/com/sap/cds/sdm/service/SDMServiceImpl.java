@@ -51,11 +51,13 @@ public class SDMServiceImpl implements SDMService {
     this.connectionPool = connectionPool;
     this.binding = binding;
     this.tokenHandler = tokenHandler;
+    logger.info("SDMServiceImpl initialized");
   }
 
   @Override
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
+    logger.debug("START: createDocument for file: {}", cmisDocument.getFileName());
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
@@ -78,6 +80,7 @@ public class SDMServiceImpl implements SDMService {
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
     executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    logger.debug("END: createDocument - status: {}", finalResponse.get("status"));
     return new JSONObject(finalResponse);
   }
 
@@ -85,6 +88,7 @@ public class SDMServiceImpl implements SDMService {
   public JSONObject editLink(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws ServiceException {
+    logger.debug("START: editLink for objectId: {}", cmisDocument.getObjectId());
 
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -118,6 +122,7 @@ public class SDMServiceImpl implements SDMService {
     uploadFile.setEntity(multipart);
 
     executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
+    logger.debug("END: editLink - status: {}", finalResponse.get("status"));
     return new JSONObject(finalResponse);
   }
 
@@ -194,6 +199,7 @@ public class SDMServiceImpl implements SDMService {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       boolean isSystemUser)
       throws ServiceException {
+    logger.debug("START: updateAttachments for objectId: {}", cmisDocument.getObjectId());
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -302,6 +308,7 @@ public class SDMServiceImpl implements SDMService {
 
     // Only proceed with the update if there are properties to update
     if (updateRequestBody.isEmpty()) {
+      logger.debug("END: updateAttachments - no updates needed");
       return 200; // No updates needed, return success
     }
 
@@ -319,8 +326,10 @@ public class SDMServiceImpl implements SDMService {
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
+      logger.debug("END: updateAttachments - status: {}", response.getStatusLine().getStatusCode());
       return response.getStatusLine().getStatusCode();
     } catch (IOException e) {
+      logger.error("Error updating attachments: {}", e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("COULD_NOT_UPDATE_THE_ATTACHMENT"), e);
     }
   }
@@ -328,6 +337,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public JSONObject getObject(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
+    logger.debug("START: getObject for objectId: {}", objectId);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -349,8 +359,10 @@ public class SDMServiceImpl implements SDMService {
         return null;
       }
       String responseString = EntityUtils.toString(response.getEntity());
+      logger.debug("END: getObject - retrieved successfully");
       return new JSONObject(responseString);
     } catch (IOException e) {
+      logger.error("Error getting object {}: {}", objectId, e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("ATTACHMENT_NOT_FOUND"), e);
     }
   }
@@ -358,6 +370,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context) {
+    logger.debug("START: readDocument for objectId: {}", objectId);
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = context.getUserInfo().isSystemUser() ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -384,8 +397,10 @@ public class SDMServiceImpl implements SDMService {
       byte[] responseBody = EntityUtils.toByteArray(response.getEntity());
       try (InputStream inputStream = new ByteArrayInputStream(responseBody)) {
         context.getData().setContent(inputStream);
+        logger.debug("END: readDocument - content set in context");
       }
     } catch (Exception e) {
+      logger.error("Error reading document {}: {}", objectId, e.getMessage(), e);
       throw new ServiceException("Failed to set document stream in context");
     }
   }
@@ -440,6 +455,7 @@ public class SDMServiceImpl implements SDMService {
       PersistenceService persistenceService,
       String folderName,
       boolean isSystemUser) {
+    logger.debug("START: getFolderId for folderName: {}", folderName);
 
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> resultList =
@@ -457,6 +473,7 @@ public class SDMServiceImpl implements SDMService {
         // continue
         if (repoId.equalsIgnoreCase(repositoryId)) {
           folderId = attachment.get("folderId").toString();
+          logger.debug("Found folderId in result: {}", folderId);
           break;
         }
       }
@@ -465,22 +482,27 @@ public class SDMServiceImpl implements SDMService {
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
     if (folderId == null) {
+      logger.debug("FolderId not found in result, trying to get by path");
       folderId =
           getFolderIdByPath(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
       if (folderId == null) {
+        logger.info("Folder path not found, creating new folder: {}", folderName);
         folderId =
             createFolder(folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
         JSONObject jsonObject = new JSONObject(folderId);
         JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
         folderId = succinctProperties.getString("cmis:objectId");
+        logger.info("Folder created with ID: {}", folderId);
       }
     }
+    logger.debug("END: getFolderId - returning folderId: {}", folderId);
     return folderId;
   }
 
   @Override
   public String getFolderIdByPath(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+    logger.debug("START: getFolderIdByPath for parentId: {}", parentId);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     String folderId = null;
@@ -505,6 +527,7 @@ public class SDMServiceImpl implements SDMService {
       } else if (responseCode == 403) {
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       }
+      logger.debug("END: getFolderIdByPath - folderId: {}", folderId);
       return folderId;
     } catch (IOException e) {
       throw new ServiceException(
@@ -515,6 +538,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public String createFolder(
       String parentId, String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser) {
+    logger.debug("START: createFolder for parentId: {}", parentId);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -533,8 +557,10 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseBody = EntityUtils.toString(response.getEntity());
-      if (responseCode == 201) return responseBody;
-      else if (responseCode == 403) {
+      if (responseCode == 201) {
+        logger.debug("END: createFolder - folder created successfully");
+        return responseBody;
+      } else if (responseCode == 403) {
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else {
         throw new ServiceException(
@@ -548,11 +574,13 @@ public class SDMServiceImpl implements SDMService {
 
   @Override
   public RepoValue checkRepositoryType(String repositoryId, String tenant) {
+    logger.debug("Checking repository type for repositoryId: {}, tenant: {}", repositoryId, tenant);
     RepoKey repoKey = new RepoKey();
     repoKey.setSubdomain(tenant);
     repoKey.setRepoId(repositoryId);
     RepoValue repoValue = CacheConfig.getRepoCache().get(repoKey);
     if (repoValue == null) {
+      logger.debug("Repository info not in cache, fetching from SDM");
       SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
       JSONObject repoInfo = getRepositoryInfo(sdmCredentials);
       Map<String, RepoValue> repoValueMap = fetchRepositoryData(repoInfo, repositoryId);
@@ -560,14 +588,20 @@ public class SDMServiceImpl implements SDMService {
       repoKey.setSubdomain(tenant);
       repoKey.setRepoId(repositoryId);
       RepoValue value = repoValueMap.get(repositoryId);
+      logger.debug(
+          "Repository info fetched - VersionEnabled: {}, VirusScanEnabled: {}",
+          value.getVersionEnabled(),
+          value.getVirusScanEnabled());
       CacheConfig.getRepoCache().put(repoKey, value);
       return repoValueMap.get(repositoryId);
     }
+    logger.debug("Repository info found in cache");
     return repoValue;
   }
 
   @Override
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) {
+    logger.debug("Fetching repository information from SDM");
     String repositoryId = SDMConstants.REPOSITORY_ID;
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
 
@@ -576,18 +610,25 @@ public class SDMServiceImpl implements SDMService {
     HttpGet getRepoInfoRequest = new HttpGet(getRepoInfoUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getRepoInfoRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
+        logger.error(
+            "Failed to fetch repository info. Status code: {}",
+            response.getStatusLine().getStatusCode());
         throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"));
       }
       String responseString = EntityUtils.toString(response.getEntity());
+      logger.debug("Repository information fetched successfully");
       return new JSONObject(responseString);
     } catch (IOException e) {
+      logger.error("Error fetching repository info: {}", e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
     } catch (Exception e) {
+      logger.error("Unexpected error fetching repository info: {}", e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("REPOSITORY_ERROR"), e);
     }
   }
 
   public Map<String, RepoValue> fetchRepositoryData(JSONObject repoInfo, String repositoryId) {
+    logger.debug("START: fetchRepositoryData for repositoryId: {}", repositoryId);
     Map<String, RepoValue> repoValueMap = new HashMap<>();
     repoInfo = repoInfo.getJSONObject(repositoryId);
     JSONObject capabilities = repoInfo.getJSONObject("capabilities");
@@ -612,16 +653,25 @@ public class SDMServiceImpl implements SDMService {
       }
     }
     repoValueMap.put(repositoryId, repoValue);
+    logger.debug(
+        "END: fetchRepositoryData - VersionEnabled: {}, VirusScanEnabled: {}",
+        repoValue.getVersionEnabled(),
+        repoValue.getVirusScanEnabled());
     return repoValueMap;
   }
 
   @Override
   public int deleteDocument(String cmisaction, String objectId, String user) {
+    logger.info(
+        "Deleting document - action: {}, objectId: {}, user: {}", cmisaction, objectId, user);
+    long startTime = System.currentTimeMillis();
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
     if (user.equals(SDMConstants.SYSTEM_USER)) {
+      logger.debug("Using TECHNICAL_USER_FLOW for deletion");
       httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
     } else {
+      logger.debug("Using authorities flow for deletion for user: {}", user);
       httpClient = tokenHandler.getHttpClientForAuthoritiesFlow(connectionPool, user);
     }
 
@@ -634,8 +684,14 @@ public class SDMServiceImpl implements SDMService {
     HttpEntity multipart = builder.build();
     deleteDocumentRequest.setEntity(multipart);
     try (var response = (CloseableHttpResponse) httpClient.execute(deleteDocumentRequest)) {
-      return response.getStatusLine().getStatusCode();
+      int statusCode = response.getStatusLine().getStatusCode();
+      logger.info(
+          "Document deletion completed with status code: {} in {} ms",
+          statusCode,
+          (System.currentTimeMillis() - startTime));
+      return statusCode;
     } catch (IOException e) {
+      logger.error("Error deleting document {}: {}", objectId, e.getMessage(), e);
       throw new ServiceException(
           SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_DELETE")));
     }
@@ -645,6 +701,7 @@ public class SDMServiceImpl implements SDMService {
   public List<String> getSecondaryTypes(
       String repositoryId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws ServiceException {
+    logger.debug("START: getSecondaryTypes for repositoryId: {}", repositoryId);
     SecondaryTypesKey secondaryTypesKey = new SecondaryTypesKey();
     secondaryTypesKey.setRepositoryId(repositoryId);
     List<String> secondaryTypes = new ArrayList<>();
@@ -677,11 +734,14 @@ public class SDMServiceImpl implements SDMService {
           }
           SDMUtils.extractSecondaryTypeIds(secondaryTypesJSON, result);
         }
+        logger.debug("END: getSecondaryTypes - found {} types", result.size());
         return result;
       } catch (IOException e) {
+        logger.error("Error getting secondary types: {}", e.getMessage(), e);
         throw new ServiceException("Could not update the attachment", e);
       }
     }
+    logger.debug("END: getSecondaryTypes - returning from cache");
     return secondaryTypes;
   }
 
@@ -691,6 +751,7 @@ public class SDMServiceImpl implements SDMService {
       SDMCredentials sdmCredentials,
       String repositoryId,
       boolean isSystemUser) {
+    logger.debug("START: getValidSecondaryProperties for repositoryId: {}", repositoryId);
     SecondaryPropertiesKey secondaryPropertiesKey = new SecondaryPropertiesKey();
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     secondaryPropertiesKey.setRepositoryId(repositoryId);
@@ -720,10 +781,14 @@ public class SDMServiceImpl implements SDMService {
             iterator.remove();
           }
         } catch (IOException e) {
+          logger.error("Error getting type definition: {}", e.getMessage(), e);
           throw new ServiceException(SDMUtils.getErrorMessage("UPDATE_ATTACHMENT_ERROR"), e);
         }
       }
     }
+    logger.debug(
+        "END: getValidSecondaryProperties - found {} valid properties",
+        validSecondaryProperties.size());
 
     return validSecondaryProperties;
   }
@@ -735,6 +800,7 @@ public class SDMServiceImpl implements SDMService {
       boolean isSystemUser,
       Set<String> customPropertiesInSDM)
       throws IOException {
+    logger.debug("START: copyAttachment for objectId: {}", cmisDocument.getObjectId());
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
     logger.info("This is a :{} flow", grantType);
@@ -758,6 +824,7 @@ public class SDMServiceImpl implements SDMService {
           entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
 
       if (response.getStatusLine().getStatusCode() == 201) {
+        logger.debug("END: copyAttachment - copy successful");
         return processCopyAttachmentResponse(responseBody, customPropertiesInSDM);
       }
 
@@ -800,6 +867,7 @@ public class SDMServiceImpl implements SDMService {
   @Override
   public JSONObject getChangeLog(
       String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
+    logger.debug("START: getChangeLog for objectId: {}", objectId);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
@@ -839,8 +907,10 @@ public class SDMServiceImpl implements SDMService {
       } else if (responseCode != 200) {
         throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"));
       }
+      logger.debug("END: getChangeLog - retrieved successfully");
       return new JSONObject(responseString);
     } catch (IOException e) {
+      logger.error("Error fetching changelog for {}: {}", objectId, e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("FETCH_CHANGELOG_ERROR"), e);
     }
   }
@@ -885,6 +955,7 @@ public class SDMServiceImpl implements SDMService {
   public String moveAttachment(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
+    logger.debug("START: moveAttachment for objectId: {}", cmisDocument.getObjectId());
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
     logger.info("Moving attachment - This is a :{} flow", grantType);

@@ -69,9 +69,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     before read event when the context is guaranteed to be present.
   */
   private void setErrorMessagesInCache(CdsReadEventContext context) {
+    logger.debug("Setting error messages in cache");
     // Check if cache is available
     Cache<ErrorMessageKey, String> errorMessageCache = CacheConfig.getErrorMessageCache();
     if (errorMessageCache == null) {
+      logger.debug("Error message cache not initialized, skipping");
       return; // Cache not initialized, skip
     }
 
@@ -81,11 +83,13 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     String cacheValue = errorMessageCache.get(cacheCheckKey);
 
     if ("true".equals(cacheValue)) {
+      logger.debug("Error messages already cached, skipping");
       return; // Skip processing if already cached
     }
 
     Map<String, Object> errorMessages = SDMErrorMessages.getAllErrorMessages();
     Map<String, Object> errorKeys = SDMErrorKeys.getAllErrorKeys();
+    logger.debug("Caching {} error messages", errorMessages.size());
     String localizedMessage;
     String localizedErrorMessageKey;
     for (Map.Entry<String, Object> entry : errorMessages.entrySet()) {
@@ -108,13 +112,18 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
     // Mark that localized error messages have been cached
     errorMessageCache.put(cacheCheckKey, "true");
+    logger.debug("Error messages cached successfully");
   }
 
   @Before
   @HandlerOrder(HandlerOrder.EARLY + 500)
   public void processBefore(CdsReadEventContext context) throws IOException {
+    logger.info("Processing read request for entity: {}", context.getTarget().getQualifiedName());
+    logger.debug(
+        "START: Reading attachments for entity: {}", context.getTarget().getQualifiedName());
     String repositoryId = SDMConstants.REPOSITORY_ID;
     if (repositoryId == null) {
+      logger.debug("Repository ID is null, skipping processing");
       return;
     }
     setErrorMessagesInCache(context);
@@ -122,10 +131,14 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       try {
         // update the uploadStatus of all blank attachments with success this is for existing
         // attachments
+        logger.debug("Target is a media entity, processing attachment logic");
         RepoValue repoValue = checkRepositoryTypeWithFallback(repositoryId, context);
 
         // Only process virus scan logic if repository info is available
         if (repoValue != null) {
+          logger.debug(
+              "Repository value found. Async virus scan enabled: {}",
+              repoValue.getIsAsyncVirusScanEnabled());
           Optional<CdsEntity> attachmentDraftEntity =
               context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
           String upIdKey = "", upID = "";
@@ -133,13 +146,15 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
             CqnSelect select = (CqnSelect) context.get("cqn");
             upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
+            logger.debug("Processing attachments for upID: {}", upID);
 
             if (!repoValue.getIsAsyncVirusScanEnabled()) {
-
+              logger.debug("Sync virus scan mode: updating in-progress upload status to success");
               dbQuery.updateInProgressUploadStatusToSuccess(
                   attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
             }
             if (repoValue.getIsAsyncVirusScanEnabled()) {
+              logger.debug("Async virus scan mode: processing virus scan in-progress attachments");
               processVirusScanInProgressAttachments(context, upID, upIdKey);
             }
           }
@@ -148,12 +163,15 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           CdsModel cdsModel = context.getModel();
           List<String> fieldNames =
               getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
+          logger.debug("Found {} attachment associations", fieldNames.size());
 
           // Create a combined modifier that handles both expand scenarios and repositoryId filter
           final SDMBeforeReadItemsModifier itemsModifier =
               new SDMBeforeReadItemsModifier(fieldNames);
           final Predicate repositoryFilter =
               CQL.or(CQL.get("repositoryId").eq(repositoryId), CQL.get("repositoryId").isNull());
+          logger.debug(
+              "Creating CQN modifier with {} field names and repository filter", fieldNames.size());
 
           CqnSelect modifiedCqn =
               CQL.copy(
@@ -176,7 +194,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                     }
                   });
           context.setCqn(modifiedCqn);
+          logger.debug("CQN query modified with repository filter and required fields");
         } else {
+          logger.warn(
+              "Repository value is null for repository ID: {}. Proceeding with limited functionality",
+              repositoryId);
           context.setCqn(context.getCqn());
         }
       } catch (Exception e) {
@@ -186,8 +208,12 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       }
 
     } else {
+      logger.debug(
+          "Target entity {} is not a media entity, skipping attachment processing",
+          context.getTarget().getQualifiedName());
       context.setCqn(context.getCqn());
     }
+    logger.debug("END: Read attachments processing completed");
   }
 
   /**
@@ -198,6 +224,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       CdsModel model, CdsEntity entity, String associationName, List<String> processedEntities) {
     List<String> associationNames = new ArrayList<>();
     if (SDMApplicationHandlerHelper.isMediaEntity(entity)) {
+      logger.debug("Found media entity association: {}", associationName);
       associationNames.add(associationName);
     }
 
@@ -237,6 +264,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
   private void processVirusScanInProgressAttachments(
       CdsReadEventContext context, String upID, String upIDkey) {
     try {
+      logger.debug("START: Processing virus scan in-progress attachments for upID: {}", upID);
       // Get the statuses of existing attachments and assign color code
       // Get all attachments with virus scan in progress
       Optional<CdsEntity> attachmentDraftEntity =
@@ -251,6 +279,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               persistenceService,
               upID,
               upIDkey);
+      logger.debug(
+          "Found {} attachments with virus scan in progress", attachmentsInProgress.size());
 
       // Get SDM credentials
       var sdmCredentials = tokenHandler.getSDMCredentials();
@@ -267,11 +297,13 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
       if (!attachmentsInProgress.isEmpty()) {
         logger.info(
-            "Processed {} attachments with virus scan in progress", attachmentsInProgress.size());
+            "Processed {} attachments with virus scan status updates",
+            attachmentsInProgress.size());
       }
+      logger.debug("END: Process virus scan in-progress attachments");
 
     } catch (Exception e) {
-      logger.error("Error processing virus scan in progress attachments: {}", e.getMessage());
+      logger.error("Error processing virus scan in progress attachments: {}", e.getMessage(), e);
     }
   }
 
@@ -293,8 +325,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     try {
       String objectId = attachment.getObjectId();
       if (objectId != null && !objectId.isEmpty()) {
-        logger.info(
-            "Processing attachment with objectId: {} and filename: {}",
+        logger.debug(
+            "Checking virus scan status for objectId: {}, filename: {}",
             objectId,
             attachment.getFileName());
 
@@ -309,10 +341,13 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           String scanStatus = null;
           if (succinctProperties.has("sap:virusScanStatus")) {
             scanStatus = succinctProperties.getString("sap:virusScanStatus");
+            logger.debug("Virus scan status from SDM: {}", scanStatus);
+          } else {
+            logger.debug("No virus scan status found in SDM response for objectId: {}", objectId);
           }
 
-          logger.info(
-              "Successfully retrieved object for attachmentId: {}, filename: {}, scanStatus: {}",
+          logger.debug(
+              "Retrieved object for attachmentId: {}, filename: {}, scanStatus: {}",
               attachment.getAttachmentId(),
               currentFileName,
               scanStatus);
@@ -326,7 +361,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
                 persistenceService,
                 objectId,
                 scanStatusEnum);
-            logger.info(
+            logger.debug(
                 "Updated uploadStatus for objectId: {} based on scanStatus: {}",
                 objectId,
                 scanStatus);

@@ -38,7 +38,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   private final SDMService sdmService;
   private final TokenHandler tokenHandler;
   private final DBQuery dbQuery;
-  private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
+  private static final Logger logger = LoggerFactory.getLogger(SDMUpdateAttachmentsHandler.class);
 
   public SDMUpdateAttachmentsHandler(
       PersistenceService persistenceService,
@@ -54,6 +54,9 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   @Before
   @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 500)
   public void preserveUploadStatus(CdsUpdateEventContext context, List<CdsData> data) {
+    logger.debug(
+        "Preserving uploadStatus field before CDS processing for entity: {}",
+        context.getTarget().getQualifiedName());
     // Preserve uploadStatus before CDS removes readonly fields
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
@@ -63,9 +66,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
   public void processAfter(CdsUpdateEventContext context, List<CdsData> data) {
     // Update uploadStatus to Success after entity is persisted
     logger.info(
-        "Post-processing attachments after persistence for entity: {}",
+        "START: Post-processing attachments after persistence for entity: {}",
         context.getTarget().getQualifiedName());
 
+    int totalProcessed = 0;
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
           AttachmentsHandlerUtils.getAttachmentCompositionDetails(
@@ -88,6 +92,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                   targetEntity, entityData, attachmentCompositionName);
 
           if (attachments != null) {
+            logger.debug(
+                "Processing {} attachments for composition: {}",
+                attachments.size(),
+                attachmentCompositionName);
             for (Map<String, Object> attachment : attachments) {
               String id = (String) attachment.get("ID");
               String uploadStatus = (String) attachment.get("uploadStatus");
@@ -96,20 +104,27 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                 cmisDocument.setAttachmentId(id);
                 cmisDocument.setUploadStatus(uploadStatus);
                 // Update uploadStatus to Success in database if it was InProgress
+                logger.debug("Saving uploadStatus: {} for attachment ID: {}", uploadStatus, id);
                 dbQuery.saveUploadStatusToAttachment(
                     attachmentEntity.get(), persistenceService, cmisDocument);
-                logger.debug("Updated uploadStatus to Success for attachment ID: {}", id);
+                totalProcessed++;
               }
             }
           }
         }
       }
     }
+    logger.info("END: Post-processing completed. Updated {} attachments", totalProcessed);
   }
 
   @Before
   @HandlerOrder(HandlerOrder.DEFAULT)
   public void processBefore(CdsUpdateEventContext context, List<CdsData> data) throws IOException {
+    logger.info(
+        "START: Process attachments before persistence for entity: {}",
+        context.getTarget().getQualifiedName());
+    logger.debug("Number of entities to update: {}", data.size());
+
     // Get comprehensive attachment composition details for each entity
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
@@ -119,13 +134,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               persistenceService,
               context.getTarget().getQualifiedName(),
               entityData);
-      logger.info("Attachment compositions present in CDS Model : " + attachmentCompositionDetails);
+      logger.debug("Attachment compositions present: {}", attachmentCompositionDetails.keySet());
 
       updateName(context, data, attachmentCompositionDetails);
 
       // Remove uploadStatus from attachment data to prevent validation errors
       cleanupReadonlyContextsForAttachments(context, entityData, attachmentCompositionDetails);
     }
+    logger.info("END: Process attachments before persistence");
   }
 
   public void updateName(
@@ -175,6 +191,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String attachmentCompositionName,
       String contextInfo)
       throws IOException {
+    logger.debug("Renaming documents for composition: {}", attachmentCompositionName);
     List<String> duplicateFileNameList = new ArrayList<>();
     Map<String, String> secondaryPropertiesWithInvalidDefinitions;
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
@@ -239,6 +256,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles)
       throws IOException {
+    logger.debug("Processing {} attachments for update", attachments.size());
     List<String> scanFailedFiles = new ArrayList<>();
     List<String> uploadInProgressFiles = new ArrayList<>();
 
@@ -262,6 +280,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
 
     // Throw exception if any files failed scan or upload in progress
     if (!scanFailedFiles.isEmpty() || !uploadInProgressFiles.isEmpty()) {
+      logger.warn(
+          "Blocking update due to scan failures: {}, uploads in progress: {}",
+          scanFailedFiles.size(),
+          uploadInProgressFiles.size());
       StringBuilder errorMessage = new StringBuilder();
       if (!scanFailedFiles.isEmpty()) {
         if (errorMessage.length() > 0) {
@@ -383,10 +405,12 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     String fileName = fileNameInDB != null ? fileNameInDB : filenameInRequest;
 
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_SCAN_FAILED)) {
+      logger.warn("Scan failed for file: {}", fileName);
       scanFailedFiles.add(fileName);
       return true;
     }
     if (uploadStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      logger.warn("Upload in progress for file: {}", fileName);
       uploadInProgressFiles.add(fileName);
       return true;
     }
@@ -402,6 +426,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       SDMCredentials sdmCredentials,
       boolean isSystemUser)
       throws IOException {
+    logger.debug("Fetching attachment details from SDM for objectId: {}", objectId);
     String finalFileNameInDB = fileNameInDB;
     String descriptionInDB = null;
 
@@ -417,6 +442,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       if (succinctProperties.has("cmis:description")) {
         descriptionInDB = succinctProperties.getString("cmis:description");
       }
+      logger.debug(
+          "Retrieved from SDM - fileName: {}, hasDescription: {}",
+          finalFileNameInDB,
+          descriptionInDB != null);
     }
 
     return new AttachmentDetails(finalFileNameInDB, descriptionInDB);
@@ -536,6 +565,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> noSDMRoles,
       String contextInfo) {
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
+      logger.warn(
+          "Files with restricted characters in filename: {}", fileNameWithRestrictedCharacters);
       context
           .getMessages()
           .warn(
@@ -543,6 +574,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                   + contextInfo);
     }
     if (!duplicateFileNameList.isEmpty()) {
+      logger.warn("Duplicate filenames detected: {}", duplicateFileNameList);
       context
           .getMessages()
           .warn(
@@ -550,6 +582,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
                   SDMErrorMessages.duplicateFilenameFormat(duplicateFileNameList), contextInfo));
     }
     if (!filesNotFound.isEmpty()) {
+      logger.warn("Files not found in SDM: {}", filesNotFound);
       context.getMessages().warn(SDMErrorMessages.fileNotFound(filesNotFound) + contextInfo);
     }
     if (!filesWithUnsupportedProperties.isEmpty()) {
@@ -566,6 +599,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         invalidPropertyNames.add(propertyTitles.get(file));
       }
       if (!invalidPropertyNames.isEmpty()) {
+        logger.warn("Files with unsupported properties: {}", invalidPropertyNames);
         context
             .getMessages()
             .warn(
@@ -573,9 +607,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       }
     }
     if (!badRequest.isEmpty()) {
+      logger.warn("Bad request errors: {}", badRequest.keySet());
       context.getMessages().warn(SDMErrorMessages.badRequestMessage(badRequest) + contextInfo);
     }
     if (!noSDMRoles.isEmpty()) {
+      logger.warn("No SDM roles for files: {}", noSDMRoles);
       context
           .getMessages()
           .warn(
@@ -594,7 +630,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     for (Map.Entry<String, Map<String, String>> entry : attachmentCompositionDetails.entrySet()) {
       String attachmentCompositionName = entry.getValue().get("name");
 
-      logger.info(
+      logger.debug(
           "Cleaning up SDM_READONLY_CONTEXT for composition: {}", attachmentCompositionName);
 
       // Fetch attachments for this specific composition
@@ -603,7 +639,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               targetEntity, entityData, attachmentCompositionName);
 
       if (attachments != null && !attachments.isEmpty()) {
-        logger.info(
+        logger.debug(
             "Found {} attachments in composition: {}",
             attachments.size(),
             attachmentCompositionName);
@@ -611,15 +647,15 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         for (int i = 0; i < attachments.size(); i++) {
           Map<String, Object> attachment = attachments.get(i);
           if (attachment.containsKey(SDM_READONLY_CONTEXT)) {
-            logger.info(
-                "  Removing SDM_READONLY_CONTEXT from attachment [{}] in {}",
+            logger.debug(
+                "Removing SDM_READONLY_CONTEXT from attachment [{}] in {}",
                 i,
                 attachmentCompositionName);
             attachment.remove(SDM_READONLY_CONTEXT);
           }
         }
       } else {
-        logger.info("No attachments found for composition: {}", attachmentCompositionName);
+        logger.debug("No attachments found for composition: {}", attachmentCompositionName);
       }
     }
   }

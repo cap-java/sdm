@@ -35,6 +35,7 @@ public class SDMAttachmentsService extends ServiceDelegator
 
   @Override
   public void copyAttachments(CopyAttachmentInput input, boolean isSystemUser) {
+    logger.debug("START: copyAttachments");
     logger.info(
         "Copying attachments for upId: {}, facet: {}, objectIds: {}, isSystemUser: {}",
         input.upId(),
@@ -62,10 +63,12 @@ public class SDMAttachmentsService extends ServiceDelegator
     copyContext.setSystemUser(isSystemUser);
 
     emit(copyContext);
+    logger.debug("END: copyAttachments - event emitted");
   }
 
   @Override
   public Map<String, Object> moveAttachments(MoveAttachmentInput input, boolean isSystemUser) {
+    logger.debug("START: moveAttachments");
     logger.info(
         "Moving attachments from sourceFolderId: {} (sourceFacet: {}) to upId: {}, targetFacet:"
             + " {}, objectIds: {}, isSystemUser: {}",
@@ -137,11 +140,15 @@ public class SDMAttachmentsService extends ServiceDelegator
     // Return structured result that OData can serialize
     Map<String, Object> result = new HashMap<>();
     result.put("failedAttachments", failedAttachments != null ? failedAttachments : List.of());
+    logger.debug(
+        "END: moveAttachments - returning result with {} failed attachments",
+        failedAttachments != null ? failedAttachments.size() : 0);
     return result;
   }
 
   @Override
   public InputStream readAttachment(String contentId) {
+    logger.debug("START: readAttachment for contentId: {}", contentId);
     logger.info("Reading attachment with document id: {}", contentId);
 
     var readContext = AttachmentReadEventContext.create();
@@ -150,11 +157,13 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     emit(readContext);
 
+    logger.debug("END: readAttachment - returning content stream");
     return readContext.getData().getContent();
   }
 
   @Override
   public AttachmentModificationResult createAttachment(CreateAttachmentInput input) {
+    logger.debug("START: createAttachment");
     logger.info(
         "Creating attachment for entity name: {}", input.attachmentEntity().getQualifiedName());
     var createContext = AttachmentCreateEventContext.create();
@@ -168,6 +177,7 @@ public class SDMAttachmentsService extends ServiceDelegator
 
     emit(createContext);
 
+    logger.debug("END: createAttachment - contentId: {}", createContext.getContentId());
     return new AttachmentModificationResult(
         Boolean.TRUE.equals(createContext.getIsInternalStored()),
         createContext.getContentId(),
@@ -176,6 +186,7 @@ public class SDMAttachmentsService extends ServiceDelegator
 
   @Override
   public void markAttachmentAsDeleted(MarkAsDeletedInput input) {
+    logger.debug("START: markAttachmentAsDeleted");
     logger.info("Marking attachment as deleted for document id in SDM{}", input.contentId());
 
     var deleteContext = AttachmentMarkAsDeletedEventContext.create();
@@ -183,15 +194,18 @@ public class SDMAttachmentsService extends ServiceDelegator
     deleteContext.setDeletionUserInfo(fillDeletionUserInfo(input.userInfo()));
 
     emit(deleteContext);
+    logger.debug("END: markAttachmentAsDeleted - event emitted");
   }
 
   @Override
   public void restoreAttachment(Instant restoreTimestamp) {
+    logger.debug("START: restoreAttachment");
     logger.info("Restoring deleted attachment for timestamp: {}", restoreTimestamp);
     var restoreContext = AttachmentRestoreEventContext.create();
     restoreContext.setRestoreTimestamp(restoreTimestamp);
 
     emit(restoreContext);
+    logger.debug("END: restoreAttachment - event emitted");
   }
 
   private DeletionUserInfo fillDeletionUserInfo(UserInfo userInfo) {

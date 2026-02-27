@@ -24,15 +24,20 @@ public class SDMBeforeReadItemsModifier implements Modifier {
 
   public SDMBeforeReadItemsModifier(List<String> mediaAssociations) {
     this.mediaAssociations = mediaAssociations;
+    logger.debug(
+        "Initialized SDMBeforeReadItemsModifier with {} media associations",
+        mediaAssociations.size());
   }
 
   @Override
   public List<CqnSelectListItem> items(List<CqnSelectListItem> items) {
+    logger.debug("Modifying select items - input count: {}", items.size());
     List<CqnSelectListItem> newItems =
         new ArrayList<>(items.stream().filter(item -> !item.isExpand()).toList());
     List<CqnSelectListItem> result = addRequiredFields(items);
     newItems.addAll(result);
 
+    logger.debug("Modified select items - output count: {}", newItems.size());
     return newItems;
   }
 
@@ -47,6 +52,7 @@ public class SDMBeforeReadItemsModifier implements Modifier {
   }
 
   private List<CqnSelectListItem> processExpandedEntities(List<CqnSelectListItem> expandedItems) {
+    logger.debug("Processing {} expanded entities", expandedItems.size());
     List<CqnSelectListItem> newItems = new ArrayList<>();
 
     expandedItems.forEach(

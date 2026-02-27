@@ -45,6 +45,7 @@ public class ReadAheadInputStream extends InputStream {
   }
 
   private void preloadChunks() {
+    logger.debug("START: preloadChunks - totalSize: {}", totalSize);
     executor.submit(
         () -> {
           try {
@@ -90,6 +91,7 @@ public class ReadAheadInputStream extends InputStream {
 
   private void readChunk(AtomicReference<byte[]> bufferRef, AtomicLong bytesReadAtomic)
       throws IOException {
+    logger.debug("START: readChunk");
     int maxRetries = 5;
     int retryCount = 0;
 
@@ -177,8 +179,10 @@ public class ReadAheadInputStream extends InputStream {
   }
 
   private synchronized void loadNextChunk() throws IOException {
+    logger.debug("START: loadNextChunk");
     try {
       if (chunkQueue.isEmpty() && lastChunkLoaded.get()) {
+        logger.debug("END: loadNextChunk - no more data");
         return; // No more data, return EOF
       }
 
@@ -190,6 +194,7 @@ public class ReadAheadInputStream extends InputStream {
       if (lastChunkLoaded.get() && chunkQueue.isEmpty()) {
         logger.info(" Last chunk successfully processed and uploaded.");
       }
+      logger.debug("END: loadNextChunk - loaded {} bytes", currentBufferSize);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException(" Interrupted while loading next chunk ", e);
@@ -211,6 +216,12 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
+    logger.debug(
+        "read(byte[], off={}, len={}) called, position: {}, bufferSize: {}",
+        off,
+        len,
+        position.get(),
+        currentBufferSize);
     if (position.get() >= currentBufferSize) {
       if (lastChunkLoaded.get()) return -1;
       loadNextChunk();
@@ -224,6 +235,7 @@ public class ReadAheadInputStream extends InputStream {
         off,
         bytesToRead); // Read the input stream byte array into the buffer
     position.addAndGet(bytesToRead);
+    logger.debug("read(byte[]) returning {} bytes", bytesToRead);
 
     return bytesToRead;
   }
@@ -246,6 +258,7 @@ public class ReadAheadInputStream extends InputStream {
       throw new IOException(" Error shutting down executor", e);
     }
     originalStream.close();
+    logger.debug("END: close - stream closed");
   }
 
   public synchronized void resetStream() throws IOException {

@@ -58,25 +58,50 @@ public class DocumentUploadService {
       boolean isSystemUser,
       AttachmentCreateEventContext eventContext)
       throws IOException {
+    long startTime = System.currentTimeMillis();
+    logger.info(
+        "START: Create document - fileName: {}, fileSize: {} bytes",
+        cmisDocument.getFileName(),
+        cmisDocument.getContentLength());
+    logger.debug(
+        "Document properties - repositoryId: {}, mimeType: {}",
+        cmisDocument.getRepositoryId(),
+        cmisDocument.getMimeType());
+
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
         logger.info("LinkType detected, uploading as single chunk");
-        return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
+        JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
+        logger.info(
+            "Link file uploaded successfully in {} ms", (System.currentTimeMillis() - startTime));
+        return result;
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      if (totalSize <= 400 * 1024 * 1024) {
+      logger.debug("Total file size: {} bytes, Chunk size: {} bytes", totalSize, chunkSize);
 
+      if (totalSize <= 400 * 1024 * 1024) {
         // Upload directly if file is ≤ 400MB
-        return uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
+        logger.info("File size is <= 400MB, uploading as single chunk");
+        JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
+        logger.info(
+            "File uploaded successfully as single chunk in {} ms",
+            (System.currentTimeMillis() - startTime));
+        return result;
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > 400MB
-        return uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
+        logger.info("File size is > 400MB, uploading in chunks of {} bytes", chunkSize);
+        JSONObject result = uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
+        logger.info(
+            "File uploaded successfully in chunks in {} ms",
+            (System.currentTimeMillis() - startTime));
+        return result;
       }
     } catch (Exception e) {
+      logger.error("Error uploading document: {}", e.getMessage(), e);
       throw new IOException("Error uploading document: " + e.getMessage(), e);
     }
   }
@@ -87,8 +112,11 @@ public class DocumentUploadService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
+    logger.debug("START: executeHttpPost for file: {}", cmisDocument.getFileName());
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
+      logger.debug(
+          "END: executeHttpPost - response formed for file: {}", cmisDocument.getFileName());
     } catch (IOException e) {
       throw new ServiceException(SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e);
     }
@@ -106,6 +134,10 @@ public class DocumentUploadService {
       int chunkIndex,
       boolean isSystemUser)
       throws IOException, ParseException {
+
+    long startTime = System.currentTimeMillis();
+    logger.debug(
+        "Appending chunk {} with {} bytes, isLastChunk: {}", chunkIndex, bytesRead, isLastChunk);
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "appendContent");
@@ -136,15 +168,18 @@ public class DocumentUploadService {
     try {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
       cmisDocument.setMimeType(finalResponse.get("mimeType"));
+      long duration = System.currentTimeMillis() - startTime;
+      logger.debug("Chunk {} appended successfully in {} ms", chunkIndex, duration);
       return new JSONObject(finalResponse);
     } catch (Exception e) {
-      logger.error("Error in appending content: {}", e.getMessage());
+      logger.error("Error appending chunk {}: {}", chunkIndex, e.getMessage(), e);
       throw new IOException("Error in appending content: " + e.getMessage(), e);
     }
   }
 
   private JSONObject createEmptyDocument(
       CmisDocument cmisDocument, String sdmUrl, boolean isSystemUser) {
+    logger.debug("START: createEmptyDocument for file: {}", cmisDocument.getFileName());
 
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     builder.addTextBody("cmisaction", "createDocument");
@@ -164,6 +199,9 @@ public class DocumentUploadService {
 
     Map<String, String> finalResponse = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResponse);
+    logger.debug(
+        "END: createEmptyDocument - empty document created for file: {}",
+        cmisDocument.getFileName());
 
     return new JSONObject(finalResponse);
   }
@@ -171,6 +209,7 @@ public class DocumentUploadService {
   public JSONObject uploadSingleChunk(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException {
+    logger.debug("START: uploadSingleChunk for file: {}", cmisDocument.getFileName());
 
     InputStream originalStream = cmisDocument.getContent();
     if (!cmisDocument.getMimeType().equalsIgnoreCase("application/internet-shortcut")
@@ -214,6 +253,7 @@ public class DocumentUploadService {
 
     Map<String, String> finalResMap = new HashMap<>();
     executeHttpPost(httpClient, request, cmisDocument, finalResMap);
+    logger.debug("END: uploadSingleChunk - file uploaded: {}", cmisDocument.getFileName());
 
     return new JSONObject(finalResMap);
   }
@@ -221,6 +261,10 @@ public class DocumentUploadService {
   private JSONObject uploadLargeFileInChunks(
       CmisDocument cmisDocument, String sdmUrl, int chunkSize, boolean isSystemUser)
       throws IOException {
+    logger.debug(
+        "START: uploadLargeFileInChunks for file: {}, chunkSize: {}",
+        cmisDocument.getFileName(),
+        chunkSize);
 
     try (ReadAheadInputStream chunkedStream =
         new ReadAheadInputStream(cmisDocument.getContent(), cmisDocument.getContentLength())) {
@@ -309,6 +353,10 @@ public class DocumentUploadService {
           hasMoreChunks = false;
         }
       }
+      logger.debug(
+          "END: uploadLargeFileInChunks - completed {} chunks for file: {}",
+          chunkIndex,
+          cmisDocument.getFileName());
       return responseBody;
     } catch (Exception e) {
       logger.error("Exception in uploadLargeFileInChunks: {}", e.getMessage());
@@ -321,6 +369,7 @@ public class DocumentUploadService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse,
       CloseableHttpResponse response) {
+    logger.debug("START: formResponse for file: {}", cmisDocument.getFileName());
     String status = "success";
     String name = cmisDocument.getFileName();
     String id = cmisDocument.getAttachmentId();
@@ -329,7 +378,10 @@ public class DocumentUploadService {
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("SDM response code: {} for file: {}", responseCode, name);
+
       if (responseCode == 201 || responseCode == 200) {
+        logger.info("Document created successfully with response code: {}", responseCode);
         JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
@@ -342,28 +394,37 @@ public class DocumentUploadService {
             succinctProperties.has("cmis:contentStreamMimeType")
                 ? succinctProperties.getString("cmis:contentStreamMimeType")
                 : null;
+        logger.debug("objectId: {}, scanStatus: {}, mimeType: {}", objectId, scanStatus, mimeType);
       } else {
         if (responseCode == 409) {
+          logger.warn("Conflict response code 409 for file: {}", name);
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
+            logger.warn("Virus detected in file: {}", name);
           } else {
             status = "duplicate";
+            logger.warn("Duplicate file detected: {}", name);
           }
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
+          logger.warn("User unauthorized - missing required scope");
         } else if (responseCode == 403) {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           if ("MIME type of the uploaded file is blocked according to your repository configuration."
-              .equals(message)) status = "blocked";
+              .equals(message)) {
+            status = "blocked";
+            logger.warn("MIME type blocked for file: {}", name);
+          }
         } else {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
+          logger.error("Document upload failed with response code {} : {}", responseCode, error);
         }
       }
       // Construct the final response
@@ -381,18 +442,23 @@ public class DocumentUploadService {
         switch (scanStatusEnum) {
           case QUARANTINED:
             uploadStatus = SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED;
+            logger.warn("Virus scan status: QUARANTINED for file: {}", name);
             break;
           case SCANNING:
             uploadStatus = SDMConstants.VIRUS_SCAN_INPROGRESS;
+            logger.info("Virus scan in progress for file: {}", name);
             break;
           case FAILED:
             uploadStatus = SDMConstants.UPLOAD_STATUS_SCAN_FAILED;
+            logger.warn("Virus scan failed for file: {}", name);
             break;
           case CLEAN:
             uploadStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+            logger.info("File is clean: {}", name);
             break;
           case PENDING:
             uploadStatus = SDMConstants.UPLOAD_STATUS_IN_PROGRESS;
+            logger.info("Virus scan pending for file: {}", name);
             break;
           case BLANK:
           default:
@@ -401,7 +467,9 @@ public class DocumentUploadService {
         }
         finalResponse.put("uploadStatus", uploadStatus);
       }
+      logger.debug("END: formResponse - status: {} for file: {}", status, name);
     } catch (IOException e) {
+      logger.error("Error forming response: {}", e.getMessage(), e);
       throw new ServiceException(
           SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")), e);
     }
