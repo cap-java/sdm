@@ -89,6 +89,54 @@ async function splitDiffIntoTokens(genAI, diff, maxTokens = MAX_CHUNK_TOKENS) {
     return chunks;
 }
 
+// Project domain context — injected into issue analysis prompts
+//----------------------------------------------------------------------------------------------------------------
+
+const PROJECT_CONTEXT = `
+**Project:** SAP CAP Java SDK plugin for Document Management Service (SDM / CMIS) integration.
+**Purpose:** Intercepts CAP Attachments CRUD events and routes document storage to SAP Document Management Service via CMIS REST API. Distributed as a Maven JAR (Java 17) consumed by CAP Java apps via Java SPI.
+
+**Key Architectural Components:**
+- Event Handlers (CAP @Before/@On/@After lifecycle): SDMCreateAttachmentsHandler, SDMReadAttachmentsHandler, SDMUpdateAttachmentsHandler, SDMAttachmentsServiceHandler (core SDM bridge), SDMCustomServiceHandler (COPY/MOVE operations).
+- Token Management: TokenHandler singleton — OAuth2 named-user and technical-user flows; cached via EhCache 3 (userTokenCache, clientCredentialsTokenCache, 660-min TTL).
+- Caching: CacheConfig (static EhCache 3) — 8 named caches: userTokenCache, clientCredentialsTokenCache, userAuthoritiesTokenCache, repoCache, secondaryTypesCache, secondaryPropertiesCache, maxAllowedAttachmentsCache, errorMessageCache.
+- Upload Scan States: uploading → Success | Failed | VirusDetected | VirusScanInprogress.
+- HTTP Layer: Apache HttpClient 5 for CMIS REST calls; multipart upload for document creation; RetryUtils for transient failure retry.
+- Multi-tenancy: Single-tenant and multi-tenant Cloud Foundry deployments with separate integration test workflows.
+- Key Dependencies: cds-services-api 3.10.3, SAP Cloud SDK 5.21.0 (OAuth2DestinationBuilder), token-client 3.5.7, EhCache 3.10.8, Apache HttpClient 5.4.4.
+- Build: Maven multi-module, Spotless (Google Java Format), JaCoCo, SonarQube, Black Duck, CodeQL on GitHub Actions.
+`.trim();
+
+/**
+ * Calls Gemini to classify an issue by type and affected component.
+ * Returns { type, component } — never throws; falls back to defaults on error.
+ */
+async function classifyIssue(issueTitle, issueBody, genAI) {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const prompt = `Classify this GitHub issue for the SAP CAP Java SDM plugin project.
+Issue Title: ${issueTitle}
+Issue Body: ${truncate(issueBody || '', 800)}
+
+Respond ONLY with a valid JSON object — no markdown, no code fences, no extra text.
+Required format:
+{"type":"<bug|enhancement|question|security|documentation|performance>","component":"<caching|auth-token|handler|service|persistence|ci-cd|sdm-api|integration-test|build|docs|unknown>"}`;
+    try {
+        const result = await fetchWithBackoff(() => model.generateContent(prompt));
+        const text = result.response.text().trim().replace(/```(?:json)?\n?|\n?```/g, '').trim();
+        const parsed = JSON.parse(text);
+        // Validate values to avoid injecting arbitrary label names
+        const validTypes = new Set(['bug', 'enhancement', 'question', 'security', 'documentation', 'performance']);
+        const validComponents = new Set(['caching', 'auth-token', 'handler', 'service', 'persistence', 'ci-cd', 'sdm-api', 'integration-test', 'build', 'docs', 'unknown']);
+        return {
+            type: validTypes.has(parsed.type) ? parsed.type : 'bug',
+            component: validComponents.has(parsed.component) ? parsed.component : 'unknown',
+        };
+    } catch (e) {
+        console.warn("Issue classification failed:", e.message);
+        return { type: 'bug', component: 'unknown' };
+    }
+}
+
 // Core logic functions
 //----------------------------------------------------------------------------------------------------------------
 
@@ -318,19 +366,27 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
         ${userQuestion}
         `;
     } else {
-        // This is a comment on a regular issue. We don't have a diff.
+        // This is a comment on a regular issue. Include repo scan + project context for better answers.
         const issueTitle = context.payload.issue.title;
         const issueBody = context.payload.issue.body;
-        prompt = `A user has a question about a GitHub issue. The issue's title and body are provided below, followed by the user's question. Please provide a clear and concise answer.
+        const repoScan = scanRepositoryForIssue(issueTitle, userQuestion, process.cwd());
+        const codeContext = repoScan.matches.length > 0
+            ? `\n**Relevant Code Context (from repository scan):**\n${truncate(repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join('\n---\n'), 4000)}`
+            : '';
+        prompt = `You are an expert engineer on the SAP CAP Java SDM plugin. A user has a question about a GitHub issue. Use the project context, issue details, and any relevant code snippets to give a precise, actionable answer.
 
-        ---
-        Issue Title: ${issueTitle}
-        Issue Body: ${issueBody}
-        
-        ---
-        User's question:
-        ${userQuestion}
-        `;
+**Project Context:**
+${PROJECT_CONTEXT}
+
+---
+**Issue Title:** ${issueTitle}
+**Issue Body:** ${issueBody}
+${codeContext}
+
+---
+**User's question:**
+${userQuestion}
+`;
     }
 
     let response = "Error: Could not generate a response to your comment.";
@@ -355,8 +411,19 @@ async function handleCommentResponse(octokit, commentBody, number, genAI) {
     }
 }
 
-async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI) {
+async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, issueBody, genAI, priorAnalysis = null) {
     console.log(`Processing new issue #${issueNumber}: ${issueTitle}`);
+
+    // Guard: if the issue body is missing or too short, request more details instead of attempting analysis
+    if (!issueBody || issueBody.trim().length < 30) {
+        console.log("Issue body too short or empty. Requesting more details from author.");
+        await octokit.rest.issues.createComment({
+            owner, repo, issue_number: issueNumber,
+            body: `👋 Thanks for opening this issue!\n\nTo provide accurate root-cause analysis and remediation steps, could you share a bit more context?\n\n**Helpful details to include:**\n- Steps to reproduce the problem\n- Expected behaviour vs. actual behaviour\n- Relevant logs, stack traces, or error messages\n- Your environment: CAP Java SDK version, tenant type (single/multi), Cloud Foundry plan\n\n_I'll automatically re-analyse once the description is updated._`,
+        });
+        return;
+    }
+
     // Primary lightweight model for generation
     const flashModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -380,51 +447,76 @@ async function handleNewIssue(octokit, owner, repo, issueNumber, issueTitle, iss
         return;
     }
 
-    // No match: scan repository for potential causes
-    const repoScan = scanRepositoryForIssue(issueTitle, issueBody, process.cwd());
+    // No match: classify issue and scan repository for potential causes — run in parallel
+    const [classification, repoScan] = await Promise.all([
+        classifyIssue(issueTitle, issueBody, genAI),
+        Promise.resolve(scanRepositoryForIssue(issueTitle, issueBody, process.cwd())),
+    ]);
+
+    console.log(`Issue classified — type: "${classification.type}", component: "${classification.component}"`);
     console.log(`Repository scan complete. Matched contexts: ${repoScan.matches.length}`);
+
+    // Apply type and component labels
+    const typeColorMap = {
+        bug: 'd73a4a', enhancement: 'a2eeef', question: 'd876e3',
+        security: 'e4e669', documentation: '0075ca', performance: 'f9d0c4',
+    };
+    const componentLabel = `component:${classification.component}`;
+    await Promise.all([
+        ensureLabel(octokit, owner, repo, classification.type, { color: typeColorMap[classification.type] || 'cccccc', description: `Issue type: ${classification.type}` }),
+        ensureLabel(octokit, owner, repo, componentLabel, { color: '1d76db', description: `Affected component: ${classification.component}` }),
+    ]);
+    await octokit.rest.issues.addLabels({ owner, repo, issue_number: issueNumber, labels: [classification.type, componentLabel] });
+
     const joinedContexts = repoScan.matches.map(m => `File: ${m.file}\n${m.snippet}`).join("\n---\n");
     
     // --- DETAILED PROMPT FIX (from previous request) ---
-    const recPrompt = `You are an expert senior engineer. A new issue was filed. Use the code contexts to hypothesize root causes and generate a detailed, prioritized remediation checklist. Your output must strictly follow the required markdown structure below.
+    const recPrompt = `You are an expert senior engineer and specialist in the SAP CAP Java SDK ecosystem. Use the project context below to ground your analysis in the actual architecture.
 
-    Crucially, for the most likely and actionable remediation steps, you **must include the exact code snippet** showing the required change in a markdown code block. Do not just describe the fix—show the code.
+**Project Context:**
+${PROJECT_CONTEXT}
 
-    Format your output strictly as:
-    
-    ######
-    ## 🧪 Initial Analysis & Proposed Remediation
-    
-    **Summary & Root Cause Hypothesis**
-    [A detailed summary of the issue, including an hypothesis on the root cause.]
+**Issue Classification:** Type = ${classification.type}, Component = ${classification.component}
+${priorAnalysis ? `\n⚠️ **This is a Refined Analysis.** The previous automated analysis is shown below — deepen or correct it based on updated context:\n\`\`\`\n${truncate(priorAnalysis, 2000)}\n\`\`\`\n` : ''}
+A new issue was filed. Use the code contexts to hypothesize root causes and generate a detailed, prioritized remediation checklist. Your output must strictly follow the required markdown structure below.
 
-    ---
-    
-    ### 🥇 Prioritized Remediation Steps (with Code Fixes)
-    
-    1. **Verify Annotation Placement (High Priority):**
-        * **Rationale:** [Explain why this is the most likely fix, e.g., technical fields require a specific placement.]
-        * **Action & Required Change:** [State the action clearly, followed by the specific code snippet showing the fix in CDS or a relevant configuration file (e.g., manifest.json). If no change is required, state the expected state.]
-    
-    2. **Inspect OData $metadata Output (High Priority):**
-        * **Rationale:** [Explain what inspecting the metadata will confirm (backend generation vs. UI rendering issue).]
-        * **Action & Command:** [Provide the exact command/URL to check, e.g., \`https://<service>/$metadata\`]
-    
-    3. **Test UI-Level Override (Medium Priority):**
-        * **Rationale:** [Explain why a UI override might be necessary if the backend annotation is ignored.]
-        * **Action & Required Change:** [Provide the action and the specific code snippet for the change, likely in \`manifest.json\` or a similar UI config.]
-    
-    ---
-    
-    **Risk Assessment**
-    [A brief assessment of the risk/impact of applying the proposed fixes.]
-    ######
+Crucially, for the most likely and actionable remediation steps, you **must include the exact code snippet** showing the required change in a markdown code block. Do not just describe the fix—show the code.
 
-    Issue Title: ${issueTitle}
-    Issue Body: ${issueBody}
-    Relevant Code Contexts (truncated):
-    ${truncate(joinedContexts, 12000)}
-    `;
+Format your output strictly as:
+
+######
+## 🧪 Initial Analysis & Proposed Remediation
+
+**Summary & Root Cause Hypothesis**
+[A detailed summary of the issue, including a hypothesis on the root cause. Reference specific classes (e.g., TokenHandler, SDMServiceImpl, CacheConfig) where relevant.]
+
+---
+
+### 🥇 Prioritized Remediation Steps (with Code Fixes)
+
+1. **Verify Annotation Placement (High Priority):**
+    * **Rationale:** [Explain why this is the most likely fix, e.g., technical fields require a specific placement.]
+    * **Action & Required Change:** [State the action clearly, followed by the specific code snippet showing the fix in CDS or a relevant configuration file (e.g., manifest.json). If no change is required, state the expected state.]
+
+2. **Inspect OData $metadata Output (High Priority):**
+    * **Rationale:** [Explain what inspecting the metadata will confirm (backend generation vs. UI rendering issue).]
+    * **Action & Command:** [Provide the exact command/URL to check, e.g., \`https://<service>/$metadata\`]
+
+3. **Test UI-Level Override (Medium Priority):**
+    * **Rationale:** [Explain why a UI override might be necessary if the backend annotation is ignored.]
+    * **Action & Required Change:** [Provide the action and the specific code snippet for the change, likely in \`manifest.json\` or a similar UI config.]
+
+---
+
+**Risk Assessment**
+[A brief assessment of the risk/impact of applying the proposed fixes.]
+######
+
+Issue Title: ${issueTitle}
+Issue Body: ${issueBody}
+Relevant Code Contexts (truncated):
+${truncate(joinedContexts, 12000)}
+`;
     // --- END DETAILED PROMPT FIX ---
     
     let recommendations = "Failed to generate recommendations.";
@@ -644,13 +736,38 @@ async function run() {
                     // Maintainer confirmation flow
                     const issueLabels = context.payload.issue.labels.map(l => l.name);
                     if (issueLabels.includes('awaiting-confirmation')) {
-                        console.log('Remediation confirmed. Updating labels.');
+                        console.log('Remediation confirmed. Generating task checklist...');
+
+                        // Fetch the last bot comment that contains the analysis
+                        const { data: allComments } = await octokit.rest.issues.listComments({ owner, repo, issue_number: number, per_page: 100 });
+                        const analysisComment = [...allComments].reverse().find(
+                            c => c.user.login === 'github-actions[bot]' && c.body.includes('Prioritized Remediation Steps')
+                        );
+                        const priorAnalysis = analysisComment ? analysisComment.body : '(no prior analysis found)';
+
+                        const taskModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                        const taskPrompt = `Based on this issue remediation analysis, generate a concise GitHub Markdown task checklist using - [ ] checkboxes. Group tasks under clear headings (e.g., ## Investigation, ## Code Changes, ## Verification). Keep each task to one concrete action. Output only the checklist — no preamble, no summary.
+
+Analysis:
+${truncate(priorAnalysis, 3000)}`;
+                        let taskList = '';
+                        try {
+                            const taskResult = await fetchWithBackoff(() => taskModel.generateContent(taskPrompt));
+                            taskList = taskResult.response.text();
+                        } catch (e) {
+                            console.error("Failed to generate task checklist:", e.message);
+                            taskList = '_(Checklist generation failed — please review the analysis comment above and create tasks manually.)_';
+                        }
+
                         await ensureLabel(octokit, owner, repo, 'remediation-approved', { description: 'Remediation steps approved by maintainer', color: '0e8a16' });
                         await octokit.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['remediation-approved'] });
                         // Remove awaiting-confirmation label
                         const remaining = issueLabels.filter(l => l !== 'awaiting-confirmation');
                         try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
-                        await octokit.rest.issues.createComment({ owner, repo, issue_number: number, body: '✅ Remediation confirmed. Automated follow-up actions may proceed (none implemented yet).'});
+                        await octokit.rest.issues.createComment({
+                            owner, repo, issue_number: number,
+                            body: `✅ **Remediation Approved — Generated Task Checklist**\n\n${taskList}`,
+                        });
                     } else {
                         console.log('Confirmation comment received but issue not in awaiting-confirmation state.');
                     }
@@ -658,7 +775,13 @@ async function run() {
                     console.log('Refine analysis requested.');
                     const issueTitle = context.payload.issue.title;
                     const issueBody = context.payload.issue.body;
-                    await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI); // Re-run with fresh model pass
+
+                    // Fetch the last bot analysis comment to use as prior context for refinement
+                    const { data: allComments } = await octokit.rest.issues.listComments({ owner, repo, issue_number: number, per_page: 100 });
+                    const priorBotComment = [...allComments].reverse().find(c => c.user.login === 'github-actions[bot]');
+                    const priorAnalysis = priorBotComment ? priorBotComment.body : null;
+
+                    await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI, priorAnalysis);
                 } else if (commentBody === 'discard recommendations') {
                     console.log('Discard recommendations requested.');
                     try { await octokit.rest.issues.removeLabel({ owner, repo, issue_number: number, name: 'awaiting-confirmation' }); } catch {}
@@ -677,6 +800,28 @@ async function run() {
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body;
             await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
+
+        } else if (context.eventName === 'issues' && context.payload.action === 'edited') {
+            // Issue body/title was edited — if no prior analysis exists, run fresh; otherwise nudge for refinement
+            console.log(`Issue #${number} was edited. Checking for existing analysis...`);
+            const { data: allComments } = await octokit.rest.issues.listComments({ owner, repo, issue_number: number, per_page: 100 });
+            const hasBotAnalysis = allComments.some(
+                c => c.user.login === 'github-actions[bot]' && c.body.includes('Prioritized Remediation Steps')
+            );
+            if (hasBotAnalysis) {
+                // An analysis already exists — notify the author that they can request a refresh
+                await octokit.rest.issues.createComment({
+                    owner, repo, issue_number: number,
+                    body: `📝 **Issue Updated** — the description has been edited.\n\nIf the changes significantly affect scope or context, comment \`refine analysis\` and I'll generate a fresh analysis based on the updated content.`,
+                });
+            } else {
+                // No prior analysis — run fresh analysis
+                console.log(`No prior analysis found for #${number}. Running fresh analysis.`);
+                const issueTitle = context.payload.issue.title;
+                const issueBody = context.payload.issue.body;
+                await handleNewIssue(octokit, owner, repo, number, issueTitle, issueBody, genAI);
+            }
+
         } else {
             console.log(`Event '${context.eventName}' did not match any triggers. No action taken.`);
         }
