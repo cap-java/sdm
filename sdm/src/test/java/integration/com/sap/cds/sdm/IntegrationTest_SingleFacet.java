@@ -196,91 +196,6 @@ class IntegrationTest_SingleFacet {
     }
   }
 
-  /**
-   * Helper method to wait for attachment upload completion.
-   *
-   * @param entityId The ID of the entity containing the attachment
-   * @param attachmentId The ID of the attachment to check
-   * @param timeoutSeconds Maximum time to wait in seconds
-   * @return true if upload completed successfully, false if failed or timed out
-   */
-  private boolean waitForUploadCompletion(
-      String entityId, String attachmentId, int timeoutSeconds) {
-    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
-    for (int i = 0; i < maxIterations; i++) {
-      try {
-        Map<String, Object> metadata =
-            api.fetchMetadataDraft(appUrl, entityName, facetName, entityId, attachmentId);
-        String uploadStatus = (String) metadata.get("uploadStatus");
-
-        if ("Success".equals(uploadStatus)) {
-          return true;
-        } else if ("Failed".equals(uploadStatus)) {
-          System.err.println("Upload failed for attachment: " + attachmentId);
-          return false;
-        }
-
-        // Still uploading, wait before checking again
-        Thread.sleep(2000);
-      } catch (Exception e) {
-        System.err.println(
-            "Error checking upload status for attachment " + attachmentId + ": " + e.getMessage());
-        return false;
-      }
-    }
-
-    System.err.println("Upload timed out for attachment: " + attachmentId);
-    return false;
-  }
-
-  /**
-   * Helper method to wait for all attachments in an entity to complete upload.
-   *
-   * @param entityId The ID of the entity containing the attachments
-   * @param timeoutSeconds Maximum time to wait in seconds
-   * @return true if all uploads completed successfully, false if any failed or timed out
-   */
-  private boolean waitForAllUploadsCompletion(String entityId, int timeoutSeconds) {
-    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
-    for (int i = 0; i < maxIterations; i++) {
-      try {
-        List<Map<String, Object>> attachmentsMetadata =
-            api.fetchEntityMetadataDraft(appUrl, entityName, facetName, entityId);
-
-        boolean allComplete = true;
-        boolean anyFailed = false;
-
-        for (Map<String, Object> metadata : attachmentsMetadata) {
-          String uploadStatus = (String) metadata.get("uploadStatus");
-          if (uploadStatus == null || "InProgress".equals(uploadStatus)) {
-            allComplete = false;
-          } else if ("Failed".equals(uploadStatus)) {
-            anyFailed = true;
-            System.err.println("Upload failed for attachment: " + metadata.get("ID"));
-          }
-        }
-
-        if (anyFailed) {
-          return false;
-        }
-
-        if (allComplete) {
-          return true;
-        }
-
-        // Still uploading, wait before checking again
-        Thread.sleep(2000);
-      } catch (Exception e) {
-        System.err.println(
-            "Error checking upload status for entity " + entityId + ": " + e.getMessage());
-        return false;
-      }
-    }
-
-    System.err.println("Upload timed out for entity: " + entityId);
-    return false;
-  }
-
   @Test
   @Order(1)
   void testCreateEntityAndCheck() {
@@ -2430,10 +2345,6 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
-          // Wait for all uploads to complete before saving
-          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
-            fail("Upload did not complete in time after copying attachments");
-          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
@@ -2609,11 +2520,6 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy attachment to target entity: " + copyResponse);
     }
 
-    // Wait for all uploads to complete before saving
-    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
-      fail("Upload did not complete in time after copying attachment");
-    }
-
     // Save target entity
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
@@ -2785,11 +2691,6 @@ class IntegrationTest_SingleFacet {
 
     if (!copyResponse.equals("Attachments copied successfully")) {
       fail("Could not copy attachment to target entity: " + copyResponse);
-    }
-
-    // Wait for all uploads to complete before saving
-    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
-      fail("Upload did not complete in time after copying attachment");
     }
 
     // Save target entity
@@ -3018,11 +2919,6 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy attachment to target entity: " + copyResponse);
     }
 
-    // Wait for all uploads to complete before saving
-    if (!waitForAllUploadsCompletion(copyCustomTargetEntity, 60)) {
-      fail("Upload did not complete in time after copying attachment");
-    }
-
     // Save target entity
     String saveTargetResponse =
         api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
@@ -3173,10 +3069,6 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
-          // Wait for all uploads to complete before saving
-          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
-            fail("Upload did not complete in time after copying attachments");
-          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
@@ -3905,11 +3797,6 @@ class IntegrationTest_SingleFacet {
       fail("Could not copy link: " + copyResponse);
     }
 
-    // Wait for all uploads to complete before saving
-    if (!waitForAllUploadsCompletion(copyLinkTargetEntity, 60)) {
-      fail("Upload did not complete in time after copying link");
-    }
-
     String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, copyLinkTargetEntity);
     if (!saveResponse.equals("Saved")) {
       fail("Could not save target entity after copying link");
@@ -4028,11 +3915,6 @@ class IntegrationTest_SingleFacet {
         api.copyAttachment(appUrl, entityName, facetName, copyLinkTargetEntity, sourceObjectIds);
     if (!copyResponse.equals("Attachments copied successfully")) {
       fail("Could not copy link from new source entity to existing target entity: " + copyResponse);
-    }
-
-    // Wait for all uploads to complete before saving
-    if (!waitForAllUploadsCompletion(copyLinkTargetEntity, 60)) {
-      fail("Upload did not complete in time after copying link");
     }
 
     String saveTargetResponse =
@@ -4264,10 +4146,6 @@ class IntegrationTest_SingleFacet {
             api.copyAttachment(
                 appUrl, entityName, facetName, copyAttachmentTargetEntity, sourceObjectIds);
         if (copyResponse.equals("Attachments copied successfully")) {
-          // Wait for all uploads to complete before saving
-          if (!waitForAllUploadsCompletion(copyAttachmentTargetEntity, 60)) {
-            fail("Upload did not complete in time after copying attachments");
-          }
           String saveEntityResponse =
               api.saveEntityDraft(appUrl, entityName, srvpath, copyAttachmentTargetEntity);
           if (saveEntityResponse.equals("Saved")) {
