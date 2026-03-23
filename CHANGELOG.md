@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.8.1
+
+### Fixed
+- Enhanced logging across all plugin code for improved debugging and traceability
+
 ## Version 1.8.0
 
 ### Added
