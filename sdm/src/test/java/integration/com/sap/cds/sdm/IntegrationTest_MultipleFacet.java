@@ -2904,7 +2904,6 @@ class IntegrationTest_MultipleFacet {
       if (!updateSecondaryPropertyResponse2.equals("Updated")) {
         fail("Could not update attachment customProperty2 field for facet: " + facetName);
       }
-
     }
 
     // Save source entity to persist attachments before fetching metadata
