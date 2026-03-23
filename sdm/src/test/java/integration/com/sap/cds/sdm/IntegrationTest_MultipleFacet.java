@@ -881,12 +881,6 @@ class IntegrationTest_MultipleFacet {
       }
     }
     if (counter >= 2) {
-      // Allow time for deletions to process
-      try {
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
       response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
     }
     if (response.equals("Saved")) {
