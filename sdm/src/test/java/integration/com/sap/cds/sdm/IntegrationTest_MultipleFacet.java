@@ -2980,14 +2980,6 @@ class IntegrationTest_MultipleFacet {
       }
 
       // Fetch copied attachment IDs from target draft
-      List<Map<String, Object>> copiedMetadataResponse =
-          api.fetchEntityMetadata(appUrl, entityName, facetName, copyCustomTargetEntity);
-      List<String> copiedAttachmentIds =
-          copiedMetadataResponse.stream()
-              .map(item -> (String) item.get("ID"))
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList());
-
       String saveTargetResponse =
           api.saveEntityDraft(appUrl, entityName, srvpath, copyCustomTargetEntity);
       if (!saveTargetResponse.equals("Saved")) {
