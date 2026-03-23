@@ -1316,7 +1316,7 @@ SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 
 The attachment upload process displays a status indicator for each file being uploaded.
 
-**For repositories without virus scanning:**
+**For repositories without malware scanning:**
 The upload status transitions from "Uploading" to "Success".
 
 **For repositories with malware scanning:**
