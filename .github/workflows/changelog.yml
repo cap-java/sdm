@@ -3,9 +3,26 @@ name: AI Changelog Generator
 # Triggers on every GitHub Release event — both pre-release (Artifactory) and
 # full release (Maven Central) so CHANGELOG.md is always updated before the
 # artifacts land in the registries.
+#
+# Can also be triggered manually via workflow_dispatch for end-to-end testing
+# before a real release. Set dry_run=true (default) to skip the git commit.
 on:
   release:
     types: [prereleased, released]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to generate changelog for (e.g. 1.8.0)'
+        required: true
+        default: '1.8.0'
+      dry_run:
+        description: 'Dry run — generate entry but do NOT commit to develop'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: write      # needed to commit + push CHANGELOG.md to develop
@@ -47,13 +64,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          # Use manual input tag when triggered via workflow_dispatch, otherwise use the release tag
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
         run: node .github/scripts/generate-changelog.js
 
+      # Always print the diff so dry-run results are visible in the Actions log
+      - name: Show generated CHANGELOG diff
+        run: |
+          echo "──── CHANGELOG.md diff (what would be committed) ────"
+          git diff CHANGELOG.md || echo "(no changes — version may already exist)"
+          echo "─────────────────────────────────────────────────────"
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            echo "ℹ️  DRY RUN — commit step is skipped. Review the diff above."
+          fi
+
       # Commit only if CHANGELOG.md was actually modified (idempotent).
-      # `git pull --rebase` prevents conflicts with the concurrent version-bump
-      # commit from the newrelease action running in the build workflow.
+      # Skipped when dry_run=true (manual trigger default) so you can test
+      # end-to-end without touching develop.
       - name: Commit and push CHANGELOG.md
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
