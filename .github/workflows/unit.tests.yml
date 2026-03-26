@@ -1,6 +1,11 @@
 name: UnitTestsWithCodeCoverageTestAK
 
 on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+    types: [opened, synchronize, reopened, auto_merge_enabled]
   workflow_dispatch:
     inputs:
       file_url:
@@ -19,15 +24,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download file from URL
+      if: github.event_name == 'workflow_dispatch'
       run: |
         curl -fSL \
           "${{ github.event.inputs.file_url }}" \
           -o "${{ github.event.inputs.download_path }}"
 
     - name: Wait 30 seconds
+      if: github.event_name == 'workflow_dispatch'
       run: sleep 30
 
     - name: Verify downloaded file
+      if: github.event_name == 'workflow_dispatch'
       run: |
         FILE="${{ github.event.inputs.download_path }}"
         if [ -f "$FILE" ]; then
@@ -40,3 +48,7 @@ jobs:
           echo "File NOT found at path: $FILE"
           exit 1
         fi
+
+    - name: PR build check
+      if: github.event_name != 'workflow_dispatch'
+      run: echo "Workflow triggered by ${{ github.event_name }} on branch ${{ github.ref }}"
