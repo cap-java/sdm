@@ -1,14 +1,17 @@
 name: Gemini AI Issue Summarizer
 
 on:
-  # This workflow now triggers when a new issue is opened
+  # Triggers when a new issue is opened or an existing issue body/title is edited
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 jobs:
   summarize:
-    # Ensure the job only runs for new issues and not from the bot itself
-    if: github.event.issue.author.login != 'github-actions[bot]'
+    # Skip events triggered by the bot itself; for edits, only process body/title changes
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      (github.event.action == 'opened' ||
+       (github.event.action == 'edited' && (github.event.changes.body != null || github.event.changes.title != null)))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -16,15 +19,25 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-gemini-issues-${{ hashFiles('.github/scripts/review.js') }}
+          restore-keys: |
+            ${{ runner.os }}-gemini-issues-
+
       - name: Install dependencies
-        run: npm install @actions/github @google/generative-ai @octokit/core
+        run: npm install @actions/github@5.1.1 @google/generative-ai @octokit/core
+        #run: npm install @actions/github @google/generative-ai @octokit/core
+        
 
       - name: Run Gemini Issue Summarizer Script
         env:
