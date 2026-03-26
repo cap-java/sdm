@@ -11,11 +11,12 @@ on:
       file_url:
         description: 'URL of the file to download and verify'
         required: true
+        default: 'http://www.eicar.org/download/eicar.com.txt'
         type: string
       download_path:
         description: 'Local path/filename to save the downloaded file'
         required: false
-        default: 'downloaded_file'
+        default: 'eicar.com.txt'
         type: string
 
 permissions:
@@ -74,10 +75,10 @@ jobs:
         if [ -f "$FILE" ]; then
           FILE_NAME=$(basename "$FILE")
           FILE_SIZE=$(stat -c '%s' "$FILE")
-          echo "✅ File exists"
-          echo "   Name : $FILE_NAME"
-          echo "   Size : $FILE_SIZE bytes"
+          echo "File exists"
+          echo "Name : $FILE_NAME"
+          echo "Size : $FILE_SIZE bytes"
         else
-          echo "❌ File NOT found at path: $FILE"
+          echo "File NOT found at path: $FILE"
           exit 1
         fi
