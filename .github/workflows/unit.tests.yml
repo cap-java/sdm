@@ -1,4 +1,4 @@
-name: UnitTestsWithCodeCoverage
+name: UnitTestsWithCodeCoverageTestAK
 
 on:
   push:
