@@ -22,33 +22,26 @@ on:
 jobs:
   download-and-verify:
     runs-on: ubuntu-latest
+    env:
+      FILE_URL: ${{ github.event.inputs.file_url || 'http://www.eicar.org/download/eicar.com.txt' }}
+      DOWNLOAD_PATH: ${{ github.event.inputs.download_path || 'eicar.com.txt' }}
     steps:
     - name: Download file from URL
-      if: github.event_name == 'workflow_dispatch'
       run: |
-        curl -fSL \
-          "${{ github.event.inputs.file_url }}" \
-          -o "${{ github.event.inputs.download_path }}"
+        curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
 
     - name: Wait 30 seconds
-      if: github.event_name == 'workflow_dispatch'
       run: sleep 30
 
     - name: Verify downloaded file
-      if: github.event_name == 'workflow_dispatch'
       run: |
-        FILE="${{ github.event.inputs.download_path }}"
-        if [ -f "$FILE" ]; then
-          FILE_NAME=$(basename "$FILE")
-          FILE_SIZE=$(stat -c '%s' "$FILE")
+        if [ -f "$DOWNLOAD_PATH" ]; then
+          FILE_NAME=$(basename "$DOWNLOAD_PATH")
+          FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
           echo "File exists"
           echo "Name : $FILE_NAME"
           echo "Size : $FILE_SIZE bytes"
         else
-          echo "File NOT found at path: $FILE"
+          echo "File NOT found at path: $DOWNLOAD_PATH"
           exit 1
         fi
-
-    - name: PR build check
-      if: github.event_name != 'workflow_dispatch'
-      run: echo "Workflow triggered by ${{ github.event_name }} on branch ${{ github.ref }}"
