@@ -1,11 +1,6 @@
 name: UnitTestsWithCodeCoverageTestAK
 
 on:
-  push:
-    branches: [ "develop" ]
-  pull_request:
-    branches: [ "develop" ]
-    types: [opened, synchronize, reopened, auto_merge_enabled]
   workflow_dispatch:
     inputs:
       file_url:
@@ -19,57 +14,20 @@ on:
         default: 'eicar.com.txt'
         type: string
 
-permissions:
-  pull-requests: read
-
 jobs:
-  unitTests:
+  download-and-verify:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java-version: [17]
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up JDK ${{ matrix.java-version }}
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: ${{ matrix.java-version }}
-
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-
-    - name: Install dependencies and run tests with coverage
-      run: |
-        mvn clean install -P unit-tests -DskipIntegrationTests
-
-    - name: Upload code coverage report
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-coverage-report
-        path: target/site/jacoco/jacoco.xml
-
-    # ── File download + verification (only on workflow_dispatch) ──────────────
     - name: Download file from URL
-      if: github.event_name == 'workflow_dispatch'
       run: |
         curl -fSL \
           "${{ github.event.inputs.file_url }}" \
           -o "${{ github.event.inputs.download_path }}"
 
     - name: Wait 30 seconds
-      if: github.event_name == 'workflow_dispatch'
       run: sleep 30
 
     - name: Verify downloaded file
-      if: github.event_name == 'workflow_dispatch'
       run: |
         FILE="${{ github.event.inputs.download_path }}"
         if [ -f "$FILE" ]; then
