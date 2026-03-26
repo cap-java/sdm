@@ -35,7 +35,8 @@ jobs:
             ${{ runner.os }}-gemini-issues-
 
       - name: Install dependencies
-        run: npm install @actions/github @google/generative-ai @octokit/core
+        run: npm install @actions/github@5.1.1 @google/generative-ai @octokit/core
+        #run: npm install @actions/github @google/generative-ai @octokit/core
 
       - name: Run Gemini Issue Summarizer Script
         env:
