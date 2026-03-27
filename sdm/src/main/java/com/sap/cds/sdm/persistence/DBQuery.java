@@ -357,6 +357,9 @@ public class DBQuery {
       PersistenceService persistenceService,
       CmisDocument cmisDocument) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
+    System.out.println("Attachment entity for adding attachment: " + attachmentEntity.getName());
+    System.out.println("Upload Status before adding to entity: " + cmisDocument.getUploadStatus());
+
     Map<String, Object> updatedFields = new HashMap<>();
     updatedFields.put("objectId", cmisDocument.getObjectId());
     updatedFields.put("repositoryId", repositoryId);
@@ -365,11 +368,25 @@ public class DBQuery {
     updatedFields.put("type", "sap-icon://document");
     updatedFields.put("mimeType", cmisDocument.getMimeType());
     updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
+    System.out.println("Updated fields: " + updatedFields);
+
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
-    persistenceService.run(updateQuery);
+    Result updateResult = persistenceService.run(updateQuery);
+
+    long rowsUpdated = updateResult.rowCount();
+    System.out.println("Rows updated: " + rowsUpdated);
+    logger.info(
+        "Updated {} row(s) for attachment ID: {}", rowsUpdated, cmisDocument.getAttachmentId());
+
+    if (rowsUpdated == 0) {
+      logger.warn(
+          "No rows updated for attachment ID: {}. The record might not exist yet in entity: {}",
+          cmisDocument.getAttachmentId(),
+          attachmentEntity.getQualifiedName());
+    }
   }
 
   public void saveUploadStatusToAttachment(
