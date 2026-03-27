@@ -1654,6 +1654,7 @@ public class SDMCustomServiceHandler {
     fields.put("repositoryId", data.getRepositoryId());
     fields.put("folderId", data.getFolderId());
     fields.put("status", "Clean");
+    fields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
     fields.put("mimeType", mimeType);
     fields.put("type", cmisDocument.getType());
     fields.put("fileName", fileName);
@@ -1807,6 +1808,7 @@ public class SDMCustomServiceHandler {
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
       updatedFields.put("status", "Clean");
+      updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
