@@ -1299,17 +1299,21 @@ type=Type
 
 ### Error Messages Localization
 
-The plugin provides error message keys in the `SDMErrorKeys` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorKeys.java). You can override these messages by adding translations to `messages_[languagecode].properties` files in your leading application under `srv/src/main/resources`.
+The plugin provides two classes for error keys:
 
-Default messages are present in `SDMErrorMessages` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorMessages.java). If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
+- `SDMUIErrorKeys` - UI-facing messages that should be translated
+- `SDMErrorKeys` - Backend/internal messages (no translation needed)
 
-Example `messages_de.properties` for German language:
+To translate UI messages, add entries to `messages_[languagecode].properties` in `srv/src/main/resources/`:
+
 ```properties
-SDM.virusRepoErrorMoreThan400MB=Sie können keine Dateien hochladen, die größer als 400 MB sind
-SDM.userNotAuthorisedError=Sie verfügen nicht über die erforderlichen Berechtigungen zum Hochladen von Anhängen
-SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
-SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
+# messages_de.properties
+SDM.couldNotUploadDocument=Das Dokument konnte nicht hochgeladen werden.
+SDM.couldNotDeleteDocument=Das Dokument konnte nicht gelöscht werden.
+SDM.userNotAuthorisedError=Sie haben keine Berechtigung zum Hochladen von Anhängen.
 ```
+
+Default English messages are defined in `SDMErrorMessages`.
 
 
 ## Support for Attachment Upload Status

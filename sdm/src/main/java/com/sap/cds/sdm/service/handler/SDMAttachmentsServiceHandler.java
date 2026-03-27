@@ -363,8 +363,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           createResult != null ? createResult.toString() : "null");
     } catch (Exception e) {
       logger.error("Error creating document in SDM service: {}", e.getMessage(), e);
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(AttachmentService.EVENT_CREATE_ATTACHMENT), e);
+      throw new ServiceException(SDMErrorMessages.getCouldNotUploadDocument(), e);
     }
 
     logger.info(

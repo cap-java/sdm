@@ -530,8 +530,7 @@ public class SDMServiceImpl implements SDMService {
       logger.debug("END: getFolderIdByPath - folderId: {}", folderId);
       return folderId;
     } catch (IOException e) {
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")));
+      throw new ServiceException(SDMErrorMessages.getCouldNotUploadDocument());
     }
   }
 
@@ -692,8 +691,7 @@ public class SDMServiceImpl implements SDMService {
       return statusCode;
     } catch (IOException e) {
       logger.error("Error deleting document {}: {}", objectId, e.getMessage(), e);
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_DELETE")));
+      throw new ServiceException(SDMErrorMessages.getCouldNotDeleteDocument());
     }
   }
 
