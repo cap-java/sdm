@@ -125,24 +125,36 @@ jobs:
           password="${{ secrets.CF_PASSWORD }}"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          CF_ORG=${{ secrets.CF_ORG }}
-          CF_USERNAME=${{ secrets.CF_USERNAME }}
-          CF_PASSWORD=${{ secrets.CF_PASSWORD }}
-          CONSUMER_CF_API_ENDPOINT=${{secrets.CF_API}}
-          CONSUMER_CF_USERNAME=${{secrets.CF_USERNAME}}
-          CONSUMER_CF_PASSWORD=${{secrets.CF_PASSWORD}}
-          CONSUMER_SUBACCOUNT_ID=${{secrets.CONSUMER_SUBACCOUNT_ID}}
-          BTP_GLOBAL_ACCOUNT_SUBDOMAIN=${{secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN}}
-          CMIS_CLIENT_ID=${{secrets.CMIS_CLIENT_ID}}
-          CMIS_CLIENT_SECRET=${{secrets.CMIS_CLIENT_SECRET}}
-          CMIS_USERNAME=${{secrets.CF_USERNAME}}
-          CMIS_PASSWORD=${{secrets.CF_PASSWORD}}
+          CF_ORG="${{ secrets.CF_ORG }}"
+          CF_USERNAME="${{ secrets.CF_USERNAME }}"
+          CF_PASSWORD="${{ secrets.CF_PASSWORD }}"
+          CONSUMER_CF_API_ENDPOINT="${{secrets.CF_API}}"
+          CONSUMER_CF_USERNAME="${{secrets.CF_USERNAME}}"
+          CONSUMER_CF_PASSWORD="${{secrets.CF_PASSWORD}}"
+          CONSUMER_SUBACCOUNT_ID="${{secrets.CONSUMER_SUBACCOUNT_ID}}"
+          BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN}}"
+          CMIS_CLIENT_ID="${{secrets.CMIS_CLIENT_ID}}"
+          CMIS_CLIENT_SECRET="${{secrets.CMIS_CLIENT_SECRET}}"
+          CMIS_USERNAME="${{secrets.CF_USERNAME}}"
+          CMIS_PASSWORD="${{secrets.CF_PASSWORD}}"
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
           echo "::add-mask::$username"
           echo "::add-mask::$password"
           echo "::add-mask::$noSDMRoleUsername"
           echo "::add-mask::$noSDMRoleUserPassword"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::$CF_USERNAME"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CONSUMER_CF_API_ENDPOINT"
+          echo "::add-mask::$CONSUMER_CF_USERNAME"
+          echo "::add-mask::$CONSUMER_CF_PASSWORD"
+          echo "::add-mask::$CONSUMER_SUBACCOUNT_ID"
+          echo "::add-mask::$BTP_GLOBAL_ACCOUNT_SUBDOMAIN"
+          echo "::add-mask::$CMIS_CLIENT_ID"
+          echo "::add-mask::$CMIS_CLIENT_SECRET"
+          echo "::add-mask::$CMIS_USERNAME"
+          echo "::add-mask::$CMIS_PASSWORD"
           if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
           if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
           if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
@@ -151,6 +163,18 @@ jobs:
           if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
           if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
           if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
+          if [ -z "$CF_ORG" ]; then echo "❌ Error: CF_ORG is not set"; exit 1; fi
+          if [ -z "$CF_USERNAME" ]; then echo "❌ Error: CF_USERNAME is not set"; exit 1; fi
+          if [ -z "$CF_PASSWORD" ]; then echo "❌ Error: CF_PASSWORD is not set"; exit 1; fi
+          if [ -z "$CONSUMER_CF_API_ENDPOINT" ]; then echo "❌ Error: CONSUMER_CF_API_ENDPOINT is not set"; exit 1; fi
+          if [ -z "$CONSUMER_CF_USERNAME" ]; then echo "❌ Error: CONSUMER_CF_USERNAME is not set"; exit 1; fi
+          if [ -z "$CONSUMER_CF_PASSWORD" ]; then echo "❌ Error: CONSUMER_CF_PASSWORD is not set"; exit 1; fi
+          if [ -z "$CONSUMER_SUBACCOUNT_ID" ]; then echo "❌ Error: CONSUMER_SUBACCOUNT_ID is not set"; exit 1; fi
+          if [ -z "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN" ]; then echo "❌ Error: BTP_GLOBAL_ACCOUNT_SUBDOMAIN is not set"; exit 1; fi
+          if [ -z "$CMIS_CLIENT_ID" ]; then echo "❌ Error: CMIS_CLIENT_ID is not set"; exit 1; fi
+          if [ -z "$CMIS_CLIENT_SECRET" ]; then echo "❌ Error: CMIS_CLIENT_SECRET is not set"; exit 1; fi
+          if [ -z "$CMIS_USERNAME" ]; then echo "❌ Error: CMIS_USERNAME is not set"; exit 1; fi
+          if [ -z "$CMIS_PASSWORD" ]; then echo "❌ Error: CMIS_PASSWORD is not set"; exit 1; fi
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           authUrl=$authUrl
