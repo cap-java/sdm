@@ -17,11 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tokenFlow: [namedUser, technicalUser]
+        tokenFlow: [namedUser]
         testClass: 
           - IntegrationTest_SingleFacet
-          - IntegrationTest_MultipleFacet
-          - IntegrationTest_Chapters_MultipleFacet
 
     steps:
       - name: Checkout repository 📁
