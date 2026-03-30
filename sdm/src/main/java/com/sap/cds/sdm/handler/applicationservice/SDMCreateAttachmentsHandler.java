@@ -94,7 +94,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       dbQuery.addAttachmentToDraft(attachmentEntity, persistenceService, cmisDocument);
       logger.info("Post-INSERT: Successfully updated active entity attachment with SDM metadata");
     } catch (Exception e) {
-      logger.warn("Failed to update active entity SDM metadata after INSERT: {}", e.getMessage());
+      logger.error(
+          "Failed to update active entity SDM metadata after INSERT: {}", e.getMessage(), e);
     }
   }
 
@@ -182,6 +183,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 500)
   public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
     // Preserve uploadStatus before CDS removes readonly fields
+    logger.debug(
+        "Preserving readonly fields (uploadStatus) for entity: {} before CDS capability check",
+        context.getTarget().getQualifiedName());
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
 

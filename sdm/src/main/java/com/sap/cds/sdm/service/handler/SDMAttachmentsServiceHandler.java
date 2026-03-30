@@ -278,7 +278,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String draftEntityName = baseEntityName + "_drafts";
 
     logger.debug("Looking for attachment entity: {}", baseEntityName);
-    System.out.println("Looking for attachment entity: " + baseEntityName);
 
     // Check if we should use draft entity by verifying if parent record exists in draft table
     Map<String, Object> attachmentIds = eventContext.getAttachmentIds();
@@ -286,7 +285,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
     if (isDraftContext) {
       logger.debug("Using draft entity: {}", draftEntityName);
-      System.out.println("Using draft entity: " + draftEntityName);
       Optional<CdsEntity> draftEntity = model.findEntity(draftEntityName);
       return draftEntity.orElseThrow(
           () -> {
@@ -296,7 +294,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     } else {
       // Use the active entity
       logger.debug("Using active entity: {}", baseEntityName);
-      System.out.println("Using active entity: " + baseEntityName);
       Optional<CdsEntity> activeEntity = model.findEntity(baseEntityName);
       return activeEntity.orElseThrow(
           () -> {
@@ -319,7 +316,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
         String parentDraftEntityName = parentEntityName + "_drafts";
 
         logger.debug("Checking if parent entity {} has draft table", parentEntityName);
-        System.out.println("Checking parent entity: " + parentEntityName);
 
         // Check if parent draft entity exists in model
         Optional<CdsEntity> parentDraftEntity =
@@ -344,21 +340,18 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
                 parentId,
                 existsInDraft ? "exists" : "does not exist",
                 parentDraftEntityName);
-            System.out.println(
-                "Parent ID "
-                    + parentId
-                    + (existsInDraft ? " exists" : " does not exist")
-                    + " in draft table");
             return existsInDraft;
           }
         }
       }
     } catch (Exception e) {
       logger.warn("Error checking draft context, defaulting to draft entity: {}", e.getMessage());
-      System.out.println("Error checking draft context: " + e.getMessage());
     }
 
     // Default to draft entity if we can't determine (safer option for backwards compatibility)
+    logger.info(
+        "Could not determine draft/active context for entity: {}, defaulting to draft entity",
+        baseEntityName);
     return true;
   }
 
@@ -477,6 +470,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     cmisDocument.setFolderId(folderId);
     cmisDocument.setMimeType((String) data.get("mimeType"));
     cmisDocument.setContentLength(contentlen);
+    logger.debug(
+        "CMIS document properties set - attachmentId: {}, fileName: {}, folderId: {}, mimeType: {}",
+        cmisDocument.getAttachmentId(),
+        cmisDocument.getFileName(),
+        folderId,
+        cmisDocument.getMimeType());
   }
 
   private void handleCreateDocumentResult(
@@ -497,6 +496,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           String activeEntityName = eventContext.getAttachmentEntity().getQualifiedName();
           Optional<CdsEntity> activeEntity = eventContext.getModel().findEntity(activeEntityName);
           if (activeEntity.isPresent()) {
+            logger.debug(
+                "Checking if attachment already exists in active entity: {}", activeEntityName);
             String attachmentId = cmisDocument.getAttachmentId();
             CmisDocument existing =
                 dbQuery.getObjectIdForAttachmentID(
@@ -519,7 +520,15 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
               eventContext.getData().setContent(null);
               eventContext.setCompleted();
               return;
+            } else {
+              logger.debug(
+                  "Attachment {} not found in active entity with a valid objectId, treating as genuine duplicate",
+                  attachmentId);
             }
+          } else {
+            logger.warn(
+                "Active entity not found in model: {}, cannot check for existing attachment during duplicate handling",
+                activeEntityName);
           }
         } catch (Exception ex) {
           logger.warn(
