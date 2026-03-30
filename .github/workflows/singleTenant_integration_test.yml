@@ -131,6 +131,9 @@ jobs:
           CONSUMER_CF_PASSWORD="${{secrets.CF_PASSWORD}}"
           CONSUMER_SUBACCOUNT_ID="${{secrets.CONSUMER_SUBACCOUNT_ID}}"
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN}}"
+          CMIS_URL="https://api-sdm-di.cfapps.eu12.hana.ondemand.com/"
+          CMIS_REPOSITORY_ID="SAMPLE-REPO"
+          CMIS_TOKEN_URL="https://sdmgoogleworkspace.authentication.eu12.hana.ondemand.com"
           CMIS_CLIENT_ID="${{secrets.CMIS_CLIENT_ID}}"
           CMIS_CLIENT_SECRET="${{secrets.CMIS_CLIENT_SECRET}}"
           CMIS_USERNAME="${{secrets.CF_USER}}"
@@ -169,6 +172,9 @@ jobs:
           if [ -z "$CONSUMER_CF_PASSWORD" ]; then echo "❌ Error: CONSUMER_CF_PASSWORD is not set"; exit 1; fi
           if [ -z "$CONSUMER_SUBACCOUNT_ID" ]; then echo "❌ Error: CONSUMER_SUBACCOUNT_ID is not set"; exit 1; fi
           if [ -z "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN" ]; then echo "❌ Error: BTP_GLOBAL_ACCOUNT_SUBDOMAIN is not set"; exit 1; fi
+          if [ -z "$CMIS_URL" ]; then echo "❌ Error: CMIS_URL is not set"; exit 1; fi
+          if [ -z "$CMIS_REPOSITORY_ID" ]; then echo "❌ Error: CMIS_REPOSITORY_ID is not set"; exit 1; fi
+          if [ -z "$CMIS_TOKEN_URL" ]; then echo "❌ Error: CMIS_TOKEN_URL is not set"; exit 1; fi
           if [ -z "$CMIS_CLIENT_ID" ]; then echo "❌ Error: CMIS_CLIENT_ID is not set"; exit 1; fi
           if [ -z "$CMIS_CLIENT_SECRET" ]; then echo "❌ Error: CMIS_CLIENT_SECRET is not set"; exit 1; fi
           if [ -z "$CMIS_USERNAME" ]; then echo "❌ Error: CMIS_USERNAME is not set"; exit 1; fi
@@ -182,6 +188,21 @@ jobs:
           password=$password
           noSDMRoleUsername=$noSDMRoleUsername
           noSDMRoleUserPassword=$noSDMRoleUserPassword
+          CF_ORG=$CF_ORG
+          CF_USERNAME=$CF_USERNAME
+          CF_PASSWORD=$CF_PASSWORD
+          CONSUMER_CF_API_ENDPOINT=$CONSUMER_CF_API_ENDPOINT
+          CONSUMER_CF_USERNAME=$CONSUMER_CF_USERNAME
+          CONSUMER_CF_PASSWORD=$CONSUMER_CF_PASSWORD
+          CONSUMER_SUBACCOUNT_ID=$CONSUMER_SUBACCOUNT_ID
+          BTP_GLOBAL_ACCOUNT_SUBDOMAIN=$BTP_GLOBAL_ACCOUNT_SUBDOMAIN
+          CMIS_URL=$CMIS_URL
+          CMIS_REPOSITORY_ID=$CMIS_REPOSITORY_ID
+          CMIS_TOKEN_URL=$CMIS_TOKEN_URL
+          CMIS_CLIENT_ID=$CMIS_CLIENT_ID
+          CMIS_CLIENT_SECRET=$CMIS_CLIENT_SECRET
+          CMIS_USERNAME=$CMIS_USERNAME
+          CMIS_PASSWORD=$CMIS_PASSWORD
           EOL
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
