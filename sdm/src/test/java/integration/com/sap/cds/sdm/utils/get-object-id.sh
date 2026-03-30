@@ -21,13 +21,26 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/cf-config.env"
+CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties"
+
+# Load key=value pairs from .properties file without shell expansion of values
+load_props() {
+  local key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ -z "$key" ]] && continue
+    printf -v "$key" '%s' "$val"
+  done < "$1"
+}
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "ERROR: Config file not found at $CONFIG_FILE"
   exit 1
 fi
-source "$CONFIG_FILE"
+load_props "$CONFIG_FILE"
 
 # --- Validate positional parameters ---
 if [[ $# -lt 1 || $# -gt 3 ]]; then

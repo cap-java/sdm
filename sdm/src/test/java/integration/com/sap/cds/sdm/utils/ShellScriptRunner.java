@@ -1,0 +1,131 @@
+package integration.com.sap.cds.sdm.utils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class ShellScriptRunner {
+
+  /**
+   * Runs a shell script and returns its exit code. stdout and stderr are printed to System.out /
+   * System.err.
+   *
+   * @param scriptPath absolute or relative path to the .sh file
+   * @param args additional arguments forwarded to the script
+   * @return exit code of the process (0 = success)
+   */
+  public static int run(String scriptPath, String... args)
+      throws IOException, InterruptedException {
+    List<String> command = new ArrayList<>();
+    command.add("bash");
+    command.add(scriptPath);
+    Collections.addAll(command, args);
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.redirectErrorStream(false);
+    Process process = pb.start();
+
+    // Stream stdout
+    Thread stdoutThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.out.println("[script] " + line);
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stdout: " + e.getMessage());
+              }
+            });
+
+    // Stream stderr
+    Thread stderrThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.err.println("[script-err] " + line);
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stderr: " + e.getMessage());
+              }
+            });
+
+    stdoutThread.start();
+    stderrThread.start();
+    int exitCode = process.waitFor();
+    stdoutThread.join();
+    stderrThread.join();
+    return exitCode;
+  }
+
+  /**
+   * Runs a shell script, streams stderr to System.err, and returns the last non-empty line of
+   * stdout. Useful for scripts that print a single result value as their final output line.
+   *
+   * @param scriptPath absolute or relative path to the .sh file
+   * @param args additional arguments forwarded to the script
+   * @return the last non-empty stdout line, or null if stdout was empty
+   */
+  public static String runAndCaptureOutput(String scriptPath, String... args)
+      throws IOException, InterruptedException {
+    List<String> command = new ArrayList<>();
+    command.add("bash");
+    command.add(scriptPath);
+    Collections.addAll(command, args);
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.redirectErrorStream(false);
+    Process process = pb.start();
+
+    final List<String> stdoutLines = new CopyOnWriteArrayList<>();
+
+    Thread stdoutThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.out.println("[script] " + line);
+                  if (!line.trim().isEmpty()) stdoutLines.add(line.trim());
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stdout: " + e.getMessage());
+              }
+            });
+
+    Thread stderrThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.err.println("[script-err] " + line);
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stderr: " + e.getMessage());
+              }
+            });
+
+    stdoutThread.start();
+    stderrThread.start();
+    int exitCode = process.waitFor();
+    stdoutThread.join();
+    stderrThread.join();
+
+    if (exitCode != 0) {
+      throw new RuntimeException(scriptPath + " exited with code " + exitCode);
+    }
+    return stdoutLines.isEmpty() ? null : stdoutLines.get(stdoutLines.size() - 1);
+  }
+}

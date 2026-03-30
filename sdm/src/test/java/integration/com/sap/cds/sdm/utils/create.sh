@@ -10,23 +10,33 @@ echo "test"
 #   cmisName      The name the document will have inside the CMIS repository
 #   file          Path to the local file to upload
 #   parentFolderID  (Optional) CMIS object ID of the parent folder to upload into.
-#                   Takes precedence over CMIS_FOLDER_ID from cf-config.env.
-#                   If neither is provided, the file is uploaded to the repository root.
+#                   If not provided, the file is uploaded to the repository root.
 #
-# Required config in cf-config.env:
+# Required config in credentials.properties:
 #   CMIS_URL, CMIS_REPOSITORY_ID, CMIS_TOKEN_URL, CMIS_CLIENT_ID, CMIS_CLIENT_SECRET
-# Optional config:
-#   CMIS_FOLDER_ID  — fallback target folder object ID; overridden by the parentFolderID argument
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/cf-config.env"
+CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties"
+
+# Load key=value pairs from .properties file without shell expansion of values
+load_props() {
+  local key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ -z "$key" ]] && continue
+    printf -v "$key" '%s' "$val"
+  done < "$1"
+}
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "ERROR: Config file not found at $CONFIG_FILE"
   exit 1
 fi
-source "$CONFIG_FILE"
+load_props "$CONFIG_FILE"
 
 # --- Validate positional parameters ---
 if [[ $# -lt 2 || $# -gt 3 ]]; then
@@ -37,6 +47,7 @@ fi
 CMIS_NAME="$1"
 FILE_PATH="$2"
 ARG_FOLDER_ID="${3:-}"
+EFFECTIVE_FOLDER_ID="${ARG_FOLDER_ID:-}"
 
 if [[ ! -f "$FILE_PATH" ]]; then
   echo "ERROR: File not found: $FILE_PATH"
@@ -72,10 +83,6 @@ fi
 
 # --- Detect MIME type of the local file ---
 MIME_TYPE=$(file --mime-type -b "$FILE_PATH")
-
-# --- Resolve the target folder: argument takes precedence over config ---
-# In CMIS Browser Binding, the folder is addressed via objectId as a URL query param
-EFFECTIVE_FOLDER_ID="${ARG_FOLDER_ID:-${CMIS_FOLDER_ID:-}}"
 
 # --- Build the CMIS browser endpoint URL ---
 if [[ -n "${EFFECTIVE_FOLDER_ID}" ]]; then

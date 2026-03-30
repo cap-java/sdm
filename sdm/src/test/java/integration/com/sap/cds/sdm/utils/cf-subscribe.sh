@@ -2,7 +2,20 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/cf-config.env"
+CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties"
+
+# Load key=value pairs from .properties file without shell expansion of values
+load_props() {
+  local key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ -z "$key" ]] && continue
+    printf -v "$key" '%s' "$val"
+  done < "$1"
+}
 
 # --- Load config ---
 if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -10,7 +23,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 
-source "$CONFIG_FILE"
+load_props "$CONFIG_FILE"
 
 # --- Resolve consumer credentials (fall back to provider credentials) ---
 CONSUMER_USER="${CONSUMER_CF_USERNAME:-$CF_USERNAME}"
@@ -92,14 +105,36 @@ echo ""
 echo "Done."
 
 # --- Create role collection from app roles and assign to configured email IDs ---
-if [[ -z "${ROLE_ASSIGNMENT_EMAILS:-}" ]]; then
+
+# Parse comma-separated arrays and strip surrounding whitespace from each element
+IFS=',' read -ra _emails_raw  <<< "${ROLE_ASSIGNMENT_EMAILS:-}"
+IFS=',' read -ra _colls_raw   <<< "${ROLE_COLLECTION_NAME:-}"
+
+EMAILS_ARRAY=()
+for _e in "${_emails_raw[@]}"; do
+  _e="${_e#"${_e%%[![:space:]]*}"}"; _e="${_e%"${_e##*[![:space:]]}"}" 
+  [[ -n "$_e" ]] && EMAILS_ARRAY+=("$_e")
+done
+
+COLLECTIONS_ARRAY=()
+for _c in "${_colls_raw[@]}"; do
+  _c="${_c#"${_c%%[![:space:]]*}"}"; _c="${_c%"${_c##*[![:space:]]}"}" 
+  [[ -n "$_c" ]] && COLLECTIONS_ARRAY+=("$_c")
+done
+
+if [[ ${#COLLECTIONS_ARRAY[@]} -eq 0 ]]; then
+  echo ""
+  echo "No ROLE_COLLECTION_NAME configured — skipping role collection setup."
+  exit 0
+fi
+
+if [[ ${#EMAILS_ARRAY[@]} -eq 0 ]]; then
   echo ""
   echo "No ROLE_ASSIGNMENT_EMAILS configured — skipping role assignment."
   exit 0
 fi
 
 ROLE_FILTER="${APP_ROLE_FILTER:-$SAAS_APP_NAME}"
-COLLECTION_NAME="${ROLE_COLLECTION_NAME:-${SAAS_APP_NAME}-Users}"
 
 echo ""
 echo "=== Role Collection Setup ==="
@@ -139,7 +174,7 @@ done
 if [[ -z "$MATCHED_ROLES" ]]; then
   echo "WARNING: No roles found matching '$ROLE_FILTER' after $MAX_RETRIES attempts."
   echo "The role templates may not be provisioned yet for this subscription."
-  echo "Hint: set APP_ROLE_FILTER in cf-config.env to a substring of your app's appId."
+  echo "Hint: set APP_ROLE_FILTER in credentials.properties to a substring of your app's appId."
   echo "Available appIds in this subaccount (sample):"
   echo "$ROLES_RAW" | awk 'NR>1 && $2~/!/ {print "  " $2}' | sort -u | head -20
   exit 0
@@ -150,45 +185,51 @@ echo "$MATCHED_ROLES" | while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
   echo "  - $RNAME (template: $RTEMPLATE, appId: $RAPPID)"
 done
 
-# Create the role collection if it doesn't already exist
-echo ""
-COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$CONSUMER_SUBACCOUNT_ID" 2>/dev/null | grep -F "$COLLECTION_NAME" || true)
-if [[ -n "$COLLECTION_EXISTS" ]]; then
-  echo "Role collection '$COLLECTION_NAME' already exists — skipping creation."
-else
-  echo "Creating role collection '$COLLECTION_NAME'..."
-  btp create security/role-collection "$COLLECTION_NAME" \
-    --subaccount "$CONSUMER_SUBACCOUNT_ID" \
-    --description "Auto-created role collection for $SAAS_APP_NAME" \
-    && echo "Role collection created." \
-    || echo "WARNING: Could not create role collection — it may already exist, continuing."
-fi
+# For each role collection: create it, add roles, then assign all emails
+for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
+  echo ""
+  echo "--- Processing role collection: '$COLLECTION_NAME' ---"
 
-# Add each role to the collection (safe to re-run; duplicate adds are ignored)
-echo ""
-echo "Adding roles to collection '$COLLECTION_NAME'..."
-while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
-  [[ -z "$RNAME" ]] && continue
-  echo "  Adding role '$RNAME'..."
-  btp add security/role "$RNAME" \
-    --to-role-collection "$COLLECTION_NAME" \
-    --subaccount "$CONSUMER_SUBACCOUNT_ID" \
-    --of-app "$RAPPID" \
-    --of-role-template "$RTEMPLATE" \
-    && echo "  OK: $RNAME" \
-    || echo "  WARNING: Could not add role '$RNAME' (may already be in collection) — continuing."
-done <<< "$MATCHED_ROLES"
+  # Create the role collection if it doesn't already exist
+  # Use awk exact first-column match to avoid "ak-test" matching "ak-test2" as a substring
+  COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$CONSUMER_SUBACCOUNT_ID" 2>/dev/null \
+    | awk -v name="$COLLECTION_NAME" '$1 == name {found=1} END {print found+0}' || echo 0)
+  if [[ "$COLLECTION_EXISTS" == "1" ]]; then
+    echo "Role collection '$COLLECTION_NAME' already exists — skipping creation."
+  else
+    echo "Creating role collection '$COLLECTION_NAME'..."
+    btp create security/role-collection "$COLLECTION_NAME" \
+      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --description "Auto-created role collection for $SAAS_APP_NAME" \
+      && echo "Role collection created." \
+      || echo "WARNING: Could not create role collection — it may already exist, continuing."
+  fi
 
-# Assign the role collection to each email
-echo ""
-for EMAIL in $ROLE_ASSIGNMENT_EMAILS; do
-  echo "Assigning '$COLLECTION_NAME' to $EMAIL..."
-  btp assign security/role-collection "$COLLECTION_NAME" \
-    --subaccount "$CONSUMER_SUBACCOUNT_ID" \
-    --to-user "$EMAIL" \
-    --create-user-if-missing \
-    && echo "  OK: $EMAIL" \
-    || echo "  WARNING: Failed to assign to $EMAIL — continuing."
+  # Add each role to the collection (safe to re-run; duplicate adds are ignored)
+  echo "Adding roles to collection '$COLLECTION_NAME'..."
+  while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
+    [[ -z "$RNAME" ]] && continue
+    echo "  Adding role '$RNAME'..."
+    btp add security/role "$RNAME" \
+      --to-role-collection "$COLLECTION_NAME" \
+      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --of-app "$RAPPID" \
+      --of-role-template "$RTEMPLATE" \
+      && echo "  OK: $RNAME" \
+      || echo "  WARNING: Could not add role '$RNAME' (may already be in collection) — continuing."
+  done <<< "$MATCHED_ROLES"
+
+  # Assign the role collection to each email
+  echo "Assigning '$COLLECTION_NAME' to users..."
+  for EMAIL in "${EMAILS_ARRAY[@]}"; do
+    echo "  Assigning to $EMAIL..."
+    btp assign security/role-collection "$COLLECTION_NAME" \
+      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --to-user "$EMAIL" \
+      --create-user-if-missing \
+      && echo "  OK: $EMAIL" \
+      || echo "  WARNING: Failed to assign to $EMAIL — continuing."
+  done
 done
 
 echo ""
