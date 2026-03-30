@@ -125,6 +125,18 @@ jobs:
           password="${{ secrets.CF_PASSWORD }}"
           noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
           noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          CF_ORG=${{ secrets.CF_ORG }}
+          CF_USERNAME=${{ secrets.CF_USERNAME }}
+          CF_PASSWORD=${{ secrets.CF_PASSWORD }}
+          CONSUMER_CF_API_ENDPOINT=${{CF_API}}
+          CONSUMER_CF_USERNAME=${{CF_USERNAME}}
+          CONSUMER_CF_PASSWORD=${{CF_PASSWORD}}
+          CONSUMER_SUBACCOUNT_ID=${{CONSUMER_SUBACCOUNT_ID}}
+          BTP_GLOBAL_ACCOUNT_SUBDOMAIN=${{BTP_GLOBAL_ACCOUNT_SUBDOMAIN}}
+          CMIS_CLIENT_ID=${{CMIS_CLIENT_ID}}
+          CMIS_CLIENT_SECRET=${{CMIS_CLIENT_SECRET}}
+          CMIS_USERNAME=${{CF_USERNAME}}
+          CMIS_PASSWORD=${{CF_PASSWORD}}
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
           echo "::add-mask::$username"
