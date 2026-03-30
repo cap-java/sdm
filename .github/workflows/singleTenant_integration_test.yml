@@ -111,33 +111,44 @@ jobs:
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          _CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
+          _CF_ORG: ${{ secrets.CF_ORG }}
+          _CF_USER: ${{ secrets.CF_USER }}
+          _CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          _CF_API: ${{ secrets.CF_API }}
+          _NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
+          _NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
+          _CONSUMER_SUBACCOUNT_ID: ${{ secrets.CONSUMER_SUBACCOUNT_ID }}
+          _BTP_GLOBAL_ACCOUNT_SUBDOMAIN: ${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}
+          _CMIS_CLIENT_ID: ${{ secrets.CMIS_CLIENT_ID }}
+          _CMIS_CLIENT_SECRET: ${{ secrets.CMIS_CLIENT_SECRET }}
         run: |
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          CF_ORG="${{ secrets.CF_ORG }}"
-          CF_USERNAME="${{ secrets.CF_USER }}"
-          CF_PASSWORD="${{ secrets.CF_PASSWORD }}"
-          CONSUMER_CF_API_ENDPOINT="${{secrets.CF_API}}"
-          CONSUMER_CF_USERNAME="${{secrets.CF_USER}}"
-          CONSUMER_CF_PASSWORD="${{secrets.CF_PASSWORD}}"
-          CONSUMER_SUBACCOUNT_ID="${{secrets.CONSUMER_SUBACCOUNT_ID}}"
-          BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN}}"
+          appUrl="${_CF_ORG}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="${_CAPAUTH_URL}"
+          clientID="${CLIENT_ID}"
+          clientSecret="${CLIENT_SECRET}"
+          username="${_CF_USER}"
+          password="${_CF_PASSWORD}"
+          noSDMRoleUsername="${_NOSDMROLEUSERNAME}"
+          noSDMRoleUserPassword="${_NOSDMROLEUSERPASSWORD}"
+          CF_ORG="${_CF_ORG}"
+          CF_USERNAME="${_CF_USER}"
+          CF_PASSWORD="${_CF_PASSWORD}"
+          CONSUMER_CF_API_ENDPOINT="${_CF_API}"
+          CONSUMER_CF_USERNAME="${_CF_USER}"
+          CONSUMER_CF_PASSWORD="${_CF_PASSWORD}"
+          CONSUMER_SUBACCOUNT_ID="${_CONSUMER_SUBACCOUNT_ID}"
+          BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${_BTP_GLOBAL_ACCOUNT_SUBDOMAIN}"
           CMIS_URL="https://api-sdm-di.cfapps.eu12.hana.ondemand.com/"
           CMIS_REPOSITORY_ID="SAMPLE-REPO"
           CMIS_TOKEN_URL="https://sdmgoogleworkspace.authentication.eu12.hana.ondemand.com"
-          CMIS_CLIENT_ID="${{secrets.CMIS_CLIENT_ID}}"
-          CMIS_CLIENT_SECRET="${{secrets.CMIS_CLIENT_SECRET}}"
-          CMIS_USERNAME="${{secrets.CF_USER}}"
-          CMIS_PASSWORD="${{secrets.CF_PASSWORD}}"
+          CMIS_CLIENT_ID="${_CMIS_CLIENT_ID}"
+          CMIS_CLIENT_SECRET="${_CMIS_CLIENT_SECRET}"
+          CMIS_USERNAME="${_CF_USER}"
+          CMIS_PASSWORD="${_CF_PASSWORD}"
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
           echo "::add-mask::$username"
