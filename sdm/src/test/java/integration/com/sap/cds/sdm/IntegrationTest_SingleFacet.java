@@ -366,6 +366,17 @@ class IntegrationTest_SingleFacet {
         "Test (4) : Update REPOSITORY_ID to SAMPLE-REPO and upload EICAR virus file — expect"
             + " success");
     CfEnvHelper.updateEnv("REPOSITORY_ID", "SAMPLE-REPO");
+    System.out.println("Waiting 15 seconds for CF app to pick up the new REPOSITORY_ID...");
+    Thread.sleep(15000);
+
+    String virusEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (virusEntityID.equals("Could not create entity")) {
+      fail("Could not create entity for virus file test (SAMPLE-REPO)");
+    }
+    String saveResp = api.saveEntityDraft(appUrl, entityName, srvpath, virusEntityID);
+    if (!saveResp.equals("Saved")) {
+      fail("Could not save entity for virus file test (SAMPLE-REPO)");
+    }
 
     boolean testStatus = false;
 
@@ -376,22 +387,23 @@ class IntegrationTest_SingleFacet {
     }
 
     Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", entityID);
+    postData.put("up__ID", virusEntityID);
     postData.put("mimeType", "text/plain");
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
 
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, virusEntityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, entityName, facetName, virusEntityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID2 = createResponse.get(1);
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, virusEntityID);
         if (response.equals("Saved")) {
-          boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
+          boolean uploadComplete = waitForUploadCompletion(virusEntityID, attachmentID2, 120);
           if (uploadComplete) {
             System.out.println(
                 "✅ Virus file uploaded successfully to SAMPLE-REPO (no scanner blocking)");
@@ -415,6 +427,17 @@ class IntegrationTest_SingleFacet {
         "Test (5) : Update REPOSITORY_ID to scanned repo and upload EICAR virus file — expect"
             + " rejection");
     CfEnvHelper.updateEnv("REPOSITORY_ID", "6a9acbed-a55c-4f7e-a00d-eb2e9dbad373");
+    System.out.println("Waiting 15 seconds for CF app to pick up the new REPOSITORY_ID...");
+    Thread.sleep(15000);
+
+    String virusEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (virusEntityID.equals("Could not create entity")) {
+      fail("Could not create entity for virus file test (scanned repo)");
+    }
+    String saveResp = api.saveEntityDraft(appUrl, entityName, srvpath, virusEntityID);
+    if (!saveResp.equals("Saved")) {
+      fail("Could not save entity for virus file test (scanned repo)");
+    }
 
     boolean testStatus = false;
 
@@ -425,22 +448,23 @@ class IntegrationTest_SingleFacet {
     }
 
     Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", entityID);
+    postData.put("up__ID", virusEntityID);
     postData.put("mimeType", "text/plain");
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
 
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, virusEntityID);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+          api.createAttachment(
+              appUrl, entityName, facetName, virusEntityID, srvpath, postData, file);
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID3 = createResponse.get(1);
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, virusEntityID);
         if (response.equals("Saved")) {
-          boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID3, 120);
+          boolean uploadComplete = waitForUploadCompletion(virusEntityID, attachmentID3, 120);
           if (!uploadComplete) {
             System.out.println(
                 "✅ Virus scan correctly rejected the EICAR file in scanned repository");
