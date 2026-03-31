@@ -212,7 +212,7 @@ jobs:
           BTP_CLI_URL="https://canary.cli.btp.int.sap"
           APP_NAME="demoappjava-srv"
           VAR_NAME="REPOSITORY_ID"
-          VAR_VALUE="6a9acbed-a55c-4f7e-a00d-eb2e9dbad373"
+          VAR_VALUE="SAMPLE-REPO"
           CMIS_URL="https://api-sdm-di.cfapps.eu12.hana.ondemand.com/"
           CMIS_REPOSITORY_ID="SAMPLE-REPO"
           CMIS_TOKEN_URL="https://sdmgoogleworkspace.authentication.eu12.hana.ondemand.com"
@@ -303,6 +303,10 @@ jobs:
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java" -Deicar.file.path=$(pwd)/$DOWNLOAD_PATH
 
           SCRIPTS_DIR="sdm/src/test/java/integration/com/sap/cds/sdm/utils"
+          echo "🔄 Running cf-update-env.sh..."
+          bash "$SCRIPTS_DIR/cf-update-env.sh"
+          echo "✅ Update env complete."
+
           echo "🔄 Running cf-unsubscribe.sh..."
           bash "$SCRIPTS_DIR/cf-unsubscribe.sh"
           echo "✅ Unsubscribe complete."
