@@ -544,10 +544,7 @@ public class SDMServiceImplTest {
                 sdmServiceImpl.getFolderIdByPath(
                     "parentId", "repositoryId", mockSdmCredentials, false));
 
-    assertTrue(
-        exception
-            .getMessage()
-            .contains(SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD"))));
+    assertTrue(exception.getMessage().contains(SDMErrorMessages.getCouldNotUploadDocument()));
   }
 
   @Test
