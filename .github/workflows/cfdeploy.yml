@@ -55,12 +55,12 @@ jobs:
       - name: Verify and Checkout Deploy Branch 🔄
         run: |
           git fetch origin
-          echo "📂 Verifying 'appChangesForAttachmentCreationInActiveEntity' branch..."
-          if git rev-parse --verify origin/appChangesForAttachmentCreationInActiveEntity; then
-            git checkout appChangesForAttachmentCreationInActiveEntity
+          echo "📂 Verifying 'local_deploy' branch..."
+          if git rev-parse --verify origin/local_deploy; then
+            git checkout local_deploy
             echo "✅ Branch checked out successfully!"
           else
-            echo "❌ Branch 'appChangesForAttachmentCreationInActiveEntity' not found. Please verify the branch name."
+            echo "❌ Branch 'local_deploy' not found. Please verify the branch name."
             exit 1
           fi
 

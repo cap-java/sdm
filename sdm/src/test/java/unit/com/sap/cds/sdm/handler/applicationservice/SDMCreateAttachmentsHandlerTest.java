@@ -860,9 +860,7 @@ public class SDMCreateAttachmentsHandlerTest {
     metadata.put("attachmentEntity", mockAttachmentEntity);
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify addAttachmentToDraft was called with correct entity
     verify(dbQuery)
@@ -885,9 +883,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // When ThreadLocal is not set (null), should return early without any action
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.remove();
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify no interaction with dbQuery
     verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
@@ -902,9 +898,7 @@ public class SDMCreateAttachmentsHandlerTest {
     metadata.put("attachmentEntity", null);
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify no interaction with dbQuery
     verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
@@ -929,10 +923,8 @@ public class SDMCreateAttachmentsHandlerTest {
         .when(dbQuery)
         .addAttachmentToDraft(any(), any(), any());
 
-    List<CdsData> data = new ArrayList<>();
-
     // Should NOT throw exception
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify ThreadLocal was cleaned up even though exception occurred
     assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
@@ -951,9 +943,7 @@ public class SDMCreateAttachmentsHandlerTest {
     metadata.put("attachmentEntity", mockAttachmentEntity);
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify ThreadLocal was cleared
     assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
@@ -968,9 +958,7 @@ public class SDMCreateAttachmentsHandlerTest {
     // No "attachmentEntity" key
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Verify no interaction with dbQuery
     verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
@@ -991,9 +979,7 @@ public class SDMCreateAttachmentsHandlerTest {
     metadata.put("attachmentEntity", mockAttachmentEntity);
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     // Should still call addAttachmentToDraft with CmisDocument having null fields
     verify(dbQuery)
@@ -1022,9 +1008,7 @@ public class SDMCreateAttachmentsHandlerTest {
     metadata.put("attachmentEntity", mockAttachmentEntity);
     SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
 
-    List<CdsData> data = new ArrayList<>();
-
-    handler.updateActiveEntitySdmMetadata(context, data);
+    handler.updateActiveEntitySdmMetadata(context);
 
     verify(dbQuery)
         .addAttachmentToDraft(
