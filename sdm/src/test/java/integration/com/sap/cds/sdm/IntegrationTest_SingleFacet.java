@@ -358,6 +358,61 @@ class IntegrationTest_SingleFacet {
     }
   }
 
+  @Test
+  @Order(4)
+  void testUploadVirusFileAttachment() throws IOException, InterruptedException {
+    System.out.println("Test (4) : Upload EICAR virus file and verify scan detects it as infected");
+    boolean testStatus = false;
+
+    String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+    File file = new File(eicarFilePath);
+    if (!file.exists()) {
+      fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+    }
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityID);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    if (response == "Entity in draft mode") {
+      List<String> createResponse =
+          api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+      String check = createResponse.get(0);
+      if (check.equals("Attachment created")) {
+        attachmentID2 = createResponse.get(1);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        if (response.equals("Saved")) {
+          // Wait for the virus scan to complete
+          boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
+          if (!uploadComplete) {
+            // uploadComplete=false means the scan returned "Failed" (virus detected) — expected
+            Map<String, Object> metadata =
+                api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
+            String uploadStatus = (String) metadata.get("uploadStatus");
+            System.out.println("Virus scan upload status: " + uploadStatus);
+            if ("Failed".equals(uploadStatus) || "Infected".equals(uploadStatus)) {
+              testStatus = true;
+              System.out.println(
+                  "✅ Virus scan correctly identified EICAR file as infected/failed");
+            } else {
+              System.err.println("Unexpected upload status for virus file: " + uploadStatus);
+            }
+          } else {
+            System.err.println(
+                "Virus scan did not flag the EICAR file — scan may not be enabled");
+          }
+        }
+      }
+    }
+    if (!testStatus) {
+      fail("Virus file was not correctly detected by the malware scanner");
+    }
+  }
+
   // @Test
   // @Order(4)
   // void testUploadSingleAttachmentTXT() throws IOException {

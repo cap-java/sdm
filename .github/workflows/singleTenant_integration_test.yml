@@ -11,6 +11,17 @@ on:
         description: 'Specify the branch to use for integration tests'
         required: true
 
+      file_url:
+        description: 'URL of the file to download and verify'
+        required: true
+        default: 'http://www.eicar.org/download/eicar.com.txt'
+        type: string
+      download_path:
+        description: 'Local path/filename to save the downloaded file'
+        required: false
+        default: 'eicar.com.txt'
+        type: string
+
 jobs:
   integration-test:
     runs-on: ubuntu-latest
@@ -20,6 +31,9 @@ jobs:
         tokenFlow: [namedUser]
         testClass: 
           - IntegrationTest_SingleFacet
+    env:
+      FILE_URL: ${{ github.event.inputs.file_url || 'http://www.eicar.org/download/eicar.com.txt' }}
+      DOWNLOAD_PATH: ${{ github.event.inputs.download_path || 'eicar.com.txt' }}
 
     steps:
       - name: Checkout repository 📁
@@ -130,6 +144,26 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
           echo "✅ Client details fetched successfully!"
+
+      - name: Download file from URL
+        run: |
+          curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
+
+      - name: Wait 5 seconds
+        run: sleep 5
+
+      - name: Verify downloaded file
+        run: |
+          if [ -f "$DOWNLOAD_PATH" ]; then
+            FILE_NAME=$(basename "$DOWNLOAD_PATH")
+            FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
+            echo "File exists"
+            echo "Name : $FILE_NAME"
+            echo "Size : $FILE_SIZE bytes"
+          else
+            echo "File NOT found at path: $DOWNLOAD_PATH"
+            exit 1
+          fi
 
       - name: Run integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
@@ -266,7 +300,7 @@ jobs:
           CMIS_PASSWORD=$CMIS_PASSWORD
           EOL
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java" -Deicar.file.path=$(pwd)/$DOWNLOAD_PATH
 
           SCRIPTS_DIR="sdm/src/test/java/integration/com/sap/cds/sdm/utils"
           echo "🔄 Running cf-update-env.sh..."
