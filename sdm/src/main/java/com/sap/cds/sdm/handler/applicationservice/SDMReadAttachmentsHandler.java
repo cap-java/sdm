@@ -11,8 +11,8 @@ import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.constants.SDMConstants;
-import com.sap.cds.sdm.constants.SDMErrorKeys;
 import com.sap.cds.sdm.constants.SDMErrorMessages;
+import com.sap.cds.sdm.constants.SDMUIErrorKeys;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.helper.SDMBeforeReadItemsModifier;
 import com.sap.cds.sdm.handler.common.SDMApplicationHandlerHelper;
@@ -88,7 +88,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     }
 
     Map<String, Object> errorMessages = SDMErrorMessages.getAllErrorMessages();
-    Map<String, Object> errorKeys = SDMErrorKeys.getAllErrorKeys();
+    Map<String, Object> errorKeys = SDMUIErrorKeys.getAllUIErrorKeys();
     logger.debug("Caching {} error messages", errorMessages.size());
     String localizedMessage;
     String localizedErrorMessageKey;
