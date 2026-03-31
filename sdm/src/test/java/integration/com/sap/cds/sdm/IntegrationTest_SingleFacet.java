@@ -396,14 +396,12 @@ class IntegrationTest_SingleFacet {
             System.out.println("Virus scan upload status: " + uploadStatus);
             if ("Failed".equals(uploadStatus) || "Infected".equals(uploadStatus)) {
               testStatus = true;
-              System.out.println(
-                  "✅ Virus scan correctly identified EICAR file as infected/failed");
+              System.out.println("✅ Virus scan correctly identified EICAR file as infected/failed");
             } else {
               System.err.println("Unexpected upload status for virus file: " + uploadStatus);
             }
           } else {
-            System.err.println(
-                "Virus scan did not flag the EICAR file — scan may not be enabled");
+            System.err.println("Virus scan did not flag the EICAR file — scan may not be enabled");
           }
         }
       }
