@@ -385,14 +385,15 @@ class IntegrationTest_SingleFacet {
       String check = createResponse.get(0);
       if (check.equals("Attachment created")) {
         attachmentID2 = createResponse.get(1);
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        if (response.equals("Saved")) {
-          boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
-          if (uploadComplete) {
-            System.out.println("File uploaded successfully");
-            testStatus = true;
-          } else {
-            System.err.println("Upload did not complete successfully for: " + attachmentID2);
+        response = api.readAttachmentDraft(appUrl, entityName, facetName, entityID, attachmentID2);
+        if (response.equals("OK")) {
+          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+          if (response.equals("Saved")) {
+            response = api.readAttachment(appUrl, entityName, facetName, entityID, attachmentID2);
+            if (response.equals("OK")) {
+              System.out.println("File uploaded successfully");
+              testStatus = true;
+            }
           }
         }
       }
