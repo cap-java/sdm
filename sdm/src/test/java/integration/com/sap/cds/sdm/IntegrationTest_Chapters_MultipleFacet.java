@@ -189,131 +189,6 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
   }
 
-  /**
-   * Helper method to wait for attachment upload to complete. Polls the attachment metadata until
-   * uploadStatus is "Success" or "Failed", or timeout is reached.
-   *
-   * @param chapterId The chapter ID containing the attachment
-   * @param attachmentId The attachment ID to wait for
-   * @param timeoutSeconds Maximum time to wait in seconds
-   * @param facetName The facet name (attachments, references, footnotes)
-   * @return true if upload completed successfully, false if failed or timed out
-   */
-  private static boolean waitForUploadCompletion(
-      String chapterId, String attachmentId, int timeoutSeconds, String facetName) {
-    int pollIntervalSeconds = 2;
-    int maxAttempts = timeoutSeconds / pollIntervalSeconds;
-
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // Fetch metadata for the attachment in draft mode
-        Map<String, Object> metadata = null;
-        boolean metadataFetched = false;
-
-        try {
-          // First try fetchMetadataDraft for draft entities
-          metadata =
-              api.fetchMetadataDraft(appUrl, chapterEntityName, facetName, chapterId, attachmentId);
-          metadataFetched = true;
-        } catch (IOException e) {
-          // If draft fetch fails, entity might be active, try regular fetch
-          try {
-            metadata =
-                api.fetchMetadata(appUrl, chapterEntityName, facetName, chapterId, attachmentId);
-            metadataFetched = true;
-          } catch (IOException e2) {
-            // If both fail, attachment might not exist yet or has been deleted
-            // Wait and retry
-            Thread.sleep(pollIntervalSeconds * 1000);
-            continue;
-          }
-        }
-
-        if (!metadataFetched || metadata == null) {
-          Thread.sleep(pollIntervalSeconds * 1000);
-          continue;
-        }
-
-        // Check upload status
-        if (metadata.containsKey("uploadStatus")) {
-          String uploadStatus = (String) metadata.get("uploadStatus");
-
-          if ("Success".equals(uploadStatus)) {
-            return true;
-          } else if ("Failed".equals(uploadStatus)) {
-            System.err.println(
-                "Upload failed for attachment "
-                    + attachmentId
-                    + " in chapter "
-                    + chapterId
-                    + ". Status: "
-                    + uploadStatus);
-            return false;
-          }
-          // If status is "uploading" or any other status, continue waiting
-        }
-
-        // Wait before next poll
-        Thread.sleep(pollIntervalSeconds * 1000);
-
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        System.err.println("Wait interrupted for attachment " + attachmentId);
-        return false;
-      }
-    }
-
-    // Timeout reached
-    System.err.println(
-        "Timeout waiting for upload completion of attachment "
-            + attachmentId
-            + " in chapter "
-            + chapterId);
-    return false;
-  }
-
-  private static boolean waitForAllUploadsCompletion(
-      String chapterId, String facetName, int timeoutSeconds) {
-    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
-    for (int i = 0; i < maxIterations; i++) {
-      try {
-        List<Map<String, Object>> attachmentsMetadata =
-            api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facetName, chapterId);
-
-        boolean allComplete = true;
-        boolean anyFailed = false;
-
-        for (Map<String, Object> metadata : attachmentsMetadata) {
-          String uploadStatus = (String) metadata.get("uploadStatus");
-          if (uploadStatus == null || "InProgress".equals(uploadStatus)) {
-            allComplete = false;
-          } else if ("Failed".equals(uploadStatus)) {
-            anyFailed = true;
-            System.err.println("Upload failed for attachment: " + metadata.get("ID"));
-          }
-        }
-
-        if (anyFailed) {
-          return false;
-        }
-
-        if (allComplete) {
-          return true;
-        }
-
-        // Still uploading, wait before checking again
-        Thread.sleep(5000);
-      } catch (Exception e) {
-        System.err.println(
-            "Error checking upload status for chapter " + chapterId + ": " + e.getMessage());
-        return false;
-      }
-    }
-
-    System.err.println("Upload timed out for chapter: " + chapterId);
-    return false;
-  }
-
   private String CreateandReturnFacetID(
       String appUrl,
       String serviceName,
@@ -3036,12 +2911,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           fail("Could not create attachment in facet: " + facet[i]);
         }
       }
-      // Wait for uploads to complete
-      for (String attachmentId : attachments.get(i)) {
-        if (!waitForUploadCompletion(sourceChapterID, attachmentId, 150, facet[i])) {
-          fail("Upload did not complete in time for attachment: " + attachmentId);
-        }
-      }
     }
 
     // Fetch object IDs from source attachments
@@ -3093,9 +2962,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           api.fetchEntityMetadata(appUrl, chapterEntityName, facetName, targetChapterID);
       for (Map<String, Object> meta : copiedMetadata) {
         String copiedId = (String) meta.get("ID");
-        if (!waitForUploadCompletion(targetChapterID, copiedId, 150, facetName)) {
-          fail("Copied upload did not complete in time for attachment: " + copiedId);
-        }
       }
       objectIdIndex += 2;
     }
@@ -3211,11 +3077,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           fail("Could not create attachment in facet: " + facet[i]);
         }
       }
-      for (String attachmentId : attachments.get(i)) {
-        if (!waitForUploadCompletion(copyAttachmentSourceChapter, attachmentId, 150, facet[i])) {
-          fail("Upload did not complete in time for attachment: " + attachmentId);
-        }
-      }
     }
 
     // Fetch object IDs
@@ -3254,16 +3115,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           fail("Could not copy attachments to facet: " + facetName + " - " + copyResponse);
         }
 
-        // Wait for copied attachments
-        List<Map<String, Object>> copiedMetadata =
-            api.fetchEntityMetadata(
-                appUrl, chapterEntityName, facetName, copyAttachmentTargetChapter);
-        for (Map<String, Object> meta : copiedMetadata) {
-          String copiedId = (String) meta.get("ID");
-          if (!waitForUploadCompletion(copyAttachmentTargetChapter, copiedId, 150, facetName)) {
-            fail("Copied upload did not complete in time for attachment: " + copiedId);
-          }
-        }
         objectIdIndex += 2;
       }
 
@@ -3356,11 +3207,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
       sourceAttachmentIds[i] = createResponse.get(1);
 
-      if (!waitForUploadCompletion(
-          copyAttachmentSourceChapter, sourceAttachmentIds[i], 150, facet[i])) {
-        fail("Upload did not complete for attachment in facet: " + facet[i]);
-      }
-
       // Update note field using RequestBody
       String jsonNote = "{ \"note\" : \"" + testNote + "\" }";
       RequestBody noteBody = RequestBody.create(MediaType.parse("application/json"), jsonNote);
@@ -3433,13 +3279,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not copy attachment to facet: " + facet[i]);
       }
       System.out.println("Attachment copied to facet: " + facet[i]);
-    }
-
-    // Wait for all copied uploads to complete before saving
-    for (int i = 0; i < facet.length; i++) {
-      if (!waitForAllUploadsCompletion(copyAttachmentTargetChapter, facet[i], 300)) {
-        fail("Copied upload did not complete in time for facet: " + facet[i]);
-      }
     }
 
     // Save target book
@@ -3582,11 +3421,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
       sourceAttachmentIds[i] = createResponse.get(1);
 
-      if (!waitForUploadCompletion(
-          copyAttachmentSourceChapter, sourceAttachmentIds[i], 150, facet[i])) {
-        fail("Upload did not complete for attachment in facet: " + facet[i]);
-      }
-
       // Update secondary properties using RequestBody (customProperty6 - Boolean, customProperty2 -
       // Integer)
       String jsonBool = "{ \"customProperty6\" : " + testBooleanProp + " }";
@@ -3654,13 +3488,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not copy attachment to facet: " + facet[i]);
       }
       System.out.println("Attachment with secondary properties copied to facet: " + facet[i]);
-    }
-
-    // Wait for all copied uploads to complete before saving
-    for (int i = 0; i < facet.length; i++) {
-      if (!waitForAllUploadsCompletion(copyAttachmentTargetChapter, facet[i], 300)) {
-        fail("Copied upload did not complete in time for facet: " + facet[i]);
-      }
     }
 
     // Save target book
@@ -3809,11 +3636,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
       sourceAttachmentIds[i] = createResponse.get(1);
 
-      if (!waitForUploadCompletion(
-          copyAttachmentSourceChapter, sourceAttachmentIds[i], 150, facet[i])) {
-        fail("Upload did not complete for attachment in facet: " + facet[i]);
-      }
-
       // Update note using RequestBody
       String jsonNote = "{ \"note\" : \"" + testNote + "\" }";
       RequestBody noteBody = RequestBody.create(MediaType.parse("application/json"), jsonNote);
@@ -3883,13 +3705,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not copy attachment to facet: " + facet[i]);
       }
       System.out.println("Attachment with note and properties copied to facet: " + facet[i]);
-    }
-
-    // Wait for all copied uploads to complete before saving
-    for (int i = 0; i < facet.length; i++) {
-      if (!waitForAllUploadsCompletion(copyAttachmentTargetChapter, facet[i], 300)) {
-        fail("Copied upload did not complete in time for facet: " + facet[i]);
-      }
     }
 
     // Save target book
@@ -4078,9 +3893,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not create source attachment");
       }
       String attachmentId = createResponse.get(1);
-      if (!waitForUploadCompletion(sourceChapterID, attachmentId, 150, facet[i])) {
-        fail("Upload did not complete for source attachment");
-      }
       Map<String, Object> metadata =
           api.fetchMetadataDraft(
               appUrl, chapterEntityName, facet[i], sourceChapterID, attachmentId);
@@ -4098,9 +3910,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not create existing target attachment");
       }
       String attachmentId = createResponse.get(1);
-      if (!waitForUploadCompletion(targetChapterID, attachmentId, 150, facet[i])) {
-        fail("Upload did not complete for existing target attachment");
-      }
     }
 
     // Save both books
@@ -4121,14 +3930,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           api.copyAttachment(appUrl, chapterEntityName, facet[i], targetChapterID, objectIdsToCopy);
       if (!copyResponse.equals("Attachments copied successfully")) {
         fail("Could not copy attachment to facet: " + facet[i]);
-      }
-
-      // Wait for copy to complete
-      List<Map<String, Object>> copiedMetadata =
-          api.fetchEntityMetadata(appUrl, chapterEntityName, facet[i], targetChapterID);
-      for (Map<String, Object> meta : copiedMetadata) {
-        String copiedId = (String) meta.get("ID");
-        waitForUploadCompletion(targetChapterID, copiedId, 150, facet[i]);
       }
     }
 
@@ -4712,11 +4513,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not copy link for facet " + facetName + ": " + copyResponse);
       }
 
-      // Wait for copied link to complete before saving
-      if (!waitForAllUploadsCompletion(targetChapterID, facetName, 300)) {
-        fail("Copied link did not complete in time for facet: " + facetName);
-      }
-
       String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
       if (!saveResponse.equals("Saved")) {
         fail("Could not save target book");
@@ -4853,11 +4649,6 @@ class IntegrationTest_Chapters_MultipleFacet {
 
       if (!copyResponse.equals("Attachments copied successfully")) {
         fail("Could not copy link for facet " + facetName);
-      }
-
-      // Wait for copied link to complete before saving
-      if (!waitForAllUploadsCompletion(targetChapterID, facetName, 300)) {
-        fail("Copied link did not complete in time for facet: " + facetName);
       }
 
       String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
@@ -5021,11 +4812,6 @@ class IntegrationTest_Chapters_MultipleFacet {
         fail("Could not copy link from draft for facet " + facetName);
       }
 
-      // Wait for copied link to complete before saving
-      if (!waitForAllUploadsCompletion(targetChapterID, facetName, 300)) {
-        fail("Copied link did not complete in time for facet: " + facetName);
-      }
-
       String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
       if (!saveResponse.equals("Saved")) {
         fail("Could not save target book");
@@ -5112,13 +4898,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       } else {
         fail("Could not create attachment in facet: " + facet[i]);
       }
-
-      // Wait for upload
-      for (String attachmentId : attachments.get(i)) {
-        if (!waitForUploadCompletion(sourceChapterID, attachmentId, 150, facet[i])) {
-          fail("Upload did not complete for attachment: " + attachmentId);
-        }
-      }
     }
 
     // Fetch object IDs from draft
@@ -5152,14 +4931,6 @@ class IntegrationTest_Chapters_MultipleFacet {
 
       if (!copyResponse.equals("Attachments copied successfully")) {
         fail("Could not copy attachment from draft for facet " + facetName);
-      }
-
-      // Wait for copied attachments
-      List<Map<String, Object>> copiedMetadata =
-          api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facetName, targetChapterID);
-      for (Map<String, Object> meta : copiedMetadata) {
-        String copiedId = (String) meta.get("ID");
-        waitForUploadCompletion(targetChapterID, copiedId, 150, facetName);
       }
 
       String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
@@ -5242,11 +5013,6 @@ class IntegrationTest_Chapters_MultipleFacet {
 
       String attachmentId = createResponse.get(1);
 
-      // Wait for upload
-      if (!waitForUploadCompletion(testChapterID, attachmentId, 150, facetName)) {
-        fail("Upload did not complete");
-      }
-
       // Fetch changelog
       Map<String, Object> changelogResponse =
           api.fetchChangelog(appUrl, chapterEntityName, facetName, testChapterID, attachmentId);
@@ -5313,9 +5079,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
 
       String attachmentId = createResponse.get(1);
-      if (!waitForUploadCompletion(testChapterID, attachmentId, 150, facetName)) {
-        fail("Upload did not complete");
-      }
 
       // Update note
       String notesValue = "Test note for changelog verification";
@@ -5402,9 +5165,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
 
       String attachmentId = createResponse.get(1);
-      if (!waitForUploadCompletion(testChapterID, attachmentId, 150, facetName)) {
-        fail("Upload did not complete");
-      }
 
       // Rename attachment
       String renameResponse =
@@ -5489,9 +5249,6 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
 
     String attachmentId = createResponse.get(1);
-    if (!waitForUploadCompletion(sourceChapterID, attachmentId, 150, facet[0])) {
-      fail("Upload did not complete");
-    }
 
     // Save both books
     api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
@@ -5517,18 +5274,11 @@ class IntegrationTest_Chapters_MultipleFacet {
       fail("Could not copy attachment");
     }
 
-    // Wait and save
-    List<Map<String, Object>> targetMetadata =
-        api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facet[0], targetChapterID);
-    for (Map<String, Object> meta : targetMetadata) {
-      String copiedId = (String) meta.get("ID");
-      waitForUploadCompletion(targetChapterID, copiedId, 150, facet[0]);
-    }
-
     api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
 
     // Fetch changelog for copied attachment
-    targetMetadata = api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    List<Map<String, Object>> targetMetadata =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
     String copiedAttachmentId = (String) targetMetadata.get(0).get("ID");
 
     editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
@@ -5586,9 +5336,6 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
 
     String attachmentId = createResponse.get(1);
-    if (!waitForUploadCompletion(testChapterID, attachmentId, 150, facet[0])) {
-      fail("Upload did not complete");
-    }
 
     // Fetch changelog before saving
     Map<String, Object> changelogResponse =
@@ -5864,10 +5611,6 @@ class IntegrationTest_Chapters_MultipleFacet {
       fail("Could not create attachment");
     }
     String attachmentId = createResponse.get(1);
-
-    if (!waitForUploadCompletion(sourceChapterID, attachmentId, 150, facet[0])) {
-      fail("Upload did not complete");
-    }
 
     // Add note and secondary property
     String testNote = "Test note for move";
