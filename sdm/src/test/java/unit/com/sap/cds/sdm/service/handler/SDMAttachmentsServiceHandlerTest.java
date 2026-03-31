@@ -2600,7 +2600,6 @@ public class SDMAttachmentsServiceHandlerTest {
     Result mockResult = mock(Result.class);
     Row mockRow = mock(Row.class);
     List<Row> nonEmptyRowList = List.of(mockRow);
-    CdsEntity mockEntity = mock(CdsEntity.class);
     CdsEntity mockDraftEntityLocal = mock(CdsEntity.class);
     when(mockDraftEntityLocal.getQualifiedName())
         .thenReturn("AdminService.Books.attachments_drafts");

@@ -68,7 +68,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
    */
   @After
   @HandlerOrder(HandlerOrder.LATE)
-  public void updateActiveEntitySdmMetadata(CdsCreateEventContext context, List<CdsData> data) {
+  public void updateActiveEntitySdmMetadata(CdsCreateEventContext _context, List<CdsData> _data) {
     Map<String, Object> metadata = SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get();
     if (metadata == null) {
       return;
