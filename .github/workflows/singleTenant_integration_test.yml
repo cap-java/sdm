@@ -67,14 +67,22 @@ jobs:
         if: steps.cache-btp-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔄 Installing SAP BTP CLI..."
-          BTP_VERSION=$(curl -s https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.txt || echo "")
-          if [ -z "$BTP_VERSION" ]; then
-            BTP_DOWNLOAD_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.tar.gz"
-          else
-            BTP_DOWNLOAD_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-${BTP_VERSION}.tar.gz"
+          BTP_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.tar.gz"
+          wget -q --tries=3 -O /tmp/btp.tar.gz "$BTP_URL"
+          if ! file /tmp/btp.tar.gz | grep -q "gzip"; then
+            echo "❌ Downloaded file is not a valid gzip archive:"
+            file /tmp/btp.tar.gz
+            head -c 200 /tmp/btp.tar.gz
+            exit 1
           fi
-          curl -sL "$BTP_DOWNLOAD_URL" | tar -xz
-          sudo install -m 755 btp /usr/local/bin/btp
+          tar -xzf /tmp/btp.tar.gz -C /tmp/
+          BTP_BIN=$(find /tmp -maxdepth 3 -name 'btp' -type f 2>/dev/null | head -1)
+          if [ -z "$BTP_BIN" ]; then
+            echo "❌ btp binary not found after extraction. Contents of /tmp:"
+            ls -la /tmp/
+            exit 1
+          fi
+          sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
           btp --version
           echo "✅ BTP CLI installed successfully!"
 
