@@ -11,11 +11,6 @@ on:
         description: 'Specify the branch to use for integration tests'
         required: true
 
-      btp_cli_version:
-        description: 'SAP BTP CLI version to install (e.g. 2.46.0)'
-        required: false
-        default: '2.46.0'
-
 jobs:
   integration-test:
     runs-on: ubuntu-latest
@@ -66,39 +61,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/bin/btp
-          key: btp-cli-${{ runner.os }}-${{ github.event.inputs.btp_cli_version }}
+          key: btp-cli-${{ runner.os }}
 
       - name: Install BTP CLI 🔧
         if: steps.cache-btp-cli.outputs.cache-hit != 'true'
         run: |
-          BTP_VER="${{ github.event.inputs.btp_cli_version }}"
-          echo "🔄 Installing SAP BTP CLI v${BTP_VER}..."
-
-          curl -fsSL \
-            -b "eula_3_1_agreed=tools.hana.ondemand.com/developer-license-3_1.txt" \
-            -H "Referer: https://tools.hana.ondemand.com/" \
-            "https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-${BTP_VER}.tar.gz" \
-            -o /tmp/btp.tar.gz
-
-          if ! file /tmp/btp.tar.gz | grep -q "gzip"; then
-            echo "❌ Download returned HTML instead of tarball."
-            echo "This usually means tools.hana.ondemand.com is not accessible from public GitHub runners."
-            echo "Options: use a self-hosted runner, or upload the btp binary as a GitHub release asset"
-            echo "and change this step to download it from there."
-            head -c 300 /tmp/btp.tar.gz
-            exit 1
-          fi
-
-          tar -xzf /tmp/btp.tar.gz -C /tmp/
-          BTP_BIN=$(find /tmp -maxdepth 3 -name 'btp' -type f 2>/dev/null | head -1)
+          echo "🔄 Installing SAP BTP CLI..."
+          curl -fsSL https://cli.btp.cloud.sap/btpcli-install.sh | bash
+          # The install script places the binary in ~/bin by default — make it system-wide
+          BTP_BIN=$(find "$HOME/bin" /usr/local/bin -maxdepth 1 -name 'btp' -type f 2>/dev/null | head -1)
           if [ -z "$BTP_BIN" ]; then
-            echo "❌ btp binary not found after extraction."
-            ls -la /tmp/
+            echo "❌ btp binary not found after install script."
             exit 1
           fi
-          sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
+          if [ "$BTP_BIN" != "/usr/local/bin/btp" ]; then
+            sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
+          fi
           btp --version
-          echo "✅ BTP CLI v${BTP_VER} installed successfully!"
+          echo "✅ BTP CLI installed successfully!"
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
