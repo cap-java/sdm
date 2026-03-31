@@ -56,6 +56,28 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      - name: Cache BTP CLI 📦
+        id: cache-btp-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/btp
+          key: btp-cli-${{ runner.os }}
+
+      - name: Install BTP CLI 🔧
+        if: steps.cache-btp-cli.outputs.cache-hit != 'true'
+        run: |
+          echo "🔄 Installing SAP BTP CLI..."
+          BTP_VERSION=$(curl -s https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.txt || echo "")
+          if [ -z "$BTP_VERSION" ]; then
+            BTP_DOWNLOAD_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.tar.gz"
+          else
+            BTP_DOWNLOAD_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-${BTP_VERSION}.tar.gz"
+          fi
+          curl -sL "$BTP_DOWNLOAD_URL" | tar -xz
+          sudo install -m 755 btp /usr/local/bin/btp
+          btp --version
+          echo "✅ BTP CLI installed successfully!"
+
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
         run: |
