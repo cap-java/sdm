@@ -212,7 +212,7 @@ jobs:
           BTP_CLI_URL="https://canary.cli.btp.int.sap"
           APP_NAME="demoappjava-srv"
           VAR_NAME="REPOSITORY_ID"
-          VAR_VALUE="new-repository-id-value"
+          VAR_VALUE="6a9acbed-a55c-4f7e-a00d-eb2e9dbad373"
           CMIS_URL="https://api-sdm-di.cfapps.eu12.hana.ondemand.com/"
           CMIS_REPOSITORY_ID="SAMPLE-REPO"
           CMIS_TOKEN_URL="https://sdmgoogleworkspace.authentication.eu12.hana.ondemand.com"
