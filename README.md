@@ -1368,7 +1368,7 @@ To create attachments on active entities, the leading application needs to trigg
    | `mimeType` | `String`      | The MIME type of the content                     |
    | `content`  | `InputStream` | An `InputStream` containing the file content     |
 
-2. **Execute the INSERT** using the `ApplicationService`. [example](https://github.com/cap-java/sdm/blob/e89c3c4f9fee6a18b20dfec2650b1d05ff244bc3/cap-notebook/demoapp/srv/src/main/java/customer/demoapp/handlers/AdminServiceHandler.java#L142)
+2. **Execute the INSERT** using the `ApplicationService`. See this [example](https://github.com/cap-java/sdm/blob/e89c3c4f9fee6a18b20dfec2650b1d05ff244bc3/cap-notebook/demoapp/srv/src/main/java/customer/demoapp/handlers/AdminServiceHandler.java#L142)
 
    ```java
    import com.sap.cds.ql.Insert;
