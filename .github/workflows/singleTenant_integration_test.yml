@@ -11,6 +11,11 @@ on:
         description: 'Specify the branch to use for integration tests'
         required: true
 
+      btp_cli_version:
+        description: 'SAP BTP CLI version to install (e.g. 2.46.0)'
+        required: false
+        default: '2.46.0'
+
 jobs:
   integration-test:
     runs-on: ubuntu-latest
@@ -61,32 +66,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /usr/local/bin/btp
-          key: btp-cli-${{ runner.os }}
+          key: btp-cli-${{ runner.os }}-${{ github.event.inputs.btp_cli_version }}
 
       - name: Install BTP CLI 🔧
         if: steps.cache-btp-cli.outputs.cache-hit != 'true'
         run: |
-          echo "🔄 Installing SAP BTP CLI..."
+          BTP_VER="${{ github.event.inputs.btp_cli_version }}"
+          echo "🔄 Installing SAP BTP CLI v${BTP_VER}..."
 
-          # Step 1: resolve the latest version from the metadata txt (no EULA required)
-          BTP_VER=$(curl -sL \
-            "https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.txt" \
-            2>/dev/null | tr -d '[:space:]')
-
-          # Fallback: scrape version from the tools page HTML
-          if [ -z "$BTP_VER" ]; then
-            BTP_VER=$(curl -sL "https://tools.hana.ondemand.com/#cloud" 2>/dev/null \
-              | grep -oP 'btp-cli-linux-amd64-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          fi
-
-          if [ -z "$BTP_VER" ]; then
-            echo "❌ Could not determine BTP CLI version from SAP tools portal."
-            echo "Hint: if the runner has no public access to tools.hana.ondemand.com, use a self-hosted runner."
-            exit 1
-          fi
-          echo "Resolved BTP CLI version: $BTP_VER"
-
-          # Step 2: download the specific versioned tarball with the EULA cookie
           curl -fsSL \
             -b "eula_3_1_agreed=tools.hana.ondemand.com/developer-license-3_1.txt" \
             -H "Referer: https://tools.hana.ondemand.com/" \
@@ -94,7 +81,10 @@ jobs:
             -o /tmp/btp.tar.gz
 
           if ! file /tmp/btp.tar.gz | grep -q "gzip"; then
-            echo "❌ Download still returned HTML instead of tarball — the portal may require VPN or a self-hosted runner."
+            echo "❌ Download returned HTML instead of tarball."
+            echo "This usually means tools.hana.ondemand.com is not accessible from public GitHub runners."
+            echo "Options: use a self-hosted runner, or upload the btp binary as a GitHub release asset"
+            echo "and change this step to download it from there."
             head -c 300 /tmp/btp.tar.gz
             exit 1
           fi
@@ -108,7 +98,7 @@ jobs:
           fi
           sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
           btp --version
-          echo "✅ BTP CLI installed successfully!"
+          echo "✅ BTP CLI v${BTP_VER} installed successfully!"
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
