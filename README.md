@@ -1304,17 +1304,15 @@ The plugin provides two classes for error keys:
 - `SDMUIErrorKeys` - UI-facing messages that should be translated
 - `SDMErrorKeys` - Backend/internal messages (no translation needed)
 
-To translate UI messages, add entries to `messages_[languagecode].properties` in `srv/src/main/resources/`:
+To translate UI messages, add entries to `messages_[languagecode].properties` in `srv/src/main/resources/`. If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
 
+Example `messages_de.properties` for German language:
 ```properties
-# messages_de.properties
-SDM.couldNotUploadDocument=Das Dokument konnte nicht hochgeladen werden.
-SDM.couldNotDeleteDocument=Das Dokument konnte nicht gelöscht werden.
-SDM.userNotAuthorisedError=Sie haben keine Berechtigung zum Hochladen von Anhängen.
+SDM.virusRepoErrorMoreThan400MB=Sie können keine Dateien hochladen, die größer als 400 MB sind
+SDM.userNotAuthorisedError=Sie verfügen nicht über die erforderlichen Berechtigungen zum Hochladen von Anhängen
+SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
+SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 ```
-
-Default English messages are defined in `SDMErrorMessages`.
-
 
 ## Support for Attachment Upload Status
 
