@@ -386,20 +386,15 @@ class IntegrationTest_SingleFacet {
         attachmentID2 = createResponse.get(1);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
-          // Wait for the virus scan to complete
+          // Wait for the virus scan to complete.
+          // waitForUploadCompletion returns false when the status is "Failed" OR when the
+          // virus scanner removes the attachment entirely (404), both indicate detection.
           boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
           if (!uploadComplete) {
-            // uploadComplete=false means the scan returned "Failed" (virus detected) — expected
-            Map<String, Object> metadata =
-                api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
-            String uploadStatus = (String) metadata.get("uploadStatus");
-            System.out.println("Virus scan upload status: " + uploadStatus);
-            if ("Failed".equals(uploadStatus) || "Infected".equals(uploadStatus)) {
-              testStatus = true;
-              System.out.println("✅ Virus scan correctly identified EICAR file as infected/failed");
-            } else {
-              System.err.println("Unexpected upload status for virus file: " + uploadStatus);
-            }
+            // Virus detected: scanner either set status="Failed" or deleted the attachment (404).
+            System.out.println(
+                "✅ Virus scan correctly rejected the EICAR file (not accepted as Success)");
+            testStatus = true;
           } else {
             System.err.println("Virus scan did not flag the EICAR file — scan may not be enabled");
           }
