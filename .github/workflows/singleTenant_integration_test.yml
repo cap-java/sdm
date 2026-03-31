@@ -67,21 +67,42 @@ jobs:
         if: steps.cache-btp-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔄 Installing SAP BTP CLI..."
-          BTP_URL="https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.tar.gz"
-          # SAP tools portal requires EULA acceptance via cookie
-          wget -q --tries=3 \
-            --header="Cookie: eula_3_1_agreed=tools.hana.ondemand.com/developer-license-3_1.txt" \
-            -O /tmp/btp.tar.gz "$BTP_URL"
-          if ! file /tmp/btp.tar.gz | grep -q "gzip"; then
-            echo "❌ Downloaded file is not a valid gzip archive:"
-            file /tmp/btp.tar.gz
-            head -c 200 /tmp/btp.tar.gz
+
+          # Step 1: resolve the latest version from the metadata txt (no EULA required)
+          BTP_VER=$(curl -sL \
+            "https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-latest.txt" \
+            2>/dev/null | tr -d '[:space:]')
+
+          # Fallback: scrape version from the tools page HTML
+          if [ -z "$BTP_VER" ]; then
+            BTP_VER=$(curl -sL "https://tools.hana.ondemand.com/#cloud" 2>/dev/null \
+              | grep -oP 'btp-cli-linux-amd64-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          fi
+
+          if [ -z "$BTP_VER" ]; then
+            echo "❌ Could not determine BTP CLI version from SAP tools portal."
+            echo "Hint: if the runner has no public access to tools.hana.ondemand.com, use a self-hosted runner."
             exit 1
           fi
+          echo "Resolved BTP CLI version: $BTP_VER"
+
+          # Step 2: download the specific versioned tarball with the EULA cookie
+          curl -fsSL \
+            -b "eula_3_1_agreed=tools.hana.ondemand.com/developer-license-3_1.txt" \
+            -H "Referer: https://tools.hana.ondemand.com/" \
+            "https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-${BTP_VER}.tar.gz" \
+            -o /tmp/btp.tar.gz
+
+          if ! file /tmp/btp.tar.gz | grep -q "gzip"; then
+            echo "❌ Download still returned HTML instead of tarball — the portal may require VPN or a self-hosted runner."
+            head -c 300 /tmp/btp.tar.gz
+            exit 1
+          fi
+
           tar -xzf /tmp/btp.tar.gz -C /tmp/
           BTP_BIN=$(find /tmp -maxdepth 3 -name 'btp' -type f 2>/dev/null | head -1)
           if [ -z "$BTP_BIN" ]; then
-            echo "❌ btp binary not found after extraction. Contents of /tmp:"
+            echo "❌ btp binary not found after extraction."
             ls -la /tmp/
             exit 1
           fi
