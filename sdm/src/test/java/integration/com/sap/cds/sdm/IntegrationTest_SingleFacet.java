@@ -383,13 +383,18 @@ class IntegrationTest_SingleFacet {
       List<String> createResponse =
           api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
-      if (check.equals("Attachment created")) {
+      if (check.contains("malware")) {
+        // Scanner blocked the upload immediately at creation time
+        System.out.println("Virus scan correctly rejected the EICAR file at upload");
+        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        testStatus = true;
+      } else if (check.equals("Attachment created")) {
         attachmentID2 = createResponse.get(1);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
           boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
           if (!uploadComplete) {
-            System.out.println("Virus scan correctly rejected the EICAR file");
+            System.out.println("Virus scan correctly rejected the EICAR file during async scan");
             testStatus = true;
           } else {
             System.err.println(
