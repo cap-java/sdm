@@ -3,6 +3,7 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.utils.CfEnvHelper;
 import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
 import java.io.File;
 import java.io.IOException;
@@ -360,8 +361,12 @@ class IntegrationTest_SingleFacet {
 
   @Test
   @Order(4)
-  void testUploadVirusFileAttachment() throws IOException, InterruptedException {
-    System.out.println("Test (4) : Upload EICAR virus file and verify scan detects it as infected");
+  void testUploadVirusFileInSampleRepo() throws IOException, InterruptedException {
+    System.out.println(
+        "Test (4) : Update REPOSITORY_ID to SAMPLE-REPO and upload EICAR virus file — expect"
+            + " success");
+    CfEnvHelper.updateEnv("REPOSITORY_ID", "SAMPLE-REPO");
+
     boolean testStatus = false;
 
     String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
@@ -386,23 +391,69 @@ class IntegrationTest_SingleFacet {
         attachmentID2 = createResponse.get(1);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         if (response.equals("Saved")) {
-          // Wait for the virus scan to complete.
-          // waitForUploadCompletion returns false when the status is "Failed" OR when the
-          // virus scanner removes the attachment entirely (404), both indicate detection.
           boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID2, 120);
-          if (!uploadComplete) {
-            // Virus detected: scanner either set status="Failed" or deleted the attachment (404).
+          if (uploadComplete) {
             System.out.println(
-                "✅ Virus scan correctly rejected the EICAR file (not accepted as Success)");
+                "✅ Virus file uploaded successfully to SAMPLE-REPO (no scanner blocking)");
             testStatus = true;
           } else {
-            System.err.println("Virus scan did not flag the EICAR file — scan may not be enabled");
+            System.err.println(
+                "Upload was rejected in SAMPLE-REPO — unexpected, scanner may be active");
           }
         }
       }
     }
     if (!testStatus) {
-      fail("Virus file was not correctly detected by the malware scanner");
+      fail("Virus file upload failed unexpectedly in SAMPLE-REPO");
+    }
+  }
+
+  @Test
+  @Order(5)
+  void testUploadVirusFileInScannedRepo() throws IOException, InterruptedException {
+    System.out.println(
+        "Test (5) : Update REPOSITORY_ID to scanned repo and upload EICAR virus file — expect"
+            + " rejection");
+    CfEnvHelper.updateEnv("REPOSITORY_ID", "6a9acbed-a55c-4f7e-a00d-eb2e9dbad373");
+
+    boolean testStatus = false;
+
+    String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+    File file = new File(eicarFilePath);
+    if (!file.exists()) {
+      fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+    }
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityID);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    if (response == "Entity in draft mode") {
+      List<String> createResponse =
+          api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+      String check = createResponse.get(0);
+      if (check.equals("Attachment created")) {
+        attachmentID3 = createResponse.get(1);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        if (response.equals("Saved")) {
+          boolean uploadComplete = waitForUploadCompletion(entityID, attachmentID3, 120);
+          if (!uploadComplete) {
+            System.out.println(
+                "✅ Virus scan correctly rejected the EICAR file in scanned repository");
+            testStatus = true;
+          } else {
+            System.err.println(
+                "Virus scan did not flag the EICAR file — scanner may not be enabled");
+          }
+        }
+      }
+    }
+    if (!testStatus) {
+      fail("Virus file was not rejected by the malware scanner in scanned repository");
     }
   }
 

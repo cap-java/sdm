@@ -303,10 +303,6 @@ jobs:
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java" -Deicar.file.path=$(pwd)/$DOWNLOAD_PATH
 
           SCRIPTS_DIR="sdm/src/test/java/integration/com/sap/cds/sdm/utils"
-          echo "🔄 Running cf-update-env.sh..."
-          bash "$SCRIPTS_DIR/cf-update-env.sh"
-          echo "✅ Update env complete."
-          
           echo "🔄 Running cf-unsubscribe.sh..."
           bash "$SCRIPTS_DIR/cf-unsubscribe.sh"
           echo "✅ Unsubscribe complete."

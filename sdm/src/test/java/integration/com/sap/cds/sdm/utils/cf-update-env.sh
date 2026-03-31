@@ -4,6 +4,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties"
 
+# Parse optional --key and --value CLI arguments
+CLI_KEY=""
+CLI_VALUE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --key)   CLI_KEY="$2";   shift 2 ;;
+    --value) CLI_VALUE="$2"; shift 2 ;;
+    *) echo "Unknown argument: $1"; exit 1 ;;
+  esac
+done
+
 # Load key=value pairs from .properties file without shell expansion of values
 load_props() {
   local key val
@@ -25,10 +36,14 @@ fi
 
 load_props "$CONFIG_FILE"
 
+# --- Apply CLI overrides ---
+[[ -n "$CLI_KEY" ]]   && VAR_NAME="$CLI_KEY"
+[[ -n "$CLI_VALUE" ]] && VAR_VALUE="$CLI_VALUE"
+
 # --- Validate required variables ---
 for var in CF_API_ENDPOINT CF_ORG CF_SPACE CF_USERNAME APP_NAME VAR_NAME VAR_VALUE; do
   if [[ -z "${!var:-}" ]]; then
-    echo "ERROR: $var is not set in $CONFIG_FILE"
+    echo "ERROR: $var is not set (checked config and CLI args)"
     exit 1
   fi
 done
