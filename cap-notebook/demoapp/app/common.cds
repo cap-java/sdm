@@ -64,6 +64,14 @@ annotate my.Books.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -150,7 +158,15 @@ annotate my.Books.references with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
-     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
+    {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
     {Value: createdAt, @HTML5.CssDefaults: {width: '15%'}},
@@ -231,6 +247,14 @@ annotate my.Books.footnotes with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -312,6 +336,14 @@ annotate my.Chapters.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -393,6 +425,14 @@ annotate my.Chapters.references with @UI: {
     TypeNamePlural: '{i18n>References}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
      {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -474,6 +514,14 @@ annotate my.Chapters.footnotes with @UI: {
     TypeNamePlural: '{i18n>Footnotes}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -555,6 +603,14 @@ annotate my.Pages.attachments with @UI: {
     TypeNamePlural: '{i18n>Attachments}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -636,6 +692,14 @@ annotate my.Pages.references with @UI: {
     TypeNamePlural: '{i18n>References}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
@@ -717,6 +781,14 @@ annotate my.Pages.footnotes with @UI: {
     TypeNamePlural: '{i18n>Footnotes}',
   },
   LineItem  : [
+    {
+      $Type : 'UI.DataFieldForAction',
+      Action: 'AdminService.createAttachmentInActive',
+      Label : 'Create Attachment',
+      Inline: false,
+      RequiresSelection: false,
+      ![@UI.Hidden]: {$edmJson: {$Ne: [ {$Path: 'IsActiveEntity'}, true ]}}
+    },
     {Value: type, @HTML5.CssDefaults: {width: '10%'}},
     {Value: fileName, @HTML5.CssDefaults: {width: '20%'}},
     {Value: content, @HTML5.CssDefaults: {width: '0%'}},
