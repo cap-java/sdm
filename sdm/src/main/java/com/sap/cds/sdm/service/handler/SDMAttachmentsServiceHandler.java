@@ -42,6 +42,11 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
   private final TokenHandler tokenHandler;
   private final DBQuery dbQuery;
 
+  // ThreadLocal to share SDM metadata between AttachmentService event and CREATE event
+  // (different EventContext types, but same thread)
+  public static final ThreadLocal<Map<String, Object>> SDM_METADATA_THREADLOCAL =
+      new ThreadLocal<>();
+
   public SDMAttachmentsServiceHandler(
       PersistenceService persistenceService,
       SDMService sdmService,
@@ -57,6 +62,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   @On(event = AttachmentService.EVENT_CREATE_ATTACHMENT)
   public void createAttachment(AttachmentCreateEventContext context) throws IOException {
+    // Defensive cleanup: remove any stale ThreadLocal from a previous failed request on this thread
+    SDM_METADATA_THREADLOCAL.remove();
+
     long startTime = System.currentTimeMillis();
     String contentLength =
         (context.getParameterInfo() != null && context.getParameterInfo().getHeaders() != null)
@@ -81,7 +89,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String contentId = context.getContentId();
     logger.debug("START: Mark attachment as deleted with contentId: {}", contentId);
     String[] contextValues = context.getContentId().split(":");
-    if (contextValues.length > 0 && !(contextValues[0].equalsIgnoreCase("null"))) {
+    if (contextValues.length >= 3 && !(contextValues[0].equalsIgnoreCase("null"))) {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
       String entity = contextValues[2];
@@ -266,14 +274,85 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
 
   private CdsEntity getAttachmentDraftEntity(AttachmentCreateEventContext eventContext) {
     CdsModel model = eventContext.getModel();
-    String draftEntityName = eventContext.getAttachmentEntity() + "_drafts";
-    logger.debug("Looking for attachment draft entity: {}", draftEntityName);
-    Optional<CdsEntity> attachmentDraftEntity = model.findEntity(draftEntityName);
-    return attachmentDraftEntity.orElseThrow(
-        () -> {
-          logger.error("Draft entity not found: {}", draftEntityName);
-          return new ServiceException(SDMUtils.getErrorMessage("DRAFT_NOT_FOUND"));
-        });
+    String baseEntityName = eventContext.getAttachmentEntity().getQualifiedName();
+    String draftEntityName = baseEntityName + "_drafts";
+
+    logger.debug("Looking for attachment entity: {}", baseEntityName);
+
+    // Check if we should use draft entity by verifying if parent record exists in draft table
+    Map<String, Object> attachmentIds = eventContext.getAttachmentIds();
+    boolean isDraftContext = isDraftContext(eventContext, attachmentIds, baseEntityName);
+
+    if (isDraftContext) {
+      logger.debug("Using draft entity: {}", draftEntityName);
+      Optional<CdsEntity> draftEntity = model.findEntity(draftEntityName);
+      return draftEntity.orElseThrow(
+          () -> {
+            logger.error("Draft entity not found: {}", draftEntityName);
+            return new ServiceException(SDMUtils.getErrorMessage("DRAFT_NOT_FOUND"));
+          });
+    } else {
+      // Use the active entity
+      logger.debug("Using active entity: {}", baseEntityName);
+      Optional<CdsEntity> activeEntity = model.findEntity(baseEntityName);
+      return activeEntity.orElseThrow(
+          () -> {
+            logger.error("Entity not found: {}", baseEntityName);
+            return new ServiceException(SDMUtils.getErrorMessage("DRAFT_NOT_FOUND"));
+          });
+    }
+  }
+
+  private boolean isDraftContext(
+      AttachmentCreateEventContext eventContext,
+      Map<String, Object> attachmentIds,
+      String baseEntityName) {
+    try {
+      // Extract parent entity name (e.g., "AdminService.Books" from
+      // "AdminService.Books.attachments")
+      String[] parts = baseEntityName.split("\\.");
+      if (parts.length >= 3) {
+        String parentEntityName = parts[0] + "." + parts[1];
+        String parentDraftEntityName = parentEntityName + "_drafts";
+
+        logger.debug("Checking if parent entity {} has draft table", parentEntityName);
+
+        // Check if parent draft entity exists in model
+        Optional<CdsEntity> parentDraftEntity =
+            eventContext.getModel().findEntity(parentDraftEntityName);
+
+        if (parentDraftEntity.isPresent()) {
+          // Get the parent ID from attachment IDs
+          CdsEntity attachmentEntity = eventContext.getAttachmentEntity();
+          String upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
+          String parentId = (String) attachmentIds.get(upIdKey);
+
+          if (parentId != null) {
+            // Query the parent draft table to see if the parent record exists there
+            Result draftResult =
+                persistenceService.run(
+                    com.sap.cds.ql.Select.from(parentDraftEntityName)
+                        .where(e -> e.get("ID").eq(parentId)));
+
+            boolean existsInDraft = draftResult.first().isPresent();
+            logger.debug(
+                "Parent ID {} {} in draft table {}",
+                parentId,
+                existsInDraft ? "exists" : "does not exist",
+                parentDraftEntityName);
+            return existsInDraft;
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn("Error checking draft context, defaulting to draft entity: {}", e.getMessage());
+    }
+
+    // Default to draft entity if we can't determine (safer option for backwards compatibility)
+    logger.info(
+        "Could not determine draft/active context for entity: {}, defaulting to draft entity",
+        baseEntityName);
+    return true;
   }
 
   private void checkAttachmentConstraints(
@@ -390,6 +469,12 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     cmisDocument.setFolderId(folderId);
     cmisDocument.setMimeType((String) data.get("mimeType"));
     cmisDocument.setContentLength(contentlen);
+    logger.debug(
+        "CMIS document properties set - attachmentId: {}, fileName: {}, folderId: {}, mimeType: {}",
+        cmisDocument.getAttachmentId(),
+        cmisDocument.getFileName(),
+        folderId,
+        cmisDocument.getMimeType());
   }
 
   private void handleCreateDocumentResult(
@@ -401,6 +486,55 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     switch (status) {
       case "duplicate":
         logger.warn("Duplicate document detected: {}", cmisDocument.getFileName());
+        // Check if the attachment already exists in the active entity with an objectId.
+        // This happens when an attachment was created in the active entity (bypassing draft),
+        // and then the user later edits + saves, causing CAP's attachment framework to
+        // re-fire CREATE_ATTACHMENT during draftActivate. The file already exists in SDM,
+        // so we should complete gracefully instead of throwing.
+        try {
+          String activeEntityName = eventContext.getAttachmentEntity().getQualifiedName();
+          Optional<CdsEntity> activeEntity = eventContext.getModel().findEntity(activeEntityName);
+          if (activeEntity.isPresent()) {
+            logger.debug(
+                "Checking if attachment already exists in active entity: {}", activeEntityName);
+            String attachmentId = cmisDocument.getAttachmentId();
+            CmisDocument existing =
+                dbQuery.getObjectIdForAttachmentID(
+                    activeEntity.get(), persistenceService, attachmentId);
+            if (existing.getObjectId() != null
+                && !existing.getObjectId().isEmpty()
+                && !"null".equalsIgnoreCase(existing.getObjectId())) {
+              logger.info(
+                  "Attachment {} already exists in SDM with objectId {}. "
+                      + "Skipping duplicate error (likely re-processing during draftActivate).",
+                  cmisDocument.getFileName(),
+                  existing.getObjectId());
+              // Use the existing metadata to finalize the context
+              cmisDocument.setObjectId(existing.getObjectId());
+              cmisDocument.setFolderId(existing.getFolderId());
+              cmisDocument.setMimeType(existing.getMimeType());
+              eventContext.setContentId(
+                  existing.getObjectId() + ":" + existing.getFolderId() + ":" + activeEntityName);
+              eventContext.getData().setStatus("Clean");
+              eventContext.getData().setContent(null);
+              eventContext.setCompleted();
+              return;
+            } else {
+              logger.debug(
+                  "Attachment {} not found in active entity with a valid objectId, treating as genuine duplicate",
+                  attachmentId);
+            }
+          } else {
+            logger.warn(
+                "Active entity not found in model: {}, cannot check for existing attachment during duplicate handling",
+                activeEntityName);
+          }
+        } catch (Exception ex) {
+          logger.warn(
+              "Error checking for existing attachment during duplicate handling: {}",
+              ex.getMessage());
+        }
+        // Genuine duplicate — attachment does not already exist in active entity
         Object[] duplicatemessage = new Object[1];
         duplicatemessage[0] = cmisDocument.getFileName();
         throw new ServiceException(
@@ -432,9 +566,47 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             "Document created successfully with objectId: {} and status: {}",
             cmisDocument.getObjectId(),
             cmisDocument.getUploadStatus());
-        dbQuery.addAttachmentToDraft(
-            getAttachmentDraftEntity(eventContext), persistenceService, cmisDocument);
-        finalizeContext(eventContext, cmisDocument);
+
+        // Check if we need to update existing draft records or store metadata for active entity
+        CdsEntity attachmentEntity = getAttachmentDraftEntity(eventContext);
+        logger.debug(
+            "Attachment entity for finalizing context: {}", attachmentEntity.getQualifiedName());
+
+        boolean isDraftEntity = attachmentEntity.getQualifiedName().endsWith("_drafts");
+
+        if (isDraftEntity) {
+          // Draft entity - record already exists, update it immediately
+          logger.debug("Updating draft entity attachment record");
+          dbQuery.addAttachmentToDraft(attachmentEntity, persistenceService, cmisDocument);
+          finalizeContext(eventContext, cmisDocument);
+        } else {
+          // Active entity - call finalizeContext() just like draft path.
+          // This sets contentId and calls setCompleted(), which:
+          // 1. Prevents the default attachment storage handler from overwriting contentId
+          // 2. Ensures contentId is propagated back to the ApplicationService INSERT data
+          // The ApplicationService INSERT still happens (setCompleted only affects
+          // AttachmentService)
+          logger.info(
+              "Active entity detected - finalizing with contentId. uploadStatus: {}",
+              cmisDocument.getUploadStatus());
+
+          // Store SDM metadata in ThreadLocal for the @After handler on ApplicationService CREATE
+          // to update objectId/folderId/repositoryId after the record is INSERTed into the DB.
+          // (These fields are NOT propagated by the framework - only contentId and status are.)
+          Map<String, Object> metadata = new HashMap<>();
+          metadata.put("attachmentId", cmisDocument.getAttachmentId());
+          metadata.put("objectId", cmisDocument.getObjectId());
+          metadata.put("folderId", cmisDocument.getFolderId());
+          metadata.put("uploadStatus", cmisDocument.getUploadStatus());
+          metadata.put("mimeType", cmisDocument.getMimeType());
+          metadata.put("attachmentEntity", attachmentEntity);
+          SDM_METADATA_THREADLOCAL.set(metadata);
+
+          // finalizeContext sets contentId and calls setCompleted()
+          finalizeContext(eventContext, cmisDocument);
+          logger.info(
+              "Active entity - finalized with contentId, SDM metadata stored in ThreadLocal");
+        }
     }
   }
 

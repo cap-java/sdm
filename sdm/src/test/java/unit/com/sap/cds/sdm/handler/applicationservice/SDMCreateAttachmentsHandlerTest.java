@@ -1,5 +1,7 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
+import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -16,6 +18,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.authentication.AuthenticationInfo;
 import com.sap.cds.services.authentication.JwtTokenAuthenticationInfo;
@@ -79,6 +82,8 @@ public class SDMCreateAttachmentsHandlerTest {
     if (sdmUtilsMockedStatic != null) {
       sdmUtilsMockedStatic.close();
     }
+    // Ensure ThreadLocal is always cleaned up
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.remove();
   }
 
   @Test
@@ -840,4 +845,183 @@ public class SDMCreateAttachmentsHandlerTest {
   //     verify(attachment3).replace("fileName", "file3_sdm.txt"); // This one had a conflict
   //   }
 
+  // ========== Tests for updateActiveEntitySdmMetadata ==========
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_Success() {
+    // When ThreadLocal has valid metadata, should call addAttachmentToDraft
+    CdsEntity mockAttachmentEntity = mock(CdsEntity.class);
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", "obj-456");
+    metadata.put("folderId", "folder-789");
+    metadata.put("mimeType", "application/pdf");
+    metadata.put("uploadStatus", "Success");
+    metadata.put("attachmentEntity", mockAttachmentEntity);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify addAttachmentToDraft was called with correct entity
+    verify(dbQuery)
+        .addAttachmentToDraft(
+            eq(mockAttachmentEntity),
+            eq(persistenceService),
+            argThat(
+                doc ->
+                    "att-123".equals(doc.getAttachmentId())
+                        && "obj-456".equals(doc.getObjectId())
+                        && "folder-789".equals(doc.getFolderId())
+                        && "application/pdf".equals(doc.getMimeType())
+                        && "Success".equals(doc.getUploadStatus())));
+    // Verify ThreadLocal was removed
+    assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_NullMetadata_ReturnsEarly() {
+    // When ThreadLocal is not set (null), should return early without any action
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.remove();
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify no interaction with dbQuery
+    verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_NullAttachmentEntity_ReturnsEarly() {
+    // When metadata has null attachmentEntity, should return early
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", "obj-456");
+    metadata.put("attachmentEntity", null);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify no interaction with dbQuery
+    verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
+    // Verify ThreadLocal was still removed
+    assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_ExceptionInDbQuery_CatchesGracefully() {
+    // When addAttachmentToDraft throws an exception, should catch and not propagate
+    CdsEntity mockAttachmentEntity = mock(CdsEntity.class);
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", "obj-456");
+    metadata.put("folderId", "folder-789");
+    metadata.put("mimeType", "application/pdf");
+    metadata.put("uploadStatus", "Success");
+    metadata.put("attachmentEntity", mockAttachmentEntity);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    doThrow(new RuntimeException("DB error"))
+        .when(dbQuery)
+        .addAttachmentToDraft(any(), any(), any());
+
+    // Should NOT throw exception
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify ThreadLocal was cleaned up even though exception occurred
+    assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_CleansUpThreadLocal() {
+    // Verify ThreadLocal is always removed regardless of outcome
+    CdsEntity mockAttachmentEntity = mock(CdsEntity.class);
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", "obj-456");
+    metadata.put("folderId", "folder-789");
+    metadata.put("mimeType", "text/plain");
+    metadata.put("uploadStatus", "InProgress");
+    metadata.put("attachmentEntity", mockAttachmentEntity);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify ThreadLocal was cleared
+    assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_MissingAttachmentEntityKey_ReturnsEarly() {
+    // When metadata does not contain the "attachmentEntity" key at all
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", "obj-456");
+    // No "attachmentEntity" key
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Verify no interaction with dbQuery
+    verify(dbQuery, never()).addAttachmentToDraft(any(), any(), any());
+    // Verify ThreadLocal was still removed
+    assertNull(SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get());
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_PartialMetadata() {
+    // When metadata has some null fields, should still call addAttachmentToDraft
+    CdsEntity mockAttachmentEntity = mock(CdsEntity.class);
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "att-123");
+    metadata.put("objectId", null); // null objectId
+    metadata.put("folderId", "folder-789");
+    metadata.put("mimeType", null); // null mimeType
+    metadata.put("uploadStatus", "Success");
+    metadata.put("attachmentEntity", mockAttachmentEntity);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    // Should still call addAttachmentToDraft with CmisDocument having null fields
+    verify(dbQuery)
+        .addAttachmentToDraft(
+            eq(mockAttachmentEntity),
+            eq(persistenceService),
+            argThat(
+                doc ->
+                    "att-123".equals(doc.getAttachmentId())
+                        && doc.getObjectId() == null
+                        && "folder-789".equals(doc.getFolderId())
+                        && doc.getMimeType() == null
+                        && "Success".equals(doc.getUploadStatus())));
+  }
+
+  @Test
+  public void testUpdateActiveEntitySdmMetadata_CorrectFieldMapping() {
+    // Verify each field from metadata is correctly mapped to CmisDocument
+    CdsEntity mockAttachmentEntity = mock(CdsEntity.class);
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("attachmentId", "test-att-id");
+    metadata.put("objectId", "test-obj-id");
+    metadata.put("folderId", "test-folder-id");
+    metadata.put("mimeType", "image/png");
+    metadata.put("uploadStatus", "InProgress");
+    metadata.put("attachmentEntity", mockAttachmentEntity);
+    SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.set(metadata);
+
+    handler.updateActiveEntitySdmMetadata(context);
+
+    verify(dbQuery)
+        .addAttachmentToDraft(
+            eq(mockAttachmentEntity),
+            eq(persistenceService),
+            argThat(
+                doc -> {
+                  assertEquals("test-att-id", doc.getAttachmentId());
+                  assertEquals("test-obj-id", doc.getObjectId());
+                  assertEquals("test-folder-id", doc.getFolderId());
+                  assertEquals("image/png", doc.getMimeType());
+                  assertEquals("InProgress", doc.getUploadStatus());
+                  return true;
+                }));
+  }
 }

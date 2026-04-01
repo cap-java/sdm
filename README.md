@@ -25,6 +25,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 - Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
+- Active entity attachment creation: Provides the capability to create attachments directly on active (non-draft) entities.
 
 ## Table of Contents
 
@@ -45,6 +46,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
 - [Support for Attachment Upload Status](#support-for-attachment-upload-status)
+- [Support for Attachment creation in Active Entities](#support-for-attachment-creation-in-active-entities)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -1331,6 +1333,64 @@ uploading;Uploading;5
 Success;Success;3
 Failed;Scan Failed;2
  ```
+
+### Support for Attachment Creation in Active Entities
+
+By default, the SDM CAP plugin handles attachment creation through the **draft flow** — attachments are first created on a draft entity and later activated. This feature adds support for creating attachments **directly on active entities**, which is useful in scenarios where the parent entity bypasses the draft lifecycle (e.g., programmatic entity creation, background jobs, or APIs that operate on active records).
+
+### How It Works
+
+When an attachment is created, the plugin automatically determines whether the parent entity is in a **draft** or **active** context:
+
+1. **Draft detection:** The plugin queries the parent entity's draft table to check if the parent record exists there. If it does, the standard draft flow is used.
+2. **Active entity flow:** If the parent record is **not** found in the draft table, the plugin treats it as an active entity context. In this case:
+   - The attachment content is uploaded to the SAP Document Management repository.
+   - The SDM metadata (`objectId`, `folderId`, `repositoryId`, etc.) is temporarily stored in-memory.
+   - After the framework completes the database INSERT, an `@After` handler updates the active entity record with the SDM metadata.
+3. **Backwards compatibility:** If the context cannot be determined (e.g., the model has no draft table), the plugin defaults to the draft flow to ensure existing applications continue to work without changes.
+
+### Key Behavior
+
+- **Automatic detection:** No configuration is required. The plugin automatically detects whether to use the draft or active entity flow based on the parent entity's presence in the draft table.
+- **Duplicate handling:** If an attachment with the same filename already exists on the active entity, the plugin gracefully handles the duplicate by reusing the existing attachment record.
+
+### Usage in Leading Applications
+
+To create attachments on active entities, the leading application needs to trigger an `INSERT` on the attachment entity through the `ApplicationService` (or `DraftService`, which extends it). The plugin intercepts the content automatically and routes it through the active entity flow.
+
+#### Steps
+
+1. **Build the attachment data** with the required fields:
+
+   | Field      | Type          | Description                                      |
+   |------------|---------------|--------------------------------------------------|
+   | `ID`       | `String`      | Unique identifier (e.g., `UUID.randomUUID()`)    |
+   | `up__ID`   | `String`      | The parent entity's ID                           |
+   | `fileName` | `String`      | The attachment filename                          |
+   | `mimeType` | `String`      | The MIME type of the content                     |
+   | `content`  | `InputStream` | An `InputStream` containing the file content     |
+
+2. **Execute the INSERT** using the `ApplicationService`. See this [example](https://github.com/cap-java/sdm/blob/e89c3c4f9fee6a18b20dfec2650b1d05ff244bc3/cap-notebook/demoapp/srv/src/main/java/customer/demoapp/handlers/AdminServiceHandler.java#L142)
+
+   ```java
+   import com.sap.cds.ql.Insert;
+   import java.io.InputStream;
+   import java.util.HashMap;
+   import java.util.Map;
+   import java.util.UUID;
+
+   // Build attachment data
+   Map<String, Object> attachmentData = new HashMap<>();
+   attachmentData.put("ID", UUID.randomUUID().toString());
+   attachmentData.put("up__ID", parentEntityId);
+   attachmentData.put("fileName", "report.pdf");
+   attachmentData.put("mimeType", "application/pdf");
+   attachmentData.put("content", inputStream);
+
+   // Insert into the attachment entity via ApplicationService
+   applicationService.run(
+       Insert.into("MyService.MyEntity.attachments").entry(attachmentData)
+   );
 
 ## Known Restrictions
 
