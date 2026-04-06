@@ -19,7 +19,7 @@ load_props() {
 
 # --- Load config ---
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "ERROR: Config file not found at $CONFIG_FILE"
+  echo "ERROR: Config file not found"
   exit 1
 fi
 
@@ -33,17 +33,12 @@ BTP_URL="${BTP_CLI_URL:-https://cli.btp.cloud.sap}"
 # --- Validate required variables ---
 for var in CONSUMER_USER CONSUMER_SUBACCOUNT_ID SAAS_APP_NAME; do
   if [[ -z "${!var:-}" ]]; then
-    echo "ERROR: $var is not set in $CONFIG_FILE"
+    echo "ERROR: Required variable $var is not set in config"
     exit 1
   fi
 done
 
 echo "=== BTP Subaccount SaaS Subscription ==="
-echo "BTP URL:      $BTP_URL"
-echo "User:         $CONSUMER_USER"
-echo "Subaccount:   $CONSUMER_SUBACCOUNT_ID"
-echo "Application:  $SAAS_APP_NAME"
-echo "Plan:         ${SAAS_APP_PLAN:-<none>}"
 echo "=========================================="
 
 # --- BTP Login ---
@@ -56,7 +51,7 @@ fi
 if [[ -n "${BTP_GLOBAL_ACCOUNT_SUBDOMAIN:-}" ]]; then
   LOGIN_ARGS+=(--subdomain "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN")
 fi
-btp login "${LOGIN_ARGS[@]}"
+btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
 
 # --- Check current subscription status ---
 GET_ARGS=(--subaccount "$CONSUMER_SUBACCOUNT_ID" --of-app "$SAAS_APP_NAME")
@@ -75,12 +70,12 @@ if [[ "$CURRENT_STATE" == "SUBSCRIBED" ]]; then
 else
   # --- Subscribe to SaaS application at subaccount level ---
   echo ""
-  echo "Subscribing to '$SAAS_APP_NAME' in subaccount $CONSUMER_SUBACCOUNT_ID..."
+  echo "Subscribing to SaaS application..."
   SUBSCRIBE_ARGS=(--subaccount "$CONSUMER_SUBACCOUNT_ID" --to-app "$SAAS_APP_NAME")
   if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
     SUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
   fi
-  btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}"
+  btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}" > /dev/null 2>&1
 
   # --- Wait for subscription to complete ---
   echo ""
@@ -88,11 +83,10 @@ else
   while true; do
     STATE=$(btp get accounts/subscription "${GET_ARGS[@]}" 2>/dev/null | grep -i "status:" | awk '{print $2}' || true)
     if echo "$STATE" | grep -qi "SUBSCRIBED"; then
-      echo "Subscription to '$SAAS_APP_NAME' is active."
+      echo "Subscription is active."
       break
     elif echo "$STATE" | grep -qi "SUBSCRIBE_FAILED"; then
       echo "ERROR: Subscription failed."
-      btp get accounts/subscription "${GET_ARGS[@]}"
       exit 1
     else
       echo "  State: ${STATE:-pending} — waiting 10s..."
@@ -151,7 +145,6 @@ for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
 
   if echo "$ROLES_RAW" | grep -qi "^error\|FAILED"; then
     echo "ERROR: Could not fetch roles from subaccount."
-    echo "$ROLES_RAW"
     exit 1
   fi
 
@@ -172,18 +165,12 @@ for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
 done
 
 if [[ -z "$MATCHED_ROLES" ]]; then
-  echo "WARNING: No roles found matching '$ROLE_FILTER' after $MAX_RETRIES attempts."
-  echo "The role templates may not be provisioned yet for this subscription."
-  echo "Hint: set APP_ROLE_FILTER in credentials.properties to a substring of your app's appId."
-  echo "Available appIds in this subaccount (sample):"
-  echo "$ROLES_RAW" | awk 'NR>1 && $2~/!/ {print "  " $2}' | sort -u | head -20
+  echo "WARNING: No matching roles found after $MAX_RETRIES attempts — role templates may not be provisioned yet."
   exit 0
 fi
 
-echo "Found roles:"
-echo "$MATCHED_ROLES" | while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
-  echo "  - $RNAME (template: $RTEMPLATE, appId: $RAPPID)"
-done
+ROLE_COUNT=$(echo "$MATCHED_ROLES" | wc -l | tr -d ' ')
+echo "Found $ROLE_COUNT role(s) to assign."
 
 # For each role collection: create it, add roles, then assign all emails
 for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
@@ -201,34 +188,35 @@ for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
     btp create security/role-collection "$COLLECTION_NAME" \
       --subaccount "$CONSUMER_SUBACCOUNT_ID" \
       --description "Auto-created role collection for $SAAS_APP_NAME" \
+      > /dev/null 2>&1 \
       && echo "Role collection created." \
       || echo "WARNING: Could not create role collection — it may already exist, continuing."
   fi
 
   # Add each role to the collection (safe to re-run; duplicate adds are ignored)
-  echo "Adding roles to collection '$COLLECTION_NAME'..."
+  echo "Adding roles to collection..."
   while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
     [[ -z "$RNAME" ]] && continue
-    echo "  Adding role '$RNAME'..."
     btp add security/role "$RNAME" \
       --to-role-collection "$COLLECTION_NAME" \
       --subaccount "$CONSUMER_SUBACCOUNT_ID" \
       --of-app "$RAPPID" \
       --of-role-template "$RTEMPLATE" \
-      && echo "  OK: $RNAME" \
-      || echo "  WARNING: Could not add role '$RNAME' (may already be in collection) — continuing."
+      > /dev/null 2>&1 \
+      && echo "  Role added successfully." \
+      || echo "  WARNING: Could not add role (may already be in collection) — continuing."
   done <<< "$MATCHED_ROLES"
 
   # Assign the role collection to each email
-  echo "Assigning '$COLLECTION_NAME' to users..."
+  echo "Assigning role collection to users..."
   for EMAIL in "${EMAILS_ARRAY[@]}"; do
-    echo "  Assigning to $EMAIL..."
     btp assign security/role-collection "$COLLECTION_NAME" \
       --subaccount "$CONSUMER_SUBACCOUNT_ID" \
       --to-user "$EMAIL" \
       --create-user-if-missing \
-      && echo "  OK: $EMAIL" \
-      || echo "  WARNING: Failed to assign to $EMAIL — continuing."
+      > /dev/null 2>&1 \
+      && echo "  User assigned successfully." \
+      || echo "  WARNING: Failed to assign role collection to a user — continuing."
   done
 done
 

@@ -19,7 +19,7 @@ load_props() {
 
 # --- Load config ---
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "ERROR: Config file not found at $CONFIG_FILE"
+  echo "ERROR: Config file not found"
   exit 1
 fi
 
@@ -33,18 +33,13 @@ BTP_URL="${BTP_CLI_URL:-https://cli.btp.cloud.sap}"
 # --- Validate required variables ---
 for var in CONSUMER_USER CONSUMER_SUBACCOUNT_ID SAAS_APP_NAME; do
   if [[ -z "${!var:-}" ]]; then
-    echo "ERROR: $var is not set in $CONFIG_FILE"
+    echo "ERROR: Required variable $var is not set in config"
     exit 1
   fi
 done
 
 echo "=== BTP Subaccount SaaS Unsubscription ==="
-echo "BTP URL:      $BTP_URL"
-echo "User:         $CONSUMER_USER"
-echo "Subaccount:   $CONSUMER_SUBACCOUNT_ID"
-echo "Application:  $SAAS_APP_NAME"
-echo "Plan:         ${SAAS_APP_PLAN:-<none>}"
-echo "==========================================="
+echo "============================================"
 
 # --- BTP Login ---
 echo ""
@@ -56,16 +51,16 @@ fi
 if [[ -n "${BTP_GLOBAL_ACCOUNT_SUBDOMAIN:-}" ]]; then
   LOGIN_ARGS+=(--subdomain "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN")
 fi
-btp login "${LOGIN_ARGS[@]}"
+btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
 
 # --- Unsubscribe from SaaS application at subaccount level ---
 echo ""
-echo "Unsubscribing from '$SAAS_APP_NAME' in subaccount $CONSUMER_SUBACCOUNT_ID..."
+echo "Unsubscribing from SaaS application..."
 UNSUBSCRIBE_ARGS=(--subaccount "$CONSUMER_SUBACCOUNT_ID" --from-app "$SAAS_APP_NAME")
 if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
   UNSUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
 fi
-btp unsubscribe accounts/subaccount "${UNSUBSCRIBE_ARGS[@]}" --confirm
+btp unsubscribe accounts/subaccount "${UNSUBSCRIBE_ARGS[@]}" --confirm > /dev/null 2>&1
 
 # --- Wait for unsubscription to complete ---
 echo ""
@@ -77,11 +72,10 @@ while true; do
   fi
   STATE=$(btp get accounts/subscription "${GET_ARGS[@]}" 2>/dev/null | grep -i "status:" | awk '{print $2}' || true)
   if [[ -z "$STATE" ]] || echo "$STATE" | grep -qi "NOT_SUBSCRIBED"; then
-    echo "Successfully unsubscribed from '$SAAS_APP_NAME'."
+    echo "Successfully unsubscribed."
     break
   elif echo "$STATE" | grep -qi "UNSUBSCRIBE_FAILED"; then
     echo "ERROR: Unsubscription failed."
-    btp get accounts/subscription "${GET_ARGS[@]}"
     exit 1
   else
     echo "  State: ${STATE:-pending} — waiting 10s..."

@@ -30,7 +30,7 @@ load_props() {
 
 # --- Load config ---
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "ERROR: Config file not found at $CONFIG_FILE"
+  echo "ERROR: Config file not found"
   exit 1
 fi
 
@@ -49,31 +49,26 @@ for var in CF_API_ENDPOINT CF_ORG CF_SPACE CF_USERNAME APP_NAME VAR_NAME VAR_VAL
 done
 
 echo "=== Cloud Foundry Environment Variable Updater ==="
-echo "API:   $CF_API_ENDPOINT"
-echo "Org:   $CF_ORG"
-echo "Space: $CF_SPACE"
-echo "App:   $APP_NAME"
-echo "Var:   $VAR_NAME = $VAR_VALUE"
 echo "=================================================="
 
 # --- CF Login ---
 echo ""
 echo "Logging in to Cloud Foundry..."
 if [[ -n "${CF_PASSWORD:-}" ]]; then
-  cf login -a "$CF_API_ENDPOINT" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE"
+  cf login -a "$CF_API_ENDPOINT" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null 2>&1
 else
-  cf login -a "$CF_API_ENDPOINT" -u "$CF_USERNAME" -o "$CF_ORG" -s "$CF_SPACE"
+  cf login -a "$CF_API_ENDPOINT" -u "$CF_USERNAME" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null 2>&1
 fi
 
 # --- Update environment variable ---
 echo ""
-echo "Setting $VAR_NAME=$VAR_VALUE on $APP_NAME..."
-cf set-env "$APP_NAME" "$VAR_NAME" "$VAR_VALUE"
+echo "Setting environment variable on app..."
+cf set-env "$APP_NAME" "$VAR_NAME" "$VAR_VALUE" > /dev/null 2>&1
 
 # --- Restage the app to pick up the change ---
 echo ""
-echo "Restaging $APP_NAME..."
-cf restage "$APP_NAME"
+echo "Restaging app..."
+cf restage "$APP_NAME" > /dev/null 2>&1
 echo "Restage complete."
 
 echo ""
