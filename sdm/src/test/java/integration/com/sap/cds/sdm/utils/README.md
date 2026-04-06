@@ -1,6 +1,6 @@
-# Helper Scripts
+# Helper Scripts & Utilities
 
-This folder contains shell scripts for managing SAP Document Management Service (SDM/CMIS) objects and Cloud Foundry / BTP subscription lifecycle tasks.
+This folder contains shell scripts and Java helper classes for managing SAP Document Management Service (SDM/CMIS) objects and Cloud Foundry / BTP subscription lifecycle tasks.
 
 All scripts read their configuration from [`cf-config.env`](cf-config.env) located in the **same directory** as the scripts. Copy [`cf-config.env.example`](cf-config.env.example) to `cf-config.env` and fill in your values before running any script.
 
@@ -56,20 +56,10 @@ cd helper-scripts
 ```
 
 **Usage in integration tests**  
-Called inside `testCreateEntityAndCheck` (Order 1) via the `runShellScript` helper. Pass the parent folder object ID as the third argument when uploading into a specific folder:
+Called via `CmisDocumentHelper.createDocumentInCmis(cmisName, filePath, entityId)` inside `testUploadSingleAttachmentPDF` (Order 3). The helper automatically resolves the parent folder object ID from `entityId + "__attachments"` before calling this script:
 ```java
-// Without a specific parent folder (uses CMIS_FOLDER_ID from config or root)
-int exitCode = runShellScript("../helper-scripts/create.sh", "README.md", "../README.md");
-if (exitCode != 0) {
-    fail("create.sh exited with non-zero code: " + exitCode);
-}
-
-// With an explicit parent folder
-int exitCode = runShellScript(
-    "../helper-scripts/create.sh", "README.md", "../README.md", parentFolderObjectId);
-if (exitCode != 0) {
-    fail("create.sh exited with non-zero code: " + exitCode);
-}
+// Upload README.md into the attachments folder of the entity
+CmisDocumentHelper.createDocumentInCmis("README.md", "../README.md", entityID);
 ```
 
 ---
@@ -100,25 +90,7 @@ Queries the SDM repository using a CMIS SQL statement to find the `cmis:objectId
 ```
 
 **Usage in integration tests**  
-Called inside `testUploadSingleAttachmentPDF` (Order 3) via the `runShellScriptAndCaptureOutput` helper to resolve both folder and document IDs before deletion:
-```java
-// Step 1: resolve the parent folder object ID
-String folderLine = runShellScriptAndCaptureOutput(
-    "../helper-scripts/get-object-id.sh", entityID + "__attachments");
-String parentFolderObjectId = folderLine.contains(": ")
-    ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
-    : folderLine;
-
-// Step 2: resolve the document object ID by filename inside the parent folder
-String docLine = runShellScriptAndCaptureOutput(
-    "../helper-scripts/get-object-id.sh",
-    file.getName(),
-    parentFolderObjectId,
-    "cmis:document");
-String documentObjectId = docLine.contains(": ")
-    ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
-    : docLine;
-```
+Called internally by `CmisDocumentHelper` (both `createDocumentInCmis` and `deleteDocumentFromCmis`) to resolve folder and document object IDs before upload or deletion. Not called directly from the test class.
 
 ---
 
@@ -144,13 +116,10 @@ Sends a CMIS `delete` action to remove a document from the repository by its obj
 ```
 
 **Usage in integration tests**  
-Called inside `testUploadSingleAttachmentPDF` (Order 3) after the document object ID has been resolved with `get-object-id.sh`:
+Called via `CmisDocumentHelper.deleteDocumentFromCmis(entityId, fileName)` inside `testUploadSingleAttachmentPDF` (Order 3) after the PDF upload has been verified. The helper resolves folder and document object IDs automatically:
 ```java
-int deleteExitCode = runShellScript(
-    "../helper-scripts/delete.sh", documentObjectId, parentFolderObjectId);
-if (deleteExitCode != 0) {
-    fail("delete.sh failed with exit code: " + deleteExitCode);
-}
+// Delete sample.pdf from the attachments folder of the entity
+CmisDocumentHelper.deleteDocumentFromCmis(entityID, file.getName());
 ```
 
 ---
@@ -211,7 +180,99 @@ cd helper-scripts
 ./cf-update-env.sh
 ```
 
-**No direct usage in integration tests.** Run manually to update configuration values (e.g. `REPOSITORY_ID`) on a deployed application.
+**Usage in integration tests**  
+Called via `CfEnvHelper.updateEnv(key, value)`. Not used by any currently active test but available for tests that need to toggle app configuration (e.g. switching a repository ID) between test runs:
+```java
+CfEnvHelper.updateEnv("REPOSITORY_ID", "<newRepoId>");
+```
+
+---
+
+## Java Helper Classes
+
+The scripts are not called directly from test methods. Instead, three Java utility classes provide a clean interface:
+
+### `ShellScriptRunner`
+
+Low-level runner that executes a shell script in a subprocess and streams its output.
+
+| Method | Returns | Description |
+|---|---|---|
+| `ShellScriptRunner.run(scriptPath, args...)` | `int` exit code | Runs a script; streams stdout with `[script]` prefix and stderr with `[script-err]` prefix |
+| `ShellScriptRunner.runAndCaptureOutput(scriptPath, args...)` | `String` last stdout line | Runs a script and returns the last non-empty stdout line; useful for scripts that print a single result value |
+
+Script paths are relative to the Maven working directory (project root), e.g.:
+```
+src/test/java/integration/com/sap/cds/sdm/utils/create.sh
+```
+
+---
+
+### `CmisDocumentHelper`
+
+High-level helper for CMIS document operations. Wraps `ShellScriptRunner` and resolves object IDs automatically.
+
+| Method | Description |
+|---|---|
+| `createDocumentInCmis(cmisName, filePath, entityId)` | Resolves the `entityId__attachments` folder ID, then uploads the file via `create.sh` |
+| `deleteDocumentFromCmis(entityId, fileName)` | Resolves the folder ID and the document object ID, then deletes the document via `delete.sh` |
+
+**Usage in integration tests**
+
+```java
+// Order 3 — after verifying a successful PDF upload and save:
+CmisDocumentHelper.createDocumentInCmis("README.md", "../README.md", entityID);
+CmisDocumentHelper.deleteDocumentFromCmis(entityID, file.getName());
+```
+
+---
+
+### `CfEnvHelper`
+
+Helper for updating CF app environment variables. Wraps `cf-update-env.sh` via `ShellScriptRunner`.
+
+| Method | Description |
+|---|---|
+| `updateEnv(key, value)` | Sets `key=value` on the CF app and restages it |
+
+```java
+CfEnvHelper.updateEnv("REPOSITORY_ID", "<newRepoId>");
+```
+
+---
+
+## Active test cases & script/helper usage
+
+| Order | Test method | Script / helper invoked |
+|---|---|---|
+| 1 | `testCreateEntityAndCheck` | — |
+| 2 | `testUpdateEmptyEntity` | — |
+| 3 | `testUploadSingleAttachmentPDF` | `CmisDocumentHelper.createDocumentInCmis` → `create.sh` (via `get-object-id.sh`) then `CmisDocumentHelper.deleteDocumentFromCmis` → `delete.sh` (via `get-object-id.sh`) |
+| 4 | `testUploadVirusFileInScannedRepo` | — |
+
+### Test 3 — `testUploadSingleAttachmentPDF`
+
+Uploads `sample.pdf`, verifies it in draft mode, saves the entity, then verifies the active attachment. On success it also uploads `README.md` to the CMIS repository (as a secondary CMIS-direct test) and immediately deletes `sample.pdf` from CMIS to clean up:
+
+```java
+if (response.equals("OK")) {
+    testStatus = true;
+    CmisDocumentHelper.createDocumentInCmis("README.md", "../README.md", entityID);
+    CmisDocumentHelper.deleteDocumentFromCmis(entityID, file.getName());
+}
+```
+
+### Test 4 — `testUploadVirusFileInScannedRepo`
+
+Uploads the EICAR test file (path supplied via the `eicar.file.path` system property, defaulting to `eicar.com.txt`) and expects it to be **uploaded successfully** — this validates a repository where virus scanning is disabled or configured to allow the file through. The test follows the same verification pattern as Test 3:
+
+1. Edit entity draft
+2. Create attachment (EICAR file, `text/plain`)
+3. Read attachment in draft mode (`readAttachmentDraft`) — must return `"OK"`
+4. Save entity draft
+5. Read attachment as active entity (`readAttachment`) — must return `"OK"`
+
+The attachment ID is stored in `attachmentID2` for potential use by subsequent tests.
 
 ---
 
@@ -220,22 +281,10 @@ cd helper-scripts
 ```
 1. Fill in cf-config.env (copy from cf-config.env.example)
 2. (Multi-tenant only) Run cf-subscribe.sh to set up the consumer subscription
-3. Run the integration tests — scripts are invoked automatically:
-      Order 1  →  create.sh          (uploads a test document to SDM)
-      Order 3  →  get-object-id.sh   (resolves folder + document object IDs)
-               →  delete.sh          (cleans up the uploaded document)
-4. (Multi-tenant only) Run cf-unsubscribe.sh to tear down after testing
+3. Place the EICAR test file at the path configured via -Deicar.file.path (or eicar.com.txt)
+4. Run the integration tests — scripts are invoked automatically:
+      Order 3  →  CmisDocumentHelper.createDocumentInCmis  (create.sh + get-object-id.sh)
+               →  CmisDocumentHelper.deleteDocumentFromCmis (delete.sh + get-object-id.sh)
+5. (Multi-tenant only) Run cf-unsubscribe.sh to tear down after testing
 ```
 
----
-
-## Helper methods in the test class
-
-Two private methods in `IntegrationTest_SingleFacet` are used to invoke the scripts:
-
-| Method | Returns | Use for |
-|---|---|---|
-| `runShellScript(scriptPath, args...)` | `int` exit code | Scripts where only success/failure matters (`create.sh`, `delete.sh`) |
-| `runShellScriptAndCaptureOutput(scriptPath, args...)` | `String` last stdout line | Scripts that print a result value (`get-object-id.sh`) |
-
-Both methods stream stdout and stderr to the console with `[script]` / `[script-err]` prefixes for easy debugging.
