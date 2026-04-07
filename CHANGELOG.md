@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Separate UI and backend error keys for localization
-- Fix upload status when attachments are coppied
+- Fix upload status when attachments are copied
 
 ## Version 1.8.1
 
