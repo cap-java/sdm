@@ -107,12 +107,20 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       if (cmisDocuments.isEmpty()) {
         // deleteFolder API
         logger.info("Deleting folder: {} for entity: {}", folderId, entity);
-        sdmService.deleteDocument("deleteTree", folderId, context.getDeletionUserInfo().getName());
+        sdmService.deleteDocument(
+            "deleteTree",
+            folderId,
+            context.getDeletionUserInfo().getName(),
+            context.getDeletionUserInfo().getIsSystemUser());
         logger.info("Folder deleted successfully: {}", folderId);
       } else {
         if (!isObjectIdPresent(cmisDocuments, objectId)) {
           logger.info("Deleting document: {} from repository", objectId);
-          sdmService.deleteDocument("delete", objectId, context.getDeletionUserInfo().getName());
+          sdmService.deleteDocument(
+              "delete",
+              objectId,
+              context.getDeletionUserInfo().getName(),
+              context.getDeletionUserInfo().getIsSystemUser());
           logger.info("Document deleted successfully: {}", objectId);
         } else {
           logger.debug("ObjectId {} is still referenced, not deleting", objectId);

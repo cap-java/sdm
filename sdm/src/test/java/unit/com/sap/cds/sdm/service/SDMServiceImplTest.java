@@ -809,10 +809,14 @@ public class SDMServiceImplTest {
       when(response.getEntity()).thenReturn(entity);
       when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
       when(deletionUserInfo.getName()).thenReturn("system-internal");
+      when(deletionUserInfo.getIsSystemUser()).thenReturn(true);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
           sdmServiceImpl.deleteDocument(
-              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
+              "deleteTree",
+              "objectId",
+              mockContext.getDeletionUserInfo().getName(),
+              mockContext.getDeletionUserInfo().getIsSystemUser());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -841,7 +845,10 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
           sdmServiceImpl.deleteDocument(
-              "deleteTree", "objectId", mockContext.getDeletionUserInfo().getName());
+              "deleteTree",
+              "objectId",
+              mockContext.getDeletionUserInfo().getName(),
+              mockContext.getDeletionUserInfo().getIsSystemUser());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -903,10 +910,14 @@ public class SDMServiceImplTest {
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
       when(deletionUserInfo.getName()).thenReturn("system-internal");
+      when(deletionUserInfo.getIsSystemUser()).thenReturn(true);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
           sdmServiceImpl.deleteDocument(
-              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
+              "delete",
+              "objectId",
+              mockContext.getDeletionUserInfo().getName(),
+              mockContext.getDeletionUserInfo().getIsSystemUser());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -934,7 +945,10 @@ public class SDMServiceImplTest {
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
           sdmServiceImpl.deleteDocument(
-              "delete", "objectId", mockContext.getDeletionUserInfo().getName());
+              "delete",
+              "objectId",
+              mockContext.getDeletionUserInfo().getName(),
+              mockContext.getDeletionUserInfo().getIsSystemUser());
       assertEquals(200, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -961,10 +975,14 @@ public class SDMServiceImplTest {
       when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
       when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
       when(deletionUserInfo.getName()).thenReturn("system-internal");
+      when(deletionUserInfo.getIsSystemUser()).thenReturn(true);
       SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
       int actualResponse =
           sdmServiceImpl.deleteDocument(
-              "delete", "ewdwe", mockContext.getDeletionUserInfo().getName());
+              "delete",
+              "ewdwe",
+              mockContext.getDeletionUserInfo().getName(),
+              mockContext.getDeletionUserInfo().getIsSystemUser());
       assertEquals(404, actualResponse);
     } finally {
       mockWebServer.shutdown();
@@ -1296,12 +1314,16 @@ public class SDMServiceImplTest {
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
     when(mockContext.getDeletionUserInfo()).thenReturn(deletionUserInfo);
     when(deletionUserInfo.getName()).thenReturn("system-internal");
+    when(deletionUserInfo.getIsSystemUser()).thenReturn(true);
     // Ensure ServiceException is thrown
     assertThrows(
         ServiceException.class,
         () ->
             sdmServiceImpl.deleteDocument(
-                "delete", "123", mockContext.getDeletionUserInfo().getName()));
+                "delete",
+                "123",
+                mockContext.getDeletionUserInfo().getName(),
+                mockContext.getDeletionUserInfo().getIsSystemUser()));
   }
 
   @Test
