@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.0
+
+### Added
+- Support for creating attachments in active database entities
+
+### Fixed
+- Improved error handling for SDM and SDMUI related events.
+
 ## Version 1.8.1
 
 ### Fixed
