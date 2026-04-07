@@ -10,7 +10,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 - Support for creating attachments in active database entities
 
 ### Fixed
-- Improved error handling for SDM and SDMUI related events.
+- Separate UI and Backend Error Keys for Localization.
+- Fix upload status when attachments are coppied
 
 ## Version 1.8.1
 
