@@ -7,10 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Version 1.9.0
 
 ### Added
-- Support for creating attachments in active database entities
+- Support attachment creation in active entities
 
 ### Fixed
-- Separate UI and Backend Error Keys for Localization.
+- Separate UI and backend error keys for localization
 - Fix upload status when attachments are coppied
 
 ## Version 1.8.1
