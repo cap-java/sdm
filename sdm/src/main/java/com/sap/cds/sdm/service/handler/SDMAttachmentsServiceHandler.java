@@ -25,6 +25,7 @@ import com.sap.cds.services.persistence.PersistenceService;
 import com.sap.cds.services.utils.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
@@ -524,6 +525,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
               eventContext.setContentId(
                   existing.getObjectId() + ":" + existing.getFolderId() + ":" + activeEntityName);
               eventContext.getData().setStatus("Clean");
+              eventContext.getData().setScannedAt(Instant.now());
               eventContext.getData().setContent(null);
               eventContext.setCompleted();
               return;
@@ -628,6 +630,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             + ":"
             + eventContext.getAttachmentEntity().getQualifiedName());
     eventContext.getData().setStatus("Clean");
+    eventContext.getData().setScannedAt(Instant.now());
     eventContext.getData().setContent(null);
     eventContext.setCompleted();
     logger.debug("Attachment context finalized and marked as completed");
