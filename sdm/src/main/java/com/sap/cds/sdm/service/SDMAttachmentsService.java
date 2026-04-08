@@ -182,7 +182,7 @@ public class SDMAttachmentsService extends ServiceDelegator
         Boolean.TRUE.equals(createContext.getIsInternalStored()),
         createContext.getContentId(),
         createContext.getData().getStatus(),
-        null);
+        Instant.now());
   }
 
   @Override
