@@ -42,7 +42,6 @@ annotate Attachments with @UI: {
                 {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
                 {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
                 {Value: note, @HTML5.CssDefaults: {width: '15%'}},
-                {Value: up__ID, @UI.Hidden},
 
 {
         Value             : uploadStatus,
@@ -73,7 +72,7 @@ annotate Attachments with @UI: {
   status       @UI.Hidden;
   linkUrl      @UI.Hidden;
   up__ID       @UI.Hidden;
-  ID           @(title: '{i18n>idCol}');
+  ID           @(title: '{i18n>attachmentID}');
 
 }
 
