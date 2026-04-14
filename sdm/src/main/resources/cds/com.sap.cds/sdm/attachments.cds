@@ -1,10 +1,5 @@
 namespace sap.attachments;
 
-using {
-    cuid,
-    managed,
-    sap.common.CodeList
-} from '@sap/cds/common';
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 using {sap.attachments.MediaData} from `com.sap.cds/cds-feature-attachments`;
 using {
@@ -47,7 +42,8 @@ annotate Attachments with @UI: {
                 {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
                 {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
                 {Value: note, @HTML5.CssDefaults: {width: '15%'}},
-                 {Value: up__ID, @UI.Hidden},
+                {Value: up__ID, @UI.Hidden},
+
 {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
@@ -70,6 +66,7 @@ annotate Attachments with @UI: {
     status @UI.Hidden;
     linkUrl @UI.Hidden;
     ID  @(title: '{i18n>idCol}');
+
 }
 
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
