@@ -63,6 +63,10 @@ annotate Attachments with @UI: {
     mimeType @UI.Hidden;
     status @UI.Hidden;
     linkUrl @UI.Hidden;
+    modifiedAt  @(title: '{i18n>modifiedAt}');
+    modifiedBy  @(title: '{i18n>modifiedBy}');
+    createdAt  @(title: '{i18n>createdAt}');
+    createdBy  @(title: '{i18n>createdBy}');
 }
 
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
