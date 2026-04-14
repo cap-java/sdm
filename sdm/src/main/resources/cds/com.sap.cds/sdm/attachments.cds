@@ -71,7 +71,6 @@ annotate Attachments with @UI: {
   mimeType     @UI.Hidden;
   status       @UI.Hidden;
   linkUrl      @UI.Hidden;
-  up__ID       @UI.Hidden;
   ID           @(title: '{i18n>attachmentID}');
 
 }
