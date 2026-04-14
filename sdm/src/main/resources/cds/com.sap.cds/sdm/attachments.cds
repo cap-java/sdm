@@ -1,5 +1,10 @@
 namespace sap.attachments;
 
+using {
+    cuid,
+    managed,
+    sap.common.CodeList
+} from '@sap/cds/common';
 using {sap.attachments.Attachments} from `com.sap.cds/cds-feature-attachments`;
 using {sap.attachments.MediaData} from `com.sap.cds/cds-feature-attachments`;
 using {
@@ -63,10 +68,7 @@ annotate Attachments with @UI: {
     mimeType @UI.Hidden;
     status @UI.Hidden;
     linkUrl @UI.Hidden;
-    modifiedAt  @(title: '{i18n>modifiedAt}');
-    modifiedBy  @(title: '{i18n>modifiedBy}');
-    createdAt  @(title: '{i18n>createdAt}');
-    createdBy  @(title: '{i18n>createdBy}');
+    ID  @(title: '{i18n>idCol}');
 }
 
 annotate Attachments with @Common: {SideEffects #ContentChanged: {
