@@ -361,7 +361,8 @@ class IntegrationTest_SingleFacet_Virus {
   @Test
   @Order(4)
   void testUploadVirusFileInScannedRepo() throws IOException {
-    System.out.println("Test (4) : Upload EICAR virus file — expect successful upload");
+    System.out.println(
+        "Test (4) : Upload EICAR virus file — expect virus scan to reject the file");
 
     boolean testStatus = false;
 
@@ -379,27 +380,56 @@ class IntegrationTest_SingleFacet_Virus {
     postData.put("modifiedBy", "test@test.com");
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    System.out.println("[Test 4] editEntityDraft response: " + response);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
           api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
+      System.out.println("[Test 4] createAttachment response: " + check);
       if (check.equals("Attachment created")) {
         attachmentID2 = createResponse.get(1);
-        response = api.readAttachmentDraft(appUrl, entityName, facetName, entityID, attachmentID2);
-        if (response.equals("OK")) {
-          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-          if (response.equals("Saved")) {
-            response = api.readAttachment(appUrl, entityName, facetName, entityID, attachmentID2);
-            if (response.equals("OK")) {
-              System.out.println("File uploaded successfully");
-              testStatus = true;
-            }
+        System.out.println("[Test 4] attachmentID: " + attachmentID2);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        System.out.println("[Test 4] saveEntityDraft response: " + response);
+        if (response.equals("Saved")) {
+          System.out.println(
+              "[Test 4] Waiting for virus scan to complete (timeout: 120s)...");
+          // Wait for the virus scan to complete and expect it to fail
+          boolean uploadSucceeded = waitForUploadCompletion(entityID, attachmentID2, 120);
+          System.out.println("[Test 4] uploadSucceeded: " + uploadSucceeded);
+          // Fetch final metadata for debugging
+          try {
+            Map<String, Object> metadata =
+                api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
+            System.out.println("[Test 4] Final metadata: " + metadata);
+            System.out.println(
+                "[Test 4] uploadStatus: " + metadata.get("uploadStatus"));
+            System.out.println(
+                "[Test 4] scanStatus: " + metadata.get("scanStatus"));
+          } catch (Exception e) {
+            System.err.println(
+                "[Test 4] Error fetching final metadata: " + e.getMessage());
           }
+          if (!uploadSucceeded) {
+            // Virus scan rejected the file — this is the expected behavior
+            System.out.println(
+                "[Test 4] Virus file was correctly rejected by the virus scanner");
+            testStatus = true;
+          } else {
+            fail(
+                "[Test 4] Virus file should have been rejected by the virus scanner but upload succeeded");
+          }
+        } else {
+          System.err.println("[Test 4] Failed to save entity draft: " + response);
         }
+      } else {
+        System.err.println("[Test 4] Failed to create attachment: " + check);
       }
+    } else {
+      System.err.println("[Test 4] Failed to enter draft mode: " + response);
     }
     if (!testStatus) {
-      fail("Could not upload file successfully");
+      fail("[Test 4] Could not verify virus file rejection");
     }
   }
 }
