@@ -361,8 +361,7 @@ class IntegrationTest_SingleFacet_Virus {
   @Test
   @Order(4)
   void testUploadVirusFileInScannedRepo() throws IOException {
-    System.out.println(
-        "Test (4) : Upload EICAR virus file — expect virus scan to reject the file");
+    System.out.println("Test (4) : Upload EICAR virus file — expect virus scan to reject the file");
 
     boolean testStatus = false;
 
@@ -392,8 +391,7 @@ class IntegrationTest_SingleFacet_Virus {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         System.out.println("[Test 4] saveEntityDraft response: " + response);
         if (response.equals("Saved")) {
-          System.out.println(
-              "[Test 4] Waiting for virus scan to complete (timeout: 120s)...");
+          System.out.println("[Test 4] Waiting for virus scan to complete (timeout: 120s)...");
           // Wait for the virus scan to complete and expect it to fail
           boolean uploadSucceeded = waitForUploadCompletion(entityID, attachmentID2, 120);
           System.out.println("[Test 4] uploadSucceeded: " + uploadSucceeded);
@@ -402,18 +400,14 @@ class IntegrationTest_SingleFacet_Virus {
             Map<String, Object> metadata =
                 api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
             System.out.println("[Test 4] Final metadata: " + metadata);
-            System.out.println(
-                "[Test 4] uploadStatus: " + metadata.get("uploadStatus"));
-            System.out.println(
-                "[Test 4] scanStatus: " + metadata.get("scanStatus"));
+            System.out.println("[Test 4] uploadStatus: " + metadata.get("uploadStatus"));
+            System.out.println("[Test 4] scanStatus: " + metadata.get("scanStatus"));
           } catch (Exception e) {
-            System.err.println(
-                "[Test 4] Error fetching final metadata: " + e.getMessage());
+            System.err.println("[Test 4] Error fetching final metadata: " + e.getMessage());
           }
           if (!uploadSucceeded) {
             // Virus scan rejected the file — this is the expected behavior
-            System.out.println(
-                "[Test 4] Virus file was correctly rejected by the virus scanner");
+            System.out.println("[Test 4] Virus file was correctly rejected by the virus scanner");
             testStatus = true;
           } else {
             fail(
