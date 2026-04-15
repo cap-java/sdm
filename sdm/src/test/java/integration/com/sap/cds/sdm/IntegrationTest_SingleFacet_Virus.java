@@ -3,7 +3,6 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -346,8 +345,6 @@ class IntegrationTest_SingleFacet_Virus {
 
             if (response.equals("OK")) {
               testStatus = true;
-              CmisDocumentHelper.createDocumentInCmis("README.md", "../README.md", entityID);
-              CmisDocumentHelper.deleteDocumentFromCmis(entityID, file.getName());
             }
           }
         }
