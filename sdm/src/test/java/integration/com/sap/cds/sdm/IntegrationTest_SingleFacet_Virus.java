@@ -385,17 +385,20 @@ class IntegrationTest_SingleFacet_Virus {
           api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
       System.out.println("[Test 4] createAttachment response: " + check);
-      if (check.equals("Attachment created")) {
+      if (check.contains("malware") || check.contains("potential malware")) {
+        // Virus scanner rejected the file at upload time — this is the expected behavior
+        System.out.println("[Test 4] Virus file was correctly rejected at upload: " + check);
+        testStatus = true;
+      } else if (check.equals("Attachment created")) {
+        // File was accepted at upload time — check if scan rejects it asynchronously
         attachmentID2 = createResponse.get(1);
         System.out.println("[Test 4] attachmentID: " + attachmentID2);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
         System.out.println("[Test 4] saveEntityDraft response: " + response);
         if (response.equals("Saved")) {
           System.out.println("[Test 4] Waiting for virus scan to complete (timeout: 120s)...");
-          // Wait for the virus scan to complete and expect it to fail
           boolean uploadSucceeded = waitForUploadCompletion(entityID, attachmentID2, 120);
           System.out.println("[Test 4] uploadSucceeded: " + uploadSucceeded);
-          // Fetch final metadata for debugging
           try {
             Map<String, Object> metadata =
                 api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
@@ -406,7 +409,6 @@ class IntegrationTest_SingleFacet_Virus {
             System.err.println("[Test 4] Error fetching final metadata: " + e.getMessage());
           }
           if (!uploadSucceeded) {
-            // Virus scan rejected the file — this is the expected behavior
             System.out.println("[Test 4] Virus file was correctly rejected by the virus scanner");
             testStatus = true;
           } else {
@@ -417,7 +419,7 @@ class IntegrationTest_SingleFacet_Virus {
           System.err.println("[Test 4] Failed to save entity draft: " + response);
         }
       } else {
-        System.err.println("[Test 4] Failed to create attachment: " + check);
+        System.err.println("[Test 4] Unexpected createAttachment response: " + check);
       }
     } else {
       System.err.println("[Test 4] Failed to enter draft mode: " + response);
