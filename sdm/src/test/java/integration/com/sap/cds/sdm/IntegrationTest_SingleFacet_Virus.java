@@ -13,15 +13,8 @@ import org.junit.jupiter.api.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_SingleFacet_Virus {
   private static String token;
-  private static String tokenNoRoles;
   private static String entityID;
-  private static String entityID2;
   private static String facetName = "attachments";
-  private static String entityID3;
-  private static String entityID4;
-  private static String entityID5;
-  private static String entityID6;
-  private static String entityID7;
   private static String clientId;
   private static String clientSecret;
   private static String appUrl;
@@ -35,36 +28,8 @@ class IntegrationTest_SingleFacet_Virus {
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static ApiInterface api;
-  private static ApiInterface apiNoRoles;
   private static String attachmentID1 = "";
   private static String attachmentID2 = "";
-  private static String attachmentID3 = "";
-  private static String attachmentID4 = "";
-  private static String attachmentID5 = "";
-  private static String attachmentID6 = "";
-  private static String attachmentID7 = "";
-  private static String attachmentID8 = "";
-  private static String attachmentID9 = "";
-  private static String attachmentID10 = "";
-  private static String changelogEntityID = "";
-  private static String changelogAttachmentID = "";
-  private static String copyAttachmentSourceEntity;
-  private static String copyAttachmentTargetEntity;
-  private static String copyAttachmentTargetEntityEmpty;
-  private static String copyLinkSourceEntity;
-  private static String copyLinkTargetEntity;
-  private static String copyCustomSourceEntity;
-  private static String copyCustomTargetEntity;
-  private static String createLinkEntity;
-  private static String editLinkEntity;
-  private static List<String> sourceObjectIds = new ArrayList<>();
-  private static List<String> targetAttachmentIds = new ArrayList<>();
-  private static String moveSourceEntity;
-  private static String moveTargetEntity;
-  private static List<String> moveObjectIds = new ArrayList<>();
-  private static String moveSourceFolderId;
-
-  private static IntegrationTestUtils integrationTestUtils;
 
   @BeforeAll
   static void setup() throws IOException {
@@ -100,7 +65,6 @@ class IntegrationTest_SingleFacet_Virus {
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
-    integrationTestUtils = new IntegrationTestUtils();
 
     // Encode clientId:clientSecret to Base64
     String credentials = clientId + ":" + clientSecret;
@@ -143,47 +107,21 @@ class IntegrationTest_SingleFacet_Virus {
       throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
     }
 
-    Request requestNoRoles =
-        new Request.Builder()
-            .url(
-                authUrl
-                    + "/oauth/token?grant_type=password&username="
-                    + noSDMRoleUsername
-                    + "&password="
-                    + noSDMRoleUserPassword)
-            .method("POST", body)
-            .addHeader("Authorization", basicAuth)
-            .build();
-
     Response response = client.newCall(request).execute();
-    Response responseNoRoles = client.newCall(requestNoRoles).execute();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
       String errorBody = response.body().string();
       System.out.println("Error body: " + errorBody);
     }
-    if (responseNoRoles.code() != 200) {
-      System.out.println("Token generation failed. Response code: " + responseNoRoles.code());
-      String errorBody = responseNoRoles.body().string();
-      System.out.println("Error body: " + errorBody);
-    }
     token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    tokenNoRoles =
-        new ObjectMapper().readTree(responseNoRoles.body().string()).get("access_token").asText();
     response.close();
-    responseNoRoles.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
-    Map<String, String> configNoRoles = new HashMap<>();
-    configNoRoles.put("Authorization", "Bearer " + tokenNoRoles);
     if (tenancyModel.equals("multi")) {
       api = new ApiMT(config);
-      apiNoRoles = new ApiMT(configNoRoles);
     } else if (tenancyModel.equals("single")) {
       config.put("serviceName", serviceName);
-      configNoRoles.put("serviceName", serviceName);
       api = new Api(config);
-      apiNoRoles = new Api(configNoRoles);
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -223,54 +161,6 @@ class IntegrationTest_SingleFacet_Virus {
     }
 
     System.err.println("Upload timed out for attachment: " + attachmentId);
-    return false;
-  }
-
-  /**
-   * Helper method to wait for all attachments in an entity to complete upload.
-   *
-   * @param entityId The ID of the entity containing the attachments
-   * @param timeoutSeconds Maximum time to wait in seconds
-   * @return true if all uploads completed successfully, false if any failed or timed out
-   */
-  private boolean waitForAllUploadsCompletion(String entityId, int timeoutSeconds) {
-    int maxIterations = timeoutSeconds / 2; // Check every 2 seconds
-    for (int i = 0; i < maxIterations; i++) {
-      try {
-        List<Map<String, Object>> attachmentsMetadata =
-            api.fetchEntityMetadataDraft(appUrl, entityName, facetName, entityId);
-
-        boolean allComplete = true;
-        boolean anyFailed = false;
-
-        for (Map<String, Object> metadata : attachmentsMetadata) {
-          String uploadStatus = (String) metadata.get("uploadStatus");
-          if (uploadStatus == null || "InProgress".equals(uploadStatus)) {
-            allComplete = false;
-          } else if ("Failed".equals(uploadStatus)) {
-            anyFailed = true;
-            System.err.println("Upload failed for attachment: " + metadata.get("ID"));
-          }
-        }
-
-        if (anyFailed) {
-          return false;
-        }
-
-        if (allComplete) {
-          return true;
-        }
-
-        // Still uploading, wait before checking again
-        Thread.sleep(2000);
-      } catch (Exception e) {
-        System.err.println(
-            "Error checking upload status for entity " + entityId + ": " + e.getMessage());
-        return false;
-      }
-    }
-
-    System.err.println("Upload timed out for entity: " + entityId);
     return false;
   }
 
@@ -376,53 +266,27 @@ class IntegrationTest_SingleFacet_Virus {
     postData.put("modifiedBy", "test@test.com");
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    System.out.println("[Test 4] editEntityDraft response: " + response);
     if (response == "Entity in draft mode") {
       List<String> createResponse =
           api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
       String check = createResponse.get(0);
-      System.out.println("[Test 4] createAttachment response: " + check);
       if (check.contains("malware") || check.contains("potential malware")) {
-        // Virus scanner rejected the file at upload time — this is the expected behavior
-        System.out.println("[Test 4] Virus file was correctly rejected at upload: " + check);
         testStatus = true;
       } else if (check.equals("Attachment created")) {
-        // File was accepted at upload time — check if scan rejects it asynchronously
         attachmentID2 = createResponse.get(1);
-        System.out.println("[Test 4] attachmentID: " + attachmentID2);
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        System.out.println("[Test 4] saveEntityDraft response: " + response);
         if (response.equals("Saved")) {
-          System.out.println("[Test 4] Waiting for virus scan to complete (timeout: 120s)...");
           boolean uploadSucceeded = waitForUploadCompletion(entityID, attachmentID2, 120);
-          System.out.println("[Test 4] uploadSucceeded: " + uploadSucceeded);
-          try {
-            Map<String, Object> metadata =
-                api.fetchMetadataDraft(appUrl, entityName, facetName, entityID, attachmentID2);
-            System.out.println("[Test 4] Final metadata: " + metadata);
-            System.out.println("[Test 4] uploadStatus: " + metadata.get("uploadStatus"));
-            System.out.println("[Test 4] scanStatus: " + metadata.get("scanStatus"));
-          } catch (Exception e) {
-            System.err.println("[Test 4] Error fetching final metadata: " + e.getMessage());
-          }
           if (!uploadSucceeded) {
-            System.out.println("[Test 4] Virus file was correctly rejected by the virus scanner");
             testStatus = true;
           } else {
-            fail(
-                "[Test 4] Virus file should have been rejected by the virus scanner but upload succeeded");
+            fail("Virus file should have been rejected by the virus scanner but upload succeeded");
           }
-        } else {
-          System.err.println("[Test 4] Failed to save entity draft: " + response);
         }
-      } else {
-        System.err.println("[Test 4] Unexpected createAttachment response: " + check);
       }
-    } else {
-      System.err.println("[Test 4] Failed to enter draft mode: " + response);
     }
     if (!testStatus) {
-      fail("[Test 4] Could not verify virus file rejection");
+      fail("Could not verify virus file rejection");
     }
   }
 }
