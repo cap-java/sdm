@@ -22,12 +22,13 @@ extend aspect Attachments with {
     type : String @(UI: {IsImageURL: true}) default 'sap-icon://document';
     uploadStatus : UploadStatusCode default 'uploading' @readonly ;
     uploadStatusNav : Association to one UploadScanStates on uploadStatusNav.code = uploadStatus;
-   }
-     entity UploadScanStates : CodeList {
-         key code        : UploadStatusCode @Common.Text: name  @Common.TextArrangement: #TextOnly;
-             name        : String(64) ;
-             criticality : Integer     @UI.Hidden;
-     }
+}
+
+entity UploadScanStates : CodeList {
+    key code        : UploadStatusCode @Common.Text: name  @Common.TextArrangement: #TextOnly;
+        name        : String(64) ;
+        criticality : Integer     @UI.Hidden;
+}
 
 annotate Attachments with @UI: {
 
