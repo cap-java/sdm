@@ -1425,7 +1425,8 @@ public class SDMAttachmentsServiceHandlerTest {
         .deleteDocument(
             "delete",
             objectId,
-            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName());
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName(),
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getIsSystemUser());
   }
 
   @Test
@@ -1461,7 +1462,8 @@ public class SDMAttachmentsServiceHandlerTest {
         .deleteDocument(
             "deleteTree",
             folderId,
-            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName());
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getName(),
+            attachmentMarkAsDeletedEventContext.getDeletionUserInfo().getIsSystemUser());
   }
 
   @Test
@@ -2054,7 +2056,7 @@ public class SDMAttachmentsServiceHandlerTest {
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
     verify(deleteContext).setCompleted();
-    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString());
+    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -2068,7 +2070,7 @@ public class SDMAttachmentsServiceHandlerTest {
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
     verify(deleteContext).setCompleted();
-    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString());
+    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -2083,7 +2085,7 @@ public class SDMAttachmentsServiceHandlerTest {
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
     verify(deleteContext).setCompleted();
-    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString());
+    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -2103,7 +2105,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
-    verify(sdmService).deleteDocument("deleteTree", "folderId", "testUser");
+    verify(sdmService).deleteDocument("deleteTree", "folderId", "testUser", false);
     verify(deleteContext).setCompleted();
   }
 
@@ -2127,7 +2129,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
-    verify(sdmService).deleteDocument("delete", "objectId", "testUser");
+    verify(sdmService).deleteDocument("delete", "objectId", "testUser", false);
     verify(deleteContext).setCompleted();
   }
 
@@ -2151,7 +2153,7 @@ public class SDMAttachmentsServiceHandlerTest {
 
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
-    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString());
+    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString(), anyBoolean());
     verify(deleteContext).setCompleted();
   }
 
@@ -2416,7 +2418,7 @@ public class SDMAttachmentsServiceHandlerTest {
     handlerSpy.markAttachmentAsDeleted(deleteContext);
 
     // Should not call delete on either document since target is present
-    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString());
+    verify(sdmService, never()).deleteDocument(anyString(), anyString(), anyString(), anyBoolean());
     verify(deleteContext).setCompleted();
   }
 

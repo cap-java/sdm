@@ -71,7 +71,7 @@ public class TokenHandler {
         DefaultServiceBindingAccessor.getInstance().getServiceBindings();
     ServiceBinding sdmBinding =
         allServiceBindings.stream()
-            .filter(binding -> "sdm".equalsIgnoreCase(binding.getServiceName().orElse(null)))
+            .filter(binding -> binding.getTags().contains("sdm"))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("SDM binding not found"));
     return sdmBinding.getCredentials();
