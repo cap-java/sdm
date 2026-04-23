@@ -3223,4 +3223,897 @@ public class SDMAttachmentsServiceHandlerTest {
       assertTrue(thrown.getMessage().contains("sample.pdf"));
     }
   }
+
+  // =====================================================================
+  // Tests for isUploadable / Upload button disable-enable feature
+  // =====================================================================
+
+  // ----- deriveFacetFieldName (via checkAndUpdateIsUploadableOnCreate) -----
+
+  @Test
+  public void testCreateDraft_MaxCountReached_SetsIsAttachmentsUploadableFalse()
+      throws IOException {
+    // Arrange: successful upload on a draft entity; count == maxCount after upload
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "parent-uuid");
+    mockAttachmentIds.put("ID", "attach-id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.getFileName()).thenReturn("file.pdf");
+    when(mockMediaData.getContent()).thenReturn(new ByteArrayInputStream("content".getBytes()));
+    when(mockMediaData.get("mimeType")).thenReturn("application/pdf");
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    // Qualified name ends with _drafts so handler treats it as draft path
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    when(mockContext.getAttachmentEntity()).thenReturn(baseAttachEntity);
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+
+    // findEntity("AdminService.Books.attachments_drafts") → draftAttachEntity
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    // findEntity("AdminService.Books_drafts") → parentDraftEntity (for updateParentIsUploadable)
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+
+    // isDraftContext: parent draft entity exists and parent record is in draft table
+    Result draftCheckResult = mock(Result.class);
+    when(draftCheckResult.first()).thenReturn(Optional.of(mock(Row.class)));
+    when(persistenceService.run(any(com.sap.cds.ql.cqn.CqnSelect.class)))
+        .thenReturn(draftCheckResult);
+
+    // 1st call (pre-upload constraint check): count=1 < maxCount=2, upload is allowed
+    // 2nd call (post-upload check in checkAndUpdateIsUploadableOnCreate): count=2 == maxCount=2,
+    // triggers disable
+    Result preCheckResult = mock(Result.class);
+    when(preCheckResult.rowCount()).thenReturn(1L);
+    Result attachResult = mock(Result.class);
+    when(attachResult.list()).thenReturn(List.of(mock(Row.class)));
+    when(attachResult.rowCount()).thenReturn(2L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(preCheckResult, attachResult);
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+    // updateIsUploadableOnParentEntity returns 1 (draft row updated)
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(false)))
+        .thenReturn(1L);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folder1");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+
+    JSONObject successResult = new JSONObject();
+    successResult.put("status", "success");
+    successResult.put("objectId", "obj1");
+    successResult.put("mimeType", "application/pdf");
+    successResult.put("uploadStatus", "Success");
+    when(documentUploadService.createDocument(any(), any(), anyBoolean(), any()))
+        .thenReturn(successResult);
+
+    ParameterInfo mockParamInfo = mock(ParameterInfo.class);
+    when(mockParamInfo.getHeaders()).thenReturn(Map.of("content-length", "1024"));
+    when(mockContext.getParameterInfo()).thenReturn(mockParamInfo);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      // maxCount = 2
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.createAttachment(mockContext);
+    }
+
+    // Verify the parent draft row was updated with isAttachmentsUploadable=false
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(false));
+  }
+
+  @Test
+  public void testCreateDraft_BelowMaxCount_DoesNotSetIsUploadable() throws IOException {
+    // Arrange: successful upload but count < maxCount → no isUploadable update
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "parent-uuid");
+    mockAttachmentIds.put("ID", "attach-id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.getFileName()).thenReturn("file.pdf");
+    when(mockMediaData.getContent()).thenReturn(new ByteArrayInputStream("content".getBytes()));
+    when(mockMediaData.get("mimeType")).thenReturn("application/pdf");
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    when(mockContext.getAttachmentEntity()).thenReturn(baseAttachEntity);
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(mock(CdsEntity.class)));
+
+    Result draftCheckResult = mock(Result.class);
+    when(draftCheckResult.first()).thenReturn(Optional.of(mock(Row.class)));
+    when(persistenceService.run(any(com.sap.cds.ql.cqn.CqnSelect.class)))
+        .thenReturn(draftCheckResult);
+
+    Result attachResult = mock(Result.class);
+    when(attachResult.list()).thenReturn(List.of(mock(Row.class)));
+    // count = 1, maxCount = 2 → below threshold, no update expected
+    when(attachResult.rowCount()).thenReturn(1L);
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folder1");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+
+    JSONObject successResult = new JSONObject();
+    successResult.put("status", "success");
+    successResult.put("objectId", "obj1");
+    successResult.put("mimeType", "application/pdf");
+    successResult.put("uploadStatus", "Success");
+    when(documentUploadService.createDocument(any(), any(), anyBoolean(), any()))
+        .thenReturn(successResult);
+
+    ParameterInfo mockParamInfo = mock(ParameterInfo.class);
+    when(mockParamInfo.getHeaders()).thenReturn(Map.of("content-length", "1024"));
+    when(mockContext.getParameterInfo()).thenReturn(mockParamInfo);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.createAttachment(mockContext);
+    }
+
+    // updateIsUploadableOnParentEntity must NOT be called when count < maxCount
+    verify(dbQuery, never())
+        .updateIsUploadableOnParentEntity(any(), any(), any(), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testCreateDraft_ReferencesMaxCountReached_SetsIsReferencesUploadableFalse()
+      throws IOException {
+    // Verifies deriveFacetFieldName works for "references" → "isReferencesUploadable"
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "parent-uuid");
+    mockAttachmentIds.put("ID", "attach-id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.getFileName()).thenReturn("file.pdf");
+    when(mockMediaData.getContent()).thenReturn(new ByteArrayInputStream("content".getBytes()));
+    when(mockMediaData.get("mimeType")).thenReturn("application/pdf");
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    // "references" facet
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.references_drafts");
+
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.references");
+    when(mockContext.getAttachmentEntity()).thenReturn(baseAttachEntity);
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+
+    when(cdsModel.findEntity("AdminService.Books.references_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+
+    Result draftCheckResult = mock(Result.class);
+    when(draftCheckResult.first()).thenReturn(Optional.of(mock(Row.class)));
+    when(persistenceService.run(any(com.sap.cds.ql.cqn.CqnSelect.class)))
+        .thenReturn(draftCheckResult);
+
+    // 1st call (pre-upload constraint check): count=2 < maxCount=3, upload is allowed
+    // 2nd call (post-upload check in checkAndUpdateIsUploadableOnCreate): count=3 == maxCount=3,
+    // triggers disable
+    Result preCheckResult = mock(Result.class);
+    when(preCheckResult.rowCount()).thenReturn(2L);
+    Result attachResult = mock(Result.class);
+    when(attachResult.list()).thenReturn(List.of(mock(Row.class)));
+    when(attachResult.rowCount()).thenReturn(3L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(preCheckResult, attachResult);
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isReferencesUploadable"),
+            eq(false)))
+        .thenReturn(1L);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folder1");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+
+    JSONObject successResult = new JSONObject();
+    successResult.put("status", "success");
+    successResult.put("objectId", "obj1");
+    successResult.put("mimeType", "application/pdf");
+    successResult.put("uploadStatus", "Success");
+    when(documentUploadService.createDocument(any(), any(), anyBoolean(), any()))
+        .thenReturn(successResult);
+
+    ParameterInfo mockParamInfo = mock(ParameterInfo.class);
+    when(mockParamInfo.getHeaders()).thenReturn(Map.of("content-length", "1024"));
+    when(mockContext.getParameterInfo()).thenReturn(mockParamInfo);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(3L);
+
+      handlerSpy.createAttachment(mockContext);
+    }
+
+    // Must update isReferencesUploadable, not isAttachmentsUploadable
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isReferencesUploadable"),
+            eq(false));
+    verify(dbQuery, never())
+        .updateIsUploadableOnParentEntity(
+            any(), any(), any(), any(), eq("isAttachmentsUploadable"), anyBoolean());
+  }
+
+  // ----- contentId format: upID embedded as 4th segment -----
+
+  @Test
+  public void testFinalizeContext_EmbeddsUpIdAsSegment4() throws IOException {
+    // Verifies that after a successful draft upload the contentId is
+    // objectId:folderId:entityName:upID
+    Map<String, Object> mockAttachmentIds = new HashMap<>();
+    mockAttachmentIds.put("up__ID", "parent-uuid");
+    mockAttachmentIds.put("ID", "attach-id");
+    mockAttachmentIds.put("repositoryId", "repo1");
+
+    MediaData mockMediaData = mock(MediaData.class);
+    when(mockMediaData.getFileName()).thenReturn("file.pdf");
+    when(mockMediaData.getContent()).thenReturn(new ByteArrayInputStream("content".getBytes()));
+    when(mockMediaData.get("mimeType")).thenReturn("application/pdf");
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+
+    when(mockContext.getAttachmentIds()).thenReturn(mockAttachmentIds);
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    when(mockContext.getAttachmentEntity()).thenReturn(baseAttachEntity);
+    when(mockContext.getData()).thenReturn(mockMediaData);
+    when(mockContext.getModel()).thenReturn(cdsModel);
+    when(mockContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.getTenant()).thenReturn("t1");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+
+    Result draftCheckResult = mock(Result.class);
+    when(draftCheckResult.first()).thenReturn(Optional.of(mock(Row.class)));
+    when(persistenceService.run(any(com.sap.cds.ql.cqn.CqnSelect.class)))
+        .thenReturn(draftCheckResult);
+
+    Result attachResult = mock(Result.class);
+    when(attachResult.list()).thenReturn(List.of(mock(Row.class)));
+    // count(1) < maxCount(2) so no disable call, but finalize still happens
+    when(attachResult.rowCount()).thenReturn(1L);
+    when(dbQuery.getAttachmentsForUPID(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(any(), any(), anyString(), anyString()))
+        .thenReturn(attachResult);
+
+    RepoValue repoValue = new RepoValue();
+    repoValue.setVirusScanEnabled(false);
+    repoValue.setVersionEnabled(false);
+    repoValue.setIsAsyncVirusScanEnabled(false);
+    when(sdmService.checkRepositoryType(anyString(), anyString())).thenReturn(repoValue);
+    when(sdmService.getFolderId(any(), any(), any(), anyBoolean())).thenReturn("folderX");
+    when(tokenHandler.getSDMCredentials()).thenReturn(mock(SDMCredentials.class));
+    doReturn(false).when(handlerSpy).duplicateCheck(any(), any(), any());
+
+    JSONObject successResult = new JSONObject();
+    successResult.put("status", "success");
+    successResult.put("objectId", "sdmObjId");
+    successResult.put("mimeType", "application/pdf");
+    successResult.put("uploadStatus", "Success");
+    when(documentUploadService.createDocument(any(), any(), anyBoolean(), any()))
+        .thenReturn(successResult);
+
+    ParameterInfo mockParamInfo = mock(ParameterInfo.class);
+    when(mockParamInfo.getHeaders()).thenReturn(Map.of("content-length", "1024"));
+    when(mockContext.getParameterInfo()).thenReturn(mockParamInfo);
+
+    // Capture the value passed to setContentId
+    ArgumentCaptor<String> contentIdCaptor = ArgumentCaptor.forClass(String.class);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.createAttachment(mockContext);
+    }
+
+    verify(mockContext).setContentId(contentIdCaptor.capture());
+    String contentId = contentIdCaptor.getValue();
+    String[] parts = contentId.split(":");
+    assertEquals(4, parts.length, "contentId must have 4 colon-separated segments");
+    assertEquals("sdmObjId", parts[0]);
+    assertEquals("folderX", parts[1]);
+    assertEquals("AdminService.Books.attachments", parts[2]);
+    assertEquals("parent-uuid", parts[3]);
+  }
+
+  // ----- markAttachmentAsDeleted: upID from 4th segment + re-enable -----
+
+  @Test
+  public void testMarkAttachmentAsDeleted_ReEnablesButtonWhenCountDropsBelowMax()
+      throws IOException {
+    // Setup: contentId has upID as 4th segment (new format)
+    // count in DB = 2, maxCount = 2, so after delete count-1=1 < 2 → re-enable
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    when(deleteCtx.getContentId())
+        .thenReturn("sdmObjId:folderId:AdminService.Books.attachments:parent-uuid");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    // No other docs in the folder → folder will be deleted
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+
+    // Draft attachment entity found, base entity found
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+
+    // Count query on draft entity = 2 (the record being deleted is still in DB)
+    Result countResult = mock(Result.class);
+    when(countResult.rowCount()).thenReturn(2L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(
+            eq(draftAttachEntity), any(), eq("parent-uuid"), eq("up__ID")))
+        .thenReturn(countResult);
+
+    // updateIsUploadableOnParentEntity on draft parent returns 1 (row found and updated)
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true)))
+        .thenReturn(1L);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.markAttachmentAsDeleted(deleteCtx);
+    }
+
+    // Parent draft row must be set to isAttachmentsUploadable=true
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true));
+  }
+
+  @Test
+  public void testMarkAttachmentAsDeleted_NoReEnableWhenCountStillAtMax() throws IOException {
+    // count after delete would still be >= maxCount → no re-enable
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    when(deleteCtx.getContentId())
+        .thenReturn("sdmObjId:folderId:AdminService.Books.attachments:parent-uuid");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+
+    // count = 3, maxCount = 2, count-1 = 2 which is NOT < maxCount → no update
+    Result countResult = mock(Result.class);
+    when(countResult.rowCount()).thenReturn(3L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(
+            eq(draftAttachEntity), any(), eq("parent-uuid"), eq("up__ID")))
+        .thenReturn(countResult);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.markAttachmentAsDeleted(deleteCtx);
+    }
+
+    verify(dbQuery, never())
+        .updateIsUploadableOnParentEntity(any(), any(), any(), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testMarkAttachmentAsDeleted_OldFormat_FallbackDbLookup() throws IOException {
+    // Old format contentId (3 segments, no upID) → falls back to DB lookup for upID
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    // Only 3 segments — old format before the upID embedding change
+    when(deleteCtx.getContentId()).thenReturn("sdmObjId:folderId:AdminService.Books.attachments");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+
+    // DB lookup returns the upID (backward-compat path)
+    when(dbQuery.getUpIdByObjectId(eq(draftAttachEntity), any(), eq("sdmObjId"), eq("up__ID")))
+        .thenReturn("lookup-upid");
+
+    Result countResult = mock(Result.class);
+    when(countResult.rowCount()).thenReturn(2L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(
+            eq(draftAttachEntity), any(), eq("lookup-upid"), eq("up__ID")))
+        .thenReturn(countResult);
+
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("lookup-upid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true)))
+        .thenReturn(1L);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.markAttachmentAsDeleted(deleteCtx);
+    }
+
+    // DB lookup must have been called for old-format contentId
+    verify(dbQuery).getUpIdByObjectId(eq(draftAttachEntity), any(), eq("sdmObjId"), eq("up__ID"));
+    // Re-enable must still fire
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("lookup-upid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true));
+  }
+
+  // ----- updateParentIsUploadable: fallthrough from draft to active when 0 rows updated -----
+
+  @Test
+  public void testMarkAttachmentAsDeleted_DraftParentGone_FallsThroughToActiveEntity()
+      throws IOException {
+    // If draft parent returned 0 rows updated (draft was already activated),
+    // the handler must update the active entity instead.
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    when(deleteCtx.getContentId())
+        .thenReturn("sdmObjId:folderId:AdminService.Books.attachments:parent-uuid");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    when(parentActiveEntity.getQualifiedName()).thenReturn("AdminService.Books");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+
+    Result countResult = mock(Result.class);
+    when(countResult.rowCount()).thenReturn(2L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(
+            eq(draftAttachEntity), any(), eq("parent-uuid"), eq("up__ID")))
+        .thenReturn(countResult);
+
+    // Draft parent update returns 0 → draft row is gone (post draftActivate)
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true)))
+        .thenReturn(0L);
+    // Active parent update returns 1
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentActiveEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true)))
+        .thenReturn(1L);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.markAttachmentAsDeleted(deleteCtx);
+    }
+
+    // Draft update was tried first
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true));
+    // Active update must follow as fallthrough
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentActiveEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true));
+  }
+
+  @Test
+  public void testMarkAttachmentAsDeleted_DraftParentUpdated_DoesNotTouchActiveEntity()
+      throws IOException {
+    // If draft parent update returns > 0, active entity must NOT be touched
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    when(deleteCtx.getContentId())
+        .thenReturn("sdmObjId:folderId:AdminService.Books.attachments:parent-uuid");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    when(parentActiveEntity.getQualifiedName()).thenReturn("AdminService.Books");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books_drafts"))
+        .thenReturn(Optional.of(parentDraftEntity));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+
+    Result countResult = mock(Result.class);
+    when(countResult.rowCount()).thenReturn(2L);
+    when(dbQuery.getAttachmentsForUPIDAndRepository(
+            eq(draftAttachEntity), any(), eq("parent-uuid"), eq("up__ID")))
+        .thenReturn(countResult);
+
+    // Draft parent update returns 1 row updated → stop here, do NOT touch active
+    when(dbQuery.updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true)))
+        .thenReturn(1L);
+
+    try (MockedStatic<SDMUtils> sdmUtilsMock = mockStatic(SDMUtils.class, CALLS_REAL_METHODS)) {
+      sdmUtilsMock
+          .when(() -> SDMUtils.getAttachmentCountAndMessage(anyList(), any()))
+          .thenReturn(2L);
+
+      handlerSpy.markAttachmentAsDeleted(deleteCtx);
+    }
+
+    // Draft entity updated
+    verify(dbQuery)
+        .updateIsUploadableOnParentEntity(
+            eq(parentDraftEntity),
+            any(),
+            eq("parent-uuid"),
+            eq("ID"),
+            eq("isAttachmentsUploadable"),
+            eq(true));
+    // Active entity must NOT be touched
+    verify(dbQuery, never())
+        .updateIsUploadableOnParentEntity(
+            eq(parentActiveEntity), any(), any(), any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void testMarkAttachmentAsDeleted_NoUpID_SkipsIsUploadableUpdate() throws IOException {
+    // When upID cannot be resolved (null from contentId and DB lookup), update is skipped
+    AttachmentMarkAsDeletedEventContext deleteCtx = mock(AttachmentMarkAsDeletedEventContext.class);
+    DeletionUserInfo deletionUserInfo = mock(DeletionUserInfo.class);
+
+    // 4th segment is empty string → treated as null/empty
+    when(deleteCtx.getContentId()).thenReturn("sdmObjId:folderId:AdminService.Books.attachments:");
+    when(deleteCtx.getDeletionUserInfo()).thenReturn(deletionUserInfo);
+    when(deletionUserInfo.getName()).thenReturn("testUser");
+    when(deleteCtx.getModel()).thenReturn(cdsModel);
+
+    when(dbQuery.getAttachmentsForFolder(anyString(), any(), anyString(), any()))
+        .thenReturn(Collections.emptyList());
+
+    CdsEntity draftAttachEntity = mock(CdsEntity.class);
+    when(draftAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments_drafts");
+    CdsElement mockAssocElem = mock(CdsElement.class);
+    CdsAssociationType mockAssocType = mock(CdsAssociationType.class);
+    CqnElementRef mockRef = mock(CqnElementRef.class);
+    when(draftAttachEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssocElem));
+    when(mockAssocElem.getType()).thenReturn(mockAssocType);
+    when(mockAssocType.refs()).thenAnswer(inv -> Stream.of(mockRef));
+    when(mockRef.path()).thenReturn("ID");
+
+    CdsEntity baseAttachEntity = mock(CdsEntity.class);
+    when(baseAttachEntity.getQualifiedName()).thenReturn("AdminService.Books.attachments");
+    CdsElement baseAssocElem = mock(CdsElement.class);
+    CdsAssociationType baseAssocType = mock(CdsAssociationType.class);
+    CqnElementRef baseRef = mock(CqnElementRef.class);
+    when(baseAttachEntity.findAssociation("up_")).thenReturn(Optional.of(baseAssocElem));
+    when(baseAssocElem.getType()).thenReturn(baseAssocType);
+    when(baseAssocType.refs()).thenAnswer(inv -> Stream.of(baseRef));
+    when(baseRef.path()).thenReturn("ID");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(draftAttachEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(baseAttachEntity));
+
+    // DB lookup also returns null (record already gone)
+    when(dbQuery.getUpIdByObjectId(any(), any(), eq("sdmObjId"), eq("up__ID"))).thenReturn(null);
+
+    handlerSpy.markAttachmentAsDeleted(deleteCtx);
+
+    // No isUploadable update should happen
+    verify(dbQuery, never())
+        .updateIsUploadableOnParentEntity(any(), any(), any(), any(), any(), anyBoolean());
+    verify(deleteCtx).setCompleted();
+  }
 }

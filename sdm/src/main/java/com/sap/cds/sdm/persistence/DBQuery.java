@@ -1138,4 +1138,76 @@ public class DBQuery {
 
     return null;
   }
+
+  /**
+   * Looks up the parent ID (up__ID) of an attachment by its objectId.
+   *
+   * @param attachmentEntity the attachment entity to query
+   * @param persistenceService the persistence service
+   * @param objectId the SDM objectId of the attachment
+   * @param upIdKey the field name for the parent ID (e.g. "up__ID")
+   * @return the parent ID string, or null if not found
+   */
+  public String getUpIdByObjectId(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String objectId,
+      String upIdKey) {
+    logger.debug(
+        "Fetching {} for objectId: {} from entity: {}",
+        upIdKey,
+        objectId,
+        attachmentEntity.getQualifiedName());
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(upIdKey)
+            .where(doc -> doc.get("objectId").eq(objectId));
+    Result result = persistenceService.run(q);
+    return result
+        .first()
+        .map(row -> row.get(upIdKey) != null ? row.get(upIdKey).toString() : null)
+        .orElse(null);
+  }
+
+  /**
+   * Updates the isUploadable flag on the parent entity row that owns the attachment composition.
+   * One row updated instead of N attachment rows.
+   *
+   * @param parentEntity the parent CDS entity (e.g. Books or Books_drafts)
+   * @param persistenceService the persistence service
+   * @param parentId the parent entity's key value
+   * @param parentKeyField the parent entity's key field name (e.g. "ID")
+   * @param isUploadable the new value of the isUploadable flag
+   */
+  public long updateIsUploadableOnParentEntity(
+      CdsEntity parentEntity,
+      PersistenceService persistenceService,
+      String parentId,
+      String parentKeyField,
+      String facetField,
+      boolean isUploadable) {
+    logger.debug(
+        "Updating {}={} on parent entity: {} for {}={}",
+        facetField,
+        isUploadable,
+        parentEntity.getQualifiedName(),
+        parentKeyField,
+        parentId);
+    Map<String, Object> updatedFields = new HashMap<>();
+    updatedFields.put(facetField, isUploadable);
+    CqnUpdate updateQuery =
+        Update.entity(parentEntity)
+            .data(updatedFields)
+            .where(e -> e.get(parentKeyField).eq(parentId));
+    Result updateResult = persistenceService.run(updateQuery);
+    logger.info(
+        "Updated {}={} for {} row(s) on {} where {}={}",
+        facetField,
+        isUploadable,
+        updateResult.rowCount(),
+        parentEntity.getQualifiedName(),
+        parentKeyField,
+        parentId);
+    return updateResult.rowCount();
+  }
 }
