@@ -660,13 +660,17 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int deleteDocument(String cmisaction, String objectId, String user) {
+  public int deleteDocument(String cmisaction, String objectId, String user, Boolean isSytemUser) {
     logger.info(
-        "Deleting document - action: {}, objectId: {}, user: {}", cmisaction, objectId, user);
+        "Deleting document - action: {}, objectId: {}, user: {},isSystemUser :{}",
+        cmisaction,
+        objectId,
+        user,
+        isSytemUser);
     long startTime = System.currentTimeMillis();
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
-    if (user.equals(SDMConstants.SYSTEM_USER)) {
+    if (isSytemUser) {
       logger.debug("Using TECHNICAL_USER_FLOW for deletion");
       httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
     } else {

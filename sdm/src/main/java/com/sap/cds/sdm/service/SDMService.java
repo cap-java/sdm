@@ -33,7 +33,8 @@ public interface SDMService {
 
   public JSONObject getRepositoryInfo(SDMCredentials sdmCredentials) throws IOException;
 
-  public int deleteDocument(String cmisaction, String objectId, String user) throws IOException;
+  public int deleteDocument(String cmisaction, String objectId, String user, Boolean isSystemUser)
+      throws IOException;
 
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context)
