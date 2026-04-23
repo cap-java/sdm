@@ -140,7 +140,7 @@ public class TokenHandlerTest {
       mockCredentials.put("uaa", mockUaa);
       mockCredentials.put("uri", "https://mock.service.url");
 
-      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getTags()).thenReturn(Collections.singletonList("sdm"));
       Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
 
       List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);
@@ -202,7 +202,7 @@ public class TokenHandlerTest {
       mockCredentials.put("uaa", mockUaa);
       mockCredentials.put("uri", "https://mock.service.url");
 
-      Mockito.when(mockServiceBinding.getServiceName()).thenReturn(Optional.of("sdm"));
+      Mockito.when(mockServiceBinding.getTags()).thenReturn(Collections.singletonList("sdm"));
       Mockito.when(mockServiceBinding.getCredentials()).thenReturn(mockCredentials);
 
       List<ServiceBinding> mockServiceBindings = Collections.singletonList(mockServiceBinding);

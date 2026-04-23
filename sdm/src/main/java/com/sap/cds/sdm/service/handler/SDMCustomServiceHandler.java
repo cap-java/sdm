@@ -1525,13 +1525,20 @@ public class SDMCustomServiceHandler {
     logger.error("Copy failure detected, initiating cleanup. Error: {}", e.getMessage());
     if (!folderExists) {
       logger.debug("Deleting newly created folder: {}", folderId);
-      sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
+      sdmService.deleteDocument(
+          "deleteTree",
+          folderId,
+          context.getUserInfo().getName(),
+          context.getUserInfo().isSystemUser());
     } else {
       logger.debug(
           "Deleting {} copied attachments from existing folder", attachmentsMetadata.size());
       for (Map<String, String> attachmentMetadata : attachmentsMetadata) {
         sdmService.deleteDocument(
-            "delete", attachmentMetadata.get("cmis:objectId"), context.getUserInfo().getName());
+            "delete",
+            attachmentMetadata.get("cmis:objectId"),
+            context.getUserInfo().getName(),
+            context.getUserInfo().isSystemUser());
       }
     }
     throw new ServiceException(e.getMessage());
