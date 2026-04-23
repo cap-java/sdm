@@ -42,6 +42,9 @@ service AdminService @(requires: ['admin','system-user']) {
     action openAttachment() returns String;
     action changelog() returns String;
   };
+  annotate AdminService.Books.attachments with @(
+    Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
+  );
 
   entity Books.references as projection on my.Books.references
     actions {
@@ -73,6 +76,9 @@ service AdminService @(requires: ['admin','system-user']) {
     action openAttachment() returns String;
     action changelog() returns String;
   };
+  annotate AdminService.Books.references with @(
+    Capabilities: {InsertRestrictions: {Insertable: up_.isReferencesUploadable}}
+  );
 
   entity Books.footnotes as projection on my.Books.footnotes
     actions {
