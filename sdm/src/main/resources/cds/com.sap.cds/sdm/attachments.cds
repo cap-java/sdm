@@ -43,6 +43,7 @@ annotate Attachments with @UI: {
                 {Value: createdAt, @HTML5.CssDefaults: {width: '20%'}},
                 {Value: createdBy, @HTML5.CssDefaults: {width: '15%'}},
                 {Value: note, @HTML5.CssDefaults: {width: '15%'}},
+
 {
         Value             : uploadStatus,
         Criticality: uploadStatusNav.criticality,
@@ -51,19 +52,28 @@ annotate Attachments with @UI: {
       },
     ]
 } {
-    note       @(title: '{i18n>Description}');
-    fileName  @(title: '{i18n>Filename}');
-       modifiedAt @(odata.etag: null);
-       uploadStatus    @(title: '{i18n>uploadStatus}', Common.Text : uploadStatusNav.name, Common.TextArrangement : #TextOnly);
-    content
-       @Core.ContentDisposition: { Filename: fileName, Type: 'inline' }
-        @(title: '{i18n>Attachment}');
-    folderId @UI.Hidden;
-    repositoryId  @UI.Hidden ;
-    objectId  @UI.Hidden ;
-    mimeType @UI.Hidden;
-    status @UI.Hidden;
-    linkUrl @UI.Hidden;
+  note         @(title: '{i18n>Description}');
+  fileName     @(title: '{i18n>Filename}');
+  modifiedAt   @(odata.etag: null);
+  uploadStatus @(
+    title                 : '{i18n>uploadStatus}',
+    Common.Text           : uploadStatusNav.name,
+    Common.TextArrangement: #TextOnly
+  );
+  content
+               @Core.ContentDisposition: {
+    Filename: fileName,
+    Type    : 'inline'
+  }
+               @(title: '{i18n>Attachment}');
+  folderId     @UI.Hidden;
+  repositoryId @UI.Hidden;
+  objectId     @UI.Hidden;
+  mimeType     @UI.Hidden;
+  status       @UI.Hidden;
+  linkUrl      @UI.Hidden;
+  ID           @(title: '{i18n>attachmentID}');
+
 }
 
 annotate Attachments with @Common: {SideEffects #ContentChanged: {

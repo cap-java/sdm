@@ -1300,6 +1300,8 @@ Filename=File Name
 linkUrl=Link Url
 type=Type
 ```
+**Note**: For localizing the CAP managed fields use the below keys
+CreatedAt,CreatedBy,ChangedAt,ChangedBy and attachmentID for ID.
 
 ### Error Messages Localization
 
