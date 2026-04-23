@@ -93,7 +93,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
       String entity = contextValues[2];
-      // 4th segment is upID embedded at creation time (absent in old contentId format → null)
       String upIDFromContentId = contextValues.length >= 4 ? contextValues[3] : null;
       logger.debug(
           "Processing deletion - objectId: {}, folderId: {}, entity: {}",
