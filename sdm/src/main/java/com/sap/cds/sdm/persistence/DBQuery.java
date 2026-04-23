@@ -20,6 +20,7 @@ import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.time.Instant;
 import java.util.*;
 import java.util.ArrayList;
 import org.slf4j.Logger;
@@ -426,6 +427,7 @@ public class DBQuery {
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    updatedFields.put("scannedAt", Instant.now());
     updatedFields.put("type", "sap-icon://document");
     updatedFields.put("mimeType", cmisDocument.getMimeType());
     updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());

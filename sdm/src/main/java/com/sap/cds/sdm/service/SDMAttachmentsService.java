@@ -181,7 +181,8 @@ public class SDMAttachmentsService extends ServiceDelegator
     return new AttachmentModificationResult(
         Boolean.TRUE.equals(createContext.getIsInternalStored()),
         createContext.getContentId(),
-        createContext.getData().getStatus());
+        createContext.getData().getStatus(),
+        Instant.now());
   }
 
   @Override
