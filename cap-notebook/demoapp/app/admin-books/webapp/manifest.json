@@ -137,7 +137,7 @@
                 "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
                   "tableSettings": {
                     "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
+                    "selectionMode": "Multi",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
                   },
                   "actions": {
@@ -147,8 +147,18 @@
                       "requiresSelection": true,
                       "press": ".extension.books.controller.custom.onChangelogPress",
                       "command": "COMMON", "position": { 
-                        "anchor": "StandardAction::Create", 
-                        "placement": "After" 
+                      "anchor": "StandardAction::Create", 
+                      "placement": "After" 
+                      }
+                    },
+                    "download": {
+                      "text": "Download",
+                      "requiresSelection": true,
+                      "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                      "press": ".extension.books.controller.custom.onDownloadPress",
+                      "position": {
+                      "anchor": "StandardAction::Create", 
+                      "placement": "After"
                       }
                     }
                   }
@@ -156,7 +166,7 @@
                 "references/@com.sap.vocabularies.UI.v1.LineItem": {
                   "tableSettings": {
                     "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
+                    "selectionMode": "Multi",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
                   },
                   "actions": {
@@ -166,8 +176,18 @@
                       "requiresSelection": true,
                       "press": ".extension.books.controller.custom.onChangelogPress",
                       "command": "COMMON", "position": { 
-                        "anchor": "StandardAction::Create", 
-                        "placement": "After" 
+                      "anchor": "StandardAction::Create", 
+                      "placement": "After" 
+                      }
+                    },
+                    "download": {
+                      "text": "Download",
+                      "requiresSelection": true,
+                      "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                      "press": ".extension.books.controller.custom.onDownloadPress",
+                      "position": {
+                      "anchor": "StandardAction::Create", 
+                      "placement": "After"
                       }
                     }
                   }
@@ -175,7 +195,7 @@
                 "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
                   "tableSettings": {
                     "type": "ResponsiveTable",
-                    "selectionMode": "Auto",
+                    "selectionMode": "Multi",
                     "rowPress": ".extension.books.controller.custom.onRowPress"
                   },
                   "actions": {
@@ -185,8 +205,18 @@
                       "requiresSelection": true,
                       "press": ".extension.books.controller.custom.onChangelogPress",
                       "command": "COMMON", "position": { 
-                        "anchor": "StandardAction::Create", 
-                        "placement": "After" 
+                      "anchor": "StandardAction::Create",
+                      "placement": "After"
+                      }
+                    },
+                    "download": {
+                      "text": "Download",
+                      "requiresSelection": true,
+                      "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                      "press": ".extension.books.controller.custom.onDownloadPress",
+                      "position": {
+                      "anchor": "StandardAction::Create", 
+                      "placement": "After"
                       }
                     }
                   }
@@ -207,7 +237,7 @@
                     "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -217,8 +247,18 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
                           }
                         }
                       }
@@ -226,7 +266,7 @@
                     "references/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -236,8 +276,18 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After"
                           }
                         }
                       }
@@ -245,7 +295,7 @@
                     "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -255,8 +305,18 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After"
                           }
                         }
                       }
@@ -278,7 +338,7 @@
                     "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -288,16 +348,26 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
                           } 
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After"
+                          }
                         }
                       }
                     },
                     "references/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -307,8 +377,18 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After"
                           }
                         }
                       }
@@ -316,7 +396,7 @@
                     "footnotes/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
                         "type": "ResponsiveTable",
-                        "selectionMode": "Auto",
+                        "selectionMode": "Multi",
                         "rowPress": ".extension.books.controller.custom.onRowPress"
                       },
                       "actions": {
@@ -326,8 +406,18 @@
                           "requiresSelection": true,
                           "press": ".extension.books.controller.custom.onChangelogPress",
                           "command": "COMMON", "position": { 
-                            "anchor": "StandardAction::Create", 
-                            "placement": "After" 
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After" 
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create", 
+                          "placement": "After"
                           }
                         }
                       }
