@@ -33,11 +33,13 @@ import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -433,6 +435,130 @@ public class SDMServiceGenericHandler implements EventHandler {
       context.setResult("None");
     }
     logger.debug("END: Open attachment event");
+  }
+
+  @On(event = "downloadSelectedAttachments")
+  public void downloadSelectedAttachments(AttachmentDownloadContext context) throws IOException {
+    logger.debug("START: Download selected attachments event");
+    CdsModel cdsModel = context.getModel();
+    Optional<CdsEntity> attachmentDraftEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
+    Optional<CdsEntity> attachmentActiveEntity =
+        cdsModel.findEntity(context.getTarget().getQualifiedName());
+
+    List<String> attachmentIds = resolveAttachmentIds(context, cdsModel);
+    logger.debug("Download requested for {} attachment(s)", attachmentIds.size());
+
+    SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+    boolean isSystemUser = context.getUserInfo().isSystemUser();
+
+    JSONArray resultsArray = new JSONArray();
+    for (String id : attachmentIds) {
+      resultsArray.put(
+          processDownloadAttachment(
+              id, attachmentDraftEntity, attachmentActiveEntity, sdmCredentials, isSystemUser));
+    }
+
+    context.setResult(resultsArray.toString());
+    logger.info("Download completed for {} attachment(s)", attachmentIds.size());
+    logger.debug("END: Download selected attachments event");
+  }
+
+  private List<String> resolveAttachmentIds(AttachmentDownloadContext context, CdsModel cdsModel) {
+    String selectedIdsParam = context.get("ids") != null ? context.get("ids").toString() : null;
+    if (selectedIdsParam != null && !selectedIdsParam.isBlank()) {
+      return Arrays.stream(selectedIdsParam.split(",")).map(String::trim).toList();
+    }
+    CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
+    Map<String, Object> targetKeys =
+        cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
+    return List.of(targetKeys.get("ID").toString());
+  }
+
+  private JSONObject processDownloadAttachment(
+      String id,
+      Optional<CdsEntity> draftEntity,
+      Optional<CdsEntity> activeEntity,
+      SDMCredentials sdmCredentials,
+      boolean isSystemUser) {
+    JSONObject result = new JSONObject();
+    result.put("id", id);
+    try {
+      CmisDocument cmisDocument = fetchAttachmentDocument(draftEntity, activeEntity, id);
+      validateDownloadStatus(cmisDocument, id);
+
+      if (SDMConstants.MIMETYPE_INTERNET_SHORTCUT.equalsIgnoreCase(cmisDocument.getMimeType())) {
+        logger.warn("Download not supported for link attachment ID: {}", id);
+        result.put("status", "error");
+        result.put("message", "Download is not supported for link attachments");
+        return result;
+      }
+
+      result.put("fileName", cmisDocument.getFileName());
+      result.put("mimeType", cmisDocument.getMimeType());
+      result.put("status", "success");
+
+      byte[] content =
+          sdmService.readDocumentContent(cmisDocument.getObjectId(), sdmCredentials, isSystemUser);
+      result.put("content", Base64.getEncoder().encodeToString(content));
+      logger.info(
+          "Content fetched for attachment: {} ({} bytes)",
+          cmisDocument.getFileName(),
+          content.length);
+    } catch (ServiceException e) {
+      logger.warn("Failed to download attachment ID {}: {}", id, e.getMessage());
+      result.put("status", "error");
+      result.put("message", e.getMessage());
+    } catch (IOException e) {
+      logger.error("IO error downloading attachment ID {}: {}", id, e.getMessage(), e);
+      result.put("status", "error");
+      result.put("message", "Failed to read attachment content");
+    }
+    return result;
+  }
+
+  private CmisDocument fetchAttachmentDocument(
+      Optional<CdsEntity> draftEntity, Optional<CdsEntity> activeEntity, String id) {
+    CmisDocument cmisDocument = null;
+    if (draftEntity.isPresent()) {
+      cmisDocument = dbQuery.getObjectIdForAttachmentID(draftEntity.get(), persistenceService, id);
+    }
+    if (cmisDocument == null
+        || cmisDocument.getFileName() == null
+        || cmisDocument.getFileName().isEmpty()) {
+      if (activeEntity.isPresent()) {
+        cmisDocument =
+            dbQuery.getObjectIdForAttachmentID(activeEntity.get(), persistenceService, id);
+      }
+    }
+    if (cmisDocument == null
+        || cmisDocument.getObjectId() == null
+        || cmisDocument.getObjectId().isEmpty()) {
+      throw new ServiceException(SDMConstants.FILE_NOT_FOUND_ERROR);
+    }
+    return cmisDocument;
+  }
+
+  private void validateDownloadStatus(CmisDocument cmisDocument, String id) {
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
+      logger.warn("Virus detected in attachment: {}", id);
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_DETECTED_FILE_ERROR"));
+    }
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
+      logger.warn("Virus scan is in progress for attachment: {}", id);
+      throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
+    }
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+      logger.warn("Upload is in progress for attachment: {}", id);
+      throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
+    }
   }
 
   private void validateRepository(EventContext eventContext) throws ServiceException, IOException {
