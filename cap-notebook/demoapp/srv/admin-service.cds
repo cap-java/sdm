@@ -40,6 +40,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
   annotate AdminService.Books.attachments with @(
     Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
@@ -74,6 +75,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
   annotate AdminService.Books.references with @(
     Capabilities: {InsertRestrictions: {Insertable: up_.isReferencesUploadable}}
@@ -108,6 +110,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   entity Pages.attachments as projection on my.Pages.attachments
@@ -139,6 +142,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   entity Pages.references as projection on my.Pages.references
@@ -169,6 +173,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   // Chapters projections
@@ -201,6 +206,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   entity Chapters.references as projection on my.Chapters.references
@@ -232,6 +238,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   entity Chapters.footnotes as projection on my.Chapters.footnotes
@@ -263,6 +270,7 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 
   // Pages footnotes projection
@@ -295,5 +303,6 @@ service AdminService @(requires: ['admin','system-user']) {
     ); 
     action openAttachment() returns String;
     action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
   };
 }
