@@ -27,6 +27,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
 - Active entity attachment creation: Provides the capability to create attachments directly on active (non-draft) entities.
 - Upload button visibility control: Provides the capability to automatically show or hide the Upload button based on the configured `maxCount` limit.
+- Download attachments: Provides the capability to download multiple selected file attachments at once with smart button enablement.
 
 ## Table of Contents
 
@@ -49,6 +50,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Attachment Upload Status](#support-for-attachment-upload-status)
 - [Support for Attachment creation in Active Entities](#support-for-attachment-creation-in-active-entities)
 - [Support for Upload Button Visibility Control](#support-for-upload-button-visibility-control)
+- [Support for Download Attachments](#support-for-download-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -1463,6 +1465,106 @@ annotate MyService.Books.references with @(
 ```
 
 > **Note:** No additional Java or configuration changes are required in the leading application. The plugin derives the field name from the facet's composition name automatically.
+
+## Support for Download Attachments
+
+This plugin provides the capability to download multiple selected file attachments at once. The Download button is automatically disabled when any link-type attachment is selected, since links are meant to be opened in the browser and not downloaded as files.
+
+### Steps to Enable Download Attachments Feature
+
+1. **Add the `downloadSelectedAttachments` action to application's service definition**
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app.
+
+   Add this action inside the `actions { }` block of each attachment entity:
+
+   ```cds
+   action downloadSelectedAttachments(ids: String) returns String;
+   ```
+
+2. **Add a custom controller extension**
+
+   In `webapp/controller/custom.controller.js`, add the `isDownloadEnabled` and `onDownloadPress` functions.
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
+
+   ```js
+   isDownloadEnabled: function(oBindingContext, aSelectedContexts) {
+       if (!aSelectedContexts || aSelectedContexts.length === 0) {
+           return false;
+       }
+       return !aSelectedContexts.some(function(oContext) {
+           return oContext.getProperty("mimeType") === "application/internet-shortcut";
+       });
+   },
+   onDownloadPress: function(oContext, aSelectedContexts) {
+       var sIds = aSelectedContexts.map(function(oCtx) {
+           return oCtx.getObject().ID;
+       }).join(",");
+       this.base.editFlow
+       .invokeAction("AdminService.downloadSelectedAttachments", {
+           contexts: aSelectedContexts[0],
+           parameterValues: [{ name: "ids", value: sIds }],
+           skipParameterDialog: true
+       })
+       .then(function(res) {
+           var sJsonResponse = res.getObject().value;
+           var aEntries = JSON.parse(sJsonResponse);
+           aEntries.forEach(function(oEntry) {
+               if (oEntry.status === "success" && oEntry.content) {
+                   var byteString = atob(oEntry.content);
+                   var aBytes = new Uint8Array(byteString.length);
+                   for (var i = 0; i < byteString.length; i++) {
+                       aBytes[i] = byteString.charCodeAt(i);
+                   }
+                   var oBlob = new Blob([aBytes], { type: oEntry.mimeType || "application/octet-stream" });
+                   var sUrl = URL.createObjectURL(oBlob);
+                   var oLink = document.createElement("a");
+                   oLink.href = sUrl;
+                   oLink.download = oEntry.fileName || "download";
+                   document.body.appendChild(oLink);
+                   oLink.click();
+                   document.body.removeChild(oLink);
+                   URL.revokeObjectURL(sUrl);
+               }
+           });
+       });
+   }
+   ```
+
+   - Replace `AdminService` in `invokeAction("AdminService.downloadSelectedAttachments")` with the name of your service.
+
+3. **Add `controlConfiguration` for Download Button**
+
+   In your `sap.ui5.routing.targets` section, under the relevant Object Page, update the `controlConfiguration` for each facet by changing the `selectionMode` to `"Multi"` and adding the download action.
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/manifest.json) from a sample Bookshop app.
+
+   ```json
+   "controlConfiguration": {
+       "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+           "tableSettings": {
+               "type": "ResponsiveTable",
+               "selectionMode": "Multi",
+               "rowPress": ".extension.books.controller.custom.onRowPress"
+           },
+           "actions": {
+               "download": {
+                   "text": "Download",
+                   "requiresSelection": true,
+                   "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                   "press": ".extension.books.controller.custom.onDownloadPress",
+                   "position": {
+                       "anchor": "StandardAction::Create",
+                       "placement": "After"
+                   }
+               }
+           }
+       }
+   }
+   ```
+
+   - Replace `attachments` with your entity's facet name as needed.
 
 ## Known Restrictions
 
