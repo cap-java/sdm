@@ -523,13 +523,11 @@ public class SDMServiceGenericHandler implements EventHandler {
     if (draftEntity.isPresent()) {
       cmisDocument = dbQuery.getObjectIdForAttachmentID(draftEntity.get(), persistenceService, id);
     }
-    if (cmisDocument == null
-        || cmisDocument.getFileName() == null
-        || cmisDocument.getFileName().isEmpty()) {
-      if (activeEntity.isPresent()) {
-        cmisDocument =
-            dbQuery.getObjectIdForAttachmentID(activeEntity.get(), persistenceService, id);
-      }
+    if ((cmisDocument == null
+            || cmisDocument.getFileName() == null
+            || cmisDocument.getFileName().isEmpty())
+        && activeEntity.isPresent()) {
+      cmisDocument = dbQuery.getObjectIdForAttachmentID(activeEntity.get(), persistenceService, id);
     }
     if (cmisDocument == null
         || cmisDocument.getObjectId() == null
