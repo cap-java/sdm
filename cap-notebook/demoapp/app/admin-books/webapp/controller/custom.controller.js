@@ -13,6 +13,14 @@ sap.ui.define(
         };
     
         return ControllerExtension.extend("books.controller.custom", {
+            isDownloadEnabled: function(oBindingContext, aSelectedContexts) {
+                if (!aSelectedContexts || aSelectedContexts.length === 0) {
+                    return false;
+                }
+                return !aSelectedContexts.some(function(oContext) {
+                    return oContext.getProperty("mimeType") === "application/internet-shortcut";
+                });
+            },
             onRowPress: function(oContext) {
                 this.base.editFlow
                 .invokeAction("AdminService.openAttachment", {
@@ -90,6 +98,43 @@ sap.ui.define(
             },
             close: function (closeBtn) {
                 closeBtn.getSource().getParent().close();
+            },
+            onDownloadPress: function(oContext, aSelectedContexts) {
+                var sIds = aSelectedContexts.map(function(oCtx) {
+                    return oCtx.getObject().ID;
+                }).join(",");
+                this.base.editFlow
+                .invokeAction("AdminService.downloadSelectedAttachments", {
+                    contexts: aSelectedContexts[0],
+                    parameterValues: [{ name: "ids", value: sIds }],
+                    skipParameterDialog: true
+                })
+                .then(function (res) {
+                    var sJsonResponse = res.getObject().value;
+                    var aEntries = JSON.parse(sJsonResponse);
+                    aEntries.forEach(function (oEntry) {
+                        if (oEntry.status === "success") {
+                            if (oEntry.linkUrl) {
+                                window.open(oEntry.linkUrl, "_blank");
+                            } else if (oEntry.content) {
+                                var byteString = atob(oEntry.content);
+                                var aBytes = new Uint8Array(byteString.length);
+                                for (var i = 0; i < byteString.length; i++) {
+                                    aBytes[i] = byteString.charCodeAt(i);
+                                }
+                                var oBlob = new Blob([aBytes], { type: oEntry.mimeType || "application/octet-stream" });
+                                var sUrl = URL.createObjectURL(oBlob);
+                                var oLink = document.createElement("a");
+                                oLink.href = sUrl;
+                                oLink.download = oEntry.fileName || "download";
+                                document.body.appendChild(oLink);
+                                oLink.click();
+                                document.body.removeChild(oLink);
+                                URL.revokeObjectURL(sUrl);
+                            }
+                        }
+                    });
+                });
             }
         });
     }
