@@ -81,4 +81,7 @@ public interface SDMService {
 
   public String getLinkUrl(String objectId, SDMCredentials sdmCredentials, boolean isSystemUser)
       throws IOException;
+
+  public byte[] readDocumentContent(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException;
 }

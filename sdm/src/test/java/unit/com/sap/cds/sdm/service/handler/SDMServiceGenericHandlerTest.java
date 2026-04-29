@@ -3820,4 +3820,445 @@ public class SDMServiceGenericHandlerTest {
         "com.example.MyService.MyEntity.attachments",
         input.targetFacet()); // Uses full qualified name
   }
+
+  // ========================= Download Selected Attachments Tests =========================
+
+  @Test
+  void testDownloadSelectedAttachments_Success_MultipleIds() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("id1,id2");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument doc1 = new CmisDocument();
+    doc1.setObjectId("obj1");
+    doc1.setFileName("file1.pdf");
+    doc1.setMimeType("application/pdf");
+    doc1.setUploadStatus("Success");
+
+    CmisDocument doc2 = new CmisDocument();
+    doc2.setObjectId("obj2");
+    doc2.setFileName("file2.txt");
+    doc2.setMimeType("text/plain");
+    doc2.setUploadStatus("Success");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "id1")).thenReturn(doc1);
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "id2")).thenReturn(doc2);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    byte[] content1 = "pdf content".getBytes();
+    byte[] content2 = "text content".getBytes();
+    when(sdmService.readDocumentContent("obj1", creds, false)).thenReturn(content1);
+    when(sdmService.readDocumentContent("obj2", creds, false)).thenReturn(content2);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    String result = resultCaptor.getValue();
+    assertNotNull(result);
+    org.json.JSONArray jsonArray = new org.json.JSONArray(result);
+    assertEquals(2, jsonArray.length());
+    assertEquals("success", jsonArray.getJSONObject(0).getString("status"));
+    assertEquals("file1.pdf", jsonArray.getJSONObject(0).getString("fileName"));
+    assertEquals("success", jsonArray.getJSONObject(1).getString("status"));
+    assertEquals("file2.txt", jsonArray.getJSONObject(1).getString("fileName"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_SingleIdFromBoundContext() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnSelect cqnSelect = mock(CqnSelect.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn(null);
+    when(context.get("cqn")).thenReturn(cqnSelect);
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(any(CqnSelect.class))).thenReturn(analysisResult);
+    when(analysisResult.targetKeyValues()).thenReturn(Map.of("ID", "single-id"));
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument doc = new CmisDocument();
+    doc.setObjectId("objSingle");
+    doc.setFileName("single.pdf");
+    doc.setMimeType("application/pdf");
+    doc.setUploadStatus("Success");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "single-id"))
+        .thenReturn(doc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    byte[] content = "single content".getBytes();
+    when(sdmService.readDocumentContent("objSingle", creds, false)).thenReturn(content);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("success", jsonArray.getJSONObject(0).getString("status"));
+    assertEquals("single.pdf", jsonArray.getJSONObject(0).getString("fileName"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_VirusDetected() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("virus-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument virusDoc = new CmisDocument();
+    virusDoc.setObjectId("virusObj");
+    virusDoc.setFileName("infected.exe");
+    virusDoc.setMimeType("application/octet-stream");
+    virusDoc.setUploadStatus("VirusDetected");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "virus-id"))
+        .thenReturn(virusDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("error", jsonArray.getJSONObject(0).getString("status"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_LinkAttachment() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("link-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument linkDoc = new CmisDocument();
+    linkDoc.setObjectId("linkObj");
+    linkDoc.setFileName("bookmark.url");
+    linkDoc.setMimeType("application/internet-shortcut");
+    linkDoc.setUrl("https://example.com");
+    linkDoc.setUploadStatus("Success");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "link-id"))
+        .thenReturn(linkDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("error", jsonArray.getJSONObject(0).getString("status"));
+    assertEquals(
+        "Download is not supported for link attachments",
+        jsonArray.getJSONObject(0).getString("message"));
+    verify(sdmService, never()).readDocumentContent(anyString(), any(), anyBoolean());
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_FallbackToActiveEntity() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity activeEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(draftEntity);
+    when(draftEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("fallback-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments"))
+        .thenReturn(Optional.of(activeEntity));
+
+    CmisDocument emptyDoc = new CmisDocument();
+    emptyDoc.setFileName("");
+    emptyDoc.setObjectId("");
+
+    CmisDocument validDoc = new CmisDocument();
+    validDoc.setObjectId("activeObj");
+    validDoc.setFileName("active.pdf");
+    validDoc.setMimeType("application/pdf");
+    validDoc.setUploadStatus("Success");
+
+    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "fallback-id"))
+        .thenReturn(emptyDoc);
+    when(dbQuery.getObjectIdForAttachmentID(activeEntity, persistenceService, "fallback-id"))
+        .thenReturn(validDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    byte[] content = "active content".getBytes();
+    when(sdmService.readDocumentContent("activeObj", creds, false)).thenReturn(content);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("success", jsonArray.getJSONObject(0).getString("status"));
+    assertEquals("active.pdf", jsonArray.getJSONObject(0).getString("fileName"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_UploadInProgress() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("upload-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument uploadingDoc = new CmisDocument();
+    uploadingDoc.setObjectId("uploadObj");
+    uploadingDoc.setFileName("uploading.pdf");
+    uploadingDoc.setMimeType("application/pdf");
+    uploadingDoc.setUploadStatus("uploading");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "upload-id"))
+        .thenReturn(uploadingDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("error", jsonArray.getJSONObject(0).getString("status"));
+    verify(sdmService, never()).readDocumentContent(anyString(), any(), anyBoolean());
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_MixedSuccessAndError() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("good-id,virus-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument goodDoc = new CmisDocument();
+    goodDoc.setObjectId("goodObj");
+    goodDoc.setFileName("good.pdf");
+    goodDoc.setMimeType("application/pdf");
+    goodDoc.setUploadStatus("Success");
+
+    CmisDocument virusDoc = new CmisDocument();
+    virusDoc.setObjectId("virusObj");
+    virusDoc.setFileName("infected.exe");
+    virusDoc.setMimeType("application/octet-stream");
+    virusDoc.setUploadStatus("VirusDetected");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "good-id"))
+        .thenReturn(goodDoc);
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "virus-id"))
+        .thenReturn(virusDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    byte[] content = "good content".getBytes();
+    when(sdmService.readDocumentContent("goodObj", creds, false)).thenReturn(content);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(2, jsonArray.length());
+    assertEquals("success", jsonArray.getJSONObject(0).getString("status"));
+    assertEquals("good.pdf", jsonArray.getJSONObject(0).getString("fileName"));
+    assertEquals("error", jsonArray.getJSONObject(1).getString("status"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_NotFound() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("missing-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument emptyDoc = new CmisDocument();
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "missing-id"))
+        .thenReturn(emptyDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("error", jsonArray.getJSONObject(0).getString("status"));
+  }
+
+  @Test
+  void testDownloadSelectedAttachments_VirusScanInProgress() throws IOException {
+    AttachmentDownloadContext context = mock(AttachmentDownloadContext.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.isSystemUser()).thenReturn(false);
+    when(context.getUserInfo()).thenReturn(userInfo);
+    CdsModel cdsModel = mock(CdsModel.class);
+    CdsEntity cdsEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+
+    when(context.getModel()).thenReturn(cdsModel);
+    when(context.getTarget()).thenReturn(cdsEntity);
+    when(cdsEntity.getQualifiedName()).thenReturn("MyService.MyEntity.attachments");
+    when(context.get("ids")).thenReturn("scanning-id");
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+
+    when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
+        .thenReturn(Optional.of(cdsEntity));
+    when(cdsModel.findEntity("MyService.MyEntity.attachments")).thenReturn(Optional.of(cdsEntity));
+
+    CmisDocument scanDoc = new CmisDocument();
+    scanDoc.setObjectId("scanObj");
+    scanDoc.setFileName("scanning.pdf");
+    scanDoc.setMimeType("application/pdf");
+    scanDoc.setUploadStatus("VirusScanInprogress");
+
+    when(dbQuery.getObjectIdForAttachmentID(cdsEntity, persistenceService, "scanning-id"))
+        .thenReturn(scanDoc);
+
+    SDMCredentials creds = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(creds);
+
+    sdmServiceGenericHandler.downloadSelectedAttachments(context);
+
+    ArgumentCaptor<String> resultCaptor = ArgumentCaptor.forClass(String.class);
+    verify(context).setResult(resultCaptor.capture());
+
+    org.json.JSONArray jsonArray = new org.json.JSONArray(resultCaptor.getValue());
+    assertEquals(1, jsonArray.length());
+    assertEquals("error", jsonArray.getJSONObject(0).getString("status"));
+    verify(sdmService, never()).readDocumentContent(anyString(), any(), anyBoolean());
+  }
 }

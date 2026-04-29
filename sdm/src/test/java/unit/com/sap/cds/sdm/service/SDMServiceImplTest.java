@@ -1137,8 +1137,8 @@ public class SDMServiceImplTest {
               sdmServiceImpl.readDocument(objectId, sdmCredentials, mockContext);
             });
 
-    // Check if the exception message contains the expected first part
-    String expectedMessagePart1 = "Failed to set document stream in context";
+    // Check if the exception message reflects the underlying readDocumentContent error
+    String expectedMessagePart1 = "Unexpected code 500";
     assertTrue(exception.getMessage().contains(expectedMessagePart1));
   }
 
@@ -1158,10 +1158,11 @@ public class SDMServiceImplTest {
 
     when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
     when(response.getStatusLine()).thenReturn(statusLine);
-    when(statusLine.getStatusCode()).thenReturn(500);
+    when(statusLine.getStatusCode()).thenReturn(200);
     when(response.getEntity()).thenReturn(entity);
     InputStream inputStream = new ByteArrayInputStream(expectedContent.getBytes());
     when(entity.getContent()).thenReturn(inputStream);
+    when(entity.getContentLength()).thenReturn((long) expectedContent.length());
 
     SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
 
@@ -2922,5 +2923,118 @@ public class SDMServiceImplTest {
     assertEquals(4, result.size());
     assertEquals("test.pdf", result.get("cmis:name"));
     assertNull(result.get("customProp1"));
+  }
+
+  // ========================= readDocumentContent Tests =========================
+
+  @Test
+  public void testReadDocumentContent_Success() throws IOException {
+    String objectId = "testObjectId";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+
+    String grantType = "TOKEN_EXCHANGE";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+
+    byte[] expectedContent = "Document content here".getBytes();
+    InputStream inputStream = new ByteArrayInputStream(expectedContent);
+    when(entity.getContent()).thenReturn(inputStream);
+    when(entity.getContentLength()).thenReturn((long) expectedContent.length);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    byte[] result = sdmServiceImpl.readDocumentContent(objectId, sdmCredentials, false);
+
+    assertNotNull(result);
+    assertEquals(expectedContent.length, result.length);
+    assertArrayEquals(expectedContent, result);
+  }
+
+  @Test
+  public void testReadDocumentContent_SystemUser() throws IOException {
+    String objectId = "testObjectId";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+
+    String grantType = "TECHNICAL_CREDENTIALS_FLOW";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(200);
+    when(response.getEntity()).thenReturn(entity);
+
+    byte[] expectedContent = "System user content".getBytes();
+    InputStream inputStream = new ByteArrayInputStream(expectedContent);
+    when(entity.getContent()).thenReturn(inputStream);
+    when(entity.getContentLength()).thenReturn((long) expectedContent.length);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    byte[] result = sdmServiceImpl.readDocumentContent(objectId, sdmCredentials, true);
+
+    assertNotNull(result);
+    assertArrayEquals(expectedContent, result);
+  }
+
+  @Test
+  public void testReadDocumentContent_NotFound() throws IOException {
+    String objectId = "testObjectId";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+
+    String grantType = "TOKEN_EXCHANGE";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(404);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream("Not found".getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    assertThrows(
+        ServiceException.class,
+        () -> sdmServiceImpl.readDocumentContent(objectId, sdmCredentials, false));
+  }
+
+  @Test
+  public void testReadDocumentContent_ServerError() throws IOException {
+    String objectId = "testObjectId";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+
+    String grantType = "TOKEN_EXCHANGE";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(500);
+    when(response.getEntity()).thenReturn(entity);
+    InputStream inputStream = new ByteArrayInputStream("Server error".getBytes());
+    when(entity.getContent()).thenReturn(inputStream);
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.readDocumentContent(objectId, sdmCredentials, false));
+    assertTrue(exception.getMessage().contains("Unexpected code"));
+  }
+
+  @Test
+  public void testReadDocumentContent_IOException() throws IOException {
+    String objectId = "testObjectId";
+    SDMCredentials sdmCredentials = new SDMCredentials();
+
+    String grantType = "TOKEN_EXCHANGE";
+    when(tokenHandler.getHttpClient(any(), any(), any(), eq(grantType))).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenThrow(new IOException("Connection failed"));
+
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.readDocumentContent(objectId, sdmCredentials, false));
+    assertTrue(exception.getMessage().contains("Failed to read document content"));
   }
 }
