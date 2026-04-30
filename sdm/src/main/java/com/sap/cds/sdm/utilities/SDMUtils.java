@@ -164,6 +164,9 @@ public class SDMUtils {
     }
     String originalExtension = getFileExtension(originalFileName);
     String newExtension = getFileExtension(newFileName);
+    if (originalExtension.isEmpty() || newExtension.isEmpty()) {
+      return false;
+    }
     return !originalExtension.equals(newExtension);
   }
 

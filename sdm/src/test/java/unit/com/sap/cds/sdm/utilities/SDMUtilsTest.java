@@ -156,6 +156,8 @@ public class SDMUtilsTest {
     assertFalse(SDMUtils.hasFileExtensionChanged("sample.pdf", "renamed.pdf"));
     assertFalse(SDMUtils.hasFileExtensionChanged(null, "file.txt"));
     assertFalse(SDMUtils.hasFileExtensionChanged("file.txt", null));
+    assertFalse(SDMUtils.hasFileExtensionChanged("sample.pdf", "sample123"));
+    assertFalse(SDMUtils.hasFileExtensionChanged("sample", "sample123"));
   }
 
   @Test
