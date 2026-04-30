@@ -134,6 +134,39 @@ public class SDMUtils {
     return matcher.find();
   }
 
+  /**
+   * Extracts the file extension from a filename (lowercase, including the dot).
+   *
+   * @param fileName the filename to extract the extension from
+   * @return the file extension (e.g. ".pdf"), or empty string if no valid extension exists
+   */
+  public static String getFileExtension(String fileName) {
+    if (fileName == null || fileName.isEmpty()) {
+      return "";
+    }
+    int lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex <= 0 || lastDotIndex == fileName.length() - 1) {
+      return "";
+    }
+    return fileName.substring(lastDotIndex).toLowerCase();
+  }
+
+  /**
+   * Checks whether the file extension has changed between the original and new filename.
+   *
+   * @param originalFileName the original filename
+   * @param newFileName the new filename
+   * @return true if the extension has changed, false otherwise
+   */
+  public static boolean hasFileExtensionChanged(String originalFileName, String newFileName) {
+    if (originalFileName == null || newFileName == null) {
+      return false;
+    }
+    String originalExtension = getFileExtension(originalFileName);
+    String newExtension = getFileExtension(newFileName);
+    return !originalExtension.equals(newExtension);
+  }
+
   public static void prepareSecondaryProperties(
       Map<String, String> requestBody,
       Map<String, String> secondaryProperties,

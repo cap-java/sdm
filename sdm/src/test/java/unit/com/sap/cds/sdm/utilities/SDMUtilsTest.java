@@ -151,6 +151,14 @@ public class SDMUtilsTest {
   }
 
   @Test
+  public void testHasFileExtensionChanged() {
+    assertTrue(SDMUtils.hasFileExtensionChanged("sample.pdf", "sample.dmg"));
+    assertFalse(SDMUtils.hasFileExtensionChanged("sample.pdf", "renamed.pdf"));
+    assertFalse(SDMUtils.hasFileExtensionChanged(null, "file.txt"));
+    assertFalse(SDMUtils.hasFileExtensionChanged("file.txt", null));
+  }
+
+  @Test
   public void prepareSecondaryPropertiesTest_withFilenameKey() {
     Map<String, String> requestBody = new HashMap<>();
     Map<String, String> secondaryProperties = new HashMap<>();

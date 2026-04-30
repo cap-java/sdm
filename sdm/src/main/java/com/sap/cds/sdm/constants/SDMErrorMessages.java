@@ -147,6 +147,8 @@ public class SDMErrorMessages {
       "Failed to access SDM error key fields";
   public static final String FAILED_TO_ACCESS_ERROR_MESSAGES_FIELDS =
       "Failed to access SDM error messages fields";
+  public static final String FILE_EXTENSION_CHANGE_NOT_ALLOWED =
+      "Changing the file extension is not allowed. The file \"%s\" must retain its original extension \"%s\".";
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(

@@ -197,6 +197,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
     List<String> filesNotFound = new ArrayList<>();
     List<String> filesWithUnsupportedProperties = new ArrayList<>();
+    List<String> extensionChangedFiles = new ArrayList<>();
     Map<String, String> badRequest = new HashMap<>();
     Map<String, String> propertyTitles = new HashMap<>();
     List<String> noSDMRoles = new ArrayList<>();
@@ -229,7 +230,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             filesWithUnsupportedProperties,
             badRequest,
             secondaryPropertiesWithInvalidDefinitions,
-            noSDMRoles);
+            noSDMRoles,
+            extensionChangedFiles);
       }
     }
     handleWarnings(
@@ -241,6 +243,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         badRequest,
         propertyTitles,
         noSDMRoles,
+        extensionChangedFiles,
         contextInfo);
   }
 
@@ -254,7 +257,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       List<String> filesWithUnsupportedProperties,
       Map<String, String> badRequest,
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
-      List<String> noSDMRoles)
+      List<String> noSDMRoles,
+      List<String> extensionChangedFiles)
       throws IOException {
     logger.debug("Processing {} attachments for update", attachments.size());
     List<String> scanFailedFiles = new ArrayList<>();
@@ -275,7 +279,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           secondaryPropertiesWithInvalidDefinitions,
           noSDMRoles,
           scanFailedFiles,
-          uploadInProgressFiles);
+          uploadInProgressFiles,
+          extensionChangedFiles);
     }
 
     // Throw exception if any files failed scan or upload in progress
@@ -319,7 +324,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> secondaryPropertiesWithInvalidDefinitions,
       List<String> noSDMRoles,
       List<String> scanFailedFiles,
-      List<String> uploadInProgressFiles)
+      List<String> uploadInProgressFiles,
+      List<String> extensionChangedFiles)
       throws IOException {
     String id = (String) attachment.get("ID");
     String filenameInRequest = (String) attachment.get("fileName");
@@ -354,6 +360,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
+    int extensionWarningsBefore = extensionChangedFiles.size();
     Map<String, String> updatedSecondaryProperties =
         prepareUpdatedProperties(
             attachmentEntity,
@@ -363,7 +370,13 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             details.fileNameInDB,
             details.descriptionInDB,
             secondaryTypeProperties,
-            propertiesInDB);
+            propertiesInDB,
+            extensionChangedFiles);
+
+    // If extension change was detected, revert filename to original
+    if (extensionChangedFiles.size() > extensionWarningsBefore) {
+      attachment.put("fileName", details.fileNameInDB);
+    }
 
     if (updatedSecondaryProperties.isEmpty()) {
       logger.debug("No changes detected for attachment ID: {}, skipping SDM update", id);
@@ -459,7 +472,8 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       String fileNameInDB,
       String descriptionInDB,
       Map<String, String> secondaryTypeProperties,
-      Map<String, String> propertiesInDB) {
+      Map<String, String> propertiesInDB,
+      List<String> extensionChangedFiles) {
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
             attachmentEntity,
@@ -469,7 +483,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             propertiesInDB);
 
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, fileNameInDB, updatedSecondaryProperties);
+        fileNameInDB,
+        filenameInRequest,
+        fileNameInDB,
+        updatedSecondaryProperties,
+        extensionChangedFiles);
 
     AttachmentsHandlerUtils.updateDescriptionProperty(
         null, descriptionInRequest, descriptionInDB, updatedSecondaryProperties, true);
@@ -563,7 +581,14 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       Map<String, String> badRequest,
       Map<String, String> propertyTitles,
       List<String> noSDMRoles,
+      List<String> extensionChangedFiles,
       String contextInfo) {
+    if (!extensionChangedFiles.isEmpty()) {
+      logger.warn("File extension change attempted for files: {}", extensionChangedFiles);
+      for (String warningMessage : extensionChangedFiles) {
+        context.getMessages().warn(warningMessage);
+      }
+    }
     if (!fileNameWithRestrictedCharacters.isEmpty()) {
       logger.warn(
           "Files with restricted characters in filename: {}", fileNameWithRestrictedCharacters);
