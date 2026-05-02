@@ -59,7 +59,7 @@ jobs:
       - name: Clone the cloud-cap-samples-java repo 🌐
         run: |
             echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
+            git clone --depth 1 --branch revertDsblUpldBtnChnges https://github.com/vibhutikumar07/cloud-cap-samples-java.git
             echo "✅ Repository cloned!"
       
       - name: Override cds.services.version (runtime only)
