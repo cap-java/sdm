@@ -583,7 +583,7 @@ class IntegrationTest_Chapters_MultipleFacet {
 
       for (int i = 0; i < facet.length; i++) {
         api.renameAttachment(
-            appUrl, chapterEntityName, facet[i], chapterID, ID2[i], "sample123.pdf");
+            appUrl, chapterEntityName, facet[i], chapterID, ID2[i], "sample123.txt");
       }
 
       response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID);
