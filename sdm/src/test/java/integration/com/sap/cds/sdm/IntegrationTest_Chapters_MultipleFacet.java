@@ -552,7 +552,7 @@ class IntegrationTest_Chapters_MultipleFacet {
         return;
       }
 
-      String restrictedName = "a/\\bc.pdf"; // \b becomes BACKSPACE
+      String restrictedName = "a/\\bc.txt"; // \b becomes BACKSPACE
       response =
           api.renameAttachment(
               appUrl, chapterEntityName, facet[i], chapterID, ID2[i], restrictedName);
@@ -575,7 +575,7 @@ class IntegrationTest_Chapters_MultipleFacet {
 
     // ---------------- EXPECTED MESSAGE (EXACT) ----------------
     String expectedMessage =
-        "\"a/\\bc.pdf\" contains unsupported characters ('/' or '\\'). Rename and try again.\n\n"
+        "\"a/\\bc.txt\" contains unsupported characters ('/' or '\\'). Rename and try again.\n\n"
             + "Table: attachments\n"
             + "Page: IntegrationTestEntity";
 
@@ -610,11 +610,11 @@ class IntegrationTest_Chapters_MultipleFacet {
 
     if ("Entity in draft mode".equals(response)) {
       // To create a duplicate within the same facet, we need to rename ID2[i] to
-      // the same name as an existing file in that facet. The existing files are:
-      // sample.pdf (ID[0]), sample.txt (ID[1]), sample.exe (ID[2]) - these are the first uploads
-      // We rename ID2[i] (sample123.pdf from test 8) to "sample.pdf" which already exists
-      String[] duplicateNames = {"sample.pdf", "sample.txt", "sample.exe"};
-      String[] validNames = {"unique_sample1.pdf", "unique_sample2.txt", "unique_sample3.exe"};
+      // the same name as an existing file in that facet. After test 7, the existing files are:
+      // sample123 (ID[0]), reference123 (ID[1]), footnote123 (ID[2])
+      // We rename ID2[i] (sample123.txt from test 8) to these names which already exist
+      String[] duplicateNames = {"sample123", "reference123", "footnote123"};
+      String[] validNames = {"unique_sample1.txt", "unique_sample2.txt", "unique_sample3.txt"};
 
       // Try to rename to duplicate file names (names that already exist in each facet)
       for (int i = 0; i < facet.length; i++) {
