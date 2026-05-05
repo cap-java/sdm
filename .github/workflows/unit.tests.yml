@@ -8,6 +8,7 @@ on:
     types: [opened, synchronize, reopened, auto_merge_enabled]
   workflow_dispatch: 
 permissions:
+  contents: read # allows workflow to checkout private repository
   pull-requests: read
 
 jobs:
