@@ -11,6 +11,7 @@ on:
   workflow_dispatch:
   
 permissions:
+  contents: read # allows workflow to checkout private repository
   pull-requests: read # allows SonarQube to decorate PRs with analysis results
 
 jobs:
