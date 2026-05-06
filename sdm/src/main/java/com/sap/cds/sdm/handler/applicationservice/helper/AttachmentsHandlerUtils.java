@@ -664,14 +664,17 @@ public class AttachmentsHandlerUtils {
    *
    * @param fileNameInDB the filename currently in the database
    * @param filenameInRequest the filename from the request
+   * @param fileNameInSDM the filename in SDM
    * @param updatedSecondaryProperties the map to update
+   * @param extensionChangedFiles list to collect filenames where extension change was attempted
    * @throws ServiceException if filename validation fails
    */
   public static void updateFilenameProperty(
       String fileNameInDB,
       String filenameInRequest,
       String fileNameInSDM,
-      Map<String, String> updatedSecondaryProperties)
+      Map<String, String> updatedSecondaryProperties,
+      List<String> extensionChangedFiles)
       throws ServiceException {
     logger.debug(
         "Updating filename property - DB: {}, Request: {}, SDM: {}",
@@ -681,6 +684,9 @@ public class AttachmentsHandlerUtils {
     if (fileNameInDB == null) {
       if (filenameInRequest != null) {
         if (!filenameInRequest.equals(fileNameInSDM)) {
+          if (isFileExtensionChanged(fileNameInSDM, filenameInRequest, extensionChangedFiles)) {
+            return;
+          }
           logger.debug(
               "Filename updated from SDM value: {} to request value: {}",
               fileNameInSDM,
@@ -696,6 +702,9 @@ public class AttachmentsHandlerUtils {
         logger.warn("Filename validation failed: filename cannot be empty");
         throw new ServiceException("Filename cannot be empty");
       } else if (!fileNameInDB.equals(filenameInRequest)) {
+        if (isFileExtensionChanged(fileNameInDB, filenameInRequest, extensionChangedFiles)) {
+          return;
+        }
         logger.debug(
             "Filename updated from DB value: {} to request value: {}",
             fileNameInDB,
@@ -703,6 +712,30 @@ public class AttachmentsHandlerUtils {
         updatedSecondaryProperties.put("filename", filenameInRequest);
       }
     }
+  }
+
+  /**
+   * Checks if the file extension has changed. If so, adds a warning message to the list and returns
+   * true, indicating the rename should be skipped and the filename reverted.
+   *
+   * @param originalFileName the original filename (from DB or SDM)
+   * @param newFileName the new filename from the request
+   * @param extensionChangedFiles list to collect warning messages
+   * @return true if extension changed (rename should be skipped), false otherwise
+   */
+  private static boolean isFileExtensionChanged(
+      String originalFileName, String newFileName, List<String> extensionChangedFiles) {
+    if (SDMUtils.hasFileExtensionChanged(originalFileName, newFileName)) {
+      String originalExtension = SDMUtils.getFileExtension(originalFileName);
+      logger.warn("File extension change attempted: {} -> {}", originalFileName, newFileName);
+      extensionChangedFiles.add(
+          String.format(
+              SDMUtils.getErrorMessage("FILE_EXTENSION_CHANGE_NOT_ALLOWED"),
+              newFileName,
+              originalExtension));
+      return true;
+    }
+    return false;
   }
 
   public static void updateDescriptionProperty(

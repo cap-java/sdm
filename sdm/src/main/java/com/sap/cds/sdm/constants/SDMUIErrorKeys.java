@@ -68,6 +68,8 @@ public final class SDMUIErrorKeys {
       "SDM.multipleDuplicateFilenamesPrefix";
   public static final String MULTIPLE_DUPLICATE_FILENAMES_SUFFIX_KEY =
       "SDM.multipleDuplicateFilenamesSuffix";
+  public static final String FILE_EXTENSION_CHANGE_NOT_ALLOWED_KEY =
+      "SDM.fileExtensionChangeNotAllowed";
 
   // Update Operation Errors
   public static final String FILE_NOT_FOUND_PREFIX_KEY = "SDM.fileNotFoundPrefix";
