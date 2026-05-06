@@ -26,7 +26,6 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 - Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
 - Active entity attachment creation: Provides the capability to create attachments directly on active (non-draft) entities.
-- Upload button visibility control: Provides the capability to automatically show or hide the Upload button based on the configured `maxCount` limit.
 - Download attachments: Provides the capability to download multiple selected file attachments at once with smart button enablement.
 
 ## Table of Contents
@@ -49,7 +48,6 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Localization](#support-for-localization)
 - [Support for Attachment Upload Status](#support-for-attachment-upload-status)
 - [Support for Attachment creation in Active Entities](#support-for-attachment-creation-in-active-entities)
-- [Support for Upload Button Visibility Control](#support-for-upload-button-visibility-control)
 - [Support for Download Attachments](#support-for-download-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
@@ -1397,74 +1395,6 @@ To create attachments on active entities, the leading application needs to trigg
    applicationService.run(
        Insert.into("MyService.MyEntity.attachments").entry(attachmentData)
    );
-
-## Support for Upload Button Visibility Control
-
-The plugin can automatically **hide the Upload button** once the configured `maxCount` is reached, and **re-enable it** when an attachment is deleted and the count drops back below the limit. This gives end users immediate visual feedback about whether further uploads are allowed, without relying solely on an error message after the attempt.
-
-### How It Works
-
-1. **On upload (create):** After a successful upload, the plugin compares the current attachment count with `maxCount`. If the count reaches or exceeds `maxCount`, a boolean flag on the parent entity (e.g. `isAttachmentsUploadable`) is set to `false`. The UI reads this flag via a `Capabilities` annotation and hides the Upload button.
-2. **On delete:** After an attachment is deleted, if the remaining count is below `maxCount`, the same flag is set back to `true` and the Upload button reappears.
-
-### Usage in Leading Applications
-
-#### Step 1 — Add a boolean field to the parent entity
-
-Add a boolean field for each attachment facet that should have Upload button control. The field name must follow the pattern `is<FacetName>Uploadable` where `<FacetName>` is the capitalised name of the composition (e.g. `attachments` → `isAttachmentsUploadable`).
-
-```cds
-entity Books {
-  key ID : UUID;
-  ...
-  isAttachmentsUploadable : Boolean default true;
-  attachments             : Composition of many Attachments @SDM.Attachments:{ maxCount: 4 };
-}
-```
-
-> **Note:** Initialise the field to `true` so the Upload button is visible before any attachment is added.
-
-#### Step 2 — Annotate the composition at the service layer
-
-Use the `@Capabilities.InsertRestrictions.Insertable` annotation to bind the Upload button visibility to the flag on the parent entity:
-
-```cds
-annotate MyService.Books.attachments with @(
-  Capabilities: {
-    InsertRestrictions: {
-      Insertable: up_.isAttachmentsUploadable
-    }
-  }
-);
-```
-
-The `up_` navigation property refers to the parent `Books` entity. The UI framework reads this annotation and enables or disables the Upload button accordingly.
-
-#### Multiple facets
-
-For each additional facet, add its own boolean field and annotation:
-
-```cds
-entity Books {
-  key ID : UUID;
-  ...
-  isAttachmentsUploadable : Boolean default true;
-  isReferencesUploadable  : Boolean default true;
-  attachments             : Composition of many Attachments @SDM.Attachments:{ maxCount: 4 };
-  references              : Composition of many Attachments @SDM.Attachments:{ maxCount: 3 };
-}
-```
-
-```cds
-annotate MyService.Books.attachments with @(
-  Capabilities: { InsertRestrictions: { Insertable: up_.isAttachmentsUploadable } }
-);
-annotate MyService.Books.references with @(
-  Capabilities: { InsertRestrictions: { Insertable: up_.isReferencesUploadable } }
-);
-```
-
-> **Note:** No additional Java or configuration changes are required in the leading application. The plugin derives the field name from the facet's composition name automatically.
 
 ## Support for Download Attachments
 
