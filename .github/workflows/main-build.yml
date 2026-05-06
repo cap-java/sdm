@@ -32,6 +32,8 @@ jobs:
     name: Update version
     runs-on: ubuntu-latest
     needs: [ build ]
+    # Security: Only run in original repo, not forks
+    if: github.repository == 'cap-java/sdm'
     permissions:
       contents: write
       packages: write

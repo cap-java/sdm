@@ -18,11 +18,14 @@ on:
         default: ''
 
 permissions:
+  contents: read
   pull-requests: read
   packages: read  # Added permission to read packages
 
 jobs:
   deploy:
+    # Security: Only run in original repo, not forks
+    if: github.repository == 'cap-java/sdm'
     runs-on: ubuntu-latest
 
     steps:

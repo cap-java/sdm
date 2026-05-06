@@ -14,7 +14,10 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
+    # Security: Only run if PR merged AND not from a fork
+    if: |
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
     steps:

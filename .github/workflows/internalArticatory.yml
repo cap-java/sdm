@@ -14,6 +14,8 @@ on:
 jobs:
   build-and-deploy-artifactory:
     runs-on: ubuntu-latest
+    # Security: Only run in original repo, not forks
+    if: github.repository == 'cap-java/sdm'
     permissions:
       contents: read
     steps:
