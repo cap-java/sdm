@@ -11,9 +11,6 @@ on:
         description: 'Specify the branch to use for integration tests'
         required: true
 
-permissions:
-  contents: read
-
 jobs:
   integration-test:
     runs-on: ubuntu-latest
