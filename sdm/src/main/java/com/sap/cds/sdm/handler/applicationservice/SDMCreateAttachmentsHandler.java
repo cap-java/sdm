@@ -482,8 +482,22 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
 
+    List<String> extensionChangedFiles = new ArrayList<>();
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
+        fileNameInDB,
+        filenameInRequest,
+        fileNameInSDM,
+        updatedSecondaryProperties,
+        extensionChangedFiles);
+
+    // If extension change was detected, revert filename to original and warn
+    if (!extensionChangedFiles.isEmpty()) {
+      attachment.put("fileName", fileNameInSDM);
+      for (String warningMessage : extensionChangedFiles) {
+        context.getMessages().warn(warningMessage);
+      }
+    }
+
     AttachmentsHandlerUtils.updateDescriptionProperty(
         descriptionInSDM,
         descriptionInRequest,

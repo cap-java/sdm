@@ -406,7 +406,7 @@ public class SDMUpdateAttachmentsHandlerTest {
           .when(
               () ->
                   AttachmentsHandlerUtils.updateFilenameProperty(
-                      anyString(), anyString(), anyString(), any(Map.class)))
+                      anyString(), anyString(), anyString(), any(Map.class), any(List.class)))
           .thenAnswer(invocation -> null);
 
       attachmentsMockStatic
