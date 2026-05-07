@@ -183,7 +183,7 @@ class IntegrationTest_MultipleFacet_Virus {
   @Order(2)
   void testUpdateEmptyEntity() {
     System.out.println("Test (2) : Update an existing entity");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
