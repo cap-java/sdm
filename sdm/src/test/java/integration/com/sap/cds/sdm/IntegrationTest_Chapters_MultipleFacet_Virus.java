@@ -164,7 +164,7 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
   @Order(1)
   void testCreateBookChapterAndCheck() {
     System.out.println("Test (1) : Create book+chapter and check if they exist");
-    Boolean testStatus = false;
+    boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
