@@ -1,0 +1,160 @@
+package integration.com.sap.cds.sdm;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import okhttp3.*;
+import org.junit.jupiter.api.*;
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+class IntegrationTest_SingleFacet_VersionedRepository {
+
+  private static final String UPDATE_ENV_SCRIPT =
+      "src/test/java/integration/com/sap/cds/sdm/utils/cf-update-env.sh";
+
+  private static String token;
+  private static String clientId;
+  private static String clientSecret;
+  private static String appUrl;
+  private static String authUrl;
+  private static String username;
+  private static String password;
+  private static String serviceName = "AdminService";
+  private static String entityName = "Books";
+  private static String entityName2 = "author";
+  private static String srvpath = "AdminService";
+  private static String facetName = "attachments";
+  private static String versionedRepositoryID;
+  private static String defaultRepositoryID;
+  private static ApiInterface api;
+  private static String entityID;
+
+  @BeforeAll
+  static void setup() throws IOException {
+    Properties credentialsProperties = Credentials.getCredentials();
+    String tenancyModel = System.getProperty("tenancyModel");
+
+    username = credentialsProperties.getProperty("username");
+    password = credentialsProperties.getProperty("password");
+    versionedRepositoryID = credentialsProperties.getProperty("versionedRepositoryID");
+    defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryID");
+
+    if (tenancyModel.equals("single")) {
+      clientId = credentialsProperties.getProperty("clientID");
+      clientSecret = credentialsProperties.getProperty("clientSecret");
+      appUrl = credentialsProperties.getProperty("appUrl");
+      authUrl = credentialsProperties.getProperty("authUrl");
+    } else {
+      throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
+    }
+
+    String credentials = clientId + ":" + clientSecret;
+    String basicAuth =
+        "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+
+    OkHttpClient client =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    MediaType mediaType = MediaType.parse("text/plain");
+    RequestBody body = RequestBody.create(mediaType, "");
+
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    Request request;
+    if (tokenFlowFlag.equals("namedUser")) {
+      request =
+          new Request.Builder()
+              .url(
+                  authUrl
+                      + "/oauth/token?grant_type=password&username="
+                      + username
+                      + "&password="
+                      + password)
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
+    } else if (tokenFlowFlag.equals("technicalUser")) {
+      request =
+          new Request.Builder()
+              .url(authUrl + "/oauth/token?grant_type=client_credentials")
+              .method("POST", body)
+              .addHeader("Authorization", basicAuth)
+              .build();
+    } else {
+      throw new IllegalArgumentException("Invalid token flow specified: " + tokenFlowFlag);
+    }
+
+    Response response = client.newCall(request).execute();
+    if (response.code() != 200) {
+      System.out.println("Token generation failed. Response code: " + response.code());
+      System.out.println("Error body: " + response.body().string());
+    }
+    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
+    response.close();
+
+    Map<String, String> config = new HashMap<>();
+    config.put("Authorization", "Bearer " + token);
+    config.put("serviceName", serviceName);
+    api = new Api(config);
+  }
+
+  @Test
+  @Order(1)
+  void testChangeToVersionedRepository() throws Exception {
+    System.out.println(
+        "Test (1) : Change REPOSITORY_ID to versioned repository: " + versionedRepositoryID);
+    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", versionedRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
+  }
+
+  @Test
+  @Order(2)
+  void testCreateEntityAndUploadAttachmentShouldFail() throws IOException {
+    System.out.println(
+        "Test (2) : Create entity and upload attachment on versioned repository — expect error");
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", response, "Entity creation should succeed");
+    entityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+    String check = createResponse.get(0);
+
+    if (check.equals("Attachment created")) {
+      response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+      assertNotEquals("Saved", response, "Save should fail on versioned repository");
+      System.out.println("Save failed as expected: " + response);
+    } else {
+      System.out.println("Operation failed as expected: " + check);
+      assertTrue(
+          check.contains("error") || check.contains("Error"),
+          "Response should contain an error message");
+    }
+  }
+
+  @Test
+  @Order(3)
+  void testRevertToDefaultRepository() throws Exception {
+    System.out.println(
+        "Test (3) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
+    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", defaultRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
+  }
+}

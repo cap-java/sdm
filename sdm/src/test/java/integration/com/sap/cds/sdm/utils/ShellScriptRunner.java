@@ -95,7 +95,6 @@ public class ShellScriptRunner {
                   new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                  System.out.println("[script] " + line);
                   if (!line.trim().isEmpty()) stdoutLines.add(line.trim());
                 }
               } catch (IOException e) {
@@ -127,5 +126,94 @@ public class ShellScriptRunner {
       throw new RuntimeException(scriptPath + " exited with code " + exitCode);
     }
     return stdoutLines.isEmpty() ? null : stdoutLines.get(stdoutLines.size() - 1);
+  }
+
+  /**
+   * Runs a shell script and returns all stdout lines as a list. Does NOT throw on non-zero exit
+   * code — the caller is responsible for checking the exit code via the returned result.
+   *
+   * @param scriptPath absolute or relative path to the .sh file
+   * @param args additional arguments forwarded to the script
+   * @return a Result containing the exit code and all stdout lines
+   */
+  public static Result runAndCaptureAll(String scriptPath, String... args)
+      throws IOException, InterruptedException {
+    List<String> command = new ArrayList<>();
+    command.add("bash");
+    command.add(scriptPath);
+    Collections.addAll(command, args);
+
+    ProcessBuilder pb = new ProcessBuilder(command);
+    pb.redirectErrorStream(false);
+    Process process = pb.start();
+
+    final List<String> stdoutLines = new CopyOnWriteArrayList<>();
+
+    Thread stdoutThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.out.println("[script] " + line);
+                  stdoutLines.add(line);
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stdout: " + e.getMessage());
+              }
+            });
+
+    Thread stderrThread =
+        new Thread(
+            () -> {
+              try (BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  System.err.println("[script-err] " + line);
+                }
+              } catch (IOException e) {
+                System.err.println("Error reading script stderr: " + e.getMessage());
+              }
+            });
+
+    stdoutThread.start();
+    stderrThread.start();
+    int exitCode = process.waitFor();
+    stdoutThread.join();
+    stderrThread.join();
+
+    return new Result(exitCode, stdoutLines);
+  }
+
+  /** Holds the exit code and captured stdout lines from a script execution. */
+  public static class Result {
+    private final int exitCode;
+    private final List<String> lines;
+
+    public Result(int exitCode, List<String> lines) {
+      this.exitCode = exitCode;
+      this.lines = lines;
+    }
+
+    public int getExitCode() {
+      return exitCode;
+    }
+
+    public List<String> getLines() {
+      return lines;
+    }
+
+    /** Returns all stdout lines joined with newline. */
+    public String getOutput() {
+      return String.join("\n", lines);
+    }
+
+    /** Check if any line contains the given substring (case-insensitive). */
+    public boolean containsIgnoreCase(String substring) {
+      String lower = substring.toLowerCase();
+      return lines.stream().anyMatch(l -> l.toLowerCase().contains(lower));
+    }
   }
 }

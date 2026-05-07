@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -6864,8 +6865,72 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
+  @Test
+  @Order(76)
+  void testReadCmisMetadataCreatedBy() {
+    System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
+    String createdBy = CmisDocumentHelper.getCmisProperty(entityID, "sample.pdf", "cmis:createdBy");
+    System.out.println("cmis:createdBy value: " + createdBy);
+    assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+  }
+
+  @Test
+  @Order(77)
+  void testUploadVirusFileInScanDisabledRepo() throws IOException {
+    System.out.println(
+        "Test (77) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
+
+    for (int i = 0; i < facet.length; i++) {
+      boolean testStatus = false;
+      String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+      if (response.equals("Could not create entity")) {
+        fail("Could not create entity for facet: " + facet[i]);
+      }
+      String testEntityID = response;
+
+      // Use EICAR test virus file
+      String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+      File file = new File(eicarFilePath);
+      if (!file.exists()) {
+        fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+      }
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testEntityID);
+      postData.put("mimeType", "text/plain");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      List<String> createResponse =
+          api.createAttachment(appUrl, entityName, facet[i], testEntityID, srvpath, postData, file);
+      String check = createResponse.get(0);
+      if (check.equals("Attachment created")) {
+        String testAttachmentID = createResponse.get(1);
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+        if (response.equals("Saved")) {
+          // Verify attachment is readable (upload succeeded despite being a virus file)
+          response =
+              api.readAttachment(appUrl, entityName, facet[i], testEntityID, testAttachmentID);
+          if (response.equals("OK")) {
+            testStatus = true;
+          }
+        }
+      }
+
+      // Clean up
+      api.deleteEntity(appUrl, entityName, testEntityID);
+
+      if (!testStatus) {
+        fail(
+            "Virus file upload should succeed in a virus scan disabled repository for facet: "
+                + facet[i]);
+      }
+    }
+  }
+
   // @Test
-  // @Order(76)
+  // @Order(78)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
   //   System.out.println(
   //       "Test (76) : Upload attachment exceeding maximum file size in references facet");

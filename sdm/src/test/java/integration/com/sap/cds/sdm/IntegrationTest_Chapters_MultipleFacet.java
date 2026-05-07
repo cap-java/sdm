@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -6619,5 +6620,79 @@ class IntegrationTest_Chapters_MultipleFacet {
     // Cleanup
     api.deleteEntity(appUrl, bookEntityName, sourceBookID);
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
+  }
+
+  @Test
+  @Order(76)
+  void testReadCmisMetadataCreatedBy() {
+    System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
+    String createdBy =
+        CmisDocumentHelper.getCmisProperty(chapterID, "sample.pdf", "cmis:createdBy");
+    System.out.println("cmis:createdBy value: " + createdBy);
+    assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+  }
+
+  @Test
+  @Order(77)
+  void testUploadVirusFileInScanDisabledRepo() throws IOException {
+    System.out.println(
+        "Test (77) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
+
+    for (int i = 0; i < facet.length; i++) {
+      boolean testStatus = false;
+
+      // Create book and chapter
+      String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+      if (testBookID.equals("Could not create entity")) {
+        fail("Could not create book for facet: " + facet[i]);
+      }
+
+      String testChapterID =
+          api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+      if (testChapterID.equals("Could not create entity")) {
+        fail("Could not create chapter for facet: " + facet[i]);
+      }
+
+      // Use EICAR test virus file
+      String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+      File file = new File(eicarFilePath);
+      if (!file.exists()) {
+        fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+      }
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "text/plain");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facet[i], testChapterID, srvpath, postData, file);
+      String check = createResponse.get(0);
+      if (check.equals("Attachment created")) {
+        String testAttachmentID = createResponse.get(1);
+        String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+        if (response.equals("Saved")) {
+          // Verify attachment is readable (upload succeeded despite being a virus file)
+          response =
+              api.readAttachment(
+                  appUrl, chapterEntityName, facet[i], testChapterID, testAttachmentID);
+          if (response.equals("OK")) {
+            testStatus = true;
+          }
+        }
+      }
+
+      // Clean up
+      api.deleteEntity(appUrl, bookEntityName, testBookID);
+
+      if (!testStatus) {
+        fail(
+            "Virus file upload should succeed in a virus scan disabled repository for facet: "
+                + facet[i]);
+      }
+    }
   }
 }
