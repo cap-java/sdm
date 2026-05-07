@@ -168,7 +168,7 @@ class IntegrationTest_SingleFacet_Virus {
   @Order(1)
   void testCreateEntityAndCheck() {
     System.out.println("Test (1) : Create entity and check if it exists");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (response != "Could not create entity") {
       entityID = response;
@@ -189,7 +189,7 @@ class IntegrationTest_SingleFacet_Virus {
   @Order(2)
   void testUpdateEmptyEntity() {
     System.out.println("Test (2) : Update an existing entity");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
@@ -209,7 +209,7 @@ class IntegrationTest_SingleFacet_Virus {
   @Order(3)
   void testUploadSingleAttachmentPDF() throws IOException {
     System.out.println("Test (3) : Upload pdf");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("sample.pdf").getFile());
 

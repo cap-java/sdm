@@ -164,7 +164,7 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
   @Order(1)
   void testCreateBookChapterAndCheck() {
     System.out.println("Test (1) : Create book+chapter and check if they exist");
-    Boolean testStatus = false;
+    boolean testStatus = false;
 
     String response = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
@@ -196,7 +196,7 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
   @Order(2)
   void testUpdateEmptyBookChapter() {
     System.out.println("Test (2) : Update an existing book+chapter");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, bookEntityName, srvpath, bookID);
     if (response.equals("Entity in draft mode")) {
       response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID);
