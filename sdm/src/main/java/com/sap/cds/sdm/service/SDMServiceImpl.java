@@ -371,9 +371,28 @@ public class SDMServiceImpl implements SDMService {
   public void readDocument(
       String objectId, SDMCredentials sdmCredentials, AttachmentReadEventContext context) {
     logger.debug("START: readDocument for objectId: {}", objectId);
+    try {
+      byte[] content =
+          readDocumentContent(objectId, sdmCredentials, context.getUserInfo().isSystemUser());
+      try (InputStream inputStream = new ByteArrayInputStream(content)) {
+        context.getData().setContent(inputStream);
+        logger.debug("END: readDocument - content set in context");
+      }
+    } catch (ServiceException e) {
+      throw e;
+    } catch (Exception e) {
+      logger.error("Error reading document {}: {}", objectId, e.getMessage(), e);
+      throw new ServiceException("Failed to set document stream in context");
+    }
+  }
+
+  @Override
+  public byte[] readDocumentContent(
+      String objectId, SDMCredentials sdmCredentials, boolean isSystemUser) throws IOException {
+    logger.debug("START: readDocumentContent for objectId: {}", objectId);
     String repositoryId = SDMConstants.REPOSITORY_ID;
-    String grantType = context.getUserInfo().isSystemUser() ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    logger.info("This is a :" + grantType + " flow");
+    String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
+    logger.info("readDocumentContent - This is a: {} flow", grantType);
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     String sdmUrl =
@@ -392,16 +411,19 @@ public class SDMServiceImpl implements SDMService {
         if (responseCode == 404) {
           throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
         }
-        throw new ServiceException("Unexpected code");
+        throw new ServiceException("Unexpected code " + responseCode);
       }
       byte[] responseBody = EntityUtils.toByteArray(response.getEntity());
-      try (InputStream inputStream = new ByteArrayInputStream(responseBody)) {
-        context.getData().setContent(inputStream);
-        logger.debug("END: readDocument - content set in context");
-      }
+      logger.debug(
+          "END: readDocumentContent - {} bytes read for objectId: {}",
+          responseBody.length,
+          objectId);
+      return responseBody;
+    } catch (ServiceException e) {
+      throw e;
     } catch (Exception e) {
-      logger.error("Error reading document {}: {}", objectId, e.getMessage(), e);
-      throw new ServiceException("Failed to set document stream in context");
+      logger.error("Error reading document content {}: {}", objectId, e.getMessage(), e);
+      throw new ServiceException("Failed to read document content from repository");
     }
   }
 
@@ -530,8 +552,7 @@ public class SDMServiceImpl implements SDMService {
       logger.debug("END: getFolderIdByPath - folderId: {}", folderId);
       return folderId;
     } catch (IOException e) {
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")));
+      throw new ServiceException(SDMErrorMessages.getCouldNotUploadDocument());
     }
   }
 
@@ -661,13 +682,17 @@ public class SDMServiceImpl implements SDMService {
   }
 
   @Override
-  public int deleteDocument(String cmisaction, String objectId, String user) {
+  public int deleteDocument(String cmisaction, String objectId, String user, Boolean isSytemUser) {
     logger.info(
-        "Deleting document - action: {}, objectId: {}, user: {}", cmisaction, objectId, user);
+        "Deleting document - action: {}, objectId: {}, user: {},isSystemUser :{}",
+        cmisaction,
+        objectId,
+        user,
+        isSytemUser);
     long startTime = System.currentTimeMillis();
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     HttpClient httpClient;
-    if (user.equals(SDMConstants.SYSTEM_USER)) {
+    if (isSytemUser) {
       logger.debug("Using TECHNICAL_USER_FLOW for deletion");
       httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, TECHNICAL_USER_FLOW);
     } else {
@@ -692,8 +717,7 @@ public class SDMServiceImpl implements SDMService {
       return statusCode;
     } catch (IOException e) {
       logger.error("Error deleting document {}: {}", objectId, e.getMessage(), e);
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_DELETE")));
+      throw new ServiceException(SDMErrorMessages.getCouldNotDeleteDocument());
     }
   }
 

@@ -470,8 +470,7 @@ public class DocumentUploadService {
       logger.debug("END: formResponse - status: {} for file: {}", status, name);
     } catch (IOException e) {
       logger.error("Error forming response: {}", e.getMessage(), e);
-      throw new ServiceException(
-          SDMErrorMessages.getGenericError(SDMUtils.getErrorMessage("EVENT_UPLOAD")), e);
+      throw new ServiceException(SDMErrorMessages.getCouldNotUploadDocument(), e);
     }
   }
 }

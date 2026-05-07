@@ -20,6 +20,7 @@ import com.sap.cds.sdm.service.handler.AttachmentMoveEventContext;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
+import java.time.Instant;
 import java.util.*;
 import java.util.ArrayList;
 import org.slf4j.Logger;
@@ -46,15 +47,26 @@ public class DBQuery {
       PersistenceService persistenceService,
       String upID,
       String upIdKey) {
+    logger.debug(
+        "Fetching attachments for upID: {} with key: {} from entity: {}",
+        upID,
+        upIdKey,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
             .where(doc -> doc.get(upIdKey).eq(upID));
-    return persistenceService.run(q);
+    Result result = persistenceService.run(q);
+    logger.debug("Found {} attachment(s) for upID: {}", result.rowCount(), upID);
+    return result;
   }
 
   public CmisDocument getObjectIdForAttachmentID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    logger.debug(
+        "Fetching objectId for attachment ID: {} from entity: {}",
+        id,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns(
@@ -70,6 +82,7 @@ public class DBQuery {
     Optional<Row> res = result.first();
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
+      logger.debug("Attachment found for ID: {}", id);
       Row row = res.get();
       cmisDocument.setObjectId(row.get("objectId").toString());
       cmisDocument.setFileName(row.get("fileName").toString());
@@ -80,12 +93,15 @@ public class DBQuery {
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
       cmisDocument.setUploadStatus(
           row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+    } else {
+      logger.debug("No attachment found for ID: {}", id);
     }
     return cmisDocument;
   }
 
   public CmisDocument getAttachmentForObjectID(
       PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
+    logger.debug("Fetching attachment for objectId: {}", id);
 
     // Use the new API to resolve the target attachment entity
     String parentEntity = context.getParentEntity();
@@ -95,6 +111,7 @@ public class DBQuery {
     // Find the parent entity
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.error("Parent entity not found: {}", parentEntity);
       throw new ServiceException(
           String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
@@ -103,6 +120,10 @@ public class DBQuery {
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error(
+          "Composition '{}' not found or not an association in parent entity: {}",
+          compositionName,
+          parentEntity);
       throw new ServiceException(
           String.format(
               SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
@@ -117,6 +138,7 @@ public class DBQuery {
     // Find the target attachment entity
     Optional<CdsEntity> attachmentEntity = model.findEntity(targetEntityName);
     if (attachmentEntity.isEmpty()) {
+      logger.error("Target attachment entity not found: {}", targetEntityName);
       throw new ServiceException(
           String.format(
               SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
@@ -133,11 +155,14 @@ public class DBQuery {
 
     CmisDocument cmisDocument = new CmisDocument();
     if (res.isPresent()) {
+      logger.debug("Attachment found in active entity for objectId: {}", id);
       Row row = res.get();
       cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
       cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
     } else {
       // Check in draft table as well
+      logger.debug(
+          "Attachment not found in active entity, checking draft table for objectId: {}", id);
       Optional<CdsEntity> attachmentDraftEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentDraftEntity.isPresent()) {
         q =
@@ -147,9 +172,12 @@ public class DBQuery {
         result = persistenceService.run(q);
         res = result.first();
         if (res.isPresent()) {
+          logger.debug("Attachment found in draft entity for objectId: {}", id);
           Row row = res.get();
           cmisDocument.setType(row.get("type") != null ? row.get("type").toString() : null);
           cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+        } else {
+          logger.debug("Attachment not found in draft entity either for objectId: {}", id);
         }
       }
     }
@@ -174,6 +202,7 @@ public class DBQuery {
     // Find the parent entity
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.error("Parent entity not found for move operation: {}", parentEntity);
       throw new ServiceException(
           String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
@@ -182,6 +211,10 @@ public class DBQuery {
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error(
+          "Composition '{}' not found or not an association in parent entity: {} for move operation",
+          compositionName,
+          parentEntity);
       throw new ServiceException(
           String.format(
               SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
@@ -199,6 +232,9 @@ public class DBQuery {
       // Try with _drafts suffix
       attachmentEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentEntity.isEmpty()) {
+        logger.error(
+            "Target attachment entity not found (neither active nor draft) for move operation: {}",
+            targetEntityName);
         throw new ServiceException(
             String.format(
                 SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
@@ -262,6 +298,7 @@ public class DBQuery {
     // Find the parent entity
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.error("Parent entity not found for secondary properties resolution: {}", parentEntity);
       throw new ServiceException(
           String.format(SDMUtils.getErrorMessage("PARENT_ENTITY_NOT_FOUND_ERROR"), parentEntity));
     }
@@ -270,6 +307,10 @@ public class DBQuery {
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error(
+          "Composition '{}' not found or not an association in parent entity: {} for secondary properties resolution",
+          compositionName,
+          parentEntity);
       throw new ServiceException(
           String.format(
               SDMUtils.getErrorMessage("COMPOSITION_NOT_FOUND_ERROR"),
@@ -286,6 +327,9 @@ public class DBQuery {
     if (attachmentEntity.isEmpty()) {
       attachmentEntity = model.findEntity(targetEntityName + "_drafts");
       if (attachmentEntity.isEmpty()) {
+        logger.error(
+            "Target attachment entity not found (neither active nor draft) for secondary properties resolution: {}",
+            targetEntityName);
         throw new ServiceException(
             String.format(
                 SDMUtils.getErrorMessage("TARGET_ATTACHMENT_ENTITY_NOT_FOUND_ERROR"),
@@ -329,6 +373,11 @@ public class DBQuery {
       PersistenceService persistenceService,
       String upID,
       String upIdKey) {
+    logger.debug(
+        "Fetching attachments for upID: {} and repositoryId: {} from entity: {}",
+        upID,
+        SDMConstants.REPOSITORY_ID,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
@@ -337,11 +386,21 @@ public class DBQuery {
                     doc.get(upIdKey)
                         .eq(upID)
                         .and(doc.get("repositoryId").eq(SDMConstants.REPOSITORY_ID)));
-    return persistenceService.run(q);
+    Result result = persistenceService.run(q);
+    logger.debug(
+        "Found {} attachment(s) for upID: {} with repositoryId: {}",
+        result.rowCount(),
+        upID,
+        SDMConstants.REPOSITORY_ID);
+    return result;
   }
 
   public CmisDocument getAttachmentForID(
       CdsEntity attachmentEntity, PersistenceService persistenceService, String id) {
+    logger.debug(
+        "Fetching attachment fileName for ID: {} from entity: {}",
+        id,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity).columns("fileName").where(doc -> doc.get("ID").eq(id));
     Result result = persistenceService.run(q);
@@ -349,6 +408,7 @@ public class DBQuery {
     for (Row row : result.list()) {
       cmisDocument.setFileName(row.get("fileName").toString());
     }
+    logger.debug("Retrieved fileName: {} for attachment ID: {}", cmisDocument.getFileName(), id);
     return cmisDocument;
   }
 
@@ -357,25 +417,50 @@ public class DBQuery {
       PersistenceService persistenceService,
       CmisDocument cmisDocument) {
     String repositoryId = SDMConstants.REPOSITORY_ID;
+    logger.debug(
+        "Adding attachment to entity: {}, uploadStatus: {}",
+        attachmentEntity.getQualifiedName(),
+        cmisDocument.getUploadStatus());
+
     Map<String, Object> updatedFields = new HashMap<>();
     updatedFields.put("objectId", cmisDocument.getObjectId());
     updatedFields.put("repositoryId", repositoryId);
     updatedFields.put("folderId", cmisDocument.getFolderId());
     updatedFields.put("status", "Clean");
+    updatedFields.put("scannedAt", Instant.now());
     updatedFields.put("type", "sap-icon://document");
     updatedFields.put("mimeType", cmisDocument.getMimeType());
     updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
+    logger.debug(
+        "Updated fields for attachment ID {}: {}", cmisDocument.getAttachmentId(), updatedFields);
+
     CqnUpdate updateQuery =
         Update.entity(attachmentEntity)
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
-    persistenceService.run(updateQuery);
+    Result updateResult = persistenceService.run(updateQuery);
+
+    long rowsUpdated = updateResult.rowCount();
+    logger.info(
+        "Updated {} row(s) for attachment ID: {}", rowsUpdated, cmisDocument.getAttachmentId());
+
+    if (rowsUpdated == 0) {
+      logger.warn(
+          "No rows updated for attachment ID: {}. The record might not exist yet in entity: {}",
+          cmisDocument.getAttachmentId(),
+          attachmentEntity.getQualifiedName());
+    }
   }
 
   public void saveUploadStatusToAttachment(
       CdsEntity attachmentEntity,
       PersistenceService persistenceService,
       CmisDocument cmisDocument) {
+    logger.debug(
+        "Saving uploadStatus: {} for attachment ID: {} in entity: {}",
+        cmisDocument.getUploadStatus(),
+        cmisDocument.getAttachmentId(),
+        attachmentEntity.getQualifiedName());
     Map<String, Object> updatedFields = new HashMap<>();
     updatedFields.put("uploadStatus", cmisDocument.getUploadStatus());
     CqnUpdate updateQuery =
@@ -383,6 +468,8 @@ public class DBQuery {
             .data(updatedFields)
             .where(doc -> doc.get("ID").eq(cmisDocument.getAttachmentId()));
     persistenceService.run(updateQuery);
+    logger.debug(
+        "Successfully saved uploadStatus for attachment ID: {}", cmisDocument.getAttachmentId());
   }
 
   public List<CmisDocument> getAttachmentsForFolder(
@@ -390,6 +477,7 @@ public class DBQuery {
       PersistenceService persistenceService,
       String folderId,
       AttachmentMarkAsDeletedEventContext context) {
+    logger.debug("Fetching attachments for folderId: {} from entity: {}", folderId, entity);
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     List<CmisDocument> cmisDocuments = new ArrayList<>();
     CqnSelect q =
@@ -418,6 +506,10 @@ public class DBQuery {
       cmisDocuments.add(cmisDocument);
     }
     if (cmisDocuments.isEmpty()) {
+      logger.debug(
+          "No attachments found in draft table for folderId: {}, checking active entity: {}",
+          folderId,
+          entity);
       attachmentEntity = context.getModel().findEntity(entity);
       q =
           Select.from(attachmentEntity.get())
@@ -445,6 +537,7 @@ public class DBQuery {
         cmisDocuments.add(cmisDocument);
       }
     }
+    logger.debug("Total {} attachment(s) found for folderId: {}", cmisDocuments.size(), folderId);
     return cmisDocuments;
   }
 
@@ -474,6 +567,7 @@ public class DBQuery {
       PersistenceService persistenceService,
       String objectId,
       AttachmentReadEventContext context) {
+    logger.debug("Fetching uploadStatus for objectId: {} from entity: {}", objectId, entity);
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     CqnSelect q =
         Select.from(attachmentEntity.get())
@@ -490,6 +584,10 @@ public class DBQuery {
       isAttachmentFound = true;
     }
     if (!isAttachmentFound) {
+      logger.debug(
+          "Attachment not found in draft table for objectId: {}, checking active entity: {}",
+          objectId,
+          entity);
       attachmentEntity = context.getModel().findEntity(entity);
       q =
           Select.from(attachmentEntity.get())
@@ -503,6 +601,8 @@ public class DBQuery {
                 : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
       }
     }
+    logger.debug(
+        "Resolved uploadStatus: {} for objectId: {}", cmisDocument.getUploadStatus(), objectId);
     return cmisDocument;
   }
 
@@ -512,6 +612,7 @@ public class DBQuery {
       PersistenceService persistenceService,
       String upID,
       String upIDkey) {
+    logger.debug("Fetching attachments with virus scan in progress for upID: {}", upID);
     List<CmisDocument> attachments = new ArrayList<>();
 
     // Query draft table
@@ -558,6 +659,10 @@ public class DBQuery {
       attachments.addAll(mapResultToCmisDocuments(activeResult));
     }
 
+    logger.debug(
+        "Found {} attachment(s) with virus scan in progress for upID: {}",
+        attachments.size(),
+        upID);
     return attachments;
   }
 
@@ -658,6 +763,10 @@ public class DBQuery {
       PersistenceService persistenceService,
       String upID,
       String upIdKey) {
+    logger.debug(
+        "Updating in-progress uploadStatus to SUCCESS for upID: {} in entity: {}",
+        upID,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns("objectId", "uploadStatus")
@@ -683,7 +792,11 @@ public class DBQuery {
                                         doc.get("uploadStatus")
                                             .eq(SDMConstants.UPLOAD_STATUS_IN_PROGRESS))));
 
-        persistenceService.run(updateQuery);
+        Result updateResult = persistenceService.run(updateQuery);
+        logger.info(
+            "Updated {} attachment(s) uploadStatus to SUCCESS for upID: {}",
+            updateResult.rowCount(),
+            upID);
       }
     }
   }
@@ -728,6 +841,11 @@ public class DBQuery {
           totalRowCount,
           objectId,
           uploadStatus);
+    } else {
+      logger.warn(
+          "No records found to update uploadStatus for objectId: {} with scanStatus: {}",
+          objectId,
+          scanStatus);
     }
 
     return combinedResult;
@@ -882,13 +1000,16 @@ public class DBQuery {
       List<String> objectIds,
       AttachmentMoveEventContext context) {
     if (objectIds == null || objectIds.isEmpty()) {
+      logger.debug("No objectIds provided, returning null");
       return null;
     }
+    logger.debug("Querying source upID for objectIds: {}", objectIds);
 
     String sourceParentEntity = context.getSourceParentEntity();
     String sourceCompositionName = context.getSourceCompositionName();
 
     if (sourceParentEntity == null || sourceCompositionName == null) {
+      logger.warn("Source parent entity or composition name is null, cannot resolve source upID");
       return null;
     }
 
@@ -897,6 +1018,8 @@ public class DBQuery {
     // Find the source parent entity
     Optional<CdsEntity> optionalParentEntity = model.findEntity(sourceParentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.warn(
+          "Source parent entity not found: {}, cannot resolve source upID", sourceParentEntity);
       return null;
     }
 
@@ -904,6 +1027,10 @@ public class DBQuery {
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(sourceCompositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.warn(
+          "Composition '{}' not found in source parent entity: {}, cannot resolve source upID",
+          sourceCompositionName,
+          sourceParentEntity);
       return null;
     }
 
@@ -914,6 +1041,9 @@ public class DBQuery {
     // Resolve the up__ID key name
     String upIdKey = resolveUpIdKey(model, sourceParentEntity, sourceCompositionName);
     if (upIdKey == null) {
+      logger.warn(
+          "Unable to resolve up__ID key for source entity: {}, cannot resolve source upID",
+          sourceParentEntity);
       return null;
     }
 
@@ -929,7 +1059,12 @@ public class DBQuery {
       Optional<Row> res = result.first();
       if (res.isPresent()) {
         Object upIdValue = res.get().get(upIdKey);
-        return upIdValue != null ? upIdValue.toString() : null;
+        String resolvedUpId = upIdValue != null ? upIdValue.toString() : null;
+        logger.info(
+            "Resolved source upID: {} from draft table for objectId: {}",
+            resolvedUpId,
+            objectIds.get(0));
+        return resolvedUpId;
       }
     }
 
@@ -944,10 +1079,19 @@ public class DBQuery {
       Optional<Row> res = result.first();
       if (res.isPresent()) {
         Object upIdValue = res.get().get(upIdKey);
-        return upIdValue != null ? upIdValue.toString() : null;
+        String resolvedUpId = upIdValue != null ? upIdValue.toString() : null;
+        logger.info(
+            "Resolved source upID: {} from active table for objectId: {}",
+            resolvedUpId,
+            objectIds.get(0));
+        return resolvedUpId;
       }
     }
 
+    logger.warn(
+        "Could not resolve source upID for objectIds: {} from entity: {}",
+        objectIds,
+        sourceAttachmentEntityName);
     return null;
   }
 
@@ -962,12 +1106,17 @@ public class DBQuery {
   private String resolveUpIdKey(CdsModel model, String parentEntity, String compositionName) {
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.warn("Cannot resolve up__ID key: parent entity not found: {}", parentEntity);
       return null;
     }
 
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.warn(
+          "Cannot resolve up__ID key: composition '{}' not found in entity: {}",
+          compositionName,
+          parentEntity);
       return null;
     }
 

@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pull-requests: read
   packages: read  # Added permission to read packages
 
@@ -81,7 +82,7 @@ jobs:
             wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
             echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
             sudo apt update
-            sudo apt install cf-cli
+            sudo apt install cf8-cli
             
             cf install-plugin multiapps -f
             echo "✅ Cloud Foundry CLI setup complete!"
@@ -317,7 +318,7 @@ jobs:
   test-summary:
     runs-on: ubuntu-latest
     needs: integration-test
-    if: always()
+    if: always() && github.event.pull_request.merged == true
     steps:
       - name: Check test results 📋
         run: |

@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pull-requests: read
   packages: read  # Added permission to read packages
 
@@ -98,7 +99,7 @@ jobs:
           echo "deb https://packages.cloudfoundry.org/debian stable main" \
           | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt update
-          sudo apt install cf-cli
+          sudo apt install cf8-cli
           
           # Install cf CLI plugin
           cf install-plugin multiapps -f

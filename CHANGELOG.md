@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.0
+
+### Added
+- Support attachment creation in active entities
+
+### Fixed
+- Separate UI and backend error keys for localization
+- Fix upload status when attachments are copied
+
 ## Version 1.8.1
 
 ### Fixed

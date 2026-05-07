@@ -14,6 +14,7 @@ import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.model.SDMCredentials;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.sdm.service.SDMService;
+import com.sap.cds.sdm.service.handler.SDMAttachmentsServiceHandler;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
@@ -54,6 +55,52 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     this.sdmService = sdmService;
     this.tokenHandler = tokenHandler;
     this.dbQuery = dbQuery;
+  }
+
+  /**
+   * After handler for ApplicationService CREATE to update active entity attachments with SDM
+   * metadata (objectId, folderId, repositoryId, etc.) after the record has been INSERTed.
+   *
+   * <p>During active entity attachment creation, the AttachmentService @On handler uploads to SDM
+   * and stores metadata in a ThreadLocal. The framework then INSERTs the record with contentId (set
+   * via finalizeContext). This @After handler runs AFTER the INSERT, so the record exists and can
+   * be UPDATEd with the remaining SDM metadata.
+   */
+  @After
+  @HandlerOrder(HandlerOrder.LATE)
+  public void updateActiveEntitySdmMetadata(CdsCreateEventContext _context) {
+    handleUpdateActiveEntitySdmMetadata();
+  }
+
+  private void handleUpdateActiveEntitySdmMetadata() {
+    Map<String, Object> metadata = SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get();
+    if (metadata == null) {
+      return;
+    }
+    try {
+      SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.remove();
+      com.sap.cds.reflect.CdsEntity attachmentEntity =
+          (com.sap.cds.reflect.CdsEntity) metadata.get("attachmentEntity");
+      if (attachmentEntity == null) {
+        logger.warn("No attachmentEntity in ThreadLocal metadata, skipping post-INSERT update");
+        return;
+      }
+      CmisDocument cmisDocument = new CmisDocument();
+      cmisDocument.setAttachmentId((String) metadata.get("attachmentId"));
+      cmisDocument.setObjectId((String) metadata.get("objectId"));
+      cmisDocument.setFolderId((String) metadata.get("folderId"));
+      cmisDocument.setMimeType((String) metadata.get("mimeType"));
+      cmisDocument.setUploadStatus((String) metadata.get("uploadStatus"));
+      logger.info(
+          "Post-INSERT: Updating active entity attachment {} with objectId {}",
+          cmisDocument.getAttachmentId(),
+          cmisDocument.getObjectId());
+      dbQuery.addAttachmentToDraft(attachmentEntity, persistenceService, cmisDocument);
+      logger.info("Post-INSERT: Successfully updated active entity attachment with SDM metadata");
+    } catch (Exception e) {
+      logger.error(
+          "Failed to update active entity SDM metadata after INSERT: {}", e.getMessage(), e);
+    }
   }
 
   @Before
@@ -140,6 +187,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   @HandlerOrder(OrderConstants.Before.CHECK_CAPABILITIES - 500)
   public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
     // Preserve uploadStatus before CDS removes readonly fields
+    logger.debug(
+        "Preserving readonly fields (uploadStatus) for entity: {} before CDS capability check",
+        context.getTarget().getQualifiedName());
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
   }
 
@@ -432,8 +482,22 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         AttachmentsHandlerUtils.prepareCmisDocument(
             filenameInRequest, descriptionInRequest, objectId);
 
+    List<String> extensionChangedFiles = new ArrayList<>();
     AttachmentsHandlerUtils.updateFilenameProperty(
-        fileNameInDB, filenameInRequest, fileNameInSDM, updatedSecondaryProperties);
+        fileNameInDB,
+        filenameInRequest,
+        fileNameInSDM,
+        updatedSecondaryProperties,
+        extensionChangedFiles);
+
+    // If extension change was detected, revert filename to original and warn
+    if (!extensionChangedFiles.isEmpty()) {
+      attachment.put("fileName", fileNameInSDM);
+      for (String warningMessage : extensionChangedFiles) {
+        context.getMessages().warn(warningMessage);
+      }
+    }
+
     AttachmentsHandlerUtils.updateDescriptionProperty(
         descriptionInSDM,
         descriptionInRequest,

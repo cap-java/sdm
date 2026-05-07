@@ -242,7 +242,8 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Verify that deleteDocument was called for cleanup of the first successful attachment
-    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), eq("testUser"));
+    verify(sdmService, times(1))
+        .deleteDocument(eq("delete"), eq(OBJECT_ID), eq("testUser"), eq(false));
     assertTrue(exception.getMessage().contains("Copy failed"));
   }
 
@@ -279,7 +280,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the folder
-    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID), any());
+    verify(sdmService, times(1)).deleteDocument(eq("deleteTree"), eq(FOLDER_ID), any(), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
@@ -320,7 +321,7 @@ public class SDMCustomServiceHandlerTest {
             });
 
     // Should attempt to delete the copied attachment
-    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), any());
+    verify(sdmService, times(1)).deleteDocument(eq("delete"), eq(OBJECT_ID), any(), any());
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 

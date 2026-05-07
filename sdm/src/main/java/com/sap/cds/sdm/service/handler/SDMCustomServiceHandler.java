@@ -1525,13 +1525,20 @@ public class SDMCustomServiceHandler {
     logger.error("Copy failure detected, initiating cleanup. Error: {}", e.getMessage());
     if (!folderExists) {
       logger.debug("Deleting newly created folder: {}", folderId);
-      sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
+      sdmService.deleteDocument(
+          "deleteTree",
+          folderId,
+          context.getUserInfo().getName(),
+          context.getUserInfo().isSystemUser());
     } else {
       logger.debug(
           "Deleting {} copied attachments from existing folder", attachmentsMetadata.size());
       for (Map<String, String> attachmentMetadata : attachmentsMetadata) {
         sdmService.deleteDocument(
-            "delete", attachmentMetadata.get("cmis:objectId"), context.getUserInfo().getName());
+            "delete",
+            attachmentMetadata.get("cmis:objectId"),
+            context.getUserInfo().getName(),
+            context.getUserInfo().isSystemUser());
       }
     }
     throw new ServiceException(e.getMessage());
@@ -1654,6 +1661,7 @@ public class SDMCustomServiceHandler {
     fields.put("repositoryId", data.getRepositoryId());
     fields.put("folderId", data.getFolderId());
     fields.put("status", "Clean");
+    fields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
     fields.put("mimeType", mimeType);
     fields.put("type", cmisDocument.getType());
     fields.put("fileName", fileName);
@@ -1807,6 +1815,7 @@ public class SDMCustomServiceHandler {
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
       updatedFields.put("status", "Clean");
+      updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
