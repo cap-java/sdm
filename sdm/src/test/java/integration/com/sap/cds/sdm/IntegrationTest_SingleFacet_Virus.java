@@ -209,7 +209,7 @@ class IntegrationTest_SingleFacet_Virus {
   @Order(3)
   void testUploadSingleAttachmentPDF() throws IOException {
     System.out.println("Test (3) : Upload pdf");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("sample.pdf").getFile());
 
