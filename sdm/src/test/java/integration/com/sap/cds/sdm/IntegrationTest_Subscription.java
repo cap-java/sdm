@@ -3,7 +3,6 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
-import java.io.IOException;
 import java.util.Properties;
 import org.junit.jupiter.api.*;
 
@@ -40,10 +39,28 @@ class IntegrationTest_Subscription {
   private static String consumerSubdomain;
 
   @BeforeAll
-  static void setup() throws IOException {
+  static void setup() throws Exception {
     credentials = Credentials.getCredentials();
     consumerSubdomain = credentials.getProperty("CONSUMER_SUBDOMAIN");
     assertNotNull(consumerSubdomain, "CONSUMER_SUBDOMAIN must be set in credentials.properties");
+
+    // Ensure subscription is active before tests run
+    System.out.println("BeforeAll: Ensuring app is subscribed...");
+    int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    assertEquals(0, subscribeExit, "Initial subscription should succeed");
+    Thread.sleep(15_000);
+
+    // Verify repo exists after subscription
+    ShellScriptRunner.Result repoResult =
+        ShellScriptRunner.runAndCaptureAll(
+            REPO_MANAGE_SCRIPT,
+            "check",
+            "--externalId",
+            SUBSCRIPTION_REPO_EXTERNAL_ID,
+            "--subdomain",
+            consumerSubdomain);
+    assertEquals(0, repoResult.getExitCode(), "Repository should exist after initial subscription");
+    System.out.println("BeforeAll: Subscription active and repo verified.");
   }
 
   /** Check if a repo exists in the consumer scope. Returns the Result. */
@@ -93,11 +110,12 @@ class IntegrationTest_Subscription {
   void testCreateSubscription_ExistingRepo_OnboardingSkipped() throws Exception {
     System.out.println("Test (1) : Subscribe when already subscribed — expect graceful handling");
 
-    // Pre-condition: test 1 left us subscribed with the repo onboarded.
+    // Pre-condition: @BeforeAll left us subscribed with the repo onboarded.
     // Verify repo exists in consumer scope.
-    System.out.println("  Verifying repo exists from previous subscription...");
+    System.out.println("  Verifying repo exists from setup subscription...");
     ShellScriptRunner.Result checkResult = repoCheck(SUBSCRIPTION_REPO_EXTERNAL_ID);
-    assertEquals(0, checkResult.getExitCode(), "Repo should exist in consumer scope from test 1");
+    assertEquals(
+        0, checkResult.getExitCode(), "Repo should exist in consumer scope from @BeforeAll");
 
     // Act: Subscribe again (should detect 'Already subscribed' and exit 0)
     System.out.println("  Re-subscribing...");
@@ -173,8 +191,17 @@ class IntegrationTest_Subscription {
         "Test (3) : Unsubscribe with only the subscription repo — expect repo offboarded");
 
     // Pre-condition: Subscribe and ensure only the subscription repo exists
+    // Wait for test 2's unsubscribe to fully complete
+    Thread.sleep(30_000);
+
     System.out.println("  Subscribing to set up precondition...");
     int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    if (subscribeExit != 0) {
+      System.out.println(
+          "  First subscribe attempt failed (exit " + subscribeExit + ") — retrying after 30s...");
+      Thread.sleep(30_000);
+      subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    }
     assertEquals(0, subscribeExit, "Subscription should succeed");
 
     // Wait for repo to be onboarded
