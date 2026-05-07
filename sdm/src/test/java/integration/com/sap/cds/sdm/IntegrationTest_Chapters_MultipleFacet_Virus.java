@@ -196,7 +196,7 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
   @Order(2)
   void testUpdateEmptyBookChapter() {
     System.out.println("Test (2) : Update an existing book+chapter");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, bookEntityName, srvpath, bookID);
     if (response.equals("Entity in draft mode")) {
       response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID);
