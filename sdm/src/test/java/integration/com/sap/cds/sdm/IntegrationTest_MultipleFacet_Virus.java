@@ -162,7 +162,7 @@ class IntegrationTest_MultipleFacet_Virus {
   @Order(1)
   void testCreateEntityAndCheck() {
     System.out.println("Test (1) : Create entity and check if it exists");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (response != "Could not create entity") {
       entityID = response;
