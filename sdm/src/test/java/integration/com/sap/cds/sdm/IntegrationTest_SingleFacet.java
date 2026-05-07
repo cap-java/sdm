@@ -6371,6 +6371,34 @@ class IntegrationTest_SingleFacet {
     assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
   }
 
+  private boolean waitForUploadCompletion(
+      String entityId, String attachmentId, int timeoutSeconds) {
+    int maxIterations = timeoutSeconds / 2;
+    for (int i = 0; i < maxIterations; i++) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadataDraft(appUrl, entityName, facetName, entityId, attachmentId);
+        String uploadStatus = (String) metadata.get("uploadStatus");
+
+        if ("Success".equals(uploadStatus)) {
+          return true;
+        } else if ("Failed".equals(uploadStatus)) {
+          System.err.println("Upload failed for attachment: " + attachmentId);
+          return false;
+        }
+
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        System.err.println(
+            "Error checking upload status for attachment " + attachmentId + ": " + e.getMessage());
+        return false;
+      }
+    }
+
+    System.err.println("Upload timed out for attachment: " + attachmentId);
+    return false;
+  }
+
   @Test
   @Order(77)
   void testUploadVirusFileInScanDisabledRepo() throws IOException {
