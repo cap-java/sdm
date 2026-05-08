@@ -51,6 +51,11 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
       clientSecret = credentialsProperties.getProperty("clientSecret");
       appUrl = credentialsProperties.getProperty("appUrl");
       authUrl = credentialsProperties.getProperty("authUrl");
+    } else if (tenancyModel.equals("multi")) {
+      clientId = credentialsProperties.getProperty("clientIDMT");
+      clientSecret = credentialsProperties.getProperty("clientSecretMT");
+      appUrl = credentialsProperties.getProperty("appUrlMT");
+      authUrl = credentialsProperties.getProperty("authUrlMTSDC");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -94,17 +99,23 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
     }
 
     Response response = client.newCall(request).execute();
+    String responseBody = response.body().string();
+    response.close();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
-      System.out.println("Error body: " + response.body().string());
+      System.out.println("Error body: " + responseBody);
+      fail("Token generation failed with response code: " + response.code());
     }
-    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    response.close();
+    token = new ObjectMapper().readTree(responseBody).get("access_token").asText();
 
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
-    config.put("serviceName", serviceName);
-    api = new Api(config);
+    if (tenancyModel.equals("multi")) {
+      api = new ApiMT(config);
+    } else {
+      config.put("serviceName", serviceName);
+      api = new Api(config);
+    }
   }
 
   @Test

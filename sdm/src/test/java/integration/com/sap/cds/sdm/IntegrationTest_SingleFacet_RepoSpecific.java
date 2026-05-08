@@ -66,6 +66,11 @@ class IntegrationTest_SingleFacet_RepoSpecific {
       clientSecret = credentialsProperties.getProperty("clientSecret");
       appUrl = credentialsProperties.getProperty("appUrl");
       authUrl = credentialsProperties.getProperty("authUrl");
+    } else if (tenancyModel.equals("multi")) {
+      clientId = credentialsProperties.getProperty("clientIDMT");
+      clientSecret = credentialsProperties.getProperty("clientSecretMT");
+      appUrl = credentialsProperties.getProperty("appUrlMT");
+      authUrl = credentialsProperties.getProperty("authUrlMTSDC");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -110,17 +115,23 @@ class IntegrationTest_SingleFacet_RepoSpecific {
     }
 
     Response response = client.newCall(request).execute();
+    String responseBody = response.body().string();
+    response.close();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
-      System.out.println("Error body: " + response.body().string());
+      System.out.println("Error body: " + responseBody);
+      fail("Token generation failed with response code: " + response.code());
     }
-    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
-    response.close();
+    token = new ObjectMapper().readTree(responseBody).get("access_token").asText();
 
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
-    config.put("serviceName", serviceName);
-    api = new Api(config);
+    if (tenancyModel.equals("multi")) {
+      api = new ApiMT(config);
+    } else {
+      config.put("serviceName", serviceName);
+      api = new Api(config);
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -503,13 +514,58 @@ class IntegrationTest_SingleFacet_RepoSpecific {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Test 9 – Revert REPOSITORY_ID back to default
+  // Test 9 – Create attachment with non-existent repository ID → error
   // ───────────────────────────────────────────────────────────────────────────
   @Test
   @Order(9)
+  void testCreateAttachment_NonExistentRepo_FailsWithRepoInfoError() throws Exception {
+    String fakeRepoId = "non-existent-repo-" + UUID.randomUUID();
+    System.out.println(
+        "Test (9) : Switch to non-existent repo ("
+            + fakeRepoId
+            + ") and attempt attachment creation — expect failure");
+
+    // Switch to a random non-existent repository ID
+    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", fakeRepoId);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
+
+    // Create a book entity (draft creation should still succeed)
+    String response = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", response, "Book creation should succeed");
+    String bookId = response;
+
+    // Upload an attachment
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.txt").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", bookId);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, bookEntityName, facetName, bookId, srvpath, postData, file);
+
+    // Save the entity — this should fail because the repo doesn't exist
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookId);
+    assertNotEquals("Saved", response, "Save should fail with a non-existent repository");
+    assertTrue(
+        response.toLowerCase().contains("failed to get repository info")
+            || response.toLowerCase().contains("repository")
+            || response.toLowerCase().contains("error"),
+        "Error should indicate repository issue. Got: " + response);
+    System.out.println("Expected error received: " + response);
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Test 10 – Revert REPOSITORY_ID back to default
+  // ───────────────────────────────────────────────────────────────────────────
+  @Test
+  @Order(10)
   void testRevertToDefaultRepository() throws Exception {
     System.out.println(
-        "Test (6) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
+        "Test (10) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
     int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", defaultRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
     System.out.println("Reverted to default repository: " + defaultRepositoryID);
