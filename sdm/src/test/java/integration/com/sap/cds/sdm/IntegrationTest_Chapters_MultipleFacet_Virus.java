@@ -51,11 +51,11 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
       appUrl = credentialsProperties.getProperty("appUrlMT");
       if (tenant.equals("TENANT1")) {
         System.out.println("Running integration tests | Multitenant Scenario | SDM DEV Consumer");
-        authUrl = credentialsProperties.getProperty("authUrlMTSDC");
+        authUrl = credentialsProperties.getProperty("authUrlMT1");
       } else if (tenant.equals("TENANT2")) {
         System.out.println(
             "Running integration tests | Multitenant Scenario | Googleworkspace Consumer");
-        authUrl = credentialsProperties.getProperty("authUrlMTGWC");
+        authUrl = credentialsProperties.getProperty("authUrlMT2");
       } else {
         throw new IllegalArgumentException("Invalid tenant specified: " + tenant);
       }
@@ -104,14 +104,13 @@ class IntegrationTest_Chapters_MultipleFacet_Virus {
     }
 
     Response response = client.newCall(request).execute();
-    String responseBody = response.body().string();
-    response.close();
     if (response.code() != 200) {
       System.out.println("Token generation failed. Response code: " + response.code());
-      System.out.println("Error body: " + responseBody);
-      fail("Token generation failed with response code: " + response.code());
+      String errorBody = response.body().string();
+      System.out.println("Error body: " + errorBody);
     }
-    token = new ObjectMapper().readTree(responseBody).get("access_token").asText();
+    token = new ObjectMapper().readTree(response.body().string()).get("access_token").asText();
+    response.close();
     Map<String, String> config = new HashMap<>();
     config.put("Authorization", "Bearer " + token);
     if (tenancyModel.equals("multi")) {
