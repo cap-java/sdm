@@ -66,7 +66,7 @@ TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
 
 ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" \
   | grep -o '"access_token":"[^"]*"' \
-  | sed 's/"access_token":"//;s/"$//')
+  | sed 's/"access_token":"//;s/"$//' || true)
 
 if [[ -z "$ACCESS_TOKEN" ]]; then
   echo "ERROR: Failed to obtain access token."
