@@ -35,9 +35,9 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static String[] facet = {"attachments", "references", "footnotes"};
-  private static String repo1;
-  private static String repo2;
+  private static String tenancyModel;
   private static String defaultRepositoryID;
+  private static String virusScanRepositoryID;
   private static ApiInterface api;
 
   // Entity IDs used across tests
@@ -48,13 +48,12 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
   @BeforeAll
   static void setup() throws IOException {
     Properties credentialsProperties = Credentials.getCredentials();
-    String tenancyModel = System.getProperty("tenancyModel");
+    tenancyModel = System.getProperty("tenancyModel");
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    repo1 = credentialsProperties.getProperty("repo1");
-    repo2 = credentialsProperties.getProperty("repo2");
     defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryID");
+    virusScanRepositoryID = credentialsProperties.getProperty("virusScanRepositoryID");
 
     if (tenancyModel.equals("single")) {
       clientId = credentialsProperties.getProperty("clientID");
@@ -65,7 +64,8 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
       clientId = credentialsProperties.getProperty("clientIDMT");
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
-      authUrl = credentialsProperties.getProperty("authUrlMTSDC");
+      authUrl = credentialsProperties.getProperty("authUrlMT1");
+      defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryIDMT");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -128,16 +128,23 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
     }
   }
 
+  private static int runUpdateEnv(String value) throws Exception {
+    if (tenancyModel.equals("multi")) {
+      return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--app", "bookshop-mt-srv", "--value", value);
+    }
+    return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", value);
+  }
+
   @Test
   @Order(1)
   void testSetupRepo1AndCreateAttachments() throws Exception {
     System.out.println(
-        "Test (1) : Setup — switch to repo1 ("
-            + repo1
+        "Test (1) : Setup — switch to defaultRepositoryID ("
+            + defaultRepositoryID
             + "), create entity with attachments in all facets");
 
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", repo1);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for repo1");
+    int exitCode = runUpdateEnv(defaultRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for defaultRepositoryID");
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     assertNotEquals("Could not create entity", response, "Entity creation should succeed");
@@ -168,12 +175,17 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
 
     for (int i = 0; i < facet.length; i++) {
       response = api.readAttachment(appUrl, entityName, facet[i], entityID1, attachmentID1[i]);
-      assertEquals("OK", response, "Attachment should be readable under repo1 for " + facet[i]);
+      assertEquals(
+          "OK",
+          response,
+          "Attachment should be readable under defaultRepositoryID for " + facet[i]);
 
       List<Map<String, Object>> attachments =
           api.fetchEntityMetadata(appUrl, entityName, facet[i], entityID1);
       assertEquals(
-          1, attachments.size(), "Entity should have 1 attachment under repo1 for " + facet[i]);
+          1,
+          attachments.size(),
+          "Entity should have 1 attachment under defaultRepositoryID for " + facet[i]);
     }
   }
 
@@ -181,10 +193,10 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
   @Order(2)
   void testSwitchToRepo2AttachmentsNotVisible() throws Exception {
     System.out.println(
-        "Test (2) : Switch to repo2, verify attachments from repo1 are not visible in any facet");
+        "Test (2) : Switch to virusScanRepositoryID, verify attachments from defaultRepositoryID are not visible in any facet");
 
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", repo2);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for repo2");
+    int exitCode = runUpdateEnv(virusScanRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for virusScanRepositoryID");
 
     String response = api.checkEntity(appUrl, entityName, entityID1);
     assertEquals("Entity exists", response, "Entity should still be visible after repo switch");
@@ -195,7 +207,8 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
       assertEquals(
           0,
           attachments.size(),
-          "Entity should have 0 attachments after switching to repo2 for " + facet[i]);
+          "Entity should have 0 attachments after switching to virusScanRepositoryID for "
+              + facet[i]);
     }
   }
 
@@ -203,7 +216,7 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
   @Order(3)
   void testDuplicateAttachmentCreateAcrossRepos() throws Exception {
     System.out.println(
-        "Test (3) : Create attachment with same name under repo2 in all facets — should succeed");
+        "Test (3) : Create attachment with same name under virusScanRepositoryID in all facets — should succeed");
 
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID1);
     assertEquals("Entity in draft mode", response, "Edit entity should succeed");
@@ -235,11 +248,11 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
   @Order(4)
   void testDuplicateAttachmentRenameAcrossRepos() throws Exception {
     System.out.println(
-        "Test (4) : Create new entity with sample.pdf in repo1, switch to repo2, upload"
+        "Test (4) : Create new entity with sample.pdf in defaultRepositoryID, switch to virusScanRepositoryID, upload"
             + " sample.txt, rename to sample.pdf in all facets — should succeed");
 
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", repo1);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for repo1");
+    int exitCode = runUpdateEnv(defaultRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for defaultRepositoryID");
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     assertNotEquals("Could not create entity", response, "Entity creation should succeed");
@@ -266,10 +279,10 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
     }
 
     response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID_rename);
-    assertEquals("Saved", response, "Entity save should succeed under repo1");
+    assertEquals("Saved", response, "Entity save should succeed under defaultRepositoryID");
 
-    exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", repo2);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for repo2");
+    exitCode = runUpdateEnv(virusScanRepositoryID);
+    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for virusScanRepositoryID");
 
     response = api.editEntityDraft(appUrl, entityName, srvpath, entityID_rename);
     assertEquals("Entity in draft mode", response, "Edit entity should succeed");
@@ -316,7 +329,7 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
             + ") and attempt attachment creation — expect failure");
 
     // Switch to a random non-existent repository ID
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", fakeRepoId);
+    int exitCode = runUpdateEnv(fakeRepoId);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
 
     // Create an entity (draft creation should still succeed)
@@ -337,22 +350,24 @@ class IntegrationTest_MultipleFacet_RepoSpecific {
     List<String> createResponse =
         api.createAttachment(appUrl, entityName, facet[0], entityId, srvpath, postData, file);
 
-    // Save the entity — this should fail because the repo doesn't exist
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, entityId);
-    assertNotEquals("Saved", response, "Save should fail with a non-existent repository");
+    // Attachment content upload should fail because the repo doesn't exist
+    String status = createResponse.get(0);
+    assertNotEquals(
+        "Attachment created", status, "Attachment should fail with non-existent repository");
     assertTrue(
-        response.toLowerCase().contains("failed to get repository info")
-            || response.toLowerCase().contains("repository")
-            || response.toLowerCase().contains("error"),
-        "Error should indicate repository issue. Got: " + response);
-    System.out.println("Expected error received: " + response);
+        status.toLowerCase().contains("repository")
+            || status.toLowerCase().contains("error")
+            || status.toLowerCase().contains("not found")
+            || status.toLowerCase().contains("failed"),
+        "Error should indicate repository issue. Got: " + status);
+    System.out.println("Expected error received: " + status);
   }
 
   @Test
   @Order(6)
   void testRevertToDefaultRepository() throws Exception {
     System.out.println("Test (6) : Revert REPOSITORY_ID to default repository");
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", defaultRepositoryID);
+    int exitCode = runUpdateEnv(defaultRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
   }
 }

@@ -13,7 +13,7 @@ echo "test"
 #                   If not provided, the file is uploaded to the repository root.
 #
 # Required config in credentials.properties:
-#   CMIS_URL, CMIS_REPOSITORY_ID, CMIS_TOKEN_URL, CMIS_CLIENT_ID, CMIS_CLIENT_SECRET
+#   CMIS_URL, defaultRepositoryID, authUrl, cmisClientID, cmisClientSecret
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,7 +55,7 @@ if [[ ! -f "$FILE_PATH" ]]; then
 fi
 
 # --- Validate required config variables ---
-for var in CMIS_URL CMIS_REPOSITORY_ID CMIS_TOKEN_URL CMIS_CLIENT_ID CMIS_CLIENT_SECRET CMIS_USERNAME CMIS_PASSWORD; do
+for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret username password; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var is not set in $CONFIG_FILE"
     exit 1
@@ -64,12 +64,12 @@ done
 
 # --- Obtain OAuth2 access token (password grant) ---
 echo "Fetching OAuth2 token..."
-TOKEN_RESPONSE=$(curl -s -X POST "${CMIS_TOKEN_URL}/oauth/token" \
+TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
-  --data-urlencode "client_id=${CMIS_CLIENT_ID}" \
-  --data-urlencode "client_secret=${CMIS_CLIENT_SECRET}" \
-  --data-urlencode "username=${CMIS_USERNAME}" \
-  --data-urlencode "password=${CMIS_PASSWORD}")
+  --data-urlencode "client_id=${cmisClientID}" \
+  --data-urlencode "client_secret=${cmisClientSecret}" \
+  --data-urlencode "username=${username}" \
+  --data-urlencode "password=${password}")
 
 ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" \
   | grep -o '"access_token":"[^"]*"' \
@@ -86,9 +86,9 @@ MIME_TYPE=$(file --mime-type -b "$FILE_PATH")
 
 # --- Build the CMIS browser endpoint URL ---
 if [[ -n "${EFFECTIVE_FOLDER_ID}" ]]; then
-  CMIS_ENDPOINT="${CMIS_URL}browser/${CMIS_REPOSITORY_ID}/root?objectId=${EFFECTIVE_FOLDER_ID}"
+  CMIS_ENDPOINT="${CMIS_URL}browser/${defaultRepositoryID}/root?objectId=${EFFECTIVE_FOLDER_ID}"
 else
-  CMIS_ENDPOINT="${CMIS_URL}browser/${CMIS_REPOSITORY_ID}/root"
+  CMIS_ENDPOINT="${CMIS_URL}browser/${defaultRepositoryID}/root"
 fi
 
 # --- Assemble curl arguments ---
@@ -105,7 +105,7 @@ CURL_ARGS=(
   -F "filename=@${FILE_PATH};type=${MIME_TYPE}"
 )
 
-echo "Creating document '${CMIS_NAME}' in repository '${CMIS_REPOSITORY_ID}'..."
+echo "Creating document '${CMIS_NAME}' in repository '${defaultRepositoryID}'..."
 RESPONSE=$(curl "${CURL_ARGS[@]}")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)

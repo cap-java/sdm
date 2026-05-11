@@ -16,8 +16,8 @@ set -euo pipefail
 # exits with code 0.  On failure the script exits with a non-zero code.
 #
 # Required config in cf-config.env:
-#   CMIS_URL, CMIS_REPOSITORY_ID, CMIS_TOKEN_URL,
-#   CMIS_CLIENT_ID, CMIS_CLIENT_SECRET, CMIS_USERNAME, CMIS_PASSWORD
+#   CMIS_URL, defaultRepositoryID, authUrl,
+#   cmisClientID, cmisClientSecret, username, password
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +53,7 @@ PARENT_FOLDER_ID="${2:-}"
 CMIS_TYPE="${3:-cmis:folder}"
 
 # --- Validate required config variables ---
-for var in CMIS_URL CMIS_REPOSITORY_ID CMIS_TOKEN_URL CMIS_CLIENT_ID CMIS_CLIENT_SECRET CMIS_USERNAME CMIS_PASSWORD; do
+for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret username password; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var is not set in $CONFIG_FILE"
     exit 1
@@ -62,12 +62,12 @@ done
 
 # --- Obtain OAuth2 access token (password grant) ---
 echo "Fetching OAuth2 token..."
-TOKEN_RESPONSE=$(curl -s -X POST "${CMIS_TOKEN_URL}/oauth/token" \
+TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
-  --data-urlencode "client_id=${CMIS_CLIENT_ID}" \
-  --data-urlencode "client_secret=${CMIS_CLIENT_SECRET}" \
-  --data-urlencode "username=${CMIS_USERNAME}" \
-  --data-urlencode "password=${CMIS_PASSWORD}")
+  --data-urlencode "client_id=${cmisClientID}" \
+  --data-urlencode "client_secret=${cmisClientSecret}" \
+  --data-urlencode "username=${username}" \
+  --data-urlencode "password=${password}")
 
 ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" \
   | grep -o '"access_token":"[^"]*"' \
@@ -81,7 +81,7 @@ fi
 
 # --- Execute CMIS query to find the folder by name ---
 # The CMIS Browser Binding query endpoint is the repository URL (no /root).
-QUERY_URL="${CMIS_URL}browser/${CMIS_REPOSITORY_ID}"
+QUERY_URL="${CMIS_URL}browser/${defaultRepositoryID}"
 
 if [[ -n "${PARENT_FOLDER_ID}" ]]; then
   CMIS_QUERY="SELECT cmis:objectId FROM ${CMIS_TYPE} WHERE cmis:name = '${CMIS_NAME}' AND IN_FOLDER('${PARENT_FOLDER_ID}')"

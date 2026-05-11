@@ -17,8 +17,8 @@ set -euo pipefail
 #   list:     0 = success, prints repo list
 #
 # Required config in credentials.properties:
-#   CMIS_URL, CMIS_TOKEN_URL, CMIS_CLIENT_ID, CMIS_CLIENT_SECRET,
-#   CMIS_USERNAME, CMIS_PASSWORD
+#   CMIS_URL, authUrl, cmisClientID, cmisClientSecret,
+#   username, password
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -70,7 +70,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Validate required config ---
-for var in CMIS_URL CMIS_TOKEN_URL CMIS_CLIENT_ID CMIS_CLIENT_SECRET; do
+for var in CMIS_URL authUrl cmisClientID cmisClientSecret; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var is not set in $CONFIG_FILE"
     exit 2
@@ -78,11 +78,11 @@ for var in CMIS_URL CMIS_TOKEN_URL CMIS_CLIENT_ID CMIS_CLIENT_SECRET; do
 done
 
 # --- Resolve token URL (replace provider subdomain with consumer if --subdomain given) ---
-RESOLVED_TOKEN_URL="$CMIS_TOKEN_URL"
+RESOLVED_TOKEN_URL="$authUrl"
 if [[ -n "$SUBDOMAIN" ]]; then
   # Extract provider subdomain from token URL (between :// and first .)
-  PROVIDER_SUBDOMAIN=$(echo "$CMIS_TOKEN_URL" | sed -n 's|.*://\([^.]*\)\..*|\1|p')
-  RESOLVED_TOKEN_URL="${CMIS_TOKEN_URL/$PROVIDER_SUBDOMAIN/$SUBDOMAIN}"
+  PROVIDER_SUBDOMAIN=$(echo "$authUrl" | sed -n 's|.*://\([^.]*\)\..*|\1|p')
+  RESOLVED_TOKEN_URL="${authUrl/$PROVIDER_SUBDOMAIN/$SUBDOMAIN}"
   echo "Using consumer subdomain: $SUBDOMAIN (token URL: $RESOLVED_TOKEN_URL)"
 fi
 
@@ -93,16 +93,16 @@ get_token() {
     # Use client_credentials grant for consumer-scoped access
     TOKEN_RESPONSE=$(curl -s -X POST "${RESOLVED_TOKEN_URL}/oauth/token" \
       --data-urlencode "grant_type=client_credentials" \
-      --data-urlencode "client_id=${CMIS_CLIENT_ID}" \
-      --data-urlencode "client_secret=${CMIS_CLIENT_SECRET}")
+      --data-urlencode "client_id=${cmisClientID}" \
+      --data-urlencode "client_secret=${cmisClientSecret}")
   else
     # Use password grant for provider-scoped access
     TOKEN_RESPONSE=$(curl -s -X POST "${RESOLVED_TOKEN_URL}/oauth/token" \
       --data-urlencode "grant_type=password" \
-      --data-urlencode "client_id=${CMIS_CLIENT_ID}" \
-      --data-urlencode "client_secret=${CMIS_CLIENT_SECRET}" \
-      --data-urlencode "username=${CMIS_USERNAME}" \
-      --data-urlencode "password=${CMIS_PASSWORD}")
+      --data-urlencode "client_id=${cmisClientID}" \
+      --data-urlencode "client_secret=${cmisClientSecret}" \
+      --data-urlencode "username=${username}" \
+      --data-urlencode "password=${password}")
   fi
 
   ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" \

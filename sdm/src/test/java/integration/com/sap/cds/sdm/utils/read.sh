@@ -11,8 +11,8 @@ set -euo pipefail
 #                 If omitted, content is written to stdout.
 #
 # Required config in credentials.properties:
-#   CMIS_URL, CMIS_REPOSITORY_ID, CMIS_TOKEN_URL,
-#   CMIS_CLIENT_ID, CMIS_CLIENT_SECRET, CMIS_USERNAME, CMIS_PASSWORD
+#   CMIS_URL, defaultRepositoryID, authUrl,
+#   cmisClientID, cmisClientSecret, username, password
 # ---------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,7 +47,7 @@ OBJECT_ID="$1"
 OUTPUT_PATH="${2:-}"
 
 # --- Validate required config variables ---
-for var in CMIS_URL CMIS_REPOSITORY_ID CMIS_TOKEN_URL CMIS_CLIENT_ID CMIS_CLIENT_SECRET CMIS_USERNAME CMIS_PASSWORD; do
+for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret username password; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var is not set in $CONFIG_FILE"
     exit 1
@@ -56,12 +56,12 @@ done
 
 # --- Obtain OAuth2 access token (password grant) ---
 echo "Fetching OAuth2 token..."
-TOKEN_RESPONSE=$(curl -s -X POST "${CMIS_TOKEN_URL}/oauth/token" \
+TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
-  --data-urlencode "client_id=${CMIS_CLIENT_ID}" \
-  --data-urlencode "client_secret=${CMIS_CLIENT_SECRET}" \
-  --data-urlencode "username=${CMIS_USERNAME}" \
-  --data-urlencode "password=${CMIS_PASSWORD}")
+  --data-urlencode "client_id=${cmisClientID}" \
+  --data-urlencode "client_secret=${cmisClientSecret}" \
+  --data-urlencode "username=${username}" \
+  --data-urlencode "password=${password}")
 
 ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" \
   | grep -o '"access_token":"[^"]*"' \
@@ -74,7 +74,7 @@ if [[ -z "$ACCESS_TOKEN" ]]; then
 fi
 
 # --- Build the CMIS browser endpoint URL for content stream ---
-CMIS_ENDPOINT="${CMIS_URL}browser/${CMIS_REPOSITORY_ID}/root?objectId=${OBJECT_ID}&cmisselector=content"
+CMIS_ENDPOINT="${CMIS_URL}browser/${defaultRepositoryID}/root?objectId=${OBJECT_ID}&cmisselector=content"
 
 echo "Reading document '${OBJECT_ID}'..."
 

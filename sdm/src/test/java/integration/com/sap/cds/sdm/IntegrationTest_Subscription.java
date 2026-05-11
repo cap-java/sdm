@@ -40,9 +40,9 @@ class IntegrationTest_Subscription {
 
   @BeforeAll
   static void setup() throws Exception {
-    credentials = Credentials.getCredentials();
-    consumerSubdomain = credentials.getProperty("CONSUMER_SUBDOMAIN");
-    assertNotNull(consumerSubdomain, "CONSUMER_SUBDOMAIN must be set in credentials.properties");
+    credentials = Credentials.getCredentials("TENANT1");
+    consumerSubdomain = credentials.getProperty("consumerSubdomainMT");
+    assertNotNull(consumerSubdomain, "consumerSubdomainMT must be set in credentials.properties");
 
     // Ensure subscription is active before tests run
     System.out.println("BeforeAll: Ensuring app is subscribed...");
@@ -143,8 +143,8 @@ class IntegrationTest_Subscription {
 
     // Pre-condition: subscription is active (from test 2), subscription repo exists.
     // Ensure a second repo exists in provider scope (not tied to consumer subscription).
-    String otherRepo = credentials.getProperty("repo1");
-    assertNotNull(otherRepo, "repo1 should be defined in credentials.properties");
+    String otherRepo = credentials.getProperty("defaultRepositoryID");
+    assertNotNull(otherRepo, "defaultRepositoryID should be defined in credentials.properties");
     ShellScriptRunner.Result checkOther = repoCheckProviderScope(otherRepo);
     if (checkOther.getExitCode() != 0) {
       System.out.println("  Onboarding other repo '" + otherRepo + "' in provider scope...");

@@ -30,6 +30,7 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static String[] facet = {"attachments", "references", "footnotes"};
+  private static String tenancyModel;
   private static String versionedRepositoryID;
   private static String defaultRepositoryID;
   private static ApiInterface api;
@@ -39,7 +40,7 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
   @BeforeAll
   static void setup() throws IOException {
     Properties credentialsProperties = Credentials.getCredentials();
-    String tenancyModel = System.getProperty("tenancyModel");
+    tenancyModel = System.getProperty("tenancyModel");
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
@@ -55,7 +56,8 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
       clientId = credentialsProperties.getProperty("clientIDMT");
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
-      authUrl = credentialsProperties.getProperty("authUrlMTSDC");
+      authUrl = credentialsProperties.getProperty("authUrlMT1");
+      defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryIDMT");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -118,12 +120,19 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
     }
   }
 
+  private static int runUpdateEnv(String value) throws Exception {
+    if (tenancyModel.equals("multi")) {
+      return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--app", "bookshop-mt-srv", "--value", value);
+    }
+    return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", value);
+  }
+
   @Test
   @Order(1)
   void testChangeToVersionedRepository() throws Exception {
     System.out.println(
         "Test (1) : Change REPOSITORY_ID to versioned repository: " + versionedRepositoryID);
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", versionedRepositoryID);
+    int exitCode = runUpdateEnv(versionedRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
   }
 
@@ -179,7 +188,7 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
   void testRevertToDefaultRepository() throws Exception {
     System.out.println(
         "Test (3) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
-    int exitCode = ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", defaultRepositoryID);
+    int exitCode = runUpdateEnv(defaultRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
   }
 }

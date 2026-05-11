@@ -25,13 +25,13 @@ fi
 
 load_props "$CONFIG_FILE"
 
-# --- Resolve consumer credentials (fall back to provider credentials) ---
-CONSUMER_USER="${CONSUMER_CF_USERNAME:-$CF_USERNAME}"
-CONSUMER_PASS="${CONSUMER_CF_PASSWORD:-$CF_PASSWORD}"
+# --- Resolve consumer credentials ---
+CONSUMER_USER="${username}"
+CONSUMER_PASS="${password}"
 BTP_URL="${BTP_CLI_URL:-https://cli.btp.cloud.sap}"
 
 # --- Validate required variables ---
-for var in CONSUMER_USER CONSUMER_SUBACCOUNT_ID SAAS_APP_NAME; do
+for var in CONSUMER_USER consumerSubaccountIdMT1 SAAS_APP_NAME; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: Required variable $var is not set in config"
     exit 1
@@ -54,14 +54,14 @@ fi
 btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
 
 # --- Check current subscription status ---
-GET_ARGS=(--subaccount "$CONSUMER_SUBACCOUNT_ID" --of-app "$SAAS_APP_NAME")
+GET_ARGS=(--subaccount "$consumerSubaccountIdMT1" --of-app "$SAAS_APP_NAME")
 if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
   GET_ARGS+=(--plan "$SAAS_APP_PLAN")
 fi
 
 # Use list to find the exact app row and check its state
 # Use -w (whole word) so "NOT_SUBSCRIBED" does NOT match "SUBSCRIBED"
-CURRENT_STATE=$(btp list accounts/subscription --subaccount "$CONSUMER_SUBACCOUNT_ID" 2>/dev/null \
+CURRENT_STATE=$(btp list accounts/subscription --subaccount "$consumerSubaccountIdMT1" 2>/dev/null \
   | grep -F "$SAAS_APP_NAME" | grep -ow "SUBSCRIBED" | head -1 || true)
 
 if [[ "$CURRENT_STATE" == "SUBSCRIBED" ]]; then
@@ -71,7 +71,7 @@ else
   # --- Subscribe to SaaS application at subaccount level ---
   echo ""
   echo "Subscribing to SaaS application..."
-  SUBSCRIBE_ARGS=(--subaccount "$CONSUMER_SUBACCOUNT_ID" --to-app "$SAAS_APP_NAME")
+  SUBSCRIBE_ARGS=(--subaccount "$consumerSubaccountIdMT1" --to-app "$SAAS_APP_NAME")
   if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
     SUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
   fi
@@ -141,7 +141,7 @@ ROLES_RAW=""
 MAX_RETRIES=6
 RETRY_INTERVAL=30
 for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
-  ROLES_RAW=$(btp list security/role --subaccount "$CONSUMER_SUBACCOUNT_ID" 2>&1) || true
+  ROLES_RAW=$(btp list security/role --subaccount "$consumerSubaccountIdMT1" 2>&1) || true
 
   if echo "$ROLES_RAW" | grep -qi "^error\|FAILED"; then
     echo "ERROR: Could not fetch roles from subaccount."
@@ -179,14 +179,14 @@ for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
 
   # Create the role collection if it doesn't already exist
   # Use awk exact first-column match to avoid "ak-test" matching "ak-test2" as a substring
-  COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$CONSUMER_SUBACCOUNT_ID" 2>/dev/null \
+  COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$consumerSubaccountIdMT1" 2>/dev/null \
     | awk -v name="$COLLECTION_NAME" '$1 == name {found=1} END {print found+0}' || echo 0)
   if [[ "$COLLECTION_EXISTS" == "1" ]]; then
     echo "Role collection '$COLLECTION_NAME' already exists — skipping creation."
   else
     echo "Creating role collection '$COLLECTION_NAME'..."
     btp create security/role-collection "$COLLECTION_NAME" \
-      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --subaccount "$consumerSubaccountIdMT1" \
       --description "Auto-created role collection for $SAAS_APP_NAME" \
       > /dev/null 2>&1 \
       && echo "Role collection created." \
@@ -199,7 +199,7 @@ for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
     [[ -z "$RNAME" ]] && continue
     btp add security/role "$RNAME" \
       --to-role-collection "$COLLECTION_NAME" \
-      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --subaccount "$consumerSubaccountIdMT1" \
       --of-app "$RAPPID" \
       --of-role-template "$RTEMPLATE" \
       > /dev/null 2>&1 \
@@ -211,7 +211,7 @@ for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
   echo "Assigning role collection to users..."
   for EMAIL in "${EMAILS_ARRAY[@]}"; do
     btp assign security/role-collection "$COLLECTION_NAME" \
-      --subaccount "$CONSUMER_SUBACCOUNT_ID" \
+      --subaccount "$consumerSubaccountIdMT1" \
       --to-user "$EMAIL" \
       --create-user-if-missing \
       > /dev/null 2>&1 \
