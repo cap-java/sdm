@@ -22,7 +22,9 @@ jobs:
           - IntegrationTest_SingleFacet
           - IntegrationTest_MultipleFacet
           - IntegrationTest_Chapters_MultipleFacet
-
+    env:
+      FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
+      DOWNLOAD_PATH: ${{ 'eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -108,7 +110,18 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
           echo "✅ Client details fetched successfully!"
-
+      - name: Download virus test file 📥
+        run: |
+          curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
+          sleep 5
+          if [ -f "$DOWNLOAD_PATH" ]; then
+            FILE_NAME=$(basename "$DOWNLOAD_PATH")
+            FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
+            echo "File exists — Name: $FILE_NAME, Size: $FILE_SIZE bytes"
+          else
+            echo "❌ File NOT found at path: $DOWNLOAD_PATH"
+            exit 1
+          fi
       - name: Run integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
