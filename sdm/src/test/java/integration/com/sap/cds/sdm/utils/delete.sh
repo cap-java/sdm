@@ -57,7 +57,6 @@ for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret us
 done
 
 # --- Obtain OAuth2 access token (password grant) ---
-echo "Fetching OAuth2 token..."
 TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "client_id=${cmisClientID}" \

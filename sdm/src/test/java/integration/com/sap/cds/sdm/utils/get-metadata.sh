@@ -56,7 +56,6 @@ for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret us
 done
 
 # --- Obtain OAuth2 access token (password grant) ---
-echo "Fetching OAuth2 token..." >&2
 TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "client_id=${cmisClientID}" \
@@ -77,7 +76,6 @@ fi
 # --- Fetch object properties via CMIS browser binding ---
 CMIS_ENDPOINT="${CMIS_URL}browser/${defaultRepositoryID}/root?objectId=${OBJECT_ID}&cmisselector=object"
 
-echo "Fetching metadata for object '${OBJECT_ID}'..." >&2
 
 RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X GET "$CMIS_ENDPOINT" \

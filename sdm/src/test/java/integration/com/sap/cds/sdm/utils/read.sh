@@ -56,7 +56,6 @@ for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret us
 done
 
 # --- Obtain OAuth2 access token (password grant) ---
-echo "Fetching OAuth2 token..."
 TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "client_id=${cmisClientID}" \
@@ -77,7 +76,6 @@ fi
 # --- Build the CMIS browser endpoint URL for content stream ---
 CMIS_ENDPOINT="${CMIS_URL}browser/${defaultRepositoryID}/root?objectId=${OBJECT_ID}&cmisselector=content"
 
-echo "Reading document '${OBJECT_ID}'..."
 
 if [[ -n "${OUTPUT_PATH}" ]]; then
   # Download to file

@@ -62,7 +62,6 @@ for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret us
 done
 
 # --- Obtain OAuth2 access token (password grant) ---
-echo "Fetching OAuth2 token..."
 TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "client_id=${cmisClientID}" \
@@ -81,15 +80,12 @@ if [[ -z "$ACCESS_TOKEN" ]]; then
 fi
 
 # --- Execute CMIS query to find the folder by name ---
-# The CMIS Browser Binding query endpoint is the repository URL (no /root).
 QUERY_URL="${CMIS_URL}browser/${defaultRepositoryID}"
 
 if [[ -n "${PARENT_FOLDER_ID}" ]]; then
   CMIS_QUERY="SELECT cmis:objectId FROM ${CMIS_TYPE} WHERE cmis:name = '${CMIS_NAME}' AND IN_FOLDER('${PARENT_FOLDER_ID}')"
-  echo "Searching for ${CMIS_TYPE} '${CMIS_NAME}' inside folder '${PARENT_FOLDER_ID}'..."
 else
   CMIS_QUERY="SELECT cmis:objectId FROM ${CMIS_TYPE} WHERE cmis:name = '${CMIS_NAME}'"
-  echo "Searching for ${CMIS_TYPE} '${CMIS_NAME}' in repository..."
 fi
 RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X GET "${QUERY_URL}" \
@@ -108,7 +104,6 @@ if [[ "$HTTP_CODE" != "200" ]]; then
 fi
 
 # --- Parse the objectId from the JSON response ---
-# The response is a CMIS query result; each entry has cmis:objectId.value
 OBJECT_ID=$(echo "$BODY" \
   | grep -o '"cmis:objectId"[^}]*"value":"[^"]*"' \
   | head -1 \

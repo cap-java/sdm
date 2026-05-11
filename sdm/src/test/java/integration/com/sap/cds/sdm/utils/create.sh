@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "test"
 
 # ---------------------------------------------------------------------------
 # create.sh — Upload a file to SAP Document Management Service via CMIS API
@@ -64,7 +63,6 @@ for var in CMIS_URL defaultRepositoryID authUrl cmisClientID cmisClientSecret us
 done
 
 # --- Obtain OAuth2 access token (password grant) ---
-echo "Fetching OAuth2 token..."
 TOKEN_RESPONSE=$(curl -s -X POST "${authUrl}/oauth/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "client_id=${cmisClientID}" \
@@ -106,7 +104,6 @@ CURL_ARGS=(
   -F "filename=@${FILE_PATH};type=${MIME_TYPE}"
 )
 
-echo "Creating document '${CMIS_NAME}' in repository '${defaultRepositoryID}'..."
 RESPONSE=$(curl "${CURL_ARGS[@]}")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)

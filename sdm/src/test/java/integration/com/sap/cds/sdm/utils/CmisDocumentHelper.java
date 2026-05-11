@@ -35,7 +35,6 @@ public class CmisDocumentHelper {
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
-      System.out.println("Resolved parent folder object ID: " + parentFolderObjectId);
 
       int exitCode = ShellScriptRunner.run(CREATE_SCRIPT, cmisName, filePath, parentFolderObjectId);
       if (exitCode != 0) {
@@ -62,7 +61,6 @@ public class CmisDocumentHelper {
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
-      System.out.println("Resolved parent folder object ID: " + parentFolderObjectId);
 
       // Step 2: resolve the document object ID by filename inside the parent folder
       String docLine =
@@ -72,7 +70,6 @@ public class CmisDocumentHelper {
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
-      System.out.println("Resolved document object ID: " + documentObjectId);
 
       // Step 3: delete the document
       int deleteExitCode =
@@ -102,7 +99,6 @@ public class CmisDocumentHelper {
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
-      System.out.println("Resolved parent folder object ID: " + parentFolderObjectId);
 
       // Step 2: resolve the document object ID by filename inside the parent folder
       String docLine =
@@ -112,7 +108,6 @@ public class CmisDocumentHelper {
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
-      System.out.println("Resolved document object ID: " + documentObjectId);
 
       // Step 3: read/download the document
       int exitCode = ShellScriptRunner.run(READ_SCRIPT, documentObjectId, outputPath);
@@ -134,22 +129,15 @@ public class CmisDocumentHelper {
    */
   public static String readDocumentMetadataFromCmis(String entityId, String fileName) {
     try {
-      System.out.println(
-          "[DEBUG] readDocumentMetadataFromCmis: entityId=" + entityId + ", fileName=" + fileName);
-
       // Step 1: resolve the parent folder object ID from entityId__attachments
       String folderName = entityId + "__attachments";
-      System.out.println("[DEBUG] Looking up folder: " + folderName);
       String folderLine = ShellScriptRunner.runAndCaptureOutput(GET_OBJECT_ID_SCRIPT, folderName);
       String parentFolderObjectId =
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
-      System.out.println("[DEBUG] Resolved parent folder object ID: " + parentFolderObjectId);
 
       // Step 2: resolve the document object ID by filename inside the parent folder
-      System.out.println(
-          "[DEBUG] Looking up document: " + fileName + " in folder: " + parentFolderObjectId);
       String docLine =
           ShellScriptRunner.runAndCaptureOutput(
               GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
@@ -157,12 +145,10 @@ public class CmisDocumentHelper {
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
-      System.out.println("[DEBUG] Resolved document object ID: " + documentObjectId);
 
       // Step 3: fetch metadata
       String metadata =
           ShellScriptRunner.runAndCaptureOutput(GET_METADATA_SCRIPT, documentObjectId);
-      System.out.println("[DEBUG] Document metadata retrieved successfully");
       return metadata;
     } catch (Exception e) {
       fail("Failed to read document metadata from CMIS: " + e.getMessage());
