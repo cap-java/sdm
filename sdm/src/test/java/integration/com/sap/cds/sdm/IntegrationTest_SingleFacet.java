@@ -6523,7 +6523,7 @@ class IntegrationTest_SingleFacet {
   @Test
   @Order(76)
   void testReadCmisMetadataCreatedBy() {
-    System.out.println("Test (4) : Read CMIS metadata and verify createdBy field");
+    System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
     String createdBy = CmisDocumentHelper.getCmisProperty(entityID, "sample.pdf", "cmis:createdBy");
     System.out.println("cmis:createdBy value: " + createdBy);
     assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
