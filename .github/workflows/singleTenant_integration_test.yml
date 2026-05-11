@@ -620,7 +620,7 @@ jobs:
           cmisClientSecret=$cmisClientSecret
           EOL
           echo "🎯 Running Maven virus scan integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Deicar.file.path=$DOWNLOAD_PATH -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Deicar.file.path=eicar.com.txt -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
   virusscan-repo-cleanup:
     runs-on: ubuntu-latest
