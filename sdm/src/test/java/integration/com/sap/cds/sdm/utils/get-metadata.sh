@@ -37,6 +37,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 load_props "$CONFIG_FILE"
+CMIS_URL="${CMIS_URL%/}/"
 
 # --- Validate positional parameters ---
 if [[ $# -ne 1 ]]; then

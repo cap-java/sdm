@@ -85,6 +85,7 @@ public class ShellScriptRunner {
     Process process = pb.start();
 
     final List<String> stdoutLines = new CopyOnWriteArrayList<>();
+    final List<String> stderrLines = new CopyOnWriteArrayList<>();
 
     Thread stdoutThread =
         new Thread(
@@ -96,7 +97,7 @@ public class ShellScriptRunner {
                   if (!line.trim().isEmpty()) stdoutLines.add(line.trim());
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stdout: " + e.getMessage());
+                // ignore
               }
             });
 
@@ -105,8 +106,9 @@ public class ShellScriptRunner {
             () -> {
               try (BufferedReader reader =
                   new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                while (reader.readLine() != null) {
-                  // discard
+                String line;
+                while ((line = reader.readLine()) != null) {
+                  if (!line.trim().isEmpty()) stderrLines.add(line.trim());
                 }
               } catch (IOException e) {
                 // ignore
@@ -120,7 +122,16 @@ public class ShellScriptRunner {
     stderrThread.join();
 
     if (exitCode != 0) {
-      throw new RuntimeException(scriptPath + " exited with code " + exitCode);
+      String output = String.join("\n", stdoutLines);
+      String errors = String.join("\n", stderrLines);
+      throw new RuntimeException(
+          scriptPath
+              + " exited with code "
+              + exitCode
+              + "\nOutput: "
+              + output
+              + "\nStderr: "
+              + errors);
     }
     return stdoutLines.isEmpty() ? null : stdoutLines.get(stdoutLines.size() - 1);
   }
