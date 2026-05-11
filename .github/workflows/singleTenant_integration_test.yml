@@ -24,7 +24,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet
     env:
       FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
-      DOWNLOAD_PATH: ${{ 'eicar.com.txt' }}
+      DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -126,6 +126,8 @@ jobs:
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
         run: |
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
@@ -142,8 +144,8 @@ jobs:
           virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
           defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
           CMIS_URL="${{ secrets.CMIS_URL }}"
-          cmisClientID="${{ secrets.CMISCLIENTID }}"
-          cmisClientSecret="${{ secrets.CMISCLIENTSECRET }}"
+          cmisClientID="$CMIS_CLIENT_ID"
+          cmisClientSecret="$CMIS_CLIENT_SECRET"
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
           echo "::add-mask::$username"
