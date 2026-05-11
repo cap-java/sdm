@@ -194,6 +194,7 @@ jobs:
   versioned-repo-setup:
     runs-on: ubuntu-latest
     needs: integration-test
+    if: always()
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -248,9 +249,6 @@ jobs:
           - IntegrationTest_SingleFacet_VersionedRepository
           - IntegrationTest_MultipleFacet_VersionedRepository
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
-    env:
-      FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
-      DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -332,18 +330,6 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
           echo "✅ Client details fetched successfully!"
-      - name: Download virus test file 📥
-        run: |
-          curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
-          sleep 5
-          if [ -f "$DOWNLOAD_PATH" ]; then
-            FILE_NAME=$(basename "$DOWNLOAD_PATH")
-            FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
-            echo "File exists — Name: $FILE_NAME, Size: $FILE_SIZE bytes"
-          else
-            echo "❌ File NOT found at path: $DOWNLOAD_PATH"
-            exit 1
-          fi
       - name: Run versioned integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
@@ -413,56 +399,10 @@ jobs:
           echo "🎯 Running Maven versioned integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  versioned-repo-cleanup:
+  virusscan-repo-setup:
     runs-on: ubuntu-latest
     needs: versioned-integration-test
     if: always()
-    steps:
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
-
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          echo "🔄 Installing Cloud Foundry CLI..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
-
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
-
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
-
-      - name: Revert to Default Repository 🔄
-        run: |
-          echo "🔄 Reverting REPOSITORY_ID to default repository..."
-          cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYID }}"
-          echo "🔄 Restaging application..."
-          cf restage demoappjava-srv
-          echo "✅ Reverted to default repository!"
-
-  virusscan-repo-setup:
-    runs-on: ubuntu-latest
-    needs: versioned-repo-cleanup
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -728,3 +668,166 @@ jobs:
           echo "🔄 Restaging application..."
           cf restage demoappjava-srv
           echo "✅ Reverted to default repository!"
+
+  repospecific-integration-test:
+    runs-on: ubuntu-latest
+    needs: virusscan-repo-cleanup
+    if: always()
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        tokenFlow: [namedUser, technicalUser]
+        testClass:
+          - IntegrationTest_SingleFacet_RepoSpecific
+          - IntegrationTest_MultipleFacet_RepoSpecific
+          - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
+    steps:
+      - name: Checkout repository 📁
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.branch_name }}
+
+      - name: Set up Java 17 ☕
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
+
+      - name: Install Cloud Foundry CLI 🔧
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+        run: |
+          echo "🔄 Installing Cloud Foundry CLI..."
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Determine Cloud Foundry Space 🌌
+        id: determine_space
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+            space="${{ secrets.CF_SPACE }}"
+          else
+            space="${{ github.event.inputs.cf_space }}"
+          fi
+          echo "space=$space" >> $GITHUB_OUTPUT
+
+      - name: Login to Cloud Foundry 🔑
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Fetch and Escape Client Details for single tenant 🔍
+        id: fetch_credentials
+        run: |
+          echo "🔄 Fetching client details for single tenant..."
+          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+            echo "❌ Error: clientSecret is not set or is null"; exit 1;
+          fi
+          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedClientSecret"
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "❌ Error: clientID is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$clientID"
+          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+          echo "✅ Client details fetched successfully!"
+      - name: Run repo-specific integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
+        env:
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+        run: |
+          echo "🚀 Starting repo-specific integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
+          set -e
+          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="${{ secrets.CAPAUTH_URL }}"
+          clientID="${{ env.CLIENT_ID }}"
+          clientSecret="${{ env.CLIENT_SECRET }}"
+          username="${{ secrets.CF_USER }}"
+          password="${{ secrets.CF_PASSWORD }}"
+          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
+          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
+          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+          CMIS_URL="${{ secrets.CMIS_URL }}"
+          cmisClientID="$CMIS_CLIENT_ID"
+          cmisClientSecret="$CMIS_CLIENT_SECRET"
+          echo "::add-mask::$clientSecret"
+          echo "::add-mask::$clientID"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          echo "::add-mask::$noSDMRoleUsername"
+          echo "::add-mask::$noSDMRoleUserPassword"
+          echo "::add-mask::$versionedRepositoryID"
+          echo "::add-mask::$virusScanRepositoryID"
+          echo "::add-mask::$defaultRepositoryID"
+          echo "::add-mask::$CMIS_URL"
+          echo "::add-mask::$cmisClientID"
+          echo "::add-mask::$cmisClientSecret"
+          if [ -z "$appUrl" ]; then echo "❌ Error: appUrl is not set"; exit 1; fi
+          if [ -z "$authUrl" ]; then echo "❌ Error: authUrl is not set"; exit 1; fi
+          if [ -z "$clientID" ]; then echo "❌ Error: clientID is not set"; exit 1; fi
+          if [ -z "$clientSecret" ]; then echo "❌ Error: clientSecret is not set"; exit 1; fi
+          if [ -z "$username" ]; then echo "❌ Error: username is not set"; exit 1; fi
+          if [ -z "$password" ]; then echo "❌ Error: password is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUsername" ]; then echo "❌ Error: noSDMRoleUsername is not set"; exit 1; fi
+          if [ -z "$noSDMRoleUserPassword" ]; then echo "❌ Error: noSDMRoleUserPassword is not set"; exit 1; fi
+          if [ -z "$versionedRepositoryID" ]; then echo "❌ Error: versionedRepositoryID is not set"; exit 1; fi
+          if [ -z "$virusScanRepositoryID" ]; then echo "❌ Error: virusScanRepositoryID is not set"; exit 1; fi
+          if [ -z "$defaultRepositoryID" ]; then echo "❌ Error: defaultRepositoryID is not set"; exit 1; fi
+          if [ -z "$CMIS_URL" ]; then echo "❌ Error: CMIS_URL is not set"; exit 1; fi
+          if [ -z "$cmisClientID" ]; then echo "❌ Error: cmisClientID is not set"; exit 1; fi
+          if [ -z "$cmisClientSecret" ]; then echo "❌ Error: cmisClientSecret is not set"; exit 1; fi
+          cat > "$PROPERTIES_FILE" <<EOL
+          appUrl=$appUrl
+          authUrl=$authUrl
+          clientID=$clientID
+          clientSecret=$clientSecret
+          username=$username
+          password=$password
+          noSDMRoleUsername=$noSDMRoleUsername
+          noSDMRoleUserPassword=$noSDMRoleUserPassword
+          versionedRepositoryID=$versionedRepositoryID
+          virusScanRepositoryID=$virusScanRepositoryID
+          defaultRepositoryID=$defaultRepositoryID
+          CMIS_URL=$CMIS_URL
+          cmisClientID=$cmisClientID
+          cmisClientSecret=$cmisClientSecret
+          EOL
+          echo "🎯 Running Maven repo-specific integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
