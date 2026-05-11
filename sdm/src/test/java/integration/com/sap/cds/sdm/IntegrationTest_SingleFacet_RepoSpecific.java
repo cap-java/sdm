@@ -7,7 +7,6 @@ import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
 import java.util.*;
 import okhttp3.*;
 import org.junit.jupiter.api.*;
@@ -267,7 +266,7 @@ class IntegrationTest_SingleFacet_RepoSpecific {
   void testDuplicateAttachmentRenameAcrossRepos() throws Exception {
     System.out.println(
         "Test (4) : Create new entity with sample.pdf in defaultRepositoryID, switch to virusScanRepositoryID, upload"
-            + " sample.txt, rename to sample.pdf — should succeed");
+            + " sample1.pdf, rename to sample.pdf — should succeed");
 
     // Switch to defaultRepositoryID to create a fresh entity with sample.pdf
     int exitCode = runUpdateEnv(defaultRepositoryID);
@@ -299,12 +298,12 @@ class IntegrationTest_SingleFacet_RepoSpecific {
     exitCode = runUpdateEnv(virusScanRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for virusScanRepositoryID");
 
-    // Edit the entity and upload a PDF with a temp name, then rename to sample.pdf
+    // Edit the entity and upload sample1.pdf (same extension, different name), then rename to
+    // sample.pdf
     response = api.editEntityDraft(appUrl, bookEntityName, srvpath, bookID_rename);
     assertEquals("Entity in draft mode", response, "Edit entity should succeed");
 
-    File tempFile = File.createTempFile("duplicate", ".pdf");
-    Files.copy(pdfFile.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    File pdfFile2 = new File(classLoader.getResource("sample1.pdf").getFile());
     postData = new HashMap<>();
     postData.put("up__ID", bookID_rename);
     postData.put("mimeType", "application/pdf");
@@ -314,12 +313,10 @@ class IntegrationTest_SingleFacet_RepoSpecific {
 
     createResponse =
         api.createAttachment(
-            appUrl, bookEntityName, facetName, bookID_rename, srvpath, postData, tempFile);
-    assertEquals("Attachment created", createResponse.get(0), "Upload temp PDF should succeed");
+            appUrl, bookEntityName, facetName, bookID_rename, srvpath, postData, pdfFile2);
+    assertEquals("Attachment created", createResponse.get(0), "Upload sample1.pdf should succeed");
     String attachmentID2 = createResponse.get(1);
 
-    // Rename temp PDF to sample.pdf (same name as attachment in defaultRepositoryID — not in
-    // virusScanRepositoryID)
     response =
         api.renameAttachment(
             appUrl, bookEntityName, facetName, bookID_rename, attachmentID2, "sample.pdf");
@@ -327,7 +324,6 @@ class IntegrationTest_SingleFacet_RepoSpecific {
 
     response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID_rename);
     assertEquals("Saved", response, "Entity save after rename should succeed");
-    System.out.println("Renamed temp PDF to sample.pdf under virusScanRepositoryID — success");
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -462,7 +458,7 @@ class IntegrationTest_SingleFacet_RepoSpecific {
   void testNestedEntityDuplicateRename() throws Exception {
     System.out.println(
         "Test (5d) : Create new book+chapter with sample.pdf in defaultRepositoryID, switch to virusScanRepositoryID, upload"
-            + " sample.txt on chapter, rename to sample.pdf — should succeed");
+            + " sample1.pdf on chapter, rename to sample.pdf — should succeed");
 
     // Switch to defaultRepositoryID to create a fresh book+chapter with sample.pdf on chapter
     int exitCode = runUpdateEnv(defaultRepositoryID);
@@ -502,12 +498,12 @@ class IntegrationTest_SingleFacet_RepoSpecific {
     exitCode = runUpdateEnv(virusScanRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for virusScanRepositoryID");
 
-    // Edit the book, upload a PDF with temp name to chapter, rename to sample.pdf
+    // Edit the book, upload sample1.pdf (same extension, different name) to chapter, rename to
+    // sample.pdf
     response = api.editEntityDraft(appUrl, bookEntityName, srvpath, bookID_chapterRename);
     assertEquals("Entity in draft mode", response, "Edit book should succeed");
 
-    File tempFile = File.createTempFile("duplicate", ".pdf");
-    Files.copy(pdfFile.toPath(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    File pdfFile2 = new File(classLoader.getResource("sample1.pdf").getFile());
     postData = new HashMap<>();
     postData.put("up__ID", chapterID_rename);
     postData.put("mimeType", "application/pdf");
@@ -517,9 +513,11 @@ class IntegrationTest_SingleFacet_RepoSpecific {
 
     createResponse =
         api.createAttachment(
-            appUrl, chapterEntityName, facetName, chapterID_rename, srvpath, postData, tempFile);
+            appUrl, chapterEntityName, facetName, chapterID_rename, srvpath, postData, pdfFile2);
     assertEquals(
-        "Attachment created", createResponse.get(0), "Upload temp PDF to chapter should succeed");
+        "Attachment created",
+        createResponse.get(0),
+        "Upload sample1.pdf to chapter should succeed");
     String chapterAttachmentID2 = createResponse.get(1);
 
     response =
@@ -535,8 +533,6 @@ class IntegrationTest_SingleFacet_RepoSpecific {
 
     response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID_chapterRename);
     assertEquals("Saved", response, "Book save after chapter rename should succeed");
-    System.out.println(
-        "Renamed temp PDF to sample.pdf on chapter under virusScanRepositoryID — success");
   }
 
   // ───────────────────────────────────────────────────────────────────────────

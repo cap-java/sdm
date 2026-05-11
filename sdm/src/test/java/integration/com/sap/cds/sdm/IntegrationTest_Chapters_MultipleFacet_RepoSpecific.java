@@ -266,7 +266,7 @@ class IntegrationTest_Chapters_MultipleFacet_RepoSpecific {
   void testDuplicateAttachmentRenameAcrossRepos() throws Exception {
     System.out.println(
         "Test (4) : Create new book+chapter with sample.pdf in defaultRepositoryID, switch to virusScanRepositoryID, upload"
-            + " sample.txt on chapter, rename to sample.pdf in all facets — should succeed");
+            + " sample1.pdf on chapter, rename to sample.pdf in all facets — should succeed");
 
     // Switch to defaultRepositoryID
     int exitCode = runUpdateEnv(defaultRepositoryID);
@@ -310,27 +310,27 @@ class IntegrationTest_Chapters_MultipleFacet_RepoSpecific {
     exitCode = runUpdateEnv(virusScanRepositoryID);
     assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0 for virusScanRepositoryID");
 
-    // Edit book, upload sample.txt to chapter, rename to sample.pdf
+    // Edit book, upload sample1.pdf (same extension, different name) to chapter, rename to
+    // sample.pdf
     response = api.editEntityDraft(appUrl, bookEntityName, srvpath, bookID_rename);
     assertEquals("Entity in draft mode", response, "Edit book should succeed");
 
-    File txtFile = new File(classLoader.getResource("sample.txt").getFile());
-
     for (int i = 0; i < facet.length; i++) {
+      File pdfFile2 = new File(classLoader.getResource("sample1.pdf").getFile());
       Map<String, Object> postData = new HashMap<>();
       postData.put("up__ID", chapterID_rename);
-      postData.put("mimeType", "text/plain");
+      postData.put("mimeType", "application/pdf");
       postData.put("createdAt", new Date().toString());
       postData.put("createdBy", "test@test.com");
       postData.put("modifiedBy", "test@test.com");
 
       List<String> createResponse =
           api.createAttachment(
-              appUrl, chapterEntityName, facet[i], chapterID_rename, srvpath, postData, txtFile);
+              appUrl, chapterEntityName, facet[i], chapterID_rename, srvpath, postData, pdfFile2);
       assertEquals(
           "Attachment created",
           createResponse.get(0),
-          "Upload sample.txt to chapter should succeed for " + facet[i]);
+          "Upload sample1.pdf to chapter should succeed for " + facet[i]);
       String attachmentID2 = createResponse.get(1);
 
       response =
