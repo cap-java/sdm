@@ -29,33 +29,31 @@ public class ShellScriptRunner {
     pb.redirectErrorStream(false);
     Process process = pb.start();
 
-    // Stream stdout
+    // Drain stdout (suppress console output)
     Thread stdoutThread =
         new Thread(
             () -> {
               try (BufferedReader reader =
                   new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  System.out.println("[script] " + line);
+                while (reader.readLine() != null) {
+                  // discard
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stdout: " + e.getMessage());
+                // ignore
               }
             });
 
-    // Stream stderr
+    // Drain stderr (suppress console output)
     Thread stderrThread =
         new Thread(
             () -> {
               try (BufferedReader reader =
                   new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  System.err.println("[script-err] " + line);
+                while (reader.readLine() != null) {
+                  // discard
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stderr: " + e.getMessage());
+                // ignore
               }
             });
 
@@ -107,12 +105,11 @@ public class ShellScriptRunner {
             () -> {
               try (BufferedReader reader =
                   new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  System.err.println("[script-err] " + line);
+                while (reader.readLine() != null) {
+                  // discard
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stderr: " + e.getMessage());
+                // ignore
               }
             });
 
@@ -156,11 +153,10 @@ public class ShellScriptRunner {
                   new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                  System.out.println("[script] " + line);
                   stdoutLines.add(line);
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stdout: " + e.getMessage());
+                // ignore
               }
             });
 
@@ -169,12 +165,11 @@ public class ShellScriptRunner {
             () -> {
               try (BufferedReader reader =
                   new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                  System.err.println("[script-err] " + line);
+                while (reader.readLine() != null) {
+                  // discard
                 }
               } catch (IOException e) {
-                System.err.println("Error reading script stderr: " + e.getMessage());
+                // ignore
               }
             });
 

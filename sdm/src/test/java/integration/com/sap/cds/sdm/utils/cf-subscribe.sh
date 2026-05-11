@@ -105,14 +105,14 @@ IFS=',' read -ra _emails_raw  <<< "${ROLE_ASSIGNMENT_EMAILS:-}"
 IFS=',' read -ra _colls_raw   <<< "${ROLE_COLLECTION_NAME:-}"
 
 EMAILS_ARRAY=()
-for _e in "${_emails_raw[@]}"; do
-  _e="${_e#"${_e%%[![:space:]]*}"}"; _e="${_e%"${_e##*[![:space:]]}"}" 
+for _e in ${_emails_raw[@]+"${_emails_raw[@]}"}; do
+  _e="${_e#"${_e%%[![:space:]]*}"}"; _e="${_e%"${_e##*[![:space:]]}"}"
   [[ -n "$_e" ]] && EMAILS_ARRAY+=("$_e")
 done
 
 COLLECTIONS_ARRAY=()
-for _c in "${_colls_raw[@]}"; do
-  _c="${_c#"${_c%%[![:space:]]*}"}"; _c="${_c%"${_c##*[![:space:]]}"}" 
+for _c in ${_colls_raw[@]+"${_colls_raw[@]}"}; do
+  _c="${_c#"${_c%%[![:space:]]*}"}"; _c="${_c%"${_c##*[![:space:]]}"}"
   [[ -n "$_c" ]] && COLLECTIONS_ARRAY+=("$_c")
 done
 
