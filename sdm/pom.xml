@@ -32,8 +32,8 @@
         <cds.install-cdsdk.version>7.6.0</cds.install-cdsdk.version>
         <generation-package>com.sap.cds.sdm.generated</generation-package>
         <test-generation-folder>src/test/gen</test-generation-folder>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <attachments_version>1.0.2</attachments_version>
         <lombok.version>1.18.30</lombok.version>
         <jacoco.version>0.8.7</jacoco.version>
