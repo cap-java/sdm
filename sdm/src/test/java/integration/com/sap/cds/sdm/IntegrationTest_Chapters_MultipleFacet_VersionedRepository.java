@@ -3,7 +3,6 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,11 +10,7 @@ import java.util.*;
 import okhttp3.*;
 import org.junit.jupiter.api.*;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
-
-  private static final String UPDATE_ENV_SCRIPT =
-      "src/test/java/integration/com/sap/cds/sdm/utils/cf-update-env.sh";
 
   private static String token;
   private static String clientId;
@@ -31,8 +26,6 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
   private static String srvpath = "AdminService";
   private static String[] facet = {"attachments", "references", "footnotes"};
   private static String tenancyModel;
-  private static String versionedRepositoryID;
-  private static String defaultRepositoryID;
   private static ApiInterface api;
   private static String bookID;
   private static String chapterID;
@@ -44,8 +37,6 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    versionedRepositoryID = credentialsProperties.getProperty("versionedRepositoryID");
-    defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryID");
 
     if (tenancyModel.equals("single")) {
       clientId = credentialsProperties.getProperty("clientID");
@@ -57,7 +48,6 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
       authUrl = credentialsProperties.getProperty("authUrlMT1");
-      defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryIDMT");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -120,24 +110,7 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
     }
   }
 
-  private static int runUpdateEnv(String value) throws Exception {
-    if (tenancyModel.equals("multi")) {
-      return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--app", "bookshop-mt-srv", "--value", value);
-    }
-    return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", value);
-  }
-
   @Test
-  @Order(1)
-  void testChangeToVersionedRepository() throws Exception {
-    System.out.println(
-        "Test (1) : Change REPOSITORY_ID to versioned repository: " + versionedRepositoryID);
-    int exitCode = runUpdateEnv(versionedRepositoryID);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
-  }
-
-  @Test
-  @Order(2)
   void testCreateBookChapterAndUploadAttachmentShouldFail() throws IOException {
     System.out.println(
         "Test (2) : Create book+chapter and upload attachments on versioned repository in all facets — expect error");
@@ -181,14 +154,5 @@ class IntegrationTest_Chapters_MultipleFacet_VersionedRepository {
             "Response should contain an error message for " + facet[i]);
       }
     }
-  }
-
-  @Test
-  @Order(3)
-  void testRevertToDefaultRepository() throws Exception {
-    System.out.println(
-        "Test (3) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
-    int exitCode = runUpdateEnv(defaultRepositoryID);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
   }
 }

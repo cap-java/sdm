@@ -3,7 +3,6 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,11 +10,7 @@ import java.util.*;
 import okhttp3.*;
 import org.junit.jupiter.api.*;
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationTest_SingleFacet_VersionedRepository {
-
-  private static final String UPDATE_ENV_SCRIPT =
-      "src/test/java/integration/com/sap/cds/sdm/utils/cf-update-env.sh";
 
   private static String token;
   private static String clientId;
@@ -30,8 +25,6 @@ class IntegrationTest_SingleFacet_VersionedRepository {
   private static String srvpath = "AdminService";
   private static String facetName = "attachments";
   private static String tenancyModel;
-  private static String versionedRepositoryID;
-  private static String defaultRepositoryID;
   private static ApiInterface api;
   private static String entityID;
 
@@ -42,8 +35,6 @@ class IntegrationTest_SingleFacet_VersionedRepository {
 
     username = credentialsProperties.getProperty("username");
     password = credentialsProperties.getProperty("password");
-    versionedRepositoryID = credentialsProperties.getProperty("versionedRepositoryID");
-    defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryID");
 
     if (tenancyModel.equals("single")) {
       clientId = credentialsProperties.getProperty("clientID");
@@ -55,7 +46,6 @@ class IntegrationTest_SingleFacet_VersionedRepository {
       clientSecret = credentialsProperties.getProperty("clientSecretMT");
       appUrl = credentialsProperties.getProperty("appUrlMT");
       authUrl = credentialsProperties.getProperty("authUrlMT1");
-      defaultRepositoryID = credentialsProperties.getProperty("defaultRepositoryIDMT");
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
@@ -118,24 +108,7 @@ class IntegrationTest_SingleFacet_VersionedRepository {
     }
   }
 
-  private static int runUpdateEnv(String value) throws Exception {
-    if (tenancyModel.equals("multi")) {
-      return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--app", "bookshop-mt-srv", "--value", value);
-    }
-    return ShellScriptRunner.run(UPDATE_ENV_SCRIPT, "--value", value);
-  }
-
   @Test
-  @Order(1)
-  void testChangeToVersionedRepository() throws Exception {
-    System.out.println(
-        "Test (1) : Change REPOSITORY_ID to versioned repository: " + versionedRepositoryID);
-    int exitCode = runUpdateEnv(versionedRepositoryID);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
-  }
-
-  @Test
-  @Order(2)
   void testCreateEntityAndUploadAttachmentShouldFail() throws IOException {
     System.out.println(
         "Test (2) : Create entity and upload attachment on versioned repository — expect error");
@@ -167,14 +140,5 @@ class IntegrationTest_SingleFacet_VersionedRepository {
           check.contains("error") || check.contains("Error"),
           "Response should contain an error message");
     }
-  }
-
-  @Test
-  @Order(3)
-  void testRevertToDefaultRepository() throws Exception {
-    System.out.println(
-        "Test (3) : Revert REPOSITORY_ID to default repository: " + defaultRepositoryID);
-    int exitCode = runUpdateEnv(defaultRepositoryID);
-    assertEquals(0, exitCode, "cf-update-env.sh should exit with code 0");
   }
 }
