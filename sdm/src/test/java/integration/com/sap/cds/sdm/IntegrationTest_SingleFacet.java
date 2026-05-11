@@ -6526,7 +6526,13 @@ class IntegrationTest_SingleFacet {
     System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
     String createdBy = CmisDocumentHelper.getCmisProperty(entityID, "sample.pdf", "cmis:createdBy");
     System.out.println("cmis:createdBy value: " + createdBy);
-    assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    if ("namedUser".equals(tokenFlowFlag)) {
+      assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+    } else {
+      assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
+      assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
+    }
   }
 
   private boolean waitForUploadCompletion(
@@ -6535,7 +6541,7 @@ class IntegrationTest_SingleFacet {
     for (int i = 0; i < maxIterations; i++) {
       try {
         Map<String, Object> metadata =
-            api.fetchMetadataDraft(appUrl, entityName, facetName, entityId, attachmentId);
+            api.fetchMetadata(appUrl, entityName, facetName, entityId, attachmentId);
         String uploadStatus = (String) metadata.get("uploadStatus");
 
         if ("Success".equals(uploadStatus)) {
