@@ -983,6 +983,13 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      - name: Install BTP CLI 📦
+        run: |
+          curl -LJO https://tools.hana.ondemand.com/additional/btp-cli-linux-amd64-2.97.0.tar.gz
+          tar -xzf btp-cli-linux-amd64-2.97.0.tar.gz
+          sudo cp linux-amd64/btp /usr/local/bin/
+          btp --version
+
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
         run: |
