@@ -304,7 +304,7 @@ jobs:
           echo "🔄 Switching REPOSITORY_ID to versioned repository..."
           cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
           echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv
+          cf restage bookshop-mt-srv > /dev/null 2>&1
           echo "✅ Switched to versioned repository!"
 
   versioned-integration-test:
@@ -525,7 +525,7 @@ jobs:
           echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
           cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
           echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv
+          cf restage bookshop-mt-srv > /dev/null 2>&1
           echo "✅ Switched to virus scan repository!"
 
   virusscan-integration-test:
@@ -762,7 +762,7 @@ jobs:
           echo "🔄 Reverting REPOSITORY_ID to default repository..."
           cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYIDMT }}"
           echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv
+          cf restage bookshop-mt-srv > /dev/null 2>&1
           echo "✅ Reverted to default repository!"
 
   repospecific-integration-test:
@@ -947,7 +947,6 @@ jobs:
     if: "!cancelled()"
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         tenant: [TENANT1, TENANT2]
     steps:
@@ -1095,7 +1094,7 @@ jobs:
           SAAS_APP_NAME="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
           ROLE_COLLECTION_NAME="ak-test"
           APP_ROLE_FILTER="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
-          BTP_CLI_URL="https://canary.cli.btp.int.sap"
+          BTP_CLI_URL="${{ secrets.BTP_CLI_URL }}"
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}"
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl

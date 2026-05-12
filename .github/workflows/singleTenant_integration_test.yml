@@ -235,7 +235,7 @@ jobs:
           echo "🔄 Switching REPOSITORY_ID to versioned repository..."
           cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
           echo "🔄 Restaging application..."
-          cf restage demoappjava-srv
+          cf restage demoappjava-srv > /dev/null 2>&1
           echo "✅ Switched to versioned repository!"
 
   versioned-integration-test:
@@ -444,7 +444,7 @@ jobs:
           echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
           cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
           echo "🔄 Restaging application..."
-          cf restage demoappjava-srv
+          cf restage demoappjava-srv > /dev/null 2>&1
           echo "✅ Switched to virus scan repository!"
 
   virusscan-integration-test:
@@ -668,7 +668,7 @@ jobs:
           echo "🔄 Reverting REPOSITORY_ID to default repository..."
           cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYID }}"
           echo "🔄 Restaging application..."
-          cf restage demoappjava-srv
+          cf restage demoappjava-srv > /dev/null 2>&1
           echo "✅ Reverted to default repository!"
 
   repospecific-integration-test:
