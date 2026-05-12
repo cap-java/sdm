@@ -26,6 +26,7 @@ CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties
 
 # Load key=value pairs from .properties file
 load_props() {
+  local key val
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]] && continue
     key="${line%%=*}"

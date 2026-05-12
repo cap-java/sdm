@@ -179,6 +179,8 @@ jobs:
           CMIS_URL="${{ secrets.CMIS_URL }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
+          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+          defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
 
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
@@ -226,6 +228,8 @@ jobs:
           CMIS_URL=$CMIS_URL
           cmisClientID=$cmisClientID
           cmisClientSecret=$cmisClientSecret
+          defaultRepositoryID=$defaultRepositoryID
+          defaultRepositoryIDMT=$defaultRepositoryIDMT
           EOL
           echo "✅ Credentials file prepared!"
 
