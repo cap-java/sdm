@@ -233,14 +233,26 @@ jobs:
           EOL
           echo "✅ Credentials file prepared!"
 
+      - name: Download virus test file 📥
+        run: |
+          curl -fSL "http://www.eicar.org/download/eicar.com.txt" -o "sdm/eicar.com.txt"
+          sleep 5
+          if [ -f "sdm/eicar.com.txt" ]; then
+            FILE_SIZE=$(stat -c '%s' "sdm/eicar.com.txt")
+            echo "File exists — Size: $FILE_SIZE bytes"
+          else
+            echo "❌ File NOT found at path: sdm/eicar.com.txt"
+            exit 1
+          fi
+
       - name: Run integration tests (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}) 🎯
         run: |
           echo "🎯 Running Maven integration tests: testClass=${{ matrix.testClass }}, tokenFlow=${{ matrix.tokenFlow }}, tenant=${{ matrix.tenant }}"
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Deicar.file.path=eicar.com.txt -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
           echo "✅ Integration tests completed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}!"
 
       - name: Upload test results 📊
-        if: always()
+        if: "!cancelled()"
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.testClass }}-${{ matrix.tokenFlow }}-${{ matrix.tenant }}
@@ -252,7 +264,7 @@ jobs:
   versioned-repo-setup:
     runs-on: ubuntu-latest
     needs: integration-test
-    if: always()
+    if: "!cancelled()"
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -298,7 +310,7 @@ jobs:
   versioned-integration-test:
     runs-on: ubuntu-latest
     needs: versioned-repo-setup
-    if: always() && needs.versioned-repo-setup.result == 'success'
+    if: "!cancelled() && needs.versioned-repo-setup.result == 'success'"
     strategy:
       fail-fast: false
       matrix:
@@ -473,7 +485,7 @@ jobs:
   virusscan-repo-setup:
     runs-on: ubuntu-latest
     needs: versioned-integration-test
-    if: always()
+    if: "!cancelled()"
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -519,7 +531,7 @@ jobs:
   virusscan-integration-test:
     runs-on: ubuntu-latest
     needs: virusscan-repo-setup
-    if: always() && needs.virusscan-repo-setup.result == 'success'
+    if: "!cancelled() && needs.virusscan-repo-setup.result == 'success'"
     strategy:
       fail-fast: false
       matrix:
@@ -756,7 +768,7 @@ jobs:
   repospecific-integration-test:
     runs-on: ubuntu-latest
     needs: virusscan-repo-cleanup
-    if: always()
+    if: "!cancelled()"
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -932,7 +944,7 @@ jobs:
   subscription-integration-test:
     runs-on: ubuntu-latest
     needs: repospecific-integration-test
-    if: always()
+    if: "!cancelled()"
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -1124,7 +1136,7 @@ jobs:
   test-summary:
     runs-on: ubuntu-latest
     needs: [integration-test, versioned-integration-test, virusscan-integration-test, repospecific-integration-test, subscription-integration-test]
-    if: always()
+    if: "!cancelled()"
     steps:
       - name: Check test results 📋
         run: |
