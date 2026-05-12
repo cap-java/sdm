@@ -241,6 +241,7 @@ jobs:
   versioned-integration-test:
     runs-on: ubuntu-latest
     needs: versioned-repo-setup
+    if: always() && needs.versioned-repo-setup.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -449,6 +450,7 @@ jobs:
   virusscan-integration-test:
     runs-on: ubuntu-latest
     needs: virusscan-repo-setup
+    if: always() && needs.virusscan-repo-setup.result == 'success'
     strategy:
       fail-fast: false
       matrix:
