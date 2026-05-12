@@ -27,11 +27,17 @@ public class CmisDocumentHelper {
     if ("multi".equals(tenancyModel)) {
       Properties props = Credentials.getCredentials();
       String repoId = props.getProperty("defaultRepositoryIDMT");
+      String tenant = System.getProperty("tenant");
+      String suffix = "TENANT1".equals(tenant) ? "1" : "2";
+      String authUrl = props.getProperty("authUrlMT" + suffix);
+      Map<String, String> env = new HashMap<>();
       if (repoId != null && !repoId.isEmpty()) {
-        Map<String, String> env = new HashMap<>();
         env.put("SDM_REPOSITORY_ID", repoId);
-        return env;
       }
+      if (authUrl != null && !authUrl.isEmpty()) {
+        env.put("SDM_AUTH_URL", authUrl);
+      }
+      return env.isEmpty() ? null : env;
     }
     return null;
   }
