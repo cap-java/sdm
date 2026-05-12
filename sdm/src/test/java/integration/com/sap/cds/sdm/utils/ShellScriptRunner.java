@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ShellScriptRunner {
@@ -20,12 +21,20 @@ public class ShellScriptRunner {
    */
   public static int run(String scriptPath, String... args)
       throws IOException, InterruptedException {
+    return run(null, scriptPath, args);
+  }
+
+  public static int run(Map<String, String> env, String scriptPath, String... args)
+      throws IOException, InterruptedException {
     List<String> command = new ArrayList<>();
     command.add("bash");
     command.add(scriptPath);
     Collections.addAll(command, args);
 
     ProcessBuilder pb = new ProcessBuilder(command);
+    if (env != null) {
+      pb.environment().putAll(env);
+    }
     pb.redirectErrorStream(false);
     Process process = pb.start();
 
@@ -75,12 +84,21 @@ public class ShellScriptRunner {
    */
   public static String runAndCaptureOutput(String scriptPath, String... args)
       throws IOException, InterruptedException {
+    return runAndCaptureOutput(null, scriptPath, args);
+  }
+
+  public static String runAndCaptureOutput(
+      Map<String, String> env, String scriptPath, String... args)
+      throws IOException, InterruptedException {
     List<String> command = new ArrayList<>();
     command.add("bash");
     command.add(scriptPath);
     Collections.addAll(command, args);
 
     ProcessBuilder pb = new ProcessBuilder(command);
+    if (env != null) {
+      pb.environment().putAll(env);
+    }
     pb.redirectErrorStream(false);
     Process process = pb.start();
 

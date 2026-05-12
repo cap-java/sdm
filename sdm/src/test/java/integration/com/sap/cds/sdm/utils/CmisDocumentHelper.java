@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import integration.com.sap.cds.sdm.Credentials;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 public class CmisDocumentHelper {
 
@@ -18,6 +22,20 @@ public class CmisDocumentHelper {
   private static final String GET_METADATA_SCRIPT =
       "src/test/java/integration/com/sap/cds/sdm/utils/get-metadata.sh";
 
+  private static Map<String, String> getCmisEnv() {
+    String tenancyModel = System.getProperty("tenancyModel");
+    if ("multi".equals(tenancyModel)) {
+      Properties props = Credentials.getCredentials();
+      String repoId = props.getProperty("defaultRepositoryIDMT");
+      if (repoId != null && !repoId.isEmpty()) {
+        Map<String, String> env = new HashMap<>();
+        env.put("SDM_REPOSITORY_ID", repoId);
+        return env;
+      }
+    }
+    return null;
+  }
+
   /**
    * Resolves the CMIS parent folder ID from {@code entityId + "__attachments"}, then uploads a
    * local file to that folder via create.sh.
@@ -28,15 +46,17 @@ public class CmisDocumentHelper {
    */
   public static void createDocumentInCmis(String cmisName, String filePath, String entityId) {
     try {
-      // Resolve the parent folder object ID from entityId__attachments
+      Map<String, String> env = getCmisEnv();
       String folderLine =
-          ShellScriptRunner.runAndCaptureOutput(GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
+          ShellScriptRunner.runAndCaptureOutput(
+              env, GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
       String parentFolderObjectId =
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
 
-      int exitCode = ShellScriptRunner.run(CREATE_SCRIPT, cmisName, filePath, parentFolderObjectId);
+      int exitCode =
+          ShellScriptRunner.run(env, CREATE_SCRIPT, cmisName, filePath, parentFolderObjectId);
       if (exitCode != 0) {
         fail("create.sh exited with non-zero code: " + exitCode);
       }
@@ -54,26 +74,25 @@ public class CmisDocumentHelper {
    */
   public static void deleteDocumentFromCmis(String entityId, String fileName) {
     try {
-      // Step 1: resolve the parent folder object ID from entityId__attachments
+      Map<String, String> env = getCmisEnv();
       String folderLine =
-          ShellScriptRunner.runAndCaptureOutput(GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
+          ShellScriptRunner.runAndCaptureOutput(
+              env, GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
       String parentFolderObjectId =
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
 
-      // Step 2: resolve the document object ID by filename inside the parent folder
       String docLine =
           ShellScriptRunner.runAndCaptureOutput(
-              GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
+              env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
       String documentObjectId =
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
 
-      // Step 3: delete the document
       int deleteExitCode =
-          ShellScriptRunner.run(DELETE_SCRIPT, documentObjectId, parentFolderObjectId);
+          ShellScriptRunner.run(env, DELETE_SCRIPT, documentObjectId, parentFolderObjectId);
       if (deleteExitCode != 0) {
         fail("delete.sh failed with exit code: " + deleteExitCode);
       }
@@ -92,25 +111,24 @@ public class CmisDocumentHelper {
    */
   public static void readDocumentFromCmis(String entityId, String fileName, String outputPath) {
     try {
-      // Step 1: resolve the parent folder object ID from entityId__attachments
+      Map<String, String> env = getCmisEnv();
       String folderLine =
-          ShellScriptRunner.runAndCaptureOutput(GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
+          ShellScriptRunner.runAndCaptureOutput(
+              env, GET_OBJECT_ID_SCRIPT, entityId + "__attachments");
       String parentFolderObjectId =
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
 
-      // Step 2: resolve the document object ID by filename inside the parent folder
       String docLine =
           ShellScriptRunner.runAndCaptureOutput(
-              GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
+              env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
       String documentObjectId =
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
 
-      // Step 3: read/download the document
-      int exitCode = ShellScriptRunner.run(READ_SCRIPT, documentObjectId, outputPath);
+      int exitCode = ShellScriptRunner.run(env, READ_SCRIPT, documentObjectId, outputPath);
       if (exitCode != 0) {
         fail("read.sh exited with non-zero code: " + exitCode);
       }
@@ -129,26 +147,25 @@ public class CmisDocumentHelper {
    */
   public static String readDocumentMetadataFromCmis(String entityId, String fileName) {
     try {
-      // Step 1: resolve the parent folder object ID from entityId__attachments
+      Map<String, String> env = getCmisEnv();
       String folderName = entityId + "__attachments";
-      String folderLine = ShellScriptRunner.runAndCaptureOutput(GET_OBJECT_ID_SCRIPT, folderName);
+      String folderLine =
+          ShellScriptRunner.runAndCaptureOutput(env, GET_OBJECT_ID_SCRIPT, folderName);
       String parentFolderObjectId =
           folderLine != null && folderLine.contains(": ")
               ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
               : folderLine;
 
-      // Step 2: resolve the document object ID by filename inside the parent folder
       String docLine =
           ShellScriptRunner.runAndCaptureOutput(
-              GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
+              env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
       String documentObjectId =
           docLine != null && docLine.contains(": ")
               ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
               : docLine;
 
-      // Step 3: fetch metadata
       String metadata =
-          ShellScriptRunner.runAndCaptureOutput(GET_METADATA_SCRIPT, documentObjectId);
+          ShellScriptRunner.runAndCaptureOutput(env, GET_METADATA_SCRIPT, documentObjectId);
       return metadata;
     } catch (Exception e) {
       fail("Failed to read document metadata from CMIS: " + e.getMessage());

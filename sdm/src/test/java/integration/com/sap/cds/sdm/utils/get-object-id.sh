@@ -41,6 +41,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 load_props "$CONFIG_FILE"
+defaultRepositoryID="${SDM_REPOSITORY_ID:-$defaultRepositoryID}"
 CMIS_URL="${CMIS_URL%/}/"
 
 # --- Validate positional parameters ---
