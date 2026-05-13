@@ -40,7 +40,7 @@ class IntegrationTest_Subscription {
 
   @BeforeAll
   static void setup() throws Exception {
-    credentials = Credentials.getCredentials("TENANT1");
+    credentials = Credentials.getCredentials(System.getProperty("tenant", "TENANT1"));
     consumerSubdomain = credentials.getProperty("consumerSubdomainMT");
     assertNotNull(consumerSubdomain, "consumerSubdomainMT must be set in credentials.properties");
 

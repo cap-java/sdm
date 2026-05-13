@@ -31,7 +31,7 @@ CONSUMER_PASS="${password}"
 BTP_URL="${BTP_CLI_URL:-https://cli.btp.cloud.sap}"
 
 # --- Validate required variables ---
-for var in CONSUMER_USER consumerSubaccountIdMT1 SAAS_APP_NAME; do
+for var in CONSUMER_USER consumerSubaccountIdMT SAAS_APP_NAME; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: Required variable $var is not set in config"
     exit 1
@@ -57,7 +57,7 @@ btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
 # --- Unsubscribe from SaaS application at subaccount level ---
 echo ""
 echo "Unsubscribing from SaaS application..."
-UNSUBSCRIBE_ARGS=(--subaccount "$consumerSubaccountIdMT1" --from-app "$SAAS_APP_NAME")
+UNSUBSCRIBE_ARGS=(--subaccount "$consumerSubaccountIdMT" --from-app "$SAAS_APP_NAME")
 if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
   UNSUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
 fi
@@ -67,7 +67,7 @@ btp unsubscribe accounts/subaccount "${UNSUBSCRIBE_ARGS[@]}" --confirm > /dev/nu
 echo ""
 echo "Waiting for unsubscription to complete..."
 while true; do
-  GET_ARGS=(--subaccount "$consumerSubaccountIdMT1" --of-app "$SAAS_APP_NAME")
+  GET_ARGS=(--subaccount "$consumerSubaccountIdMT" --of-app "$SAAS_APP_NAME")
   if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
     GET_ARGS+=(--plan "$SAAS_APP_PLAN")
   fi

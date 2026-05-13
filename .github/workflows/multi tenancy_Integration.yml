@@ -947,6 +947,7 @@ jobs:
     if: "!cancelled()"
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         tenant: [TENANT1, TENANT2]
     steps:
@@ -1112,6 +1113,14 @@ jobs:
           APP_ROLE_FILTER="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
           BTP_CLI_URL="${{ secrets.BTP_CLI_URL }}"
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}"
+          # Resolve tenant-specific values based on matrix.tenant
+          if [[ "${{ matrix.tenant }}" == "TENANT2" ]]; then
+            consumerSubaccountIdMT="$consumerSubaccountIdMT2"
+            consumerSubdomainMTResolved="$consumerSubdomainMT2"
+          else
+            consumerSubaccountIdMT="$consumerSubaccountIdMT1"
+            consumerSubdomainMTResolved="$consumerSubdomainMT1"
+          fi
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
@@ -1134,7 +1143,8 @@ jobs:
           consumerSubdomainMT1=$consumerSubdomainMT1
           consumerSubaccountIdMT2=$consumerSubaccountIdMT2
           consumerSubdomainMT2=$consumerSubdomainMT2
-          consumerSubdomainMT=$consumerSubdomainMT
+          consumerSubaccountIdMT=$consumerSubaccountIdMT
+          consumerSubdomainMT=$consumerSubdomainMTResolved
           CMIS_URL=$CMIS_URL
           cmisClientID=$cmisClientID
           cmisClientSecret=$cmisClientSecret
