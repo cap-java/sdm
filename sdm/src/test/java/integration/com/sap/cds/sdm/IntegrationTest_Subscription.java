@@ -3,6 +3,7 @@ package integration.com.sap.cds.sdm;
 import static org.junit.jupiter.api.Assertions.*;
 
 import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.*;
 
@@ -34,6 +35,8 @@ class IntegrationTest_Subscription {
 
   private static final String SUBSCRIPTION_REPO_EXTERNAL_ID = "MULTITENANT-TEST-REPO";
   private static final String MT_APP_NAME = "bookshop-mt-srv";
+  private static final Map<String, String> TENANT_ENV =
+      Map.of("ACTIVE_TENANT", System.getProperty("tenant", "TENANT1").replace("TENANT", ""));
 
   private static Properties credentials;
   private static String consumerSubdomain;
@@ -46,7 +49,7 @@ class IntegrationTest_Subscription {
 
     // Ensure subscription is active before tests run
     System.out.println("BeforeAll: Ensuring app is subscribed...");
-    int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    int subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     assertEquals(0, subscribeExit, "Initial subscription should succeed");
     Thread.sleep(15_000);
 
@@ -119,7 +122,8 @@ class IntegrationTest_Subscription {
 
     // Act: Subscribe again (should detect 'Already subscribed' and exit 0)
     System.out.println("  Re-subscribing...");
-    ShellScriptRunner.Result subscribeResult = ShellScriptRunner.runAndCaptureAll(SUBSCRIBE_SCRIPT);
+    ShellScriptRunner.Result subscribeResult =
+        ShellScriptRunner.runAndCaptureAll(TENANT_ENV, SUBSCRIBE_SCRIPT);
     assertEquals(0, subscribeResult.getExitCode(), "Re-subscription should succeed");
     assertTrue(
         subscribeResult.containsIgnoreCase("Already subscribed")
@@ -154,7 +158,7 @@ class IntegrationTest_Subscription {
 
     // Act: Unsubscribe
     System.out.println("  Unsubscribing...");
-    int unsubscribeExit = ShellScriptRunner.run(UNSUBSCRIBE_SCRIPT);
+    int unsubscribeExit = ShellScriptRunner.run(TENANT_ENV, UNSUBSCRIBE_SCRIPT);
     assertEquals(0, unsubscribeExit, "Unsubscription should succeed");
 
     // Allow time for async offboarding
@@ -195,12 +199,12 @@ class IntegrationTest_Subscription {
     Thread.sleep(30_000);
 
     System.out.println("  Subscribing to set up precondition...");
-    int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    int subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     if (subscribeExit != 0) {
       System.out.println(
           "  First subscribe attempt failed (exit " + subscribeExit + ") — retrying after 30s...");
       Thread.sleep(30_000);
-      subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+      subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     }
     assertEquals(0, subscribeExit, "Subscription should succeed");
 
@@ -213,7 +217,7 @@ class IntegrationTest_Subscription {
 
     // Act: Unsubscribe
     System.out.println("  Unsubscribing...");
-    int unsubscribeExit = ShellScriptRunner.run(UNSUBSCRIBE_SCRIPT);
+    int unsubscribeExit = ShellScriptRunner.run(TENANT_ENV, UNSUBSCRIBE_SCRIPT);
     assertEquals(0, unsubscribeExit, "Unsubscription should succeed");
 
     // Allow time for offboarding
@@ -247,13 +251,13 @@ class IntegrationTest_Subscription {
     Thread.sleep(30_000);
 
     System.out.println("  Subscribing...");
-    int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    int subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     if (subscribeExit != 0) {
       // Retry once after waiting — previous unsubscribe may still be processing
       System.out.println(
           "  First subscribe attempt failed (exit " + subscribeExit + ") — retrying after 30s...");
       Thread.sleep(30_000);
-      subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+      subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     }
     assertEquals(0, subscribeExit, "Subscription should succeed");
 
@@ -286,7 +290,7 @@ class IntegrationTest_Subscription {
 
     // Act: Unsubscribe (the app will try to offboard a non-existent repo)
     System.out.println("  Unsubscribing...");
-    int unsubscribeExit = ShellScriptRunner.run(UNSUBSCRIBE_SCRIPT);
+    int unsubscribeExit = ShellScriptRunner.run(TENANT_ENV, UNSUBSCRIBE_SCRIPT);
     assertEquals(0, unsubscribeExit, "Unsubscription itself should succeed");
 
     // Allow time for the unsubscribe callback to process
@@ -329,11 +333,11 @@ class IntegrationTest_Subscription {
 
     // Also ensure NOT subscribed
     System.out.println("  Ensuring consumer is unsubscribed...");
-    ShellScriptRunner.run(UNSUBSCRIBE_SCRIPT);
+    ShellScriptRunner.run(TENANT_ENV, UNSUBSCRIBE_SCRIPT);
 
     // Act: Subscribe
     System.out.println("  Subscribing...");
-    int subscribeExit = ShellScriptRunner.run(SUBSCRIBE_SCRIPT);
+    int subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
     assertEquals(0, subscribeExit, "Subscription should succeed");
 
     // Allow time for async repo onboarding

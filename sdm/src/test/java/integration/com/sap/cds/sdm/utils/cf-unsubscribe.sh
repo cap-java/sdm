@@ -25,6 +25,11 @@ fi
 
 load_props "$CONFIG_FILE"
 
+# --- Resolve tenant-specific subaccount via ACTIVE_TENANT env var (1 or 2) ---
+TENANT_SUFFIX="${ACTIVE_TENANT:-1}"
+SUBACCOUNT_VAR="consumerSubaccountIdMT${TENANT_SUFFIX}"
+consumerSubaccountIdMT="${!SUBACCOUNT_VAR}"
+
 # --- Resolve consumer credentials ---
 CONSUMER_USER="${username}"
 CONSUMER_PASS="${password}"

@@ -164,12 +164,20 @@ public class ShellScriptRunner {
    */
   public static Result runAndCaptureAll(String scriptPath, String... args)
       throws IOException, InterruptedException {
+    return runAndCaptureAll(null, scriptPath, args);
+  }
+
+  public static Result runAndCaptureAll(Map<String, String> env, String scriptPath, String... args)
+      throws IOException, InterruptedException {
     List<String> command = new ArrayList<>();
     command.add("bash");
     command.add(scriptPath);
     Collections.addAll(command, args);
 
     ProcessBuilder pb = new ProcessBuilder(command);
+    if (env != null) {
+      pb.environment().putAll(env);
+    }
     pb.redirectErrorStream(false);
     Process process = pb.start();
 

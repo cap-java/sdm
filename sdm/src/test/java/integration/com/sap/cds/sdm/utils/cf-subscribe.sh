@@ -25,6 +25,11 @@ fi
 
 load_props "$CONFIG_FILE"
 
+# --- Resolve tenant-specific subaccount via ACTIVE_TENANT env var (1 or 2) ---
+TENANT_SUFFIX="${ACTIVE_TENANT:-1}"
+SUBACCOUNT_VAR="consumerSubaccountIdMT${TENANT_SUFFIX}"
+consumerSubaccountIdMT="${!SUBACCOUNT_VAR}"
+
 # --- Resolve consumer credentials ---
 CONSUMER_USER="${username}"
 CONSUMER_PASS="${password}"
@@ -52,7 +57,10 @@ if [[ -n "${BTP_GLOBAL_ACCOUNT_SUBDOMAIN:-}" ]]; then
   LOGIN_ARGS+=(--subdomain "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN")
 fi
 btp logout > /dev/null 2>&1 || true
-btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
+if ! btp login "${LOGIN_ARGS[@]}"; then
+  echo "ERROR: btp login failed (exit $?)."
+  exit 1
+fi
 
 # --- Check current subscription status ---
 GET_ARGS=(--subaccount "$consumerSubaccountIdMT" --of-app "$SAAS_APP_NAME")
@@ -99,12 +107,16 @@ else
 
   # --- Subscribe to SaaS application at subaccount level ---
   echo ""
-  echo "Subscribing to SaaS application..."
+  echo "Subscribing to SaaS application (subaccount: $consumerSubaccountIdMT, app: $SAAS_APP_NAME)..."
   SUBSCRIBE_ARGS=(--subaccount "$consumerSubaccountIdMT" --to-app "$SAAS_APP_NAME")
   if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
     SUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
   fi
-  btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}" > /dev/null 2>&1
+  if ! btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}"; then
+    echo "ERROR: btp subscribe failed (exit $?). Retrying once after 30s..."
+    sleep 30
+    btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}"
+  fi
 
   # --- Wait for subscription to complete ---
   echo ""
