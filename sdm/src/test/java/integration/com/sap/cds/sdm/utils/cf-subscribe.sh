@@ -51,6 +51,7 @@ fi
 if [[ -n "${BTP_GLOBAL_ACCOUNT_SUBDOMAIN:-}" ]]; then
   LOGIN_ARGS+=(--subdomain "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN")
 fi
+btp logout > /dev/null 2>&1 || true
 btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
 
 # --- Check current subscription status ---
