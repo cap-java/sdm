@@ -132,17 +132,9 @@ fi
 echo ""
 echo "Done."
 
-# --- Create role collection from app roles and assign to configured email IDs ---
+# --- Add roles to role collection after subscription ---
 
-# Parse comma-separated arrays and strip surrounding whitespace from each element
-IFS=',' read -ra _emails_raw  <<< "${ROLE_ASSIGNMENT_EMAILS:-}"
 IFS=',' read -ra _colls_raw   <<< "${ROLE_COLLECTION_NAME:-}"
-
-EMAILS_ARRAY=()
-for _e in ${_emails_raw[@]+"${_emails_raw[@]}"}; do
-  _e="${_e#"${_e%%[![:space:]]*}"}"; _e="${_e%"${_e##*[![:space:]]}"}"
-  [[ -n "$_e" ]] && EMAILS_ARRAY+=("$_e")
-done
 
 COLLECTIONS_ARRAY=()
 for _c in ${_colls_raw[@]+"${_colls_raw[@]}"}; do
@@ -152,13 +144,7 @@ done
 
 if [[ ${#COLLECTIONS_ARRAY[@]} -eq 0 ]]; then
   echo ""
-  echo "No ROLE_COLLECTION_NAME configured — skipping role collection setup."
-  exit 0
-fi
-
-if [[ ${#EMAILS_ARRAY[@]} -eq 0 ]]; then
-  echo ""
-  echo "No ROLE_ASSIGNMENT_EMAILS configured — skipping role assignment."
+  echo "No ROLE_COLLECTION_NAME configured — skipping role setup."
   exit 0
 fi
 
@@ -169,7 +155,6 @@ echo "=== Role Collection Setup ==="
 echo "Fetching roles for app filter: '$ROLE_FILTER'..."
 
 # After a fresh subscription, role templates can take time to be provisioned.
-# Retry up to 6 times (5 minutes total) before giving up.
 MATCHED_ROLES=""
 ROLES_RAW=""
 MAX_RETRIES=6
@@ -182,7 +167,6 @@ for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
     exit 1
   fi
 
-  # BTP CLI columns: name | appId | roleTemplateName | description
   MATCHED_ROLES=$(echo "$ROLES_RAW" \
     | grep -i "$ROLE_FILTER" \
     | awk '{print $1 "|" $3 "|" $2}' \
@@ -199,36 +183,31 @@ for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
 done
 
 if [[ -z "$MATCHED_ROLES" ]]; then
-  echo "WARNING: No matching roles found after $MAX_RETRIES attempts — role templates may not be provisioned yet."
+  echo "WARNING: No matching roles found after $MAX_RETRIES attempts."
   exit 0
 fi
 
 ROLE_COUNT=$(echo "$MATCHED_ROLES" | wc -l | tr -d ' ')
-echo "Found $ROLE_COUNT role(s) to assign."
+echo "Found $ROLE_COUNT role(s) to add."
 
-# For each role collection: create it, add roles, then assign all emails
 for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
   echo ""
-  echo "--- Processing role collection: '$COLLECTION_NAME' ---"
+  echo "--- Adding roles to collection: '$COLLECTION_NAME' ---"
 
   # Create the role collection if it doesn't already exist
-  # Use awk exact first-column match to avoid "ak-test" matching "ak-test2" as a substring
   COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$consumerSubaccountIdMT" 2>/dev/null \
     | awk -v name="$COLLECTION_NAME" '$1 == name {found=1} END {print found+0}' || echo 0)
-  if [[ "$COLLECTION_EXISTS" == "1" ]]; then
-    echo "Role collection '$COLLECTION_NAME' already exists — skipping creation."
-  else
+  if [[ "$COLLECTION_EXISTS" != "1" ]]; then
     echo "Creating role collection '$COLLECTION_NAME'..."
     btp create security/role-collection "$COLLECTION_NAME" \
       --subaccount "$consumerSubaccountIdMT" \
       --description "Auto-created role collection for $SAAS_APP_NAME" \
       > /dev/null 2>&1 \
       && echo "Role collection created." \
-      || echo "WARNING: Could not create role collection — it may already exist, continuing."
+      || echo "WARNING: Could not create role collection — continuing."
   fi
 
-  # Add each role to the collection (safe to re-run; duplicate adds are ignored)
-  echo "Adding roles to collection..."
+  # Add each role to the collection
   while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
     [[ -z "$RNAME" ]] && continue
     btp add security/role "$RNAME" \
@@ -237,22 +216,10 @@ for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
       --of-app "$RAPPID" \
       --of-role-template "$RTEMPLATE" \
       > /dev/null 2>&1 \
-      && echo "  Role added successfully." \
-      || echo "  WARNING: Could not add role (may already be in collection) — continuing."
+      && echo "  Role '$RNAME' added." \
+      || echo "  WARNING: Could not add role '$RNAME' (may already exist) — continuing."
   done <<< "$MATCHED_ROLES"
-
-  # Assign the role collection to each email
-  echo "Assigning role collection to users..."
-  for EMAIL in "${EMAILS_ARRAY[@]}"; do
-    btp assign security/role-collection "$COLLECTION_NAME" \
-      --subaccount "$consumerSubaccountIdMT" \
-      --to-user "$EMAIL" \
-      --create-user-if-missing \
-      > /dev/null 2>&1 \
-      && echo "  User assigned successfully." \
-      || echo "  WARNING: Failed to assign role collection to a user — continuing."
-  done
 done
 
 echo ""
-echo "Role assignment complete."
+echo "Role setup complete."
