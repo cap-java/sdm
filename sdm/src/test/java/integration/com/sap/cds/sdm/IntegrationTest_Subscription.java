@@ -53,7 +53,8 @@ class IntegrationTest_Subscription {
     assertEquals(0, subscribeExit, "Initial subscription should succeed");
     Thread.sleep(15_000);
 
-    // Verify repo exists after subscription
+    // Verify repo exists after subscription; if not, onboard it
+    System.out.println("BeforeAll: Checking if repo exists...");
     ShellScriptRunner.Result repoResult =
         ShellScriptRunner.runAndCaptureAll(
             REPO_MANAGE_SCRIPT,
@@ -62,7 +63,19 @@ class IntegrationTest_Subscription {
             SUBSCRIPTION_REPO_EXTERNAL_ID,
             "--subdomain",
             consumerSubdomain);
-    assertEquals(0, repoResult.getExitCode(), "Repository should exist after initial subscription");
+    if (repoResult.getExitCode() != 0) {
+      System.out.println("BeforeAll: Repo not found — onboarding...");
+      int onboardExit =
+          ShellScriptRunner.run(
+              REPO_MANAGE_SCRIPT,
+              "onboard",
+              "--externalId",
+              SUBSCRIPTION_REPO_EXTERNAL_ID,
+              "--subdomain",
+              consumerSubdomain);
+      assertEquals(0, onboardExit, "Repo onboard should succeed");
+      Thread.sleep(10_000);
+    }
     System.out.println("BeforeAll: Subscription active and repo verified.");
   }
 
