@@ -69,6 +69,34 @@ if [[ "$CURRENT_STATE" == "SUBSCRIBED" ]]; then
   echo ""
   echo "Already subscribed to '$SAAS_APP_NAME' — skipping subscription step."
 else
+  # --- Wait for any transitional state to settle before subscribing ---
+  echo ""
+  echo "Checking subscription state before subscribing..."
+  SKIP_SUBSCRIBE=false
+  for ((wait_attempt=1; wait_attempt<=30; wait_attempt++)); do
+    RAW_STATE=$(btp get accounts/subscription "${GET_ARGS[@]}" 2>/dev/null | grep -i "status:" | awk '{print $2}' || true)
+    if [[ -z "$RAW_STATE" ]] || echo "$RAW_STATE" | grep -qi "NOT_SUBSCRIBED"; then
+      echo "Subscription is in stable state — proceeding."
+      break
+    elif echo "$RAW_STATE" | grep -qi "SUBSCRIBED" && ! echo "$RAW_STATE" | grep -qi "NOT_SUBSCRIBED"; then
+      echo "Already subscribed (detected via get) — skipping subscription step."
+      SKIP_SUBSCRIBE=true
+      break
+    elif echo "$RAW_STATE" | grep -qi "FAILED"; then
+      echo "Previous operation failed (${RAW_STATE}) — proceeding with subscribe."
+      break
+    else
+      echo "  State: ${RAW_STATE} — waiting 10s for stable state (attempt $wait_attempt/30)..."
+      sleep 10
+    fi
+  done
+
+  if [[ "$SKIP_SUBSCRIBE" == "true" ]]; then
+    echo ""
+    echo "Done."
+    exit 0
+  fi
+
   # --- Subscribe to SaaS application at subaccount level ---
   echo ""
   echo "Subscribing to SaaS application..."
