@@ -334,6 +334,9 @@ class IntegrationTest_Subscription {
   void testCreateSubscription_NoExistingRepo_RepoOnboarded() throws Exception {
     System.out.println("Test (5) : Subscribe without existing repo — expect repo to be onboarded");
 
+    // Wait for test 4's unsubscribe to fully complete
+    Thread.sleep(30_000);
+
     // Pre-condition: ensure the repo does NOT exist (offboard if present)
     System.out.println("  Ensuring repo '" + SUBSCRIPTION_REPO_EXTERNAL_ID + "' does not exist...");
     ShellScriptRunner.Result checkResult = repoCheck(SUBSCRIPTION_REPO_EXTERNAL_ID);
@@ -351,6 +354,12 @@ class IntegrationTest_Subscription {
     // Act: Subscribe
     System.out.println("  Subscribing...");
     int subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
+    if (subscribeExit != 0) {
+      System.out.println(
+          "  First subscribe attempt failed (exit " + subscribeExit + ") — retrying after 30s...");
+      Thread.sleep(30_000);
+      subscribeExit = ShellScriptRunner.run(TENANT_ENV, SUBSCRIBE_SCRIPT);
+    }
     assertEquals(0, subscribeExit, "Subscription should succeed");
 
     // Allow time for async repo onboarding
