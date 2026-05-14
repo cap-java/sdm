@@ -40,20 +40,19 @@ jobs:
         run: curl --silent -O https://detect.blackduck.com/detect9.sh
 
       - name: Run & analyze BlackDuck Scan
-        run: |
-          bash ./detect9.sh -d \
-          --logging.level.com.synopsys.integration=DEBUG  \
-          --blackduck.url="https://sap.blackducksoftware.com" \
-          --blackduck.api.token=""${{ secrets.BLACKDUCK_TOKEN }}""   \
-          --detect.blackduck.signature.scanner.arguments="--min-scan-interval=0" \
-          --detect.maven.build.command="install -P unit-tests  -DskipIntegrationTests" \
-          --detect.latest.release.version="9.6.0" \
-          --detect.project.version.distribution="SaaS" \
-          --detect.blackduck.signature.scanner.memory=4096  \
-          --detect.timeout=6000 \
-          --blackduck.trust.cert=true \
-          --detect.project.user.groups="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0"  \
-          --detect.project.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0" \
-          --detect.project.version.name="1.0" \
-          --detect.code.location.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0/1.0" \
-          --detect.source.path="/home/runner/work/sdm/sdm/sdm"
+        uses: blackduck-inc/black-duck-security-scan@659a0742e793a093377fab3117b0d90f23b04bfa # v2.9.0
+        with:
+          blackducksca_url: https://sap.blackducksoftware.com/
+          blackducksca_token: ${{ secrets.BLACKDUCK_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          detect_args: >
+            --detect.project.name=com.sap.cds.sdm
+            --detect.included.detector.types=MAVEN
+            --detect.excluded.directories=**/node_modules,**/*test*,**/localrepo,**/target/site,**/*-site.jar,**/samples/**
+            --detect.tools=DETECTOR,BINARY_SCAN
+            --detect.risk.report.pdf=false
+            --logging.level.detect=INFO
+        env:
+          BLACKDUCKSCA_TOKEN: ${{ secrets.BLACKDUCK_TOKEN }}
+          BLACKDUCKSCA_URL: https://sap.blackducksoftware.com/
+          BLACKDUCK_API_TOKEN: ${{ secrets.BLACKDUCK_TOKEN }}
