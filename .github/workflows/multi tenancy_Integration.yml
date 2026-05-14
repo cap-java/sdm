@@ -261,912 +261,912 @@ jobs:
             sdm/target/failsafe-reports/
           retention-days: 7
 
-  versioned-repo-setup:
-    runs-on: ubuntu-latest
-    needs: integration-test
-    if: "!cancelled()"
-    steps:
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  # versioned-repo-setup:
+  #   runs-on: ubuntu-latest
+  #   needs: integration-test
+  #   if: "!cancelled()"
+  #   steps:
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Switch to Versioned Repository 🔄
-        run: |
-          echo "🔄 Switching REPOSITORY_ID to versioned repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Switched to versioned repository!"
+  #     - name: Switch to Versioned Repository 🔄
+  #       run: |
+  #         echo "🔄 Switching REPOSITORY_ID to versioned repository..."
+  #         cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
+  #         echo "🔄 Restaging application..."
+  #         cf restage bookshop-mt-srv > /dev/null 2>&1
+  #         echo "✅ Switched to versioned repository!"
 
-  versioned-integration-test:
-    runs-on: ubuntu-latest
-    needs: versioned-repo-setup
-    if: "!cancelled() && needs.versioned-repo-setup.result == 'success'"
-    strategy:
-      fail-fast: false
-      matrix:
-        tokenFlow: [namedUser, technicalUser]
-        tenant: [TENANT1, TENANT2]
-        testClass:
-          - IntegrationTest_SingleFacet_VersionedRepository
-          - IntegrationTest_MultipleFacet_VersionedRepository
-          - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
-    steps:
-      - name: Checkout repository 📁
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.branch_name }}
+  # versioned-integration-test:
+  #   runs-on: ubuntu-latest
+  #   needs: versioned-repo-setup
+  #   if: "!cancelled() && needs.versioned-repo-setup.result == 'success'"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       tokenFlow: [namedUser, technicalUser]
+  #       tenant: [TENANT1, TENANT2]
+  #       testClass:
+  #         - IntegrationTest_SingleFacet_VersionedRepository
+  #         - IntegrationTest_MultipleFacet_VersionedRepository
+  #         - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
+  #   steps:
+  #     - name: Checkout repository 📁
+  #       uses: actions/checkout@v6
+  #       with:
+  #         ref: ${{ github.event.inputs.branch_name }}
 
-      - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
-          cache: 'maven'
+  #     - name: Set up Java 17 ☕
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 17
+  #         distribution: 'temurin'
+  #         cache: 'maven'
 
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Install jq 📦
-        run: |
-          if ! command -v jq &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+  #     - name: Install jq 📦
+  #       run: |
+  #         if ! command -v jq &> /dev/null; then
+  #           sudo apt-get update && sudo apt-get install -y jq
+  #         fi
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
-        run: |
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
-          fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
-          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for single tenant 🔍
+  #       id: fetch_credentials
+  #       run: |
+  #         service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+  #           echo "❌ Error: clientSecret is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret"
+  #         clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+  #           echo "❌ Error: clientID is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID"
+  #         echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
-      - name: Fetch and Escape Client Details for multi tenant 🔍
-        id: fetch_credentials_mt
-        run: |
-          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-            echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
-          fi
-          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret_mt"
-          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-            echo "❌ Error: clientID_mt is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID_mt"
-          echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for multi tenant 🔍
+  #       id: fetch_credentials_mt
+  #       run: |
+  #         service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+  #           echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret_mt"
+  #         clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+  #           echo "❌ Error: clientID_mt is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID_mt"
+  #         echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Run versioned integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
-        env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
-        run: |
-          set -e
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
-          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
-          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
-          cmisClientID="$CMIS_CLIENT_ID"
-          cmisClientSecret="$CMIS_CLIENT_SECRET"
-          cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=$appUrl
-          appUrlMT=$appUrlMT
-          authUrl=$authUrl
-          authUrlMT1=$authUrlMT1
-          authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
-          username=$username
-          password=$password
-          noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword=$noSDMRoleUserPassword
-          versionedRepositoryID=$versionedRepositoryID
-          virusScanRepositoryID=$virusScanRepositoryID
-          defaultRepositoryID=$defaultRepositoryID
-          defaultRepositoryIDMT=$defaultRepositoryIDMT
-          CMIS_URL=$CMIS_URL
-          cmisClientID=$cmisClientID
-          cmisClientSecret=$cmisClientSecret
-          EOL
-          echo "🎯 Running versioned integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+  #     - name: Run versioned integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
+  #       env:
+  #         CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+  #         CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+  #         CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+  #         CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+  #         CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+  #         CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+  #       run: |
+  #         set -e
+  #         PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+  #         appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+  #         appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+  #         authUrl="${{ secrets.CAPAUTH_URL }}"
+  #         authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+  #         authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+  #         clientID="${{ env.CLIENT_ID }}"
+  #         clientSecret="${{ env.CLIENT_SECRET }}"
+  #         clientIDMT="${{ env.CLIENT_ID_MT }}"
+  #         clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+  #         username="${{ secrets.CF_USER }}"
+  #         password="${{ secrets.CF_PASSWORD }}"
+  #         noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+  #         noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+  #         versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
+  #         virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
+  #         defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+  #         defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
+  #         CMIS_URL="${{ secrets.CMIS_URL }}"
+  #         cmisClientID="$CMIS_CLIENT_ID"
+  #         cmisClientSecret="$CMIS_CLIENT_SECRET"
+  #         cat > "$PROPERTIES_FILE" <<EOL
+  #         appUrl=$appUrl
+  #         appUrlMT=$appUrlMT
+  #         authUrl=$authUrl
+  #         authUrlMT1=$authUrlMT1
+  #         authUrlMT2=$authUrlMT2
+  #         clientID=$clientID
+  #         clientSecret=$clientSecret
+  #         clientIDMT=$clientIDMT
+  #         clientSecretMT=$clientSecretMT
+  #         username=$username
+  #         password=$password
+  #         noSDMRoleUsername=$noSDMRoleUsername
+  #         noSDMRoleUserPassword=$noSDMRoleUserPassword
+  #         versionedRepositoryID=$versionedRepositoryID
+  #         virusScanRepositoryID=$virusScanRepositoryID
+  #         defaultRepositoryID=$defaultRepositoryID
+  #         defaultRepositoryIDMT=$defaultRepositoryIDMT
+  #         CMIS_URL=$CMIS_URL
+  #         cmisClientID=$cmisClientID
+  #         cmisClientSecret=$cmisClientSecret
+  #         EOL
+  #         echo "🎯 Running versioned integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
+  #         mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  virusscan-repo-setup:
-    runs-on: ubuntu-latest
-    needs: versioned-integration-test
-    if: "!cancelled()"
-    steps:
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  # virusscan-repo-setup:
+  #   runs-on: ubuntu-latest
+  #   needs: versioned-integration-test
+  #   if: "!cancelled()"
+  #   steps:
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Switch to Virus Scan Repository 🔄
-        run: |
-          echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Switched to virus scan repository!"
+  #     - name: Switch to Virus Scan Repository 🔄
+  #       run: |
+  #         echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
+  #         cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
+  #         echo "🔄 Restaging application..."
+  #         cf restage bookshop-mt-srv > /dev/null 2>&1
+  #         echo "✅ Switched to virus scan repository!"
 
-  virusscan-integration-test:
-    runs-on: ubuntu-latest
-    needs: virusscan-repo-setup
-    if: "!cancelled() && needs.virusscan-repo-setup.result == 'success'"
-    strategy:
-      fail-fast: false
-      matrix:
-        tokenFlow: [namedUser, technicalUser]
-        tenant: [TENANT1, TENANT2]
-        testClass:
-          - IntegrationTest_SingleFacet_Virus
-          - IntegrationTest_MultipleFacet_Virus
-          - IntegrationTest_Chapters_MultipleFacet_Virus
-    env:
-      FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
-      DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
-    steps:
-      - name: Checkout repository 📁
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.branch_name }}
+  # virusscan-integration-test:
+  #   runs-on: ubuntu-latest
+  #   needs: virusscan-repo-setup
+  #   if: "!cancelled() && needs.virusscan-repo-setup.result == 'success'"
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       tokenFlow: [namedUser, technicalUser]
+  #       tenant: [TENANT1, TENANT2]
+  #       testClass:
+  #         - IntegrationTest_SingleFacet_Virus
+  #         - IntegrationTest_MultipleFacet_Virus
+  #         - IntegrationTest_Chapters_MultipleFacet_Virus
+  #   env:
+  #     FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
+  #     DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
+  #   steps:
+  #     - name: Checkout repository 📁
+  #       uses: actions/checkout@v6
+  #       with:
+  #         ref: ${{ github.event.inputs.branch_name }}
 
-      - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
-          cache: 'maven'
+  #     - name: Set up Java 17 ☕
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 17
+  #         distribution: 'temurin'
+  #         cache: 'maven'
 
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Install jq 📦
-        run: |
-          if ! command -v jq &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+  #     - name: Install jq 📦
+  #       run: |
+  #         if ! command -v jq &> /dev/null; then
+  #           sudo apt-get update && sudo apt-get install -y jq
+  #         fi
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
-        run: |
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
-          fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
-          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for single tenant 🔍
+  #       id: fetch_credentials
+  #       run: |
+  #         service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+  #           echo "❌ Error: clientSecret is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret"
+  #         clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+  #           echo "❌ Error: clientID is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID"
+  #         echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
-      - name: Fetch and Escape Client Details for multi tenant 🔍
-        id: fetch_credentials_mt
-        run: |
-          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-            echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
-          fi
-          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret_mt"
-          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-            echo "❌ Error: clientID_mt is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID_mt"
-          echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for multi tenant 🔍
+  #       id: fetch_credentials_mt
+  #       run: |
+  #         service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+  #           echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret_mt"
+  #         clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+  #           echo "❌ Error: clientID_mt is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID_mt"
+  #         echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Download virus test file 📥
-        run: |
-          curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
-          sleep 5
-          if [ -f "$DOWNLOAD_PATH" ]; then
-            FILE_NAME=$(basename "$DOWNLOAD_PATH")
-            FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
-            echo "File exists — Name: $FILE_NAME, Size: $FILE_SIZE bytes"
-          else
-            echo "❌ File NOT found at path: $DOWNLOAD_PATH"
-            exit 1
-          fi
+  #     - name: Download virus test file 📥
+  #       run: |
+  #         curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
+  #         sleep 5
+  #         if [ -f "$DOWNLOAD_PATH" ]; then
+  #           FILE_NAME=$(basename "$DOWNLOAD_PATH")
+  #           FILE_SIZE=$(stat -c '%s' "$DOWNLOAD_PATH")
+  #           echo "File exists — Name: $FILE_NAME, Size: $FILE_SIZE bytes"
+  #         else
+  #           echo "❌ File NOT found at path: $DOWNLOAD_PATH"
+  #           exit 1
+  #         fi
 
-      - name: Run virus scan integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
-        env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
-        run: |
-          set -e
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
-          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
-          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
-          cmisClientID="$CMIS_CLIENT_ID"
-          cmisClientSecret="$CMIS_CLIENT_SECRET"
-          cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=$appUrl
-          appUrlMT=$appUrlMT
-          authUrl=$authUrl
-          authUrlMT1=$authUrlMT1
-          authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
-          username=$username
-          password=$password
-          noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword=$noSDMRoleUserPassword
-          versionedRepositoryID=$versionedRepositoryID
-          virusScanRepositoryID=$virusScanRepositoryID
-          defaultRepositoryID=$defaultRepositoryID
-          defaultRepositoryIDMT=$defaultRepositoryIDMT
-          CMIS_URL=$CMIS_URL
-          cmisClientID=$cmisClientID
-          cmisClientSecret=$cmisClientSecret
-          EOL
-          echo "🎯 Running virus scan integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Deicar.file.path=eicar.com.txt -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+  #     - name: Run virus scan integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
+  #       env:
+  #         CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+  #         CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+  #         CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+  #         CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+  #         CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+  #         CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+  #       run: |
+  #         set -e
+  #         PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+  #         appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+  #         appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+  #         authUrl="${{ secrets.CAPAUTH_URL }}"
+  #         authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+  #         authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+  #         clientID="${{ env.CLIENT_ID }}"
+  #         clientSecret="${{ env.CLIENT_SECRET }}"
+  #         clientIDMT="${{ env.CLIENT_ID_MT }}"
+  #         clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+  #         username="${{ secrets.CF_USER }}"
+  #         password="${{ secrets.CF_PASSWORD }}"
+  #         noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+  #         noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+  #         versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
+  #         virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
+  #         defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+  #         defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
+  #         CMIS_URL="${{ secrets.CMIS_URL }}"
+  #         cmisClientID="$CMIS_CLIENT_ID"
+  #         cmisClientSecret="$CMIS_CLIENT_SECRET"
+  #         cat > "$PROPERTIES_FILE" <<EOL
+  #         appUrl=$appUrl
+  #         appUrlMT=$appUrlMT
+  #         authUrl=$authUrl
+  #         authUrlMT1=$authUrlMT1
+  #         authUrlMT2=$authUrlMT2
+  #         clientID=$clientID
+  #         clientSecret=$clientSecret
+  #         clientIDMT=$clientIDMT
+  #         clientSecretMT=$clientSecretMT
+  #         username=$username
+  #         password=$password
+  #         noSDMRoleUsername=$noSDMRoleUsername
+  #         noSDMRoleUserPassword=$noSDMRoleUserPassword
+  #         versionedRepositoryID=$versionedRepositoryID
+  #         virusScanRepositoryID=$virusScanRepositoryID
+  #         defaultRepositoryID=$defaultRepositoryID
+  #         defaultRepositoryIDMT=$defaultRepositoryIDMT
+  #         CMIS_URL=$CMIS_URL
+  #         cmisClientID=$cmisClientID
+  #         cmisClientSecret=$cmisClientSecret
+  #         EOL
+  #         echo "🎯 Running virus scan integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
+  #         mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Deicar.file.path=eicar.com.txt -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  virusscan-repo-cleanup:
-    runs-on: ubuntu-latest
-    needs: virusscan-integration-test
-    if: always()
-    steps:
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  # virusscan-repo-cleanup:
+  #   runs-on: ubuntu-latest
+  #   needs: virusscan-integration-test
+  #   if: always()
+  #   steps:
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Revert to Default Repository 🔄
-        run: |
-          echo "🔄 Reverting REPOSITORY_ID to default repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Reverted to default repository!"
+  #     - name: Revert to Default Repository 🔄
+  #       run: |
+  #         echo "🔄 Reverting REPOSITORY_ID to default repository..."
+  #         cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYIDMT }}"
+  #         echo "🔄 Restaging application..."
+  #         cf restage bookshop-mt-srv > /dev/null 2>&1
+  #         echo "✅ Reverted to default repository!"
 
-  repospecific-integration-test:
-    runs-on: ubuntu-latest
-    needs: virusscan-repo-cleanup
-    if: "!cancelled()"
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        tokenFlow: [namedUser, technicalUser]
-        tenant: [TENANT1, TENANT2]
-        testClass:
-          - IntegrationTest_SingleFacet_RepoSpecific
-          - IntegrationTest_MultipleFacet_RepoSpecific
-          - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
-    steps:
-      - name: Checkout repository 📁
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.branch_name }}
+  # repospecific-integration-test:
+  #   runs-on: ubuntu-latest
+  #   needs: virusscan-repo-cleanup
+  #   if: "!cancelled()"
+  #   strategy:
+  #     fail-fast: false
+  #     max-parallel: 1
+  #     matrix:
+  #       tokenFlow: [namedUser, technicalUser]
+  #       tenant: [TENANT1, TENANT2]
+  #       testClass:
+  #         - IntegrationTest_SingleFacet_RepoSpecific
+  #         - IntegrationTest_MultipleFacet_RepoSpecific
+  #         - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
+  #   steps:
+  #     - name: Checkout repository 📁
+  #       uses: actions/checkout@v6
+  #       with:
+  #         ref: ${{ github.event.inputs.branch_name }}
 
-      - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
-          cache: 'maven'
+  #     - name: Set up Java 17 ☕
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 17
+  #         distribution: 'temurin'
+  #         cache: 'maven'
 
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Install jq 📦
-        run: |
-          if ! command -v jq &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+  #     - name: Install jq 📦
+  #       run: |
+  #         if ! command -v jq &> /dev/null; then
+  #           sudo apt-get update && sudo apt-get install -y jq
+  #         fi
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
-        run: |
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
-          fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
-          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for single tenant 🔍
+  #       id: fetch_credentials
+  #       run: |
+  #         service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+  #           echo "❌ Error: clientSecret is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret"
+  #         clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+  #           echo "❌ Error: clientID is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID"
+  #         echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
-      - name: Fetch and Escape Client Details for multi tenant 🔍
-        id: fetch_credentials_mt
-        run: |
-          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-            echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
-          fi
-          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret_mt"
-          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-            echo "❌ Error: clientID_mt is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID_mt"
-          echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for multi tenant 🔍
+  #       id: fetch_credentials_mt
+  #       run: |
+  #         service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+  #           echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret_mt"
+  #         clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+  #           echo "❌ Error: clientID_mt is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID_mt"
+  #         echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Run repo-specific integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
-        env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
-        run: |
-          set -e
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
-          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
-          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
-          cmisClientID="$CMIS_CLIENT_ID"
-          cmisClientSecret="$CMIS_CLIENT_SECRET"
-          cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=$appUrl
-          appUrlMT=$appUrlMT
-          authUrl=$authUrl
-          authUrlMT1=$authUrlMT1
-          authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
-          username=$username
-          password=$password
-          noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword=$noSDMRoleUserPassword
-          versionedRepositoryID=$versionedRepositoryID
-          virusScanRepositoryID=$virusScanRepositoryID
-          defaultRepositoryID=$defaultRepositoryID
-          defaultRepositoryIDMT=$defaultRepositoryIDMT
-          CMIS_URL=$CMIS_URL
-          cmisClientID=$cmisClientID
-          cmisClientSecret=$cmisClientSecret
-          EOL
-          echo "🎯 Running repo-specific integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+  #     - name: Run repo-specific integration tests 🎯 (${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }})
+  #       env:
+  #         CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+  #         CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+  #         CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+  #         CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+  #         CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+  #         CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+  #       run: |
+  #         set -e
+  #         PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+  #         appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+  #         appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+  #         authUrl="${{ secrets.CAPAUTH_URL }}"
+  #         authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+  #         authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+  #         clientID="${{ env.CLIENT_ID }}"
+  #         clientSecret="${{ env.CLIENT_SECRET }}"
+  #         clientIDMT="${{ env.CLIENT_ID_MT }}"
+  #         clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+  #         username="${{ secrets.CF_USER }}"
+  #         password="${{ secrets.CF_PASSWORD }}"
+  #         noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+  #         noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+  #         versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
+  #         virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
+  #         defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+  #         defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
+  #         CMIS_URL="${{ secrets.CMIS_URL }}"
+  #         cmisClientID="$CMIS_CLIENT_ID"
+  #         cmisClientSecret="$CMIS_CLIENT_SECRET"
+  #         cat > "$PROPERTIES_FILE" <<EOL
+  #         appUrl=$appUrl
+  #         appUrlMT=$appUrlMT
+  #         authUrl=$authUrl
+  #         authUrlMT1=$authUrlMT1
+  #         authUrlMT2=$authUrlMT2
+  #         clientID=$clientID
+  #         clientSecret=$clientSecret
+  #         clientIDMT=$clientIDMT
+  #         clientSecretMT=$clientSecretMT
+  #         username=$username
+  #         password=$password
+  #         noSDMRoleUsername=$noSDMRoleUsername
+  #         noSDMRoleUserPassword=$noSDMRoleUserPassword
+  #         versionedRepositoryID=$versionedRepositoryID
+  #         virusScanRepositoryID=$virusScanRepositoryID
+  #         defaultRepositoryID=$defaultRepositoryID
+  #         defaultRepositoryIDMT=$defaultRepositoryIDMT
+  #         CMIS_URL=$CMIS_URL
+  #         cmisClientID=$cmisClientID
+  #         cmisClientSecret=$cmisClientSecret
+  #         EOL
+  #         echo "🎯 Running repo-specific integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }} - ${{ matrix.testClass }}..."
+  #         mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  subscription-integration-test:
-    runs-on: ubuntu-latest
-    needs: repospecific-integration-test
-    if: "!cancelled()"
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        tenant: [TENANT1, TENANT2]
-    steps:
-      - name: Checkout repository 📁
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.branch_name }}
+  # subscription-integration-test:
+  #   runs-on: ubuntu-latest
+  #   needs: repospecific-integration-test
+  #   if: "!cancelled()"
+  #   strategy:
+  #     fail-fast: false
+  #     max-parallel: 1
+  #     matrix:
+  #       tenant: [TENANT1, TENANT2]
+  #   steps:
+  #     - name: Checkout repository 📁
+  #       uses: actions/checkout@v6
+  #       with:
+  #         ref: ${{ github.event.inputs.branch_name }}
 
-      - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
-        with:
-          java-version: 17
-          distribution: 'temurin'
-          cache: 'maven'
+  #     - name: Set up Java 17 ☕
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 17
+  #         distribution: 'temurin'
+  #         cache: 'maven'
 
-      - name: Cache CF CLI 📦
-        id: cache-cf-cli
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/cf8
-          key: cf-cli-v8-${{ runner.os }}
+  #     - name: Cache CF CLI 📦
+  #       id: cache-cf-cli
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /usr/bin/cf8
+  #         key: cf-cli-v8-${{ runner.os }}
 
-      - name: Install Cloud Foundry CLI 🔧
-        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
-        run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-          sudo apt-get update
-          sudo apt-get install cf8-cli
+  #     - name: Install Cloud Foundry CLI 🔧
+  #       if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+  #       run: |
+  #         wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+  #         echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+  #         sudo apt-get update
+  #         sudo apt-get install cf8-cli
 
-      - name: Install jq 📦
-        run: |
-          if ! command -v jq &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y jq
-          fi
+  #     - name: Install jq 📦
+  #       run: |
+  #         if ! command -v jq &> /dev/null; then
+  #           sudo apt-get update && sudo apt-get install -y jq
+  #         fi
 
-      - name: Install BTP CLI 🔧
-        run: |
-          echo "🔄 Installing SAP BTP CLI..."
-          curl -fsSL https://cli.btp.cloud.sap/btpcli-install.sh | bash
-          # The install script places the binary in ~/bin by default — make it system-wide
-          BTP_BIN=$(find "$HOME/bin" /usr/local/bin -maxdepth 1 -name 'btp' -type f 2>/dev/null | head -1)
-          if [ -z "$BTP_BIN" ]; then
-            echo "❌ btp binary not found after install script."
-            exit 1
-          fi
-          if [ "$BTP_BIN" != "/usr/local/bin/btp" ]; then
-            sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
-          fi
-          btp --version
-          echo "✅ BTP CLI installed successfully!"
+  #     - name: Install BTP CLI 🔧
+  #       run: |
+  #         echo "🔄 Installing SAP BTP CLI..."
+  #         curl -fsSL https://cli.btp.cloud.sap/btpcli-install.sh | bash
+  #         # The install script places the binary in ~/bin by default — make it system-wide
+  #         BTP_BIN=$(find "$HOME/bin" /usr/local/bin -maxdepth 1 -name 'btp' -type f 2>/dev/null | head -1)
+  #         if [ -z "$BTP_BIN" ]; then
+  #           echo "❌ btp binary not found after install script."
+  #           exit 1
+  #         fi
+  #         if [ "$BTP_BIN" != "/usr/local/bin/btp" ]; then
+  #           sudo install -m 755 "$BTP_BIN" /usr/local/bin/btp
+  #         fi
+  #         btp --version
+  #         echo "✅ BTP CLI installed successfully!"
 
-      - name: Determine Cloud Foundry Space 🌌
-        id: determine_space
-        run: |
-          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
-          else
-            space="${{ github.event.inputs.cf_space }}"
-          fi
-          echo "space=$space" >> $GITHUB_OUTPUT
+  #     - name: Determine Cloud Foundry Space 🌌
+  #       id: determine_space
+  #       run: |
+  #         if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+  #           space="${{ secrets.CF_SPACE }}"
+  #         else
+  #           space="${{ github.event.inputs.cf_space }}"
+  #         fi
+  #         echo "space=$space" >> $GITHUB_OUTPUT
 
-      - name: Login to Cloud Foundry 🔑
-        run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+  #     - name: Login to Cloud Foundry 🔑
+  #       run: |
+  #         cf login -a ${{ secrets.CF_API }} \
+  #           -u ${{ secrets.CF_USER }} \
+  #           -p ${{ secrets.CF_PASSWORD }} \
+  #           -o ${{ secrets.CF_ORG }} \
+  #           -s ${{ steps.determine_space.outputs.space }}
 
-      - name: Fetch and Escape Client Details for single tenant 🔍
-        id: fetch_credentials
-        run: |
-          service_instance_guid=$(cf service demoappjava-public-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "❌ Error: clientSecret is not set or is null"; exit 1;
-          fi
-          escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret"
-          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
-            echo "❌ Error: clientID is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID"
-          echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for single tenant 🔍
+  #       id: fetch_credentials
+  #       run: |
+  #         service_instance_guid=$(cf service demoappjava-public-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
+  #           echo "❌ Error: clientSecret is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret"
+  #         clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+  #           echo "❌ Error: clientID is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID"
+  #         echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
-      - name: Fetch and Escape Client Details for multi tenant 🔍
-        id: fetch_credentials_mt
-        run: |
-          service_instance_guid=$(cf service bookshop-mt-uaa --guid)
-          if [ -z "$service_instance_guid" ]; then
-            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
-          fi
-          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
-          if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
-          fi
-          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
-          if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
-            echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
-          fi
-          escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedClientSecret_mt"
-          clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
-          if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
-            echo "❌ Error: clientID_mt is not set or is null"; exit 1;
-          fi
-          echo "::add-mask::$clientID_mt"
-          echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
-          echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
+  #     - name: Fetch and Escape Client Details for multi tenant 🔍
+  #       id: fetch_credentials_mt
+  #       run: |
+  #         service_instance_guid=$(cf service bookshop-mt-uaa --guid)
+  #         if [ -z "$service_instance_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
+  #         fi
+  #         bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+  #         binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+  #         if [ -z "$binding_guid" ]; then
+  #           echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
+  #         fi
+  #         binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+  #         clientSecret_mt=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+  #         if [ -z "$clientSecret_mt" ] || [ "$clientSecret_mt" == "null" ]; then
+  #           echo "❌ Error: clientSecret_mt is not set or is null"; exit 1;
+  #         fi
+  #         escapedClientSecret_mt=$(echo "$clientSecret_mt" | sed 's/\$/\\$/g')
+  #         echo "::add-mask::$escapedClientSecret_mt"
+  #         clientID_mt=$(echo "$binding_details" | jq -r '.credentials.clientid')
+  #         if [ -z "$clientID_mt" ] || [ "$clientID_mt" == "null" ]; then
+  #           echo "❌ Error: clientID_mt is not set or is null"; exit 1;
+  #         fi
+  #         echo "::add-mask::$clientID_mt"
+  #         echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
+  #         echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Run subscription integration tests 🎯 (${{ matrix.tenant }})
-        env:
-          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
-          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
-          CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
-        run: |
-          set -e
-          PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
-          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
-          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          consumerSubaccountIdMT1="${{ secrets.CONSUMERSUBACCOUNTIDMT1 }}"
-          consumerSubdomainMT1="${{ secrets.CONSUMERSUBDOMAINMT1 }}"
-          consumerSubaccountIdMT2="${{ secrets.CONSUMERSUBACCOUNTIDMT2 }}"
-          consumerSubdomainMT2="${{ secrets.CONSUMERSUBDOMAINMT2 }}"
-          consumerSubdomainMT="${{ secrets.CONSUMERSUBDOMAINMT }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
-          cmisClientID="$CMIS_CLIENT_ID"
-          cmisClientSecret="$CMIS_CLIENT_SECRET"
-          SAAS_APP_NAME="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
-          ROLE_COLLECTION_NAME="ak-test"
-          APP_ROLE_FILTER="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
-          BTP_CLI_URL="${{ secrets.BTP_CLI_URL }}"
-          BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}"
-          cat > "$PROPERTIES_FILE" <<EOL
-          appUrl=$appUrl
-          appUrlMT=$appUrlMT
-          authUrl=$authUrl
-          authUrlMT1=$authUrlMT1
-          authUrlMT2=$authUrlMT2
-          clientID=$clientID
-          clientSecret=$clientSecret
-          clientIDMT=$clientIDMT
-          clientSecretMT=$clientSecretMT
-          username=$username
-          password=$password
-          noSDMRoleUsername=$noSDMRoleUsername
-          noSDMRoleUserPassword=$noSDMRoleUserPassword
-          versionedRepositoryID=$versionedRepositoryID
-          virusScanRepositoryID=$virusScanRepositoryID
-          defaultRepositoryID=$defaultRepositoryID
-          defaultRepositoryIDMT=$defaultRepositoryIDMT
-          consumerSubaccountIdMT1=$consumerSubaccountIdMT1
-          consumerSubdomainMT1=$consumerSubdomainMT1
-          consumerSubaccountIdMT2=$consumerSubaccountIdMT2
-          consumerSubdomainMT2=$consumerSubdomainMT2
-          CMIS_URL=$CMIS_URL
-          cmisClientID=$cmisClientID
-          cmisClientSecret=$cmisClientSecret
-          SAAS_APP_NAME=$SAAS_APP_NAME
-          ROLE_COLLECTION_NAME=$ROLE_COLLECTION_NAME
-          APP_ROLE_FILTER=$APP_ROLE_FILTER
-          BTP_CLI_URL=$BTP_CLI_URL
-          BTP_GLOBAL_ACCOUNT_SUBDOMAIN=$BTP_GLOBAL_ACCOUNT_SUBDOMAIN
-          EOL
-          echo "🎯 Running subscription integration tests for ${{ matrix.tenant }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/IntegrationTest_Subscription.java"
+  #     - name: Run subscription integration tests 🎯 (${{ matrix.tenant }})
+  #       env:
+  #         CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+  #         CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
+  #         CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
+  #         CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+  #         CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
+  #         CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+  #       run: |
+  #         set -e
+  #         PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
+  #         appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+  #         appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+  #         authUrl="${{ secrets.CAPAUTH_URL }}"
+  #         authUrlMT1="${{ secrets.AUTHURLMT1 }}"
+  #         authUrlMT2="${{ secrets.AUTHURLMT2 }}"
+  #         clientID="${{ env.CLIENT_ID }}"
+  #         clientSecret="${{ env.CLIENT_SECRET }}"
+  #         clientIDMT="${{ env.CLIENT_ID_MT }}"
+  #         clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
+  #         username="${{ secrets.CF_USER }}"
+  #         password="${{ secrets.CF_PASSWORD }}"
+  #         noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
+  #         noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+  #         versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
+  #         virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
+  #         defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
+  #         defaultRepositoryIDMT="${{ secrets.DEFAULTREPOSITORYIDMT }}"
+  #         consumerSubaccountIdMT1="${{ secrets.CONSUMERSUBACCOUNTIDMT1 }}"
+  #         consumerSubdomainMT1="${{ secrets.CONSUMERSUBDOMAINMT1 }}"
+  #         consumerSubaccountIdMT2="${{ secrets.CONSUMERSUBACCOUNTIDMT2 }}"
+  #         consumerSubdomainMT2="${{ secrets.CONSUMERSUBDOMAINMT2 }}"
+  #         consumerSubdomainMT="${{ secrets.CONSUMERSUBDOMAINMT }}"
+  #         CMIS_URL="${{ secrets.CMIS_URL }}"
+  #         cmisClientID="$CMIS_CLIENT_ID"
+  #         cmisClientSecret="$CMIS_CLIENT_SECRET"
+  #         SAAS_APP_NAME="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
+  #         ROLE_COLLECTION_NAME="ak-test"
+  #         APP_ROLE_FILTER="bookshop-mt-sdmgoogleworkspacedev-${{ steps.determine_space.outputs.space }}"
+  #         BTP_CLI_URL="${{ secrets.BTP_CLI_URL }}"
+  #         BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}"
+  #         cat > "$PROPERTIES_FILE" <<EOL
+  #         appUrl=$appUrl
+  #         appUrlMT=$appUrlMT
+  #         authUrl=$authUrl
+  #         authUrlMT1=$authUrlMT1
+  #         authUrlMT2=$authUrlMT2
+  #         clientID=$clientID
+  #         clientSecret=$clientSecret
+  #         clientIDMT=$clientIDMT
+  #         clientSecretMT=$clientSecretMT
+  #         username=$username
+  #         password=$password
+  #         noSDMRoleUsername=$noSDMRoleUsername
+  #         noSDMRoleUserPassword=$noSDMRoleUserPassword
+  #         versionedRepositoryID=$versionedRepositoryID
+  #         virusScanRepositoryID=$virusScanRepositoryID
+  #         defaultRepositoryID=$defaultRepositoryID
+  #         defaultRepositoryIDMT=$defaultRepositoryIDMT
+  #         consumerSubaccountIdMT1=$consumerSubaccountIdMT1
+  #         consumerSubdomainMT1=$consumerSubdomainMT1
+  #         consumerSubaccountIdMT2=$consumerSubaccountIdMT2
+  #         consumerSubdomainMT2=$consumerSubdomainMT2
+  #         CMIS_URL=$CMIS_URL
+  #         cmisClientID=$cmisClientID
+  #         cmisClientSecret=$cmisClientSecret
+  #         SAAS_APP_NAME=$SAAS_APP_NAME
+  #         ROLE_COLLECTION_NAME=$ROLE_COLLECTION_NAME
+  #         APP_ROLE_FILTER=$APP_ROLE_FILTER
+  #         BTP_CLI_URL=$BTP_CLI_URL
+  #         BTP_GLOBAL_ACCOUNT_SUBDOMAIN=$BTP_GLOBAL_ACCOUNT_SUBDOMAIN
+  #         EOL
+  #         echo "🎯 Running subscription integration tests for ${{ matrix.tenant }}..."
+  #         mvn clean verify -P integration-tests -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/IntegrationTest_Subscription.java"
 
-  # Summary job to aggregate results
-  test-summary:
-    runs-on: ubuntu-latest
-    needs: [integration-test, versioned-integration-test, virusscan-integration-test, repospecific-integration-test, subscription-integration-test]
-    if: "!cancelled()"
-    steps:
-      - name: Check test results 📋
-        run: |
-          echo "Integration test: ${{ needs.integration-test.result }}"
-          echo "Versioned test: ${{ needs.versioned-integration-test.result }}"
-          echo "Virus scan test: ${{ needs.virusscan-integration-test.result }}"
-          echo "Repo-specific test: ${{ needs.repospecific-integration-test.result }}"
-          echo "Subscription test: ${{ needs.subscription-integration-test.result }}"
-          if [ "${{ needs.integration-test.result }}" == "success" ] && \
-             [ "${{ needs.versioned-integration-test.result }}" == "success" ] && \
-             [ "${{ needs.virusscan-integration-test.result }}" == "success" ] && \
-             [ "${{ needs.repospecific-integration-test.result }}" == "success" ] && \
-             [ "${{ needs.subscription-integration-test.result }}" == "success" ]; then
-            echo "✅ All integration tests passed!"
-          else
-            echo "❌ Some integration tests failed. Check individual job results for details."
-            exit 1
-          fi
+  # # Summary job to aggregate results
+  # test-summary:
+  #   runs-on: ubuntu-latest
+  #   needs: [integration-test, versioned-integration-test, virusscan-integration-test, repospecific-integration-test, subscription-integration-test]
+  #   if: "!cancelled()"
+  #   steps:
+  #     - name: Check test results 📋
+  #       run: |
+  #         echo "Integration test: ${{ needs.integration-test.result }}"
+  #         echo "Versioned test: ${{ needs.versioned-integration-test.result }}"
+  #         echo "Virus scan test: ${{ needs.virusscan-integration-test.result }}"
+  #         echo "Repo-specific test: ${{ needs.repospecific-integration-test.result }}"
+  #         echo "Subscription test: ${{ needs.subscription-integration-test.result }}"
+  #         if [ "${{ needs.integration-test.result }}" == "success" ] && \
+  #            [ "${{ needs.versioned-integration-test.result }}" == "success" ] && \
+  #            [ "${{ needs.virusscan-integration-test.result }}" == "success" ] && \
+  #            [ "${{ needs.repospecific-integration-test.result }}" == "success" ] && \
+  #            [ "${{ needs.subscription-integration-test.result }}" == "success" ]; then
+  #           echo "✅ All integration tests passed!"
+  #         else
+  #           echo "❌ Some integration tests failed. Check individual job results for details."
+  #           exit 1
+  #         fi
