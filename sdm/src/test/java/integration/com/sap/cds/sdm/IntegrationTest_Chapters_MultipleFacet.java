@@ -9,6 +9,8 @@ import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1190,7 +1192,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           System.out.println("Save response: " + response);
           if ("Saved".equals(response)) {
             // --- CMIS backend validation ---
-            String[] name = {"sample1234.pdf", "reference1234.pdf", "footnote1234.pdf"};
             for (int i = 0; i < facet.length; i++) {
               String cmisName =
                   CmisDocumentHelper.getCmisProperty(chapterID5, name[i], "cmis:name");
@@ -2181,7 +2182,7 @@ class IntegrationTest_Chapters_MultipleFacet {
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, name1, "Working:DocumentInfoRecordInt");
                 assertEquals(
-                    String.valueOf(secondaryPropertyInt1),
+                    String.valueOf(secondaryPropertyInt),
                     cmisInt,
                     "DocumentInfoRecordInt should match for PDF " + facet[i]);
                 String cmisBool =
