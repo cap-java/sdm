@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - develop
+      - Blackduck
   pull_request:
     branches:
       - develop
+      - Blackduck
     types: [opened, synchronize, reopened]
   workflow_dispatch:
   
@@ -43,9 +45,11 @@ jobs:
           detect_args: >
             --detect.project.name=SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0
             --detect.project.version.name=1.0
+            --detect.code.location.name=SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0/1.0
             --detect.included.detector.types=MAVEN
             --detect.excluded.directories=**/node_modules,**/*test*,**/localrepo,**/target/site,**/*-site.jar
             --detect.tools=DETECTOR,BINARY_SCAN
+            --detect.source.path=${{ github.workspace }}/sdm
             --detect.risk.report.pdf=false
             --logging.level.detect=INFO
         env:
