@@ -1506,9 +1506,9 @@ class IntegrationTest_MultipleFacet {
             CreateandReturnFacetID(
                 appUrl, serviceName, entityName, facet[i], entityID3, postData, file);
       }
-      Boolean Updated1[] = new Boolean[3];
-      Boolean Updated2[] = new Boolean[3];
-      Boolean Updated3[] = new Boolean[3];
+      boolean Updated1[] = new boolean[3];
+      boolean Updated2[] = new boolean[3];
+      boolean Updated3[] = new boolean[3];
       String name1 = "sample1234.pdf";
       Integer secondaryPropertyInt1 = 1234;
       LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
@@ -1699,9 +1699,9 @@ class IntegrationTest_MultipleFacet {
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
     if (response.equals("Entity in draft mode")) {
-      Boolean Updated1[] = new Boolean[3];
-      Boolean Updated2[] = new Boolean[3];
-      Boolean Updated3[] = new Boolean[3];
+      boolean Updated1[] = new boolean[3];
+      boolean Updated2[] = new boolean[3];
+      boolean Updated3[] = new boolean[3];
 
       String name1 = "sample1.pdf";
       Integer secondaryPropertyInt1 = 12;
@@ -2170,9 +2170,9 @@ class IntegrationTest_MultipleFacet {
     Boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID3);
     if (response.equals("Entity in draft mode")) {
-      Boolean Updated1[] = new Boolean[3];
-      Boolean Updated2[] = new Boolean[3];
-      Boolean Updated3[] = new Boolean[3];
+      boolean Updated1[] = new boolean[3];
+      boolean Updated2[] = new boolean[3];
+      boolean Updated3[] = new boolean[3];
       String name1 = "sample.pdf";
       Integer secondaryPropertyInt1 = 12;
       LocalDateTime secondaryPropertyDateTime1 = LocalDateTime.now();
