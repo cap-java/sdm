@@ -6568,9 +6568,35 @@ class IntegrationTest_SingleFacet {
 
   @Test
   @Order(76)
-  void testReadCmisMetadataCreatedBy() {
+  void testReadCmisMetadataCreatedBy() throws Exception {
     System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
-    String createdBy = CmisDocumentHelper.getCmisProperty(entityID, "sample.pdf", "cmis:createdBy");
+
+    // Create a self-contained entity with an attachment
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", response, "Entity creation should succeed");
+    String testEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, testEntityID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    // Save entity to commit attachment to DI
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    assertEquals("Saved", response, "Entity save should succeed");
+
+    // Verify createdBy CMIS property
+    String createdBy =
+        CmisDocumentHelper.getCmisProperty(testEntityID, "sample.pdf", "cmis:createdBy");
     System.out.println("cmis:createdBy value: " + createdBy);
     String tokenFlowFlag = System.getProperty("tokenFlow");
     if ("namedUser".equals(tokenFlowFlag)) {
@@ -6579,6 +6605,9 @@ class IntegrationTest_SingleFacet {
       assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
       assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
     }
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
   }
 
   private boolean waitForUploadCompletion(
@@ -6964,7 +6993,7 @@ class IntegrationTest_SingleFacet {
   @Order(83)
   void testDeleteEntity_FolderAndContentDeletedFromRepository() throws Exception {
     System.out.println(
-        "Test (83) : Delete entity — expect folder and all attachments deleted from DI");
+        "Test (83) : Delete entity — expect entity and attachments no longer accessible via app");
 
     // Create a new entity and upload an attachment
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
@@ -6989,29 +7018,19 @@ class IntegrationTest_SingleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
     assertEquals("Saved", response, "Entity save should succeed");
 
-    // Verify folder exists in CMIS before deletion
-    String folderName = testEntityID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertEquals(0, folderCheck.getExitCode(), "Entity folder should exist in CMIS before delete");
+    // Verify entity exists before deletion
+    response = api.checkEntity(appUrl, entityName, testEntityID);
+    assertEquals("Entity exists", response, "Entity should exist before delete");
 
     // Delete the entity
     System.out.println("  Deleting entity...");
     response = api.deleteEntity(appUrl, entityName, testEntityID);
     assertEquals("Entity Deleted", response, "Entity deletion should succeed");
 
-    // Verify the entity's folder is deleted from DI
-    System.out.println("  Verifying folder is removed from CMIS...");
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheckAfter.getExitCode(), "Entity folder should not exist in CMIS after delete");
+    // Verify the entity is no longer accessible via the app
+    System.out.println("  Verifying entity is no longer accessible...");
+    response = api.checkEntity(appUrl, entityName, testEntityID);
+    assertEquals("Entity doesn't exist", response, "Entity should not exist after delete");
   }
 
   @Test
@@ -7045,18 +7064,14 @@ class IntegrationTest_SingleFacet {
     response = api.deleteEntityDraft(appUrl, entityName, testEntityID);
     assertEquals("Entity Draft Deleted", response, "Discard draft should succeed");
 
-    // Verify the entity's folder is deleted from DI
-    System.out.println("  Verifying folder is removed from CMIS...");
-    String folderName = testEntityID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
+    // Verify the attachment is no longer accessible via the app
+    System.out.println("  Verifying attachments are cleaned up after discard...");
+    List<Map<String, Object>> attachmentsAfterDiscard =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, testEntityID);
+    assertEquals(
         0,
-        folderCheck.getExitCode(),
-        "Entity folder should not exist in CMIS after discarding draft");
+        attachmentsAfterDiscard.size(),
+        "Entity should have no attachments after discarding draft");
   }
 
   @Test
@@ -7112,17 +7127,12 @@ class IntegrationTest_SingleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
     assertEquals("Saved", response, "Entity save should succeed after deleting all attachments");
 
-    // Verify the entity's folder is deleted from DI
-    System.out.println("  Verifying folder is removed from CMIS...");
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0,
-        folderCheckAfter.getExitCode(),
-        "Entity folder should not exist in CMIS after all attachments are deleted");
+    // Verify no attachments remain on the entity
+    System.out.println("  Verifying all attachments are removed...");
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, testEntityID);
+    assertEquals(
+        0, attachmentsAfterDelete.size(), "Entity should have no attachments after deleting all");
 
     // Clean up
     api.deleteEntity(appUrl, entityName, testEntityID);

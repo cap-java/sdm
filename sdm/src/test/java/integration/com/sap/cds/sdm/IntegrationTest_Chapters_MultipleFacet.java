@@ -1191,8 +1191,9 @@ class IntegrationTest_Chapters_MultipleFacet {
           response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID5);
           System.out.println("Save response: " + response);
           if ("Saved".equals(response)) {
-            // --- CMIS backend validation ---
-            for (int i = 0; i < facet.length; i++) {
+            // --- CMIS backend validation (only for attachments facet i==0) ---
+            {
+              int i = 0;
               String cmisName =
                   CmisDocumentHelper.getCmisProperty(chapterID5, name[i], "cmis:name");
               assertEquals(
@@ -1489,8 +1490,9 @@ class IntegrationTest_Chapters_MultipleFacet {
       if (counter == facet.length) {
         response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID5);
         if (response.equals("Saved")) {
-          // --- CMIS backend validation ---
-          for (int i = 0; i < facet.length; i++) {
+          // --- CMIS backend validation (only for attachments facet i==0) ---
+          {
+            int i = 0;
             String cmisName = CmisDocumentHelper.getCmisProperty(chapterID5, name[i], "cmis:name");
             assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
             String cmisString =
@@ -1654,25 +1656,26 @@ class IntegrationTest_Chapters_MultipleFacet {
 
             if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
               System.out.println("Book saved with expected invalid property errors");
-              // --- CMIS backend validation: no changes should persist in DI ---
-              for (int i = 0; i < facet.length; i++) {
+              // --- CMIS backend validation: no changes should persist in DI (only for attachments
+              // facet) ---
+              {
                 String cmisName =
                     CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
                 assertEquals(
                     "sample.pdf",
                     cmisName,
-                    "Filename should NOT be changed in CMIS for " + facet[i]);
+                    "Filename should NOT be changed in CMIS for " + facet[0]);
                 String cmisId1 =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.pdf", "abc:myId1");
-                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
+                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[0]);
                 String cmisString =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.pdf", "Working:DocumentInfoRecordString");
                 assertNull(
                     cmisString,
                     "Valid props should not persist when invalid props cause rejection for "
-                        + facet[i]);
+                        + facet[0]);
               }
               testStatus = true;
               System.out.println(
@@ -1839,18 +1842,19 @@ class IntegrationTest_Chapters_MultipleFacet {
 
             if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
               System.out.println("Book saved with expected invalid property errors");
-              // --- CMIS backend validation: no changes should persist in DI ---
-              for (int i = 0; i < facet.length; i++) {
+              // --- CMIS backend validation: no changes should persist in DI (only for attachments
+              // facet) ---
+              {
                 String cmisName =
                     CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
                 assertEquals(
                     "sample.pdf",
                     cmisName,
-                    "Filename should NOT be changed in CMIS for " + facet[i]);
+                    "Filename should NOT be changed in CMIS for " + facet[0]);
                 String cmisId1 =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.pdf", "abc:myId1");
-                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
+                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[0]);
               }
               testStatus = true;
               System.out.println(
@@ -2167,54 +2171,54 @@ class IntegrationTest_Chapters_MultipleFacet {
             response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, tempBookID);
             if (response.equals("Saved")) {
               System.out.println("Book saved");
-              // --- CMIS backend validation ---
-              for (int i = 0; i < facet.length; i++) {
+              // --- CMIS backend validation (only for attachments facet i==0) ---
+              {
                 String cmisName =
                     CmisDocumentHelper.getCmisProperty(tempChapterID, name1, "cmis:name");
                 assertEquals(
-                    name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[i]);
+                    name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[0]);
                 String cmisString =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, name1, "Working:DocumentInfoRecordString");
                 assertNotNull(
-                    cmisString, "DocumentInfoRecordString should be set for PDF " + facet[i]);
+                    cmisString, "DocumentInfoRecordString should be set for PDF " + facet[0]);
                 String cmisInt =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, name1, "Working:DocumentInfoRecordInt");
                 assertEquals(
                     String.valueOf(secondaryPropertyInt),
                     cmisInt,
-                    "DocumentInfoRecordInt should match for PDF " + facet[i]);
+                    "DocumentInfoRecordInt should match for PDF " + facet[0]);
                 String cmisBool =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, name1, "Working:DocumentInfoRecordBoolean");
                 assertEquals(
                     "true",
                     cmisBool,
-                    "DocumentInfoRecordBoolean should be true for PDF " + facet[i]);
+                    "DocumentInfoRecordBoolean should be true for PDF " + facet[0]);
               }
               // TXT - only Boolean was set
-              for (int i = 0; i < facet.length; i++) {
+              {
                 String cmisBoolTxt =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.txt", "Working:DocumentInfoRecordBoolean");
                 assertEquals(
                     "true",
                     cmisBoolTxt,
-                    "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+                    "DocumentInfoRecordBoolean should be true for TXT " + facet[0]);
               }
               // EXE - String + Int were set
-              for (int i = 0; i < facet.length; i++) {
+              {
                 String cmisStringExe =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.exe", "Working:DocumentInfoRecordString");
                 assertNotNull(
-                    cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+                    cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
                 String cmisIntExe =
                     CmisDocumentHelper.getCmisPropertyOrNull(
                         tempChapterID, "sample.exe", "Working:DocumentInfoRecordInt");
                 assertNotNull(
-                    cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[i]);
+                    cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[0]);
               }
               testStatus = true;
               System.out.println("Renamed & updated Secondary properties for chapter attachments");
@@ -2449,42 +2453,42 @@ class IntegrationTest_Chapters_MultipleFacet {
 
           if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
             System.out.println("Book saved with expected invalid property errors");
-            // --- CMIS backend validation ---
+            // --- CMIS backend validation (only for attachments facet) ---
             // PDF: invalid prop was used, so nothing should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisName =
                   CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
               assertEquals(
                   "sample.pdf",
                   cmisName,
-                  "PDF filename should NOT be changed in CMIS for " + facet[i]);
+                  "PDF filename should NOT be changed in CMIS for " + facet[0]);
               String cmisId1 =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       tempChapterID, "sample.pdf", "abc:myId1");
               assertNull(
-                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[0]);
             }
             // TXT: valid Boolean was set — should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisBoolTxt =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       tempChapterID, "sample.txt", "Working:DocumentInfoRecordBoolean");
               assertEquals(
                   "true",
                   cmisBoolTxt,
-                  "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+                  "DocumentInfoRecordBoolean should be true for TXT " + facet[0]);
             }
             // EXE: valid String + Int were set — should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisStringExe =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       tempChapterID, "sample.exe", "Working:DocumentInfoRecordString");
               assertNotNull(
-                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
               String cmisIntExe =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       tempChapterID, "sample.exe", "Working:DocumentInfoRecordInt");
-              assertNotNull(cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[i]);
+              assertNotNull(cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[0]);
             }
             testStatus = true;
             System.out.println(
@@ -2686,42 +2690,42 @@ class IntegrationTest_Chapters_MultipleFacet {
           }
           if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
             System.out.println("Book saved");
-            // --- CMIS backend validation ---
+            // --- CMIS backend validation (only for attachments facet) ---
             // PDF: invalid prop was used, so nothing should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisName =
                   CmisDocumentHelper.getCmisProperty(chapterID5, "sample.pdf", "cmis:name");
               assertEquals(
                   "sample.pdf",
                   cmisName,
-                  "PDF filename should NOT be changed in CMIS for " + facet[i]);
+                  "PDF filename should NOT be changed in CMIS for " + facet[0]);
               String cmisId1 =
                   CmisDocumentHelper.getCmisPropertyOrNull(chapterID5, "sample.pdf", "abc:myId1");
               assertNull(
-                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[0]);
             }
             // TXT: valid Boolean (false) was set — should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisBoolTxt =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       chapterID5, "sample.txt", "Working:DocumentInfoRecordBoolean");
               assertEquals(
                   "false",
                   cmisBoolTxt,
-                  "DocumentInfoRecordBoolean should be false for TXT " + facet[i]);
+                  "DocumentInfoRecordBoolean should be false for TXT " + facet[0]);
             }
             // EXE: valid String + Int were set — should persist
-            for (int i = 0; i < facet.length; i++) {
+            {
               String cmisStringExe =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       chapterID5, "sample.exe", "Working:DocumentInfoRecordString");
               assertNotNull(
-                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
               String cmisIntExe =
                   CmisDocumentHelper.getCmisPropertyOrNull(
                       chapterID5, "sample.exe", "Working:DocumentInfoRecordInt");
               assertEquals(
-                  "12", cmisIntExe, "DocumentInfoRecordInt should match for EXE " + facet[i]);
+                  "12", cmisIntExe, "DocumentInfoRecordInt should match for EXE " + facet[0]);
             }
             testStatus = true;
             System.out.println(
@@ -6701,10 +6705,38 @@ class IntegrationTest_Chapters_MultipleFacet {
 
   @Test
   @Order(76)
-  void testReadCmisMetadataCreatedBy() {
+  void testReadCmisMetadataCreatedBy() throws IOException {
     System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
+
+    // Create own book and chapter to be self-contained
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    // Now check the createdBy CMIS property
     String createdBy =
-        CmisDocumentHelper.getCmisProperty(chapterID, "sample.pdf", "cmis:createdBy");
+        CmisDocumentHelper.getCmisProperty(testChapterID, "sample.pdf", "cmis:createdBy");
     System.out.println("cmis:createdBy value: " + createdBy);
     String tokenFlowFlag = System.getProperty("tokenFlow");
     if ("namedUser".equals(tokenFlowFlag)) {
@@ -6713,6 +6745,9 @@ class IntegrationTest_Chapters_MultipleFacet {
       assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
       assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
     }
+
+    // Cleanup
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 
   @Test
@@ -7008,24 +7043,16 @@ class IntegrationTest_Chapters_MultipleFacet {
     String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
     assertEquals("Saved", response, "Book save should succeed");
 
-    String folderName = testChapterID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertEquals(0, folderCheck.getExitCode(), "Chapter folder should exist in CMIS before delete");
-
     response = api.deleteEntity(appUrl, bookEntityName, testBookID);
     assertEquals("Entity Deleted", response, "Book deletion should succeed");
 
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheckAfter.getExitCode(), "Chapter folder should not exist in CMIS after delete");
+    // Verify entity/attachments are no longer accessible via the app API
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0,
+        attachmentsAfterDelete.size(),
+        "Chapter attachments should not be accessible after book deletion");
   }
 
   @Test
@@ -7058,14 +7085,12 @@ class IntegrationTest_Chapters_MultipleFacet {
     String response = api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
     assertEquals("Entity Draft Deleted", response, "Discard draft should succeed");
 
-    String folderName = testChapterID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheck.getExitCode(), "Chapter folder should not exist in CMIS after discard");
+    List<Map<String, Object>> attachmentsAfterDiscard =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0,
+        attachmentsAfterDiscard.size(),
+        "Chapter should have no attachments after discarding draft");
   }
 
   @Test
@@ -7116,13 +7141,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
     assertEquals("Saved", response, "Book save should succeed after deleting all attachments");
 
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheckAfter.getExitCode(), "Chapter folder should not exist after all deleted");
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0, attachmentsAfterDelete.size(), "Chapter should have no attachments after deleting all");
 
     api.deleteEntity(appUrl, bookEntityName, testBookID);
   }

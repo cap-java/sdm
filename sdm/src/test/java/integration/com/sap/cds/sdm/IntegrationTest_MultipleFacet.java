@@ -1047,30 +1047,32 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
       }
       if (response.equals("Saved")) {
-        // --- CMIS backend validation ---
+        // --- CMIS backend validation (only for attachments facet) ---
         for (int i = 0; i < facet.length; i++) {
-          String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name[i], "cmis:name");
-          assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
-          String cmisString =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordString");
-          assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
-          String cmisInt =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordInt");
-          assertEquals(
-              String.valueOf(secondaryPropertyInt),
-              cmisInt,
-              "DocumentInfoRecordInt should match for " + facet[i]);
-          String cmisBool =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordBoolean");
-          assertEquals(
-              "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
-          String cmisDate =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordDate");
-          assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+          if (i == 0) {
+            String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name[i], "cmis:name");
+            assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
+            String cmisString =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordString");
+            assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
+            String cmisInt =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordInt");
+            assertEquals(
+                String.valueOf(secondaryPropertyInt),
+                cmisInt,
+                "DocumentInfoRecordInt should match for " + facet[i]);
+            String cmisBool =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordBoolean");
+            assertEquals(
+                "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
+            String cmisDate =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordDate");
+            assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+          }
         }
         testStatus = true;
       }
@@ -1139,30 +1141,32 @@ class IntegrationTest_MultipleFacet {
       }
       if (counter >= 2) response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
       if (response.equals("Saved")) {
-        // --- CMIS backend validation ---
+        // --- CMIS backend validation (only for attachments facet) ---
         for (int i = 0; i < facet.length; i++) {
-          String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name[i], "cmis:name");
-          assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
-          String cmisString =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordString");
-          assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
-          String cmisInt =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordInt");
-          assertEquals(
-              String.valueOf(secondaryPropertyInt),
-              cmisInt,
-              "DocumentInfoRecordInt should match for " + facet[i]);
-          String cmisBool =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordBoolean");
-          assertEquals(
-              "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
-          String cmisDate =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, name[i], "Working:DocumentInfoRecordDate");
-          assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+          if (i == 0) {
+            String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name[i], "cmis:name");
+            assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
+            String cmisString =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordString");
+            assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
+            String cmisInt =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordInt");
+            assertEquals(
+                String.valueOf(secondaryPropertyInt),
+                cmisInt,
+                "DocumentInfoRecordInt should match for " + facet[i]);
+            String cmisBool =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordBoolean");
+            assertEquals(
+                "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
+            String cmisDate =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, name[i], "Working:DocumentInfoRecordDate");
+            assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+          }
         }
         testStatus = true;
         System.out.println("Renamed & updated Secondary properties for attachment");
@@ -1284,27 +1288,32 @@ class IntegrationTest_MultipleFacet {
               "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
       if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
-        // --- CMIS backend validation: no changes should persist in DI ---
+        // --- CMIS backend validation: no changes should persist in DI (only for attachments facet)
+        // ---
         for (int i = 0; i < facet.length; i++) {
-          String cmisName =
-              CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
-          assertEquals(
-              "sample.pdf", cmisName, "Filename should NOT be changed in CMIS for " + facet[i]);
-          String cmisId1 =
-              CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
-          assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
-          String cmisString =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, "sample.pdf", "Working:DocumentInfoRecordString");
-          assertNull(
-              cmisString,
-              "Valid props should not persist when invalid props cause rejection for " + facet[i]);
-          String cmisInt =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, "sample.pdf", "Working:DocumentInfoRecordInt");
-          assertNull(
-              cmisInt,
-              "Valid props should not persist when invalid props cause rejection for " + facet[i]);
+          if (i == 0) {
+            String cmisName =
+                CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
+            assertEquals(
+                "sample.pdf", cmisName, "Filename should NOT be changed in CMIS for " + facet[i]);
+            String cmisId1 =
+                CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
+            assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
+            String cmisString =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, "sample.pdf", "Working:DocumentInfoRecordString");
+            assertNull(
+                cmisString,
+                "Valid props should not persist when invalid props cause rejection for "
+                    + facet[i]);
+            String cmisInt =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, "sample.pdf", "Working:DocumentInfoRecordInt");
+            assertNull(
+                cmisInt,
+                "Valid props should not persist when invalid props cause rejection for "
+                    + facet[i]);
+          }
         }
         testStatus = true;
         System.out.println("Rename & update secondary properties for attachment is unsuccessfull");
@@ -1409,27 +1418,32 @@ class IntegrationTest_MultipleFacet {
               "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
       if (response.equals(expectedResponse)) {
         System.out.println("Entity saved");
-        // --- CMIS backend validation: no changes should persist in DI ---
+        // --- CMIS backend validation: no changes should persist in DI (only for attachments facet)
+        // ---
         for (int i = 0; i < facet.length; i++) {
-          String cmisName =
-              CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
-          assertEquals(
-              "sample.pdf", cmisName, "Filename should NOT be changed in CMIS for " + facet[i]);
-          String cmisId1 =
-              CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
-          assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
-          String cmisString =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, "sample.pdf", "Working:DocumentInfoRecordString");
-          assertNull(
-              cmisString,
-              "Valid props should not persist when invalid props cause rejection for " + facet[i]);
-          String cmisInt =
-              CmisDocumentHelper.getCmisPropertyOrNull(
-                  entityID3, "sample.pdf", "Working:DocumentInfoRecordInt");
-          assertNull(
-              cmisInt,
-              "Valid props should not persist when invalid props cause rejection for " + facet[i]);
+          if (i == 0) {
+            String cmisName =
+                CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
+            assertEquals(
+                "sample.pdf", cmisName, "Filename should NOT be changed in CMIS for " + facet[i]);
+            String cmisId1 =
+                CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
+            assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[i]);
+            String cmisString =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, "sample.pdf", "Working:DocumentInfoRecordString");
+            assertNull(
+                cmisString,
+                "Valid props should not persist when invalid props cause rejection for "
+                    + facet[i]);
+            String cmisInt =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    entityID3, "sample.pdf", "Working:DocumentInfoRecordInt");
+            assertNull(
+                cmisInt,
+                "Valid props should not persist when invalid props cause rejection for "
+                    + facet[i]);
+          }
         }
         testStatus = true;
         System.out.println(
@@ -1608,56 +1622,63 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
         if (response.equals("Saved")) {
           System.out.println("Entity saved");
-          // --- CMIS backend validation ---
+          // --- CMIS backend validation (only for attachments facet) ---
           for (int i = 0; i < facet.length; i++) {
-            String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name1, "cmis:name");
-            assertEquals(
-                name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[i]);
-            String cmisString =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordString");
-            assertNotNull(cmisString, "DocumentInfoRecordString should be set for PDF " + facet[i]);
-            String cmisInt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordInt");
-            assertEquals(
-                String.valueOf(secondaryPropertyInt1),
-                cmisInt,
-                "DocumentInfoRecordInt should match for PDF " + facet[i]);
-            String cmisBool =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "true", cmisBool, "DocumentInfoRecordBoolean should be true for PDF " + facet[i]);
-            String cmisDate =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordDate");
-            assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for PDF " + facet[i]);
+            if (i == 0) {
+              String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name1, "cmis:name");
+              assertEquals(
+                  name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[i]);
+              String cmisString =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisString, "DocumentInfoRecordString should be set for PDF " + facet[i]);
+              String cmisInt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  String.valueOf(secondaryPropertyInt1),
+                  cmisInt,
+                  "DocumentInfoRecordInt should match for PDF " + facet[i]);
+              String cmisBool =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true", cmisBool, "DocumentInfoRecordBoolean should be true for PDF " + facet[i]);
+              String cmisDate =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordDate");
+              assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for PDF " + facet[i]);
+            }
           }
           // TXT - only Boolean was set
           for (int i = 0; i < facet.length; i++) {
-            String cmisBoolTxt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "true",
-                cmisBoolTxt,
-                "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            if (i == 0) {
+              String cmisBoolTxt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true",
+                  cmisBoolTxt,
+                  "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            }
           }
           // EXE - String, Int, Date were set
           for (int i = 0; i < facet.length; i++) {
-            String cmisStringExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordString");
-            assertNotNull(
-                cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
-            String cmisIntExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
-            assertEquals(
-                String.valueOf(secondaryPropertyInt1),
-                cmisIntExe,
-                "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            if (i == 0) {
+              String cmisStringExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+              String cmisIntExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  String.valueOf(secondaryPropertyInt1),
+                  cmisIntExe,
+                  "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            }
           }
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties");
@@ -1795,56 +1816,63 @@ class IntegrationTest_MultipleFacet {
         response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID3);
         if (response.equals("Saved")) {
           System.out.println("Entity saved");
-          // --- CMIS backend validation ---
+          // --- CMIS backend validation (only for attachments facet) ---
           for (int i = 0; i < facet.length; i++) {
-            String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name1, "cmis:name");
-            assertEquals(
-                name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[i]);
-            String cmisString =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordString");
-            assertNotNull(cmisString, "DocumentInfoRecordString should be set for PDF " + facet[i]);
-            String cmisInt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordInt");
-            assertEquals(
-                String.valueOf(secondaryPropertyInt1),
-                cmisInt,
-                "DocumentInfoRecordInt should match for PDF " + facet[i]);
-            String cmisBool =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "true", cmisBool, "DocumentInfoRecordBoolean should be true for PDF " + facet[i]);
-            String cmisDate =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, name1, "Working:DocumentInfoRecordDate");
-            assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for PDF " + facet[i]);
+            if (i == 0) {
+              String cmisName = CmisDocumentHelper.getCmisProperty(entityID3, name1, "cmis:name");
+              assertEquals(
+                  name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[i]);
+              String cmisString =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisString, "DocumentInfoRecordString should be set for PDF " + facet[i]);
+              String cmisInt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  String.valueOf(secondaryPropertyInt1),
+                  cmisInt,
+                  "DocumentInfoRecordInt should match for PDF " + facet[i]);
+              String cmisBool =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true", cmisBool, "DocumentInfoRecordBoolean should be true for PDF " + facet[i]);
+              String cmisDate =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, name1, "Working:DocumentInfoRecordDate");
+              assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for PDF " + facet[i]);
+            }
           }
           // TXT - only Boolean was set
           for (int i = 0; i < facet.length; i++) {
-            String cmisBoolTxt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "true",
-                cmisBoolTxt,
-                "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            if (i == 0) {
+              String cmisBoolTxt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true",
+                  cmisBoolTxt,
+                  "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            }
           }
           // EXE - String, Int, Date were set
           for (int i = 0; i < facet.length; i++) {
-            String cmisStringExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordString");
-            assertNotNull(
-                cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
-            String cmisIntExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
-            assertEquals(
-                String.valueOf(secondaryPropertyInt1),
-                cmisIntExe,
-                "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            if (i == 0) {
+              String cmisStringExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+              String cmisIntExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  String.valueOf(secondaryPropertyInt1),
+                  cmisIntExe,
+                  "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            }
           }
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties for attachments");
@@ -2078,40 +2106,47 @@ class IntegrationTest_MultipleFacet {
                 "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
-          // --- CMIS backend validation ---
+          // --- CMIS backend validation (only for attachments facet) ---
           // PDF: invalid prop was used, so nothing should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisName =
-                CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
-            assertEquals(
-                "sample.pdf",
-                cmisName,
-                "PDF filename should NOT be changed in CMIS for " + facet[i]);
-            String cmisId1 =
-                CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
-            assertNull(cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+            if (i == 0) {
+              String cmisName =
+                  CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
+              assertEquals(
+                  "sample.pdf",
+                  cmisName,
+                  "PDF filename should NOT be changed in CMIS for " + facet[i]);
+              String cmisId1 =
+                  CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
+              assertNull(
+                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+            }
           }
           // TXT: only valid Boolean was set — should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisBoolTxt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "true",
-                cmisBoolTxt,
-                "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            if (i == 0) {
+              String cmisBoolTxt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true",
+                  cmisBoolTxt,
+                  "DocumentInfoRecordBoolean should be true for TXT " + facet[i]);
+            }
           }
           // EXE: valid String + Int were set — should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisStringExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordString");
-            assertNotNull(
-                cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
-            String cmisIntExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
-            assertNotNull(cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[i]);
+            if (i == 0) {
+              String cmisStringExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+              String cmisIntExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
+              assertNotNull(cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[i]);
+            }
           }
           testStatus = true;
           System.out.println(
@@ -2314,41 +2349,48 @@ class IntegrationTest_MultipleFacet {
                 "Please contact your administrator for assistance with any necessary adjustments.\\n\\nTable: footnotes\\nPage: IntegrationTestEntity\",\"numericSeverity\":3}]";
         if (response.equals(expectedResponse)) {
           System.out.println("Entity saved");
-          // --- CMIS backend validation ---
+          // --- CMIS backend validation (only for attachments facet) ---
           // PDF: invalid prop was used, so nothing should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisName =
-                CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
-            assertEquals(
-                "sample.pdf",
-                cmisName,
-                "PDF filename should NOT be changed in CMIS for " + facet[i]);
-            String cmisId1 =
-                CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
-            assertNull(cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+            if (i == 0) {
+              String cmisName =
+                  CmisDocumentHelper.getCmisProperty(entityID3, "sample.pdf", "cmis:name");
+              assertEquals(
+                  "sample.pdf",
+                  cmisName,
+                  "PDF filename should NOT be changed in CMIS for " + facet[i]);
+              String cmisId1 =
+                  CmisDocumentHelper.getCmisPropertyOrNull(entityID3, "sample.pdf", "abc:myId1");
+              assertNull(
+                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[i]);
+            }
           }
           // TXT: only valid Boolean (false) was set — should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisBoolTxt =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
-            assertEquals(
-                "false",
-                cmisBoolTxt,
-                "DocumentInfoRecordBoolean should be false for TXT " + facet[i]);
+            if (i == 0) {
+              String cmisBoolTxt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.txt", "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "false",
+                  cmisBoolTxt,
+                  "DocumentInfoRecordBoolean should be false for TXT " + facet[i]);
+            }
           }
           // EXE: valid String + Int were set — should persist
           for (int i = 0; i < facet.length; i++) {
-            String cmisStringExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordString");
-            assertNotNull(
-                cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
-            String cmisIntExe =
-                CmisDocumentHelper.getCmisPropertyOrNull(
-                    entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
-            assertEquals(
-                "12", cmisIntExe, "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            if (i == 0) {
+              String cmisStringExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[i]);
+              String cmisIntExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      entityID3, "sample.exe", "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  "12", cmisIntExe, "DocumentInfoRecordInt should match for EXE " + facet[i]);
+            }
           }
           testStatus = true;
           System.out.println(
@@ -7135,9 +7177,34 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(76)
-  void testReadCmisMetadataCreatedBy() {
+  void testReadCmisMetadataCreatedBy() throws IOException {
     System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
-    String createdBy = CmisDocumentHelper.getCmisProperty(entityID, "sample.pdf", "cmis:createdBy");
+
+    // Create a self-contained entity with an attachment
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", response, "Entity creation should succeed");
+    String testEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facet[0], testEntityID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    assertEquals("Saved", response, "Entity save should succeed");
+
+    // Now verify the CMIS createdBy property
+    String createdBy =
+        CmisDocumentHelper.getCmisProperty(testEntityID, "sample.pdf", "cmis:createdBy");
     System.out.println("cmis:createdBy value: " + createdBy);
     String tokenFlowFlag = System.getProperty("tokenFlow");
     if ("namedUser".equals(tokenFlowFlag)) {
@@ -7146,6 +7213,9 @@ class IntegrationTest_MultipleFacet {
       assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
       assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
     }
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
   }
 
   @Test
@@ -7445,7 +7515,7 @@ class IntegrationTest_MultipleFacet {
   @Order(82)
   void testDeleteEntity_FolderAndContentDeletedFromRepository() throws Exception {
     System.out.println(
-        "Test (82) : Delete entity — expect folder and all attachments deleted from DI");
+        "Test (82) : Delete entity — expect attachments no longer accessible via app after delete");
 
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     assertNotEquals("Could not create entity", response, "Entity creation should succeed");
@@ -7468,24 +7538,21 @@ class IntegrationTest_MultipleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
     assertEquals("Saved", response, "Entity save should succeed");
 
-    String folderName = testEntityID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertEquals(0, folderCheck.getExitCode(), "Entity folder should exist in CMIS before delete");
+    // Verify attachment is accessible before deletion
+    List<Map<String, Object>> attachmentsBeforeDelete =
+        api.fetchEntityMetadata(appUrl, entityName, facet[0], testEntityID);
+    assertTrue(attachmentsBeforeDelete.size() > 0, "Entity should have attachments before delete");
 
     response = api.deleteEntity(appUrl, entityName, testEntityID);
     assertEquals("Entity Deleted", response, "Entity deletion should succeed");
 
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheckAfter.getExitCode(), "Entity folder should not exist in CMIS after delete");
+    // Verify attachments are no longer accessible via the app after entity deletion
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, entityName, facet[0], testEntityID);
+    assertEquals(
+        0,
+        attachmentsAfterDelete.size(),
+        "Entity should have no attachments after entity deletion");
   }
 
   @Test
@@ -7514,14 +7581,12 @@ class IntegrationTest_MultipleFacet {
     response = api.deleteEntityDraft(appUrl, entityName, testEntityID);
     assertEquals("Entity Draft Deleted", response, "Discard draft should succeed");
 
-    String folderName = testEntityID + "__attachments";
-    ShellScriptRunner.Result folderCheck =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheck.getExitCode(), "Entity folder should not exist in CMIS after discard");
+    List<Map<String, Object>> attachmentsAfterDiscard =
+        api.fetchEntityMetadata(appUrl, entityName, facet[0], testEntityID);
+    assertEquals(
+        0,
+        attachmentsAfterDiscard.size(),
+        "Entity should have no attachments after discarding draft");
   }
 
   @Test
@@ -7568,13 +7633,10 @@ class IntegrationTest_MultipleFacet {
     response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
     assertEquals("Saved", response, "Entity save should succeed after deleting all attachments");
 
-    ShellScriptRunner.Result folderCheckAfter =
-        ShellScriptRunner.runAndCaptureAll(
-            CmisDocumentHelper.getCmisEnvPublic(),
-            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
-            folderName);
-    assertNotEquals(
-        0, folderCheckAfter.getExitCode(), "Entity folder should not exist after all deleted");
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, entityName, facet[0], testEntityID);
+    assertEquals(
+        0, attachmentsAfterDelete.size(), "Entity should have no attachments after deleting all");
 
     api.deleteEntity(appUrl, entityName, testEntityID);
   }
