@@ -32,12 +32,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          mvn clean install -P unit-tests  -DskipIntegrationTests
-        
-      # - name: Download Synopsys Detect Script
-      #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
-      - name: Download Black Duck Detect Script
-        run: curl --silent -O https://detect.blackduck.com/detect9.sh
+          mvn clean install -P unit-tests -DskipIntegrationTests
 
       - name: Run & analyze BlackDuck Scan
         uses: blackduck-inc/black-duck-security-scan@659a0742e793a093377fab3117b0d90f23b04bfa # v2.9.0
@@ -46,9 +41,10 @@ jobs:
           blackducksca_token: ${{ secrets.BLACKDUCK_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           detect_args: >
-            --detect.project.name=com.sap.cds.sdm
+            --detect.project.name=SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0
+            --detect.project.version.name=1.0
             --detect.included.detector.types=MAVEN
-            --detect.excluded.directories=**/node_modules,**/*test*,**/localrepo,**/target/site,**/*-site.jar,**/samples/**
+            --detect.excluded.directories=**/node_modules,**/*test*,**/localrepo,**/target/site,**/*-site.jar
             --detect.tools=DETECTOR,BINARY_SCAN
             --detect.risk.report.pdf=false
             --logging.level.detect=INFO
