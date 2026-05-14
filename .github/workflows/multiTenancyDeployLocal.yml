@@ -20,6 +20,7 @@ on:
 permissions:
   pull-requests: read
   packages: read  # Added permission to read packages
+  contents: read # allows workflow to checkout private repository
 
 jobs:
   deploy:
