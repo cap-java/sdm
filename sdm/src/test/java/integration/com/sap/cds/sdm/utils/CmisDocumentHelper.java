@@ -220,31 +220,57 @@ public class CmisDocumentHelper {
    * @return the JSON metadata string returned by the CMIS API
    */
   public static String readDocumentMetadataFromCmis(String entityId, String fileName) {
-    try {
-      Map<String, String> env = getCmisEnv();
-      String folderName = entityId + "__attachments";
-      String folderLine =
-          ShellScriptRunner.runAndCaptureOutput(env, GET_OBJECT_ID_SCRIPT, folderName);
-      String parentFolderObjectId =
-          folderLine != null && folderLine.contains(": ")
-              ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
-              : folderLine;
+    int maxRetries = 3;
+    int retryDelayMs = 10000;
+    Exception lastException = null;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        Map<String, String> env = getCmisEnv();
+        String folderName = entityId + "__attachments";
+        String folderLine =
+            ShellScriptRunner.runAndCaptureOutput(env, GET_OBJECT_ID_SCRIPT, folderName);
+        String parentFolderObjectId =
+            folderLine != null && folderLine.contains(": ")
+                ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
+                : folderLine;
 
-      String docLine =
-          ShellScriptRunner.runAndCaptureOutput(
-              env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
-      String documentObjectId =
-          docLine != null && docLine.contains(": ")
-              ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
-              : docLine;
+        String docLine =
+            ShellScriptRunner.runAndCaptureOutput(
+                env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
+        String documentObjectId =
+            docLine != null && docLine.contains(": ")
+                ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
+                : docLine;
 
-      String metadata =
-          ShellScriptRunner.runAndCaptureOutput(env, GET_METADATA_SCRIPT, documentObjectId);
-      return metadata;
-    } catch (Exception e) {
-      fail("Failed to read document metadata from CMIS: " + e.getMessage());
-      return null;
+        String metadata =
+            ShellScriptRunner.runAndCaptureOutput(env, GET_METADATA_SCRIPT, documentObjectId);
+        return metadata;
+      } catch (Exception e) {
+        lastException = e;
+        if (attempt < maxRetries
+            && e.getMessage() != null
+            && e.getMessage().contains("No cmis:document found")) {
+          System.out.println(
+              "CMIS document not found yet (eventual consistency), retrying after "
+                  + retryDelayMs
+                  + "ms... (attempt "
+                  + attempt
+                  + "/"
+                  + maxRetries
+                  + ")");
+          try {
+            Thread.sleep(retryDelayMs);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        } else {
+          break;
+        }
+      }
     }
+    fail("Failed to read document metadata from CMIS: " + lastException.getMessage());
+    return null;
   }
 
   /**
