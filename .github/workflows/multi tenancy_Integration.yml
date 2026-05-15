@@ -261,11 +261,20 @@ jobs:
             sdm/target/failsafe-reports/
           retention-days: 7
 
-  # Single self-contained job: switch to versioned repo, run all test combos, revert
+  # Versioned tests run in parallel; first entry to start switches repo, others skip restage
   versioned-test:
     runs-on: ubuntu-latest
     needs: integration-test
     if: "!cancelled()"
+    strategy:
+      fail-fast: false
+      matrix:
+        tokenFlow: [namedUser, technicalUser]
+        tenant: [TENANT1, TENANT2]
+        testClass:
+          - IntegrationTest_SingleFacet_VersionedRepository
+          - IntegrationTest_MultipleFacet_VersionedRepository
+          - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -317,6 +326,20 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Ensure versioned repository is active 🔄
+        run: |
+          APP_GUID=$(cf app bookshop-mt-srv --guid)
+          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
+          if [ "$CURRENT" != "${{ secrets.VERSIONEDREPOSITORYID }}" ]; then
+            echo "🔄 Switching REPOSITORY_ID to versioned repository..."
+            cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
+            echo "🔄 Restaging application..."
+            cf restage bookshop-mt-srv > /dev/null 2>&1
+            echo "✅ Switched to versioned repository!"
+          else
+            echo "✅ Repository already set to versioned, skipping restage"
+          fi
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
@@ -372,16 +395,7 @@ jobs:
           echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
           echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Switch to Versioned Repository 🔄
-        run: |
-          echo "🔄 Switching REPOSITORY_ID to versioned repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Switched to versioned repository!"
-
-      - name: Run all versioned integration tests 🎯
-        id: run_tests
+      - name: Run versioned integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
@@ -412,7 +426,6 @@ jobs:
           CMIS_URL="${{ secrets.CMIS_URL }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
-
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
@@ -435,49 +448,25 @@ jobs:
           cmisClientID=$cmisClientID
           cmisClientSecret=$cmisClientSecret
           EOL
+          echo "🎯 Running versioned integration tests for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
+          mvn clean verify -P integration-tests \
+            -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} \
+            -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-          FAILED=0
-          for tokenFlow in namedUser technicalUser; do
-            for tenant in TENANT1 TENANT2; do
-              for testClass in IntegrationTest_SingleFacet_VersionedRepository IntegrationTest_MultipleFacet_VersionedRepository IntegrationTest_Chapters_MultipleFacet_VersionedRepository; do
-                echo "🎯 Running: $testClass - $tokenFlow - $tenant"
-                if ! mvn clean verify -P integration-tests \
-                  -DtokenFlow=$tokenFlow -DtenancyModel=multi -Dtenant=$tenant \
-                  -DskipUnitTests -Dfailsafe.includes="**/${testClass}.java"; then
-                  echo "❌ FAILED: $testClass - $tokenFlow - $tenant"
-                  FAILED=$((FAILED + 1))
-                else
-                  echo "✅ PASSED: $testClass - $tokenFlow - $tenant"
-                fi
-              done
-            done
-          done
-
-          if [ $FAILED -gt 0 ]; then
-            echo "❌ $FAILED test combination(s) failed"
-            echo "test_failed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Revert to Default Repository 🔄
-        if: always()
-        run: |
-          echo "🔄 Reverting REPOSITORY_ID to default repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYIDMT }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Reverted to default repository!"
-
-      - name: Fail if tests failed ❌
-        if: steps.run_tests.outputs.test_failed == 'true'
-        run: |
-          echo "❌ Some versioned integration tests failed. Check logs above for details."
-          exit 1
-
-  # Single self-contained job: switch to virusscan repo, run all test combos, revert
+  # Virus scan tests run in parallel; first entry to start switches repo, others skip restage
   virusscan-test:
     runs-on: ubuntu-latest
     needs: versioned-test
     if: "!cancelled()"
+    strategy:
+      fail-fast: false
+      matrix:
+        tokenFlow: [namedUser, technicalUser]
+        tenant: [TENANT1, TENANT2]
+        testClass:
+          - IntegrationTest_SingleFacet_Virus
+          - IntegrationTest_MultipleFacet_Virus
+          - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -529,6 +518,20 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Ensure virus scan repository is active 🔄
+        run: |
+          APP_GUID=$(cf app bookshop-mt-srv --guid)
+          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
+          if [ "$CURRENT" != "${{ secrets.VIRUSSCANREPOSITORYID }}" ]; then
+            echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
+            cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
+            echo "🔄 Restaging application..."
+            cf restage bookshop-mt-srv > /dev/null 2>&1
+            echo "✅ Switched to virus scan repository!"
+          else
+            echo "✅ Repository already set to virus scan, skipping restage"
+          fi
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
@@ -583,14 +586,6 @@ jobs:
           echo "::add-mask::$clientID_mt"
           echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
           echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
-
-      - name: Switch to Virus Scan Repository 🔄
-        run: |
-          echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
-          cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
-          echo "🔄 Restaging application..."
-          cf restage bookshop-mt-srv > /dev/null 2>&1
-          echo "✅ Switched to virus scan repository!"
 
       - name: Download virus test file 📥
         run: |
@@ -604,8 +599,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run all virus scan integration tests 🎯
-        id: run_tests
+      - name: Run virus scan integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
@@ -636,7 +630,6 @@ jobs:
           CMIS_URL="${{ secrets.CMIS_URL }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
-
           cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
@@ -659,32 +652,58 @@ jobs:
           cmisClientID=$cmisClientID
           cmisClientSecret=$cmisClientSecret
           EOL
+          echo "🎯 Running virus scan integration tests for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
+          mvn clean verify -P integration-tests \
+            -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} \
+            -DskipUnitTests -Deicar.file.path=eicar.com.txt \
+            -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-          FAILED=0
-          for tokenFlow in namedUser technicalUser; do
-            for tenant in TENANT1 TENANT2; do
-              for testClass in IntegrationTest_SingleFacet_Virus IntegrationTest_MultipleFacet_Virus IntegrationTest_Chapters_MultipleFacet_Virus; do
-                echo "🎯 Running: $testClass - $tokenFlow - $tenant"
-                if ! mvn clean verify -P integration-tests \
-                  -DtokenFlow=$tokenFlow -DtenancyModel=multi -Dtenant=$tenant \
-                  -DskipUnitTests -Deicar.file.path=eicar.com.txt \
-                  -Dfailsafe.includes="**/${testClass}.java"; then
-                  echo "❌ FAILED: $testClass - $tokenFlow - $tenant"
-                  FAILED=$((FAILED + 1))
-                else
-                  echo "✅ PASSED: $testClass - $tokenFlow - $tenant"
-                fi
-              done
-            done
-          done
+  # Revert repository to default after virus scan tests (always runs)
+  virusscan-cleanup:
+    runs-on: ubuntu-latest
+    needs: virusscan-test
+    if: always()
+    steps:
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
 
-          if [ $FAILED -gt 0 ]; then
-            echo "❌ $FAILED test combination(s) failed"
-            echo "test_failed=true" >> $GITHUB_OUTPUT
+      - name: Install Cloud Foundry CLI 🔧
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
           fi
 
+      - name: Determine Cloud Foundry Space 🌌
+        id: determine_space
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+            space="${{ secrets.CF_SPACE }}"
+          else
+            space="${{ github.event.inputs.cf_space }}"
+          fi
+          echo "space=$space" >> $GITHUB_OUTPUT
+
+      - name: Login to Cloud Foundry 🔑
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ steps.determine_space.outputs.space }}
+
       - name: Revert to Default Repository 🔄
-        if: always()
         run: |
           echo "🔄 Reverting REPOSITORY_ID to default repository..."
           cf set-env bookshop-mt-srv REPOSITORY_ID "${{ secrets.DEFAULTREPOSITORYIDMT }}"
@@ -692,17 +711,21 @@ jobs:
           cf restage bookshop-mt-srv > /dev/null 2>&1
           echo "✅ Reverted to default repository!"
 
-      - name: Fail if tests failed ❌
-        if: steps.run_tests.outputs.test_failed == 'true'
-        run: |
-          echo "❌ Some virus scan integration tests failed. Check logs above for details."
-          exit 1
-
-  # Single self-contained job: run all repo-specific test combos sequentially
+  # Repo-specific tests run one at a time (max-parallel: 1) so each shows individually in UI
   repospecific-test:
     runs-on: ubuntu-latest
-    needs: virusscan-test
+    needs: virusscan-cleanup
     if: "!cancelled()"
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        tokenFlow: [namedUser, technicalUser]
+        tenant: [TENANT1, TENANT2]
+        testClass:
+          - IntegrationTest_SingleFacet_RepoSpecific
+          - IntegrationTest_MultipleFacet_RepoSpecific
+          - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -809,8 +832,7 @@ jobs:
           echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
           echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Run all repo-specific integration tests 🎯
-        id: run_tests
+      - name: Run repo-specific integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
@@ -841,13 +863,7 @@ jobs:
           CMIS_URL="${{ secrets.CMIS_URL }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
-
-          FAILED=0
-          for tokenFlow in namedUser technicalUser; do
-            for tenant in TENANT1 TENANT2; do
-              for testClass in IntegrationTest_SingleFacet_RepoSpecific IntegrationTest_MultipleFacet_RepoSpecific IntegrationTest_Chapters_MultipleFacet_RepoSpecific; do
-                echo "🎯 Running: $testClass - $tokenFlow - $tenant"
-                cat > "$PROPERTIES_FILE" <<EOL
+          cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
           authUrl=$authUrl
@@ -869,22 +885,10 @@ jobs:
           cmisClientID=$cmisClientID
           cmisClientSecret=$cmisClientSecret
           EOL
-                if ! mvn clean verify -P integration-tests \
-                  -DtokenFlow=$tokenFlow -DtenancyModel=multi -Dtenant=$tenant \
-                  -DskipUnitTests -Dfailsafe.includes="**/${testClass}.java"; then
-                  echo "❌ FAILED: $testClass - $tokenFlow - $tenant"
-                  FAILED=$((FAILED + 1))
-                else
-                  echo "✅ PASSED: $testClass - $tokenFlow - $tenant"
-                fi
-              done
-            done
-          done
-
-          if [ $FAILED -gt 0 ]; then
-            echo "❌ $FAILED test combination(s) failed"
-            exit 1
-          fi
+          echo "🎯 Running repo-specific integration tests for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
+          mvn clean verify -P integration-tests \
+            -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} \
+            -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
   # Single self-contained job: run subscription tests for both tenants
   # Must run AFTER repospecific-test because subscription tests unsubscribe tenants
@@ -1108,7 +1112,7 @@ jobs:
   # Summary job to aggregate results
   test-summary:
     runs-on: ubuntu-latest
-    needs: [integration-test, versioned-test, virusscan-test, repospecific-test, subscription-test]
+    needs: [integration-test, versioned-test, virusscan-test, virusscan-cleanup, repospecific-test, subscription-test]
     if: "!cancelled()"
     steps:
       - name: Check test results 📋
