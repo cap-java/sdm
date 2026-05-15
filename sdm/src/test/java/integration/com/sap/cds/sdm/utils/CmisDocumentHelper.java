@@ -220,8 +220,8 @@ public class CmisDocumentHelper {
    * @return the JSON metadata string returned by the CMIS API
    */
   public static String readDocumentMetadataFromCmis(String entityId, String fileName) {
-    int maxRetries = 3;
-    int retryDelayMs = 10000;
+    int maxRetries = 5;
+    int retryDelayMs = 15000;
     Exception lastException = null;
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
