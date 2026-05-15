@@ -887,9 +887,10 @@ jobs:
           fi
 
   # Single self-contained job: run subscription tests for both tenants
+  # Must run AFTER repospecific-test because subscription tests unsubscribe tenants
   subscription-test:
     runs-on: ubuntu-latest
-    needs: virusscan-test
+    needs: repospecific-test
     if: "!cancelled()"
     steps:
       - name: Checkout repository 📁
