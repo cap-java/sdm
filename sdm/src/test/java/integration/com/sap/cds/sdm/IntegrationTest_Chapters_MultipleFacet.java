@@ -2070,9 +2070,9 @@ class IntegrationTest_Chapters_MultipleFacet {
         // Edit book to update chapter attachments
         response = api.editEntityDraft(appUrl, bookEntityName, srvpath, tempBookID);
         if (response.equals("Entity in draft mode")) {
-          boolean[] Updated1 = new boolean[3];
-          boolean[] Updated2 = new boolean[3];
-          boolean[] Updated3 = new boolean[3];
+          Boolean[] Updated1 = new Boolean[3];
+          Boolean[] Updated2 = new Boolean[3];
+          Boolean[] Updated3 = new Boolean[3];
 
           String name1 = "sample1234.pdf";
           Integer secondaryPropertyInt = 1234;
@@ -2286,9 +2286,9 @@ class IntegrationTest_Chapters_MultipleFacet {
               CreateandReturnFacetID(appUrl, serviceName, tempChapterID, facet[i], postData, file);
         }
 
-        boolean[] Updated1 = new boolean[3];
-        boolean[] Updated2 = new boolean[3];
-        boolean[] Updated3 = new boolean[3];
+        Boolean[] Updated1 = new Boolean[3];
+        Boolean[] Updated2 = new Boolean[3];
+        Boolean[] Updated3 = new Boolean[3];
 
         String name1 = "sample1234.pdf";
         String dropdownValue = integrationTestUtils.getDropDownValue();
@@ -2546,9 +2546,9 @@ class IntegrationTest_Chapters_MultipleFacet {
         exeID[1] = (String) referencesMeta.get(2).get("ID");
         exeID[2] = (String) footnotesMeta.get(2).get("ID");
 
-        boolean[] Updated1 = new boolean[3];
-        boolean[] Updated2 = new boolean[3];
-        boolean[] Updated3 = new boolean[3];
+        Boolean[] Updated1 = new Boolean[3];
+        Boolean[] Updated2 = new Boolean[3];
+        Boolean[] Updated3 = new Boolean[3];
 
         String name1 = "sample.pdf";
         Integer secondaryPropertyInt1 = 12;
