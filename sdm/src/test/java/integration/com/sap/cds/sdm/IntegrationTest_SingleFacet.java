@@ -6410,4 +6410,46 @@ class IntegrationTest_SingleFacet {
   //   // delete the test entity draft
   //   api.deleteEntityDraft(appUrl, entityName, testEntityID);
   // }
+
+  @Test
+  @Order(76)
+  void testRename_ExtensionUpdate() throws IOException {
+    System.out.println("Test (76) : Rename single attachment while updating the file extension");
+    System.out.println("Uploading pdf");
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    String response1 = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
+    Boolean testStatus = false;
+    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    String name = "sample.txt";
+    if (response == "Entity in draft mode") {
+      response = api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, name);
+      if (response.equals("Renamed")) {
+        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+        System.out.println("Response is: " + response);
+        String expected =
+            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/name\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
+        if (response.equals(expected)) {
+          api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, "sample123");
+          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+          if ("Saved".equals(response)) testStatus = true;
+        }
+      } else {
+        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
+      }
+    }
+    if (!testStatus) {
+      fail("Attachment was renamed with unsupported characters");
+    }
+  }
 }
