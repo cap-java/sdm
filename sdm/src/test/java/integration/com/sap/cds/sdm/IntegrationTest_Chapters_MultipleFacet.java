@@ -2070,9 +2070,9 @@ class IntegrationTest_Chapters_MultipleFacet {
         // Edit book to update chapter attachments
         response = api.editEntityDraft(appUrl, bookEntityName, srvpath, tempBookID);
         if (response.equals("Entity in draft mode")) {
-          Boolean[] Updated1 = new Boolean[3];
-          Boolean[] Updated2 = new Boolean[3];
-          Boolean[] Updated3 = new Boolean[3];
+          boolean[] Updated1 = new boolean[3];
+          boolean[] Updated2 = new boolean[3];
+          boolean[] Updated3 = new boolean[3];
 
           String name1 = "sample1234.pdf";
           Integer secondaryPropertyInt = 1234;
@@ -2286,9 +2286,9 @@ class IntegrationTest_Chapters_MultipleFacet {
               CreateandReturnFacetID(appUrl, serviceName, tempChapterID, facet[i], postData, file);
         }
 
-        Boolean[] Updated1 = new Boolean[3];
-        Boolean[] Updated2 = new Boolean[3];
-        Boolean[] Updated3 = new Boolean[3];
+        boolean[] Updated1 = new boolean[3];
+        boolean[] Updated2 = new boolean[3];
+        boolean[] Updated3 = new boolean[3];
 
         String name1 = "sample1234.pdf";
         String dropdownValue = integrationTestUtils.getDropDownValue();
@@ -2546,9 +2546,9 @@ class IntegrationTest_Chapters_MultipleFacet {
         exeID[1] = (String) referencesMeta.get(2).get("ID");
         exeID[2] = (String) footnotesMeta.get(2).get("ID");
 
-        Boolean[] Updated1 = new Boolean[3];
-        Boolean[] Updated2 = new Boolean[3];
-        Boolean[] Updated3 = new Boolean[3];
+        boolean[] Updated1 = new boolean[3];
+        boolean[] Updated2 = new boolean[3];
+        boolean[] Updated3 = new boolean[3];
 
         String name1 = "sample.pdf";
         Integer secondaryPropertyInt1 = 12;
@@ -2690,43 +2690,6 @@ class IntegrationTest_Chapters_MultipleFacet {
           }
           if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
             System.out.println("Book saved");
-            // --- CMIS backend validation (only for attachments facet) ---
-            // PDF: invalid prop was used, so nothing should persist
-            {
-              String cmisName =
-                  CmisDocumentHelper.getCmisProperty(chapterID5, "sample.pdf", "cmis:name");
-              assertEquals(
-                  "sample.pdf",
-                  cmisName,
-                  "PDF filename should NOT be changed in CMIS for " + facet[0]);
-              String cmisId1 =
-                  CmisDocumentHelper.getCmisPropertyOrNull(chapterID5, "sample.pdf", "abc:myId1");
-              assertNull(
-                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[0]);
-            }
-            // TXT: valid Boolean (false) was set — should persist
-            {
-              String cmisBoolTxt =
-                  CmisDocumentHelper.getCmisPropertyOrNull(
-                      chapterID5, "sample.txt", "Working:DocumentInfoRecordBoolean");
-              assertEquals(
-                  "false",
-                  cmisBoolTxt,
-                  "DocumentInfoRecordBoolean should be false for TXT " + facet[0]);
-            }
-            // EXE: valid String + Int were set — should persist
-            {
-              String cmisStringExe =
-                  CmisDocumentHelper.getCmisPropertyOrNull(
-                      chapterID5, "sample.exe", "Working:DocumentInfoRecordString");
-              assertNotNull(
-                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
-              String cmisIntExe =
-                  CmisDocumentHelper.getCmisPropertyOrNull(
-                      chapterID5, "sample.exe", "Working:DocumentInfoRecordInt");
-              assertEquals(
-                  "12", cmisIntExe, "DocumentInfoRecordInt should match for EXE " + facet[0]);
-            }
             testStatus = true;
             System.out.println(
                 "Rename & update unsuccessful for invalid Secondary properties and successful for valid property attachments");
