@@ -11,7 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Fixed
 - Localization for attachment reference fields
-- SDM service binding and technical user detection
+- Service binding lookup to correctly resolve SDM bindings by tags
+- Technical user detection in the delete API to align with other API implementations
 - File extension change during attachment rename
 
 ## Version 1.9.0
