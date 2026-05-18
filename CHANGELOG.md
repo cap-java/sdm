@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.10.0
+
+### Added
+- Support download multiple attachments
+
+### Fixed
+- Localization for attachment reference fields
+- SDM service binding and technical user detection
+- File extension change during attachment rename
+
 ## Version 1.9.0
 
 ### Added
