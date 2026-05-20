@@ -364,7 +364,7 @@ public class SDMCustomServiceHandlerTest {
   }
 
   @Test
-  void testCopyAttachments_MixedValidAndInvalidSecondaryProps_BlocksEntireCopy()
+  void testCopyAttachments_MixedValidAndInvalidSecondaryProps_CopiesValidRejectsInvalid()
       throws IOException {
     // Mock SDMCredentials
     SDMCredentials sdmCredentials = mock(SDMCredentials.class);
@@ -403,13 +403,27 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.getObject(eq(invalidObjectId), any(), anyBoolean()))
         .thenReturn(invalidMetadata);
 
+    // Mock attachment metadata and copy for the valid attachment
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://document");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
+
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "valid.pdf");
+    attachmentData.put("cmis:contentStreamMimeType", "application/pdf");
+    attachmentData.put("cmis:objectId", "newCopiedObjectId");
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any()))
+        .thenReturn(attachmentData);
+
     // Act
     sdmCustomServiceHandler.copyAttachments(context);
 
-    // Assert: entire copy should be blocked since one attachment has invalid properties
-    verify(sdmService, never())
+    // Assert: valid attachment should be copied, invalid one should be warned about
+    verify(sdmService, times(1))
         .copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any());
     verify(context.getMessages(), times(1)).warn(any(String.class));
+    verify(draftService, times(1)).newDraft(any());
     verify(context, times(1)).setCompleted();
   }
 

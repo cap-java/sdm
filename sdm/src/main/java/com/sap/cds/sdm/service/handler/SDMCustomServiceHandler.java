@@ -136,9 +136,24 @@ public class SDMCustomServiceHandler {
               objectIds, customPropertiesInSDM, repositoryId, sdmCredentials, isSystemUser);
       if (!copyFailures.isEmpty()) {
         buildAndWarnCopyFailures(copyFailures, context);
-        context.setCompleted();
-        logger.debug("END: Copy attachments event");
-        return;
+        // Remove invalid objectIds and proceed with valid ones
+        Set<String> invalidObjectIds =
+            copyFailures.stream()
+                .map(failure -> failure.get(OBJECT_ID_KEY))
+                .collect(Collectors.toSet());
+        objectIds =
+            objectIds.stream()
+                .filter(id -> !invalidObjectIds.contains(id))
+                .collect(Collectors.toList());
+        if (objectIds.isEmpty()) {
+          context.setCompleted();
+          logger.debug("END: Copy attachments event - all attachments have invalid properties");
+          return;
+        }
+        logger.info(
+            "Proceeding with {} valid attachments after filtering out {} invalid ones",
+            objectIds.size(),
+            invalidObjectIds.size());
       }
     }
 
