@@ -208,7 +208,7 @@ public class SDMCustomServiceHandler {
 
   /**
    * Checks source attachments for invalid secondary properties before copy. Returns a list of
-   * failures if any attachment has invalid properties; returns empty list if all are valid.
+   * failures if any attachment has invalid properties; returns empty list if all are valid
    */
   private List<Map<String, String>> findAttachmentsWithInvalidSecondaryProperties(
       List<String> objectIds,
@@ -248,7 +248,7 @@ public class SDMCustomServiceHandler {
 
   /**
    * Gets the list of invalid secondary properties for a single object from SDM. Returns empty list
-   * if all properties are valid or if metadata cannot be fetched.
+   * if all properties are valid or if metadata cannot be fetched
    */
   private List<String> getInvalidPropertiesForObject(
       String objectId,
@@ -281,7 +281,7 @@ public class SDMCustomServiceHandler {
     }
   }
 
-  /** Builds and emits a warning message for copy failures. */
+  /** Builds and emits a warning message for copy failures */
   private void buildAndWarnCopyFailures(
       List<Map<String, String>> copyFailures, AttachmentCopyEventContext context) {
     StringBuilder warningMessage =
