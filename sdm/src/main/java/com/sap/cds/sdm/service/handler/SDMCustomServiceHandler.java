@@ -671,10 +671,19 @@ public class SDMCustomServiceHandler {
               objectId,
               invalidProperties.size(),
               invalidProperties);
-          deleteInvalidCopiedAttachment(
-              copiedObjectId,
-              request.getContext().getUserInfo().getName(),
-              request.getIsSystemUser());
+          try {
+            sdmService.deleteDocument(
+                "delete",
+                copiedObjectId,
+                request.getContext().getUserInfo().getName(),
+                request.getIsSystemUser());
+            logger.info("Deleted invalid copied attachment: {}", copiedObjectId);
+          } catch (Exception deleteEx) {
+            logger.error(
+                "Failed to delete invalid copied attachment {}: {}",
+                copiedObjectId,
+                deleteEx.getMessage());
+          }
           // Add to failed attachments list instead of throwing exception
           Map<String, String> failure = new HashMap<>();
           failure.put(OBJECT_ID_KEY, objectId);
@@ -1639,19 +1648,6 @@ public class SDMCustomServiceHandler {
       }
     }
     throw new ServiceException(e.getMessage());
-  }
-
-  private void deleteInvalidCopiedAttachment(
-      String copiedObjectId, String userName, Boolean isSystemUser) {
-    try {
-      sdmService.deleteDocument("delete", copiedObjectId, userName, isSystemUser);
-      logger.info("Deleted invalid copied attachment: {}", copiedObjectId);
-    } catch (Exception deleteEx) {
-      logger.error(
-          "Failed to delete invalid copied attachment {}: {}",
-          copiedObjectId,
-          deleteEx.getMessage());
-    }
   }
 
   private String resolveUpIdKey(EventContext context, String parentEntity, String compositionName) {
