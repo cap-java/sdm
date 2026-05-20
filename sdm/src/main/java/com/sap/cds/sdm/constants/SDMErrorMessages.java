@@ -142,8 +142,6 @@ public class SDMErrorMessages {
       "Invalid secondary properties detected: ";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX =
       ". Attachment rolled back to source.";
-  public static final String FAILED_TO_COPY_ATTACHMENTS_PREFIX =
-      "Failed to copy the following attachments:\n";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX =
       "Invalid secondary properties detected: ";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX =
