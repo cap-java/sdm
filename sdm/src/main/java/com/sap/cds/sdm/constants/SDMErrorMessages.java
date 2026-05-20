@@ -142,10 +142,6 @@ public class SDMErrorMessages {
       "Invalid secondary properties detected: ";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX =
       ". Attachment rolled back to source.";
-  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX =
-      "Invalid secondary properties detected: ";
-  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX =
-      ". Attachment not copied.";
   public static final String SDM_MOVE_OPERATION_FAILED = "SDM move operation failed";
   public static final String FAILED_TO_ACCESS_ERROR_KEY_FIELDS =
       "Failed to access SDM error key fields";

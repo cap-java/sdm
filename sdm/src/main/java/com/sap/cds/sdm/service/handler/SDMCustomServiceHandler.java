@@ -150,55 +150,25 @@ public class SDMCustomServiceHandler {
 
     List<Map<String, String>> attachmentsMetadata = copyResult.getAttachmentsMetadata();
     List<CmisDocument> populatedDocuments = copyResult.getPopulatedDocuments();
-    List<Map<String, String>> copyFailures = copyResult.getFailedAttachments();
-
-    // Show warning if there are failures
-    if (!copyFailures.isEmpty()) {
-      StringBuilder warningMessage =
-          new StringBuilder("Failed to copy the following attachments:\n");
-      for (Map<String, String> failure : copyFailures) {
-        warningMessage
-            .append("  - ObjectId: ")
-            .append(failure.get(OBJECT_ID_KEY))
-            .append(", Reason: ")
-            .append(failure.get(FAILURE_REASON_KEY))
-            .append("\n");
-      }
-      context.getMessages().warn(warningMessage.toString());
-    }
 
     String upIdKey = resolveUpIdKey(context, parentEntity, compositionName);
 
-    // Create draft entries if there are successful copies
-    if (!attachmentsMetadata.isEmpty()) {
-      CreateDraftEntriesRequest draftRequest =
-          CreateDraftEntriesRequest.builder()
-              .attachmentsMetadata(attachmentsMetadata)
-              .populatedDocuments(populatedDocuments)
-              .parentEntity(parentEntity)
-              .compositionName(compositionName)
-              .upID(upID)
-              .upIdKey(upIdKey)
-              .repositoryId(repositoryId)
-              .folderId(folderId)
-              .customPropertyValues(null)
-              .build();
+    CreateDraftEntriesRequest draftRequest =
+        CreateDraftEntriesRequest.builder()
+            .attachmentsMetadata(attachmentsMetadata)
+            .populatedDocuments(populatedDocuments)
+            .parentEntity(parentEntity)
+            .compositionName(compositionName)
+            .upID(upID)
+            .upIdKey(upIdKey)
+            .repositoryId(repositoryId)
+            .folderId(folderId)
+            .customPropertyValues(null)
+            .build();
 
-      // Pass the entity for type conversion
-      CdsEntity targetEntity = entity.isPresent() ? entity.get() : null;
-      createDraftEntries(draftRequest, customPropertyDefinitions, targetEntity);
-    } else if (!folderExists) {
-      // All copies failed but folder was newly created - delete the empty folder
-      logger.info(
-          "All attachments failed to copy. Deleting newly created empty folder: {}", folderId);
-      try {
-        sdmService.deleteDocument(
-            "deleteTree", folderId, context.getUserInfo().getName(), isSystemUser);
-        logger.info("Deleted empty folder: {}", folderId);
-      } catch (Exception e) {
-        logger.error("Failed to delete empty folder {}: {}", folderId, e.getMessage());
-      }
-    }
+    // Pass the entity for type conversion
+    CdsEntity targetEntity = entity.isPresent() ? entity.get() : null;
+    createDraftEntries(draftRequest, customPropertyDefinitions, targetEntity);
 
     logger.info(
         "Copy attachments completed - {} attachments copied for upID: {}",
@@ -600,33 +570,6 @@ public class SDMCustomServiceHandler {
     logger.debug("START: Copy {} attachments to SDM", request.getObjectIds().size());
     List<Map<String, String>> attachmentsMetadata = new ArrayList<>();
     List<CmisDocument> populatedDocuments = new ArrayList<>();
-    List<Map<String, String>> failedAttachments = new ArrayList<>();
-
-    // Fetch valid secondary properties for validation
-    List<String> validSecondaryProperties = new ArrayList<>();
-    boolean shouldValidateSecondaryProperties = false;
-    if (!customPropertiesInSDM.isEmpty()) {
-      try {
-        List<String> secondaryTypes =
-            sdmService.getSecondaryTypes(
-                request.getRepositoryId(), request.getSdmCredentials(), request.getIsSystemUser());
-        validSecondaryProperties =
-            sdmService.getValidSecondaryProperties(
-                secondaryTypes,
-                request.getSdmCredentials(),
-                request.getRepositoryId(),
-                request.getIsSystemUser());
-        shouldValidateSecondaryProperties = true;
-        logger.debug(
-            "Fetched {} valid secondary properties for copy validation",
-            validSecondaryProperties.size());
-      } catch (Exception e) {
-        logger.warn(
-            "Failed to fetch valid secondary properties for copy validation: {}. "
-                + "Proceeding without validation.",
-            e.getMessage());
-      }
-    }
 
     for (String objectId : request.getObjectIds()) {
       logger.debug("Processing copy for objectId: {}", objectId);
@@ -641,6 +584,7 @@ public class SDMCustomServiceHandler {
       populatedDocument.setType(cmisDocument.getType());
       populatedDocument.setUrl(cmisDocument.getUrl());
       populatedDocument.setUploadStatus(cmisDocument.getUploadStatus());
+      populatedDocuments.add(populatedDocument);
 
       try {
         Map<String, String> attachmentData =
@@ -650,53 +594,6 @@ public class SDMCustomServiceHandler {
                 request.getIsSystemUser(),
                 customPropertiesInSDM);
 
-        // Validate secondary properties after copy (similar to move validation)
-        // Only validate if we successfully fetched valid secondary properties
-        List<String> invalidProperties = new ArrayList<>();
-        if (shouldValidateSecondaryProperties) {
-          for (String customProp : customPropertiesInSDM) {
-            if (attachmentData.containsKey(customProp)
-                && !validSecondaryProperties.contains(customProp)) {
-              invalidProperties.add(customProp);
-            }
-          }
-        }
-
-        if (!invalidProperties.isEmpty()) {
-          // Validation failed - delete the copied attachment and record failure
-          String copiedObjectId = attachmentData.get("cmis:objectId");
-          logger.error(
-              "Attachment {} validation FAILED - Found {} invalid properties: {}. "
-                  + "Deleting copied attachment...",
-              objectId,
-              invalidProperties.size(),
-              invalidProperties);
-          try {
-            sdmService.deleteDocument(
-                "delete",
-                copiedObjectId,
-                request.getContext().getUserInfo().getName(),
-                request.getIsSystemUser());
-            logger.info("Deleted invalid copied attachment: {}", copiedObjectId);
-          } catch (Exception deleteEx) {
-            logger.error(
-                "Failed to delete invalid copied attachment {}: {}",
-                copiedObjectId,
-                deleteEx.getMessage());
-          }
-          // Add to failed attachments list instead of throwing exception
-          Map<String, String> failure = new HashMap<>();
-          failure.put(OBJECT_ID_KEY, objectId);
-          failure.put(
-              FAILURE_REASON_KEY,
-              SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX")
-                  + String.join(", ", invalidProperties)
-                  + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
-          failedAttachments.add(failure);
-          continue;
-        }
-
-        populatedDocuments.add(populatedDocument);
         attachmentsMetadata.add(attachmentData);
         logger.debug("Successfully copied attachment: {}", objectId);
       } catch (ServiceException e) {
@@ -710,11 +607,8 @@ public class SDMCustomServiceHandler {
       }
     }
 
-    logger.debug(
-        "END: Copy attachments to SDM - {} successful, {} failed",
-        attachmentsMetadata.size(),
-        failedAttachments.size());
-    return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments, failedAttachments);
+    logger.debug("END: Copy attachments to SDM - {} successful", attachmentsMetadata.size());
+    return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
   }
 
   /**
