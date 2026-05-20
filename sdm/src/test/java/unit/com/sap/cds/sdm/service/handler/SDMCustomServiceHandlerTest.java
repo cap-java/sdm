@@ -326,7 +326,7 @@ public class SDMCustomServiceHandlerTest {
   }
 
   @Test
-  void testCopyAttachments_InvalidSecondaryProperty_SkipsAttachment() throws IOException {
+  void testCopyAttachments_InvalidSecondaryProperty_BlocksCopy() throws IOException {
     // Mock SDMCredentials
     SDMCredentials sdmCredentials = mock(SDMCredentials.class);
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
@@ -355,7 +355,7 @@ public class SDMCustomServiceHandlerTest {
     // Act
     sdmCustomServiceHandler.copyAttachments(context);
 
-    // Assert: attachment should be skipped, no copy operation performed
+    // Assert: copy should be blocked entirely, no copy operation performed
     verify(sdmService, never())
         .copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any());
     // Warning message should be issued
@@ -364,7 +364,8 @@ public class SDMCustomServiceHandlerTest {
   }
 
   @Test
-  void testCopyAttachments_MixedValidAndInvalidSecondaryProps_CopiesOnlyValid() throws IOException {
+  void testCopyAttachments_MixedValidAndInvalidSecondaryProps_BlocksEntireCopy()
+      throws IOException {
     // Mock SDMCredentials
     SDMCredentials sdmCredentials = mock(SDMCredentials.class);
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
@@ -382,7 +383,6 @@ public class SDMCustomServiceHandlerTest {
     // Mock secondary types and valid secondary properties
     when(sdmService.getSecondaryTypes(any(), any(), anyBoolean()))
         .thenReturn(List.of("secondaryType1"));
-    // "invalidCustomProp" is NOT in the valid list - only "validProp1" and "validProp2" are valid
     when(sdmService.getValidSecondaryProperties(any(), any(), any(), anyBoolean()))
         .thenReturn(List.of("validProp1", "validProp2"));
 
@@ -390,38 +390,26 @@ public class SDMCustomServiceHandlerTest {
     JSONObject validMetadata = new JSONObject();
     JSONObject validProps = new JSONObject();
     validProps.put("cmis:name", "valid.pdf");
-    validProps.put("validProp1", "someValue"); // only valid properties present
+    validProps.put("validProp1", "someValue");
     validMetadata.put("succinctProperties", validProps);
     when(sdmService.getObject(eq(validObjectId), any(), anyBoolean())).thenReturn(validMetadata);
 
-    // Mock getObject for invalid attachment (HAS "invalidCustomProp" in response, which is NOT in
-    // valid list)
+    // Mock getObject for invalid attachment (HAS "invalidCustomProp" which is NOT in valid list)
     JSONObject invalidMetadata = new JSONObject();
     JSONObject invalidProps = new JSONObject();
     invalidProps.put("cmis:name", "invalid.pdf");
-    invalidProps.put("invalidCustomProp", "someValue"); // present in response but NOT in valid list
+    invalidProps.put("invalidCustomProp", "someValue");
     invalidMetadata.put("succinctProperties", invalidProps);
     when(sdmService.getObject(eq(invalidObjectId), any(), anyBoolean()))
         .thenReturn(invalidMetadata);
 
-    // Mock attachment copy for valid attachment
-    Map<String, String> attachmentData = new HashMap<>();
-    attachmentData.put("cmis:name", "valid.pdf");
-    attachmentData.put("cmis:contentStreamMimeType", "application/pdf");
-    attachmentData.put("cmis:objectId", validObjectId);
-    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any()))
-        .thenReturn(attachmentData);
-    CmisDocument cmisDocument = new CmisDocument();
-    cmisDocument.setType("sap-icon://document");
-    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
-        .thenReturn(cmisDocument);
-
     // Act
     sdmCustomServiceHandler.copyAttachments(context);
 
-    // Assert: only valid attachment should be copied
-    verify(sdmService, times(1))
+    // Assert: entire copy should be blocked since one attachment has invalid properties
+    verify(sdmService, never())
         .copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any());
+    verify(context.getMessages(), times(1)).warn(any(String.class));
     verify(context, times(1)).setCompleted();
   }
 
