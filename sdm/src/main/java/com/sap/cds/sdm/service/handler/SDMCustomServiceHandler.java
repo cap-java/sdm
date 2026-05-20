@@ -187,6 +187,17 @@ public class SDMCustomServiceHandler {
       // Pass the entity for type conversion
       CdsEntity targetEntity = entity.isPresent() ? entity.get() : null;
       createDraftEntries(draftRequest, customPropertyDefinitions, targetEntity);
+    } else if (!folderExists) {
+      // All copies failed but folder was newly created - delete the empty folder
+      logger.info(
+          "All attachments failed to copy. Deleting newly created empty folder: {}", folderId);
+      try {
+        sdmService.deleteDocument(
+            "deleteTree", folderId, context.getUserInfo().getName(), isSystemUser);
+        logger.info("Deleted empty folder: {}", folderId);
+      } catch (Exception e) {
+        logger.error("Failed to delete empty folder {}: {}", folderId, e.getMessage());
+      }
     }
 
     logger.info(
