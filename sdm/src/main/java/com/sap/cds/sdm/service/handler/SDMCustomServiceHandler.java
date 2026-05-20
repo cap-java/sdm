@@ -630,6 +630,34 @@ public class SDMCustomServiceHandler {
 
     for (String objectId : request.getObjectIds()) {
       logger.debug("Processing copy for objectId: {}", objectId);
+
+      // Validate secondary properties BEFORE copying using source attachment metadata
+      if (shouldValidateSecondaryProperties) {
+        List<String> invalidProperties =
+            validateSourceAttachmentProperties(
+                objectId,
+                customPropertiesInSDM,
+                validSecondaryProperties,
+                request.getSdmCredentials(),
+                request.getIsSystemUser());
+
+        if (!invalidProperties.isEmpty()) {
+          logger.warn(
+              "Attachment {} has invalid secondary properties: {}. Skipping copy.",
+              objectId,
+              invalidProperties);
+          Map<String, String> failure = new HashMap<>();
+          failure.put(OBJECT_ID_KEY, objectId);
+          failure.put(
+              FAILURE_REASON_KEY,
+              SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX")
+                  + String.join(", ", invalidProperties)
+                  + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
+          failedAttachments.add(failure);
+          continue;
+        }
+      }
+
       CmisDocument cmisDocument =
           dbQuery.getAttachmentForObjectID(persistenceService, objectId, request.getContext());
       cmisDocument.setObjectId(objectId);
@@ -649,43 +677,6 @@ public class SDMCustomServiceHandler {
                 request.getSdmCredentials(),
                 request.getIsSystemUser(),
                 customPropertiesInSDM);
-
-        // Validate secondary properties after copy (similar to move validation)
-        // Only validate if we successfully fetched valid secondary properties
-        List<String> invalidProperties = new ArrayList<>();
-        if (shouldValidateSecondaryProperties) {
-          for (String customProp : customPropertiesInSDM) {
-            if (attachmentData.containsKey(customProp)
-                && !validSecondaryProperties.contains(customProp)) {
-              invalidProperties.add(customProp);
-            }
-          }
-        }
-
-        if (!invalidProperties.isEmpty()) {
-          // Validation failed - delete the copied attachment and record failure
-          String copiedObjectId = attachmentData.get("cmis:objectId");
-          logger.error(
-              "Attachment {} validation FAILED - Found {} invalid properties: {}. "
-                  + "Deleting copied attachment...",
-              objectId,
-              invalidProperties.size(),
-              invalidProperties);
-          deleteInvalidCopiedAttachment(
-              copiedObjectId,
-              request.getContext().getUserInfo().getName(),
-              request.getIsSystemUser());
-          // Add to failed attachments list instead of throwing exception
-          Map<String, String> failure = new HashMap<>();
-          failure.put(OBJECT_ID_KEY, objectId);
-          failure.put(
-              FAILURE_REASON_KEY,
-              SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX")
-                  + String.join(", ", invalidProperties)
-                  + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
-          failedAttachments.add(failure);
-          continue;
-        }
 
         populatedDocuments.add(populatedDocument);
         attachmentsMetadata.add(attachmentData);
@@ -1641,17 +1632,39 @@ public class SDMCustomServiceHandler {
     throw new ServiceException(e.getMessage());
   }
 
-  private void deleteInvalidCopiedAttachment(
-      String copiedObjectId, String userName, Boolean isSystemUser) {
+  /**
+   * Validates source attachment's secondary properties before copying. Fetches attachment metadata
+   * from SDM and checks if it has properties not supported by the target entity.
+   *
+   * @return list of invalid property names, empty if all properties are valid
+   */
+  private List<String> validateSourceAttachmentProperties(
+      String objectId,
+      Set<String> customPropertiesInSDM,
+      List<String> validSecondaryProperties,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser) {
+    List<String> invalidProperties = new ArrayList<>();
     try {
-      sdmService.deleteDocument("delete", copiedObjectId, userName, isSystemUser);
-      logger.info("Deleted invalid copied attachment: {}", copiedObjectId);
-    } catch (Exception deleteEx) {
-      logger.error(
-          "Failed to delete invalid copied attachment {}: {}",
-          copiedObjectId,
-          deleteEx.getMessage());
+      JSONObject sdmMetadata = sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+      if (sdmMetadata != null) {
+        JSONObject succinctProperties = sdmMetadata.optJSONObject("succinctProperties");
+        if (succinctProperties != null) {
+          for (String customProp : customPropertiesInSDM) {
+            if (succinctProperties.has(customProp)
+                && !validSecondaryProperties.contains(customProp)) {
+              invalidProperties.add(customProp);
+            }
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.warn(
+          "Failed to fetch source attachment {} for validation: {}. Proceeding with copy.",
+          objectId,
+          e.getMessage());
     }
+    return invalidProperties;
   }
 
   private String resolveUpIdKey(EventContext context, String parentEntity, String compositionName) {
