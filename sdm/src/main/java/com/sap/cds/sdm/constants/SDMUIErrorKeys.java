@@ -87,6 +87,10 @@ public final class SDMUIErrorKeys {
       "SDM.invalidSecondaryPropertiesForMovePrefix";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX_KEY =
       "SDM.invalidSecondaryPropertiesForMoveSuffix";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX_KEY =
+      "SDM.invalidSecondaryPropertiesForCopyPrefix";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX_KEY =
+      "SDM.invalidSecondaryPropertiesForCopySuffix";
   public static final String MAX_COUNT_ERROR_MESSAGE_KEY = "SDM.maxCountErrorMessage";
 
   public static Map<String, Object> getAllUIErrorKeys() {
