@@ -130,8 +130,6 @@ public class SDMCustomServiceHandler {
 
     List<String> objectIds = context.getObjectIds();
 
-    // Pre-copy validation: Block copy if any source attachment has invalid secondary properties
-    // This check runs BEFORE folder creation to avoid creating empty folders in SDM
     if (!customPropertiesInSDM.isEmpty()) {
       List<Map<String, String>> copyFailures =
           findAttachmentsWithInvalidSecondaryProperties(
