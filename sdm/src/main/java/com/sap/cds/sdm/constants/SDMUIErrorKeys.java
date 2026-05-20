@@ -87,6 +87,8 @@ public final class SDMUIErrorKeys {
       "SDM.invalidSecondaryPropertiesForMovePrefix";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX_KEY =
       "SDM.invalidSecondaryPropertiesForMoveSuffix";
+  public static final String FAILED_TO_COPY_ATTACHMENTS_PREFIX_KEY =
+      "SDM.failedToCopyAttachmentsPrefix";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX_KEY =
       "SDM.invalidSecondaryPropertiesForCopyPrefix";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX_KEY =
