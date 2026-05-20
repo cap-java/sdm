@@ -94,7 +94,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       String objectId = contextValues[0];
       String folderId = contextValues[1];
       String entity = contextValues[2];
-      String upIDFromContentId = contextValues.length >= 4 ? contextValues[3] : null;
       logger.debug(
           "Processing deletion - objectId: {}, folderId: {}, entity: {}",
           objectId,
@@ -128,8 +127,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           logger.debug("ObjectId {} is still referenced, not deleting", objectId);
         }
       }
-      // After SDM deletion, check if count drops below maxCount and update isUploadable.
-      updateIsUploadableOnDelete(context, objectId, entity, upIDFromContentId);
     } else {
       logger.warn("Invalid contentId format for deletion: {}", contentId);
     }
@@ -525,16 +522,8 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
               cmisDocument.setObjectId(existing.getObjectId());
               cmisDocument.setFolderId(existing.getFolderId());
               cmisDocument.setMimeType(existing.getMimeType());
-              String parentIdForContentId =
-                  cmisDocument.getParentId() != null ? cmisDocument.getParentId() : "";
               eventContext.setContentId(
-                  existing.getObjectId()
-                      + ":"
-                      + existing.getFolderId()
-                      + ":"
-                      + activeEntityName
-                      + ":"
-                      + parentIdForContentId);
+                  existing.getObjectId() + ":" + existing.getFolderId() + ":" + activeEntityName);
               eventContext.getData().setStatus("Clean");
               eventContext.getData().setScannedAt(Instant.now());
               eventContext.getData().setContent(null);
@@ -600,10 +589,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           logger.debug("Updating draft entity attachment record");
           dbQuery.addAttachmentToDraft(attachmentEntity, persistenceService, cmisDocument);
           finalizeContext(eventContext, cmisDocument);
-          // After a successful upload, check whether the maxCount has been reached and
-          // update isUploadable accordingly so the UI can hide the Upload button.
-          checkAndUpdateIsUploadableOnCreate(
-              eventContext, attachmentEntity, cmisDocument.getParentId());
         } else {
           // Active entity - call finalizeContext() just like draft path.
           // This sets contentId and calls setCompleted(), which:
@@ -625,8 +610,6 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
           metadata.put("uploadStatus", cmisDocument.getUploadStatus());
           metadata.put("mimeType", cmisDocument.getMimeType());
           metadata.put("attachmentEntity", attachmentEntity);
-          // Store the parent ID so the @After ApplicationService handler can update isUploadable.
-          metadata.put("upID", cmisDocument.getParentId());
           SDM_METADATA_THREADLOCAL.set(metadata);
 
           // finalizeContext sets contentId and calls setCompleted()
@@ -637,202 +620,15 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     }
   }
 
-  /**
-   * After a successful upload, checks whether the attachment count for the parent entity has
-   * reached the configured maxCount. If so, sets the facet-specific uploadable flag (e.g.
-   * isAttachmentsUploadable, isReferencesUploadable) to false on the parent entity row so the UI
-   * hides the Upload button for that facet.
-   */
-  private void checkAndUpdateIsUploadableOnCreate(
-      AttachmentCreateEventContext eventContext, CdsEntity attachmentEntity, String upID) {
-    if (upID == null || upID.isEmpty()) return;
-    try {
-      String upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
-      if (upIdKey.isEmpty()) return;
-      Result countResult =
-          dbQuery.getAttachmentsForUPIDAndRepository(
-              attachmentEntity, persistenceService, upID, upIdKey);
-      long count = countResult.rowCount();
-      Long maxCount =
-          SDMUtils.getAttachmentCountAndMessage(
-              eventContext.getModel().entities().toList(), eventContext.getAttachmentEntity());
-      if (maxCount > 0 && count >= maxCount) {
-        String facetField = deriveFacetFieldName(attachmentEntity.getQualifiedName());
-        logger.info(
-            "Max attachment count ({}) reached for upID: {}. Setting {}=false.",
-            maxCount,
-            upID,
-            facetField);
-        String parentKeyField = upIdKey.replaceFirst("^up__", "");
-        updateParentIsUploadable(
-            eventContext.getModel(),
-            attachmentEntity.getQualifiedName(),
-            upID,
-            parentKeyField,
-            facetField,
-            false);
-      }
-    } catch (Exception e) {
-      logger.warn("Error updating isUploadable on create: {}", e.getMessage());
-    }
-  }
-
-  /**
-   * After an SDM document deletion, checks whether the remaining attachment count for the parent
-   * entity has dropped below maxCount. If so, sets isUploadable=true on all remaining attachment
-   * rows for that parent so the UI shows the Upload button again.
-   *
-   * <p>The record being deleted is still present in the DB at the time this method runs; count-1
-   * represents the count after the pending DB deletion.
-   */
-  private void updateIsUploadableOnDelete(
-      AttachmentMarkAsDeletedEventContext context,
-      String objectId,
-      String entity,
-      String upIDFromContentId) {
-    try {
-      CdsEntity attachmentEntity = null;
-      String upIdKey = "";
-      // Use upID embedded in contentId when available (avoids DB lookup which fails when
-      // markAttachmentAsDeleted fires after the attachment row is already removed during
-      // draftActivate).
-      String upID =
-          (upIDFromContentId != null && !upIDFromContentId.isEmpty()) ? upIDFromContentId : null;
-
-      // Resolve the attachment entity (needed for upIdKey, facetField, and count query).
-      // Try the draft entity first — the count query runs against whichever table is current.
-      Optional<CdsEntity> draftEntityOpt = context.getModel().findEntity(entity + "_drafts");
-      if (draftEntityOpt.isPresent()) {
-        attachmentEntity = draftEntityOpt.get();
-        upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
-        if (upID == null && !upIdKey.isEmpty()) {
-          // Backward compat: DB lookup for attachments created before the upID-in-contentId fix
-          upID = dbQuery.getUpIdByObjectId(attachmentEntity, persistenceService, objectId, upIdKey);
-        }
-      }
-
-      // Fall back to the active entity (direct deletes without draft, or old contentId format)
-      if (upID == null) {
-        Optional<CdsEntity> activeEntityOpt = context.getModel().findEntity(entity);
-        if (activeEntityOpt.isPresent()) {
-          attachmentEntity = activeEntityOpt.get();
-          upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
-          if (!upIdKey.isEmpty()) {
-            upID =
-                dbQuery.getUpIdByObjectId(attachmentEntity, persistenceService, objectId, upIdKey);
-          }
-        }
-      }
-
-      if (upID == null || attachmentEntity == null || upIdKey.isEmpty()) {
-        logger.warn("Could not determine upID for objectId: {} in entity: {}", objectId, entity);
-        return;
-      }
-
-      // Count still includes the record being deleted (DB deletion happens after this handler).
-      Result countResult =
-          dbQuery.getAttachmentsForUPIDAndRepository(
-              attachmentEntity, persistenceService, upID, upIdKey);
-      long count = countResult.rowCount();
-
-      // Determine maxCount using the base (non-draft) attachment entity.
-      CdsEntity baseEntity = context.getModel().findEntity(entity).orElse(attachmentEntity);
-      Long maxCount =
-          SDMUtils.getAttachmentCountAndMessage(context.getModel().entities().toList(), baseEntity);
-
-      if (maxCount > 0 && (count - 1) < maxCount) {
-        String facetField = deriveFacetFieldName(attachmentEntity.getQualifiedName());
-        logger.info(
-            "Attachment count will drop to {} (below maxCount={}). Setting {}=true for upID: {}",
-            count - 1,
-            maxCount,
-            facetField,
-            upID);
-        String parentKeyField = upIdKey.replaceFirst("^up__", "");
-        updateParentIsUploadable(
-            context.getModel(),
-            attachmentEntity.getQualifiedName(),
-            upID,
-            parentKeyField,
-            facetField,
-            true);
-      }
-    } catch (Exception e) {
-      logger.warn("Error updating isUploadable on delete: {}", e.getMessage());
-    }
-  }
-
-  /**
-   * Updates the facet-specific uploadable flag on the parent entity row (e.g. Books or
-   * Books_drafts) that owns the attachment composition. Draft context is detected from the
-   * attachment entity name suffix.
-   *
-   * @param facetField the parent entity field to update (e.g. "isAttachmentsUploadable")
-   */
-  private void updateParentIsUploadable(
-      CdsModel model,
-      String attachmentEntityName,
-      String upID,
-      String parentKeyField,
-      String facetField,
-      boolean value) {
-    String parentBaseName = deriveParentEntityName(attachmentEntityName);
-    boolean isDraft = attachmentEntityName.endsWith("_drafts");
-    if (isDraft) {
-      Optional<CdsEntity> parentDraftOpt = model.findEntity(parentBaseName + "_drafts");
-      if (parentDraftOpt.isPresent()) {
-        long updated =
-            dbQuery.updateIsUploadableOnParentEntity(
-                parentDraftOpt.get(), persistenceService, upID, parentKeyField, facetField, value);
-        if (updated > 0) {
-          // Draft row updated — no need to touch active entity now (draftActivate will copy it)
-          return;
-        }
-        // 0 rows updated: draft was already activated and the draft row is gone.
-        // Fall through to update the active entity directly.
-        logger.debug("Draft parent had no row for upID {}, falling through to active entity", upID);
-      }
-    }
-    Optional<CdsEntity> parentActiveOpt = model.findEntity(parentBaseName);
-    if (parentActiveOpt.isPresent()) {
-      dbQuery.updateIsUploadableOnParentEntity(
-          parentActiveOpt.get(), persistenceService, upID, parentKeyField, facetField, value);
-    } else {
-      logger.warn("Parent entity not found for attachment entity: {}", attachmentEntityName);
-    }
-  }
-
-  /**
-   * Derives the parent entity field name for the uploadable flag from the attachment entity's
-   * qualified name. The facet name (last segment, ignoring _drafts suffix) is capitalized and
-   * wrapped: e.g. "...Books.attachments" → "isAttachmentsUploadable", "...Books.references" →
-   * "isReferencesUploadable".
-   */
-  private String deriveFacetFieldName(String attachmentEntityQualifiedName) {
-    String base = attachmentEntityQualifiedName.replace("_drafts", "");
-    int lastDot = base.lastIndexOf('.');
-    String facet = lastDot >= 0 ? base.substring(lastDot + 1) : base;
-    return "is" + Character.toUpperCase(facet.charAt(0)) + facet.substring(1) + "Uploadable";
-  }
-
-  private String deriveParentEntityName(String qualifiedName) {
-    String base = qualifiedName.replace("_drafts", "");
-    int lastDot = base.lastIndexOf('.');
-    return lastDot > 0 ? base.substring(0, lastDot) : base;
-  }
-
   private void finalizeContext(
       AttachmentCreateEventContext eventContext, CmisDocument cmisDocument) {
     logger.debug("Finalizing attachment context for objectId: {}", cmisDocument.getObjectId());
-    String upIdSegment = cmisDocument.getParentId() != null ? cmisDocument.getParentId() : "";
     eventContext.setContentId(
         cmisDocument.getObjectId()
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + eventContext.getAttachmentEntity().getQualifiedName()
-            + ":"
-            + upIdSegment);
+            + eventContext.getAttachmentEntity().getQualifiedName());
     eventContext.getData().setStatus("Clean");
     eventContext.getData().setScannedAt(Instant.now());
     eventContext.getData().setContent(null);
