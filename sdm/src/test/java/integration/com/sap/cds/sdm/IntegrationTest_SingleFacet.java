@@ -6361,95 +6361,101 @@ class IntegrationTest_SingleFacet {
     api.deleteEntity(appUrl, entityName, moveSourceEntity);
   }
 
-  // @Test
-  // @Order(76)
-  // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
-  //   System.out.println(
-  //       "Test (76) : Upload attachment exceeding maximum file size in references facet");
-
-  //   // Create a new entity
-  //   String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-  //   if (response.equals("Could not create entity")) {
-  //     fail("Could not create entity");
-  //   }
-  //   String testEntityID = response;
-
-  //   // Load the 150MB sample file
-  //   ClassLoader classLoader = getClass().getClassLoader();
-  //   File file = new File(classLoader.getResource("sample32mb.pdf").getFile());
-
-  //   Map<String, Object> postData = new HashMap<>();
-  //   postData.put("up__ID", testEntityID);
-  //   postData.put("mimeType", "application/pdf");
-  //   postData.put("createdAt", new Date().toString());
-  //   postData.put("createdBy", "test@test.com");
-  //   postData.put("modifiedBy", "test@test.com");
-
-  //   // Try to upload to the 'references' facet which has the 100MB limit
-  //   String referencesFacet = "references";
-  //   List<String> createResponse =
-  //       api.createAttachment(
-  //           appUrl, entityName, referencesFacet, testEntityID, srvpath, postData, file);
-  //   String check = createResponse.get(0);
-
-  //   // The upload should fail with AttachmentSizeExceeded error
-  //   if (!check.equals("Attachment created")) {
-  //     try {
-  //       JSONObject json = new JSONObject(check);
-  //       String errorCode = json.getJSONObject("error").getString("code");
-  //       String errorMessage = json.getJSONObject("error").getString("message");
-  //       assertEquals("413", errorCode);
-  //       assertEquals("File size exceeds the limit of 30MB.", errorMessage);
-  //     } catch (Exception e) {
-  //       fail("Failed to parse error response: " + e.getMessage());
-  //     }
-  //   } else {
-  //     fail("Attachment got created with file size exceeding maximum limit");
-  //   }
-
-  //   // delete the test entity draft
-  //   api.deleteEntityDraft(appUrl, entityName, testEntityID);
-  // }
-
   @Test
   @Order(76)
-  void testRename_ExtensionUpdate() throws IOException {
-    System.out.println("Test (76) : Rename single attachment while updating the file extension");
-    System.out.println("Uploading pdf");
+  void testRenameAttachmentWithExtensionChange() throws IOException {
+    System.out.println(
+        "Test (76) : Rename attachment changing extension from .pdf to .txt - should return extension change warning");
+
+    // Step 1: Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (newEntityID.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!saveResponse.equals("Saved")) {
+      fail("Could not save new entity: " + saveResponse);
+    }
+
+    // Step 2: Upload a PDF attachment
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("sample.pdf").getFile());
 
     Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", entityID);
+    postData.put("up__ID", newEntityID);
     postData.put("mimeType", "application/pdf");
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
 
-    String response1 = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (editResponse != "Entity in draft mode") {
+      fail("Could not put entity in draft mode for PDF upload");
+    }
+
     List<String> createResponse =
-        api.createAttachment(appUrl, entityName, facetName, entityID, srvpath, postData, file);
-    Boolean testStatus = false;
-    String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
-    String name = "sample.txt";
-    if (response == "Entity in draft mode") {
-      response = api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, name);
-      if (response.equals("Renamed")) {
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-        System.out.println("Response is: " + response);
-        String expected =
-            "{\"error\":{\"code\":\"400\",\"message\":\"\\\"invalid/name\\\" contains unsupported characters (‘/’ or ‘\\\\’). Rename and try again.\\n\\nTable: attachments\\nPage: IntegrationTestEntity\"}}";
-        if (response.equals(expected)) {
-          api.renameAttachment(appUrl, entityName, facetName, entityID, attachmentID1, "sample123");
-          response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
-          if ("Saved".equals(response)) testStatus = true;
+        api.createAttachment(appUrl, entityName, facetName, newEntityID, srvpath, postData, file);
+    String check = createResponse.get(0);
+    if (!check.equals("Attachment created")) {
+      fail("Could not upload sample.pdf: " + check);
+    }
+    String newAttachmentID = createResponse.get(1);
+
+    // Step 3: Save the entity
+    String savedAfterUpload = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!savedAfterUpload.equals("Saved")) {
+      fail("Could not save entity after PDF upload: " + savedAfterUpload);
+    }
+
+    // Step 4: Edit the entity
+    String editDraftResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (editDraftResponse != "Entity in draft mode") {
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not put entity in draft mode for rename");
+    }
+
+    // Step 5: Rename the attachment changing the extension from .pdf to .txt
+    String renameResponse =
+        api.renameAttachment(
+            appUrl, entityName, facetName, newEntityID, newAttachmentID, "renamed_document.txt");
+    if (!renameResponse.equals("Renamed")) {
+      api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not rename attachment: " + renameResponse);
+    }
+
+    // Step 6: Save and validate the extension change error message
+    String saveWithWarningResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertNotNull(saveWithWarningResponse, "Response should not be null");
+
+    String expectedMessage =
+        "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+    com.fasterxml.jackson.databind.JsonNode messagesNode =
+        new ObjectMapper().readTree(saveWithWarningResponse);
+    assertTrue(messagesNode.isArray(), "sap-messages response should be a JSON array");
+
+    boolean foundExtensionError = false;
+    for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+      if (messageNode.has("message")) {
+        String message = messageNode.get("message").asText();
+        if (message.contains("Changing the file extension is not allowed")) {
+          foundExtensionError = true;
+          assertEquals(
+              expectedMessage,
+              message,
+              "Extension change error message does not match expected value");
+          break;
         }
-      } else {
-        api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
       }
     }
-    if (!testStatus) {
-      fail("Attachment was renamed with unsupported characters");
-    }
+
+    assertTrue(
+        foundExtensionError,
+        "Expected extension change warning not found in response. Full response: "
+            + saveWithWarningResponse);
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, newEntityID);
   }
 }
