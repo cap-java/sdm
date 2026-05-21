@@ -1,10 +1,14 @@
 package com.sap.cds.sdm.handler.applicationservice;
 
+import com.sap.cds.CdsData;
+import com.sap.cds.Result;
 import com.sap.cds.ql.CQL;
 import com.sap.cds.ql.Predicate;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.Modifier;
+import com.sap.cds.reflect.CdsAnnotation;
 import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsElementDefinition;
 import com.sap.cds.reflect.CdsEntity;
 import com.sap.cds.reflect.CdsModel;
@@ -26,12 +30,14 @@ import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.draft.Drafts;
 import com.sap.cds.services.handler.EventHandler;
+import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
 import com.sap.cds.services.handler.annotations.HandlerOrder;
 import com.sap.cds.services.handler.annotations.ServiceName;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -403,6 +409,301 @@ public class SDMReadAttachmentsHandler implements EventHandler {
           "Failed to check repository type, proceeding without repository info: {}",
           e.getMessage());
       return null;
+    }
+  }
+
+  /**
+   * After reading a parent entity, counts its attachments per composition facet and sets the
+   * corresponding virtual uploadable flag (e.g. {@code isAttachmentsUploadable}) in each result
+   * row. Values are computed at read time so no flag is ever written to the consumer's database.
+   */
+  @After
+  @HandlerOrder(HandlerOrder.LATE)
+  public void populateUploadableFlags(CdsReadEventContext context, List<CdsData> data) {
+    if (data == null || data.isEmpty()) return;
+
+    CdsEntity target = context.getTarget();
+    logger.info(
+        "populateUploadableFlags: entity={} rows={}", target.getQualifiedName(), data.size());
+
+    // Path 1: target is a parent entity with maxCount compositions — populate virtual fields
+    List<FacetInfo> facets = findFacetsWithMaxCount(target);
+    if (!facets.isEmpty()) {
+      logger.info(
+          "populateUploadableFlags Path1: entity={} facets={}",
+          target.getQualifiedName(),
+          facets.size());
+      boolean isDraft =
+          data.stream().anyMatch(row -> Boolean.FALSE.equals(row.get("IsActiveEntity")));
+      logger.debug("populateUploadableFlags Path1: isDraft={}", isDraft);
+
+      String keyField =
+          target
+              .elements()
+              .filter(CdsElement::isKey)
+              .filter(e -> !"IsActiveEntity".equals(e.getName()))
+              .map(CdsElement::getName)
+              .findFirst()
+              .orElse(null);
+      logger.debug("populateUploadableFlags Path1: keyField={}", keyField);
+      if (keyField == null) return;
+
+      CdsModel model = context.getModel();
+      for (CdsData row : data) {
+        Object keyVal = row.get(keyField);
+        if (keyVal == null) {
+          logger.debug("populateUploadableFlags Path1: skipping row with null keyVal");
+          continue;
+        }
+        String parentId = keyVal.toString();
+
+        for (FacetInfo facet : facets) {
+          String attachmentEntityBase = target.getQualifiedName() + "." + facet.facetName;
+          logger.debug(
+              "populateUploadableFlags Path1: resolving entity={} isDraft={}",
+              attachmentEntityBase,
+              isDraft);
+          CdsEntity attachmentEntity =
+              resolveAttachmentEntityForCount(model, attachmentEntityBase, isDraft);
+          if (attachmentEntity == null) {
+            logger.debug(
+                "populateUploadableFlags Path1: entity not found, skipping facet={}",
+                facet.facetName);
+            continue;
+          }
+
+          String upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
+          logger.debug(
+              "populateUploadableFlags Path1: upIdKey={} for facet={}", upIdKey, facet.facetName);
+          if (upIdKey.isEmpty()) continue;
+
+          Result countResult =
+              dbQuery.getAttachmentsForUPID(
+                  attachmentEntity, persistenceService, parentId, upIdKey);
+          boolean isUploadable = countResult.rowCount() < facet.maxCount;
+
+          logger.info(
+              "Path1: entity={} parentId={} facet={} count={}/{} uploadable={}",
+              target.getQualifiedName(),
+              parentId,
+              facet.facetName,
+              countResult.rowCount(),
+              facet.maxCount,
+              isUploadable);
+          row.put(facet.virtualFieldName, isUploadable);
+        }
+      }
+      return;
+    }
+
+    logger.info(
+        "populateUploadableFlags Path2: entity={} checking for up_ expansion",
+        target.getQualifiedName());
+    // Path 2: target is an attachment entity read with $expand=up_
+    // Fiori uses up_.isXxxUploadable (via InsertRestrictions.Insertable) to control the Upload
+    // button. After an attachment delete, Fiori refreshes the attachment list with $expand=up_ —
+    // this handler populates the virtual field on the expanded parent so the button re-enables
+    // immediately without requiring the user to save.
+    populateUploadableFlagsViaUp(context, target, data);
+  }
+
+  /**
+   * Populates {@code up_.isXxxUploadable} on attachment entity result rows that carry an expanded
+   * {@code up_} navigation property. Called when the target entity is an attachment (not a parent)
+   * and Fiori requested {@code $expand=up_} to evaluate the Insert button state.
+   */
+  private void populateUploadableFlagsViaUp(
+      CdsReadEventContext context, CdsEntity attachmentEntity, List<CdsData> data) {
+    String entityQName = attachmentEntity.getQualifiedName();
+    boolean hasUpData = data.stream().anyMatch(row -> row.get("up_") != null);
+    logger.info(
+        "populateUploadableFlagsViaUp: entity={} rows={} hasUpData={}",
+        entityQName,
+        data.size(),
+        hasUpData);
+    if (!hasUpData) return;
+
+    boolean isDraft = entityQName.endsWith("_drafts");
+    logger.debug("populateUploadableFlagsViaUp: isDraft={}", isDraft);
+    String baseEntityName =
+        isDraft ? entityQName.substring(0, entityQName.length() - 7) : entityQName;
+
+    int lastDot = baseEntityName.lastIndexOf('.');
+    if (lastDot < 0) {
+      logger.debug(
+          "populateUploadableFlagsViaUp: no dot in entity name={}, skipping", baseEntityName);
+      return;
+    }
+    String facetName = baseEntityName.substring(lastDot + 1);
+    String parentBaseEntityName = baseEntityName.substring(0, lastDot);
+    logger.info(
+        "populateUploadableFlagsViaUp: facetName={} parentEntity={}",
+        facetName,
+        parentBaseEntityName);
+
+    CdsModel model = context.getModel();
+    CdsEntity baseParentEntity = model.findEntity(parentBaseEntityName).orElse(null);
+    if (baseParentEntity == null) {
+      logger.debug(
+          "populateUploadableFlagsViaUp: parent entity not found={}", parentBaseEntityName);
+      return;
+    }
+
+    Optional<CdsAnnotation<Object>> maxCountAnno =
+        baseParentEntity
+            .compositions()
+            .filter(c -> facetName.equals(c.getName()))
+            .findFirst()
+            .flatMap(c -> c.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT));
+    if (!maxCountAnno.isPresent()) {
+      logger.info(
+          "populateUploadableFlagsViaUp: no maxCount for facet={} on entity={}",
+          facetName,
+          parentBaseEntityName);
+      return;
+    }
+
+    long maxCount;
+    try {
+      maxCount = Long.parseLong(maxCountAnno.get().getValue().toString());
+    } catch (NumberFormatException e) {
+      logger.debug(
+          "populateUploadableFlagsViaUp: invalid maxCount value={} for facet={}",
+          maxCountAnno.get().getValue(),
+          facetName);
+      return;
+    }
+    if (maxCount <= 0) {
+      logger.debug(
+          "populateUploadableFlagsViaUp: maxCount={} is non-positive for facet={}, skipping",
+          maxCount,
+          facetName);
+      return;
+    }
+    logger.debug("populateUploadableFlagsViaUp: maxCount={} facet={}", maxCount, facetName);
+
+    String virtualFieldName =
+        "is" + Character.toUpperCase(facetName.charAt(0)) + facetName.substring(1) + "Uploadable";
+    logger.debug("populateUploadableFlagsViaUp: virtualField={}", virtualFieldName);
+
+    String upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
+    logger.debug("populateUploadableFlagsViaUp: upIdKey={}", upIdKey);
+    if (upIdKey.isEmpty()) return;
+
+    Map<String, Boolean> uploadableCache = new HashMap<>();
+    for (CdsData row : data) {
+      Object upDataObj = row.get("up_");
+      if (!(upDataObj instanceof Map)) continue;
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> upMap = (Map<String, Object>) upDataObj;
+
+      Object parentIdObj = row.get(upIdKey);
+      if (parentIdObj == null) continue;
+      String parentId = parentIdObj.toString();
+
+      boolean isUploadable =
+          uploadableCache.computeIfAbsent(
+              parentId,
+              id -> {
+                Result countResult =
+                    dbQuery.getAttachmentsForUPID(
+                        attachmentEntity, persistenceService, id, upIdKey);
+                return countResult.rowCount() < maxCount;
+              });
+
+      logger.info(
+          "up_ expansion: entity={} parentId={} facet={} virtualField={} uploadable={}",
+          entityQName,
+          parentId,
+          facetName,
+          virtualFieldName,
+          isUploadable);
+      upMap.put(virtualFieldName, isUploadable);
+    }
+  }
+
+  private List<FacetInfo> findFacetsWithMaxCount(CdsEntity target) {
+    List<FacetInfo> result = new ArrayList<>();
+    target
+        .compositions()
+        .forEach(
+            composition -> {
+              String compName = composition.getName();
+              logger.debug("findFacetsWithMaxCount: checking composition={}", compName);
+              Optional<CdsAnnotation<Object>> maxCountAnno =
+                  composition.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
+              if (!maxCountAnno.isPresent()) {
+                logger.debug(
+                    "findFacetsWithMaxCount: no maxCount annotation for composition={}", compName);
+                return;
+              }
+
+              long maxCount;
+              try {
+                maxCount = Long.parseLong(maxCountAnno.get().getValue().toString());
+              } catch (NumberFormatException e) {
+                logger.debug(
+                    "findFacetsWithMaxCount: invalid maxCount value for composition={}", compName);
+                return;
+              }
+              if (maxCount <= 0) {
+                logger.debug(
+                    "findFacetsWithMaxCount: maxCount={} is non-positive for composition={}, skipping",
+                    maxCount,
+                    compName);
+                return;
+              }
+
+              String facetName = composition.getName();
+              String virtualFieldName =
+                  "is"
+                      + Character.toUpperCase(facetName.charAt(0))
+                      + facetName.substring(1)
+                      + "Uploadable";
+              logger.debug(
+                  "findFacetsWithMaxCount: facet={} virtualField={} maxCount={}",
+                  facetName,
+                  virtualFieldName,
+                  maxCount);
+              result.add(new FacetInfo(facetName, virtualFieldName, maxCount));
+            });
+    logger.debug("findFacetsWithMaxCount: found {} facet(s) with maxCount", result.size());
+    return result;
+  }
+
+  private CdsEntity resolveAttachmentEntityForCount(
+      CdsModel model, String baseEntityName, boolean isDraft) {
+    logger.debug("resolveAttachmentEntityForCount: base={} isDraft={}", baseEntityName, isDraft);
+    if (isDraft) {
+      Optional<CdsEntity> draftOpt = model.findEntity(baseEntityName + "_drafts");
+      if (draftOpt.isPresent()) {
+        logger.debug(
+            "resolveAttachmentEntityForCount: resolved to draft entity={}",
+            baseEntityName + "_drafts");
+        return draftOpt.get();
+      }
+      logger.debug(
+          "resolveAttachmentEntityForCount: draft entity not found, falling back to active entity={}",
+          baseEntityName);
+    }
+    CdsEntity active = model.findEntity(baseEntityName).orElse(null);
+    logger.debug(
+        "resolveAttachmentEntityForCount: resolved to active entity={} found={}",
+        baseEntityName,
+        active != null);
+    return active;
+  }
+
+  private static final class FacetInfo {
+    final String facetName;
+    final String virtualFieldName;
+    final long maxCount;
+
+    FacetInfo(String facetName, String virtualFieldName, long maxCount) {
+      this.facetName = facetName;
+      this.virtualFieldName = virtualFieldName;
+      this.maxCount = maxCount;
     }
   }
 }
