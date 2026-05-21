@@ -6978,6 +6978,88 @@ class IntegrationTest_MultipleFacet {
     api.deleteEntity(appUrl, entityName, newEntityID);
   }
 
+  @Test
+  @Order(77)
+  void testRenameAttachmentWithExtensionChange_BeforeSave() throws IOException {
+    System.out.println(
+        "Test (77) : Upload attachment in draft, rename changing extension before save across all facets - should return extension change warning");
+
+    for (int i = 0; i < facet.length; i++) {
+      // Step 1: Create a new entity draft (do NOT save it yet)
+      String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+      if (newEntityID.equals("Could not create entity")) {
+        fail("Could not create entity for facet: " + facet[i]);
+      }
+
+      // Step 2: Upload a PDF attachment while entity is still in draft (unsaved)
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", newEntityID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      String facetAttachmentID =
+          CreateandReturnFacetID(
+              appUrl, serviceName, entityName, facet[i], newEntityID, postData, file);
+      if (facetAttachmentID == null) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not upload sample.pdf to facet: " + facet[i]);
+      }
+
+      // Step 3: Rename the attachment changing extension from .pdf to .txt — entity still not saved
+      String renameResponse =
+          api.renameAttachment(
+              appUrl, entityName, facet[i], newEntityID, facetAttachmentID, "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not rename attachment on facet " + facet[i] + ": " + renameResponse);
+      }
+
+      // Step 4: Save — should receive extension change warning, not "Saved"
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
+          }
+        }
+      }
+
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
+
+      // Clean up
+      api.deleteEntity(appUrl, entityName, newEntityID);
+    }
+  }
+
   // @Test
   // @Order(77)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
