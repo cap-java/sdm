@@ -6534,4 +6534,54 @@ class IntegrationTest_SingleFacet {
     // Clean up
     api.deleteEntity(appUrl, entityName, newEntityID);
   }
+
+  // @Test
+  // @Order(76)
+  // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
+  //   System.out.println(
+  //       "Test (76) : Upload attachment exceeding maximum file size in references facet");
+
+  //   // Create a new entity
+  //   String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+  //   if (response.equals("Could not create entity")) {
+  //     fail("Could not create entity");
+  //   }
+  //   String testEntityID = response;
+
+  //   // Load the 150MB sample file
+  //   ClassLoader classLoader = getClass().getClassLoader();
+  //   File file = new File(classLoader.getResource("sample32mb.pdf").getFile());
+
+  //   Map<String, Object> postData = new HashMap<>();
+  //   postData.put("up__ID", testEntityID);
+  //   postData.put("mimeType", "application/pdf");
+  //   postData.put("createdAt", new Date().toString());
+  //   postData.put("createdBy", "test@test.com");
+  //   postData.put("modifiedBy", "test@test.com");
+
+  //   // Try to upload to the 'references' facet which has the 100MB limit
+  //   String referencesFacet = "references";
+  //   List<String> createResponse =
+  //       api.createAttachment(
+  //           appUrl, entityName, referencesFacet, testEntityID, srvpath, postData, file);
+  //   String check = createResponse.get(0);
+
+  //   // The upload should fail with AttachmentSizeExceeded error
+  //   if (!check.equals("Attachment created")) {
+  //     try {
+  //       JSONObject json = new JSONObject(check);
+  //       String errorCode = json.getJSONObject("error").getString("code");
+  //       String errorMessage = json.getJSONObject("error").getString("message");
+  //       assertEquals("413", errorCode);
+  //       assertEquals("File size exceeds the limit of 30MB.", errorMessage);
+  //     } catch (Exception e) {
+  //       fail("Failed to parse error response: " + e.getMessage());
+  //     }
+  //   } else {
+  //     fail("Attachment got created with file size exceeding maximum limit");
+  //   }
+
+  //   // delete the test entity draft
+  //   api.deleteEntityDraft(appUrl, entityName, testEntityID);
+  // }
 }
