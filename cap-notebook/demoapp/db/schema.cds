@@ -16,6 +16,8 @@ stock : Integer;
 price : Decimal;
 currency : Currency;
 image : LargeBinary @Core.MediaType: 'image/png';
+virtual isAttachmentsUploadable : Boolean;
+virtual isReferencesUploadable  : Boolean;
 
 // top-level chapters composition (root of the nested hierarchy)
 cHapters : Composition of many Chapters on cHapters.book = $self;
@@ -62,6 +64,8 @@ entity Chapters : cuid, managed {
   description    : String;
   url            : String;
   chapterType  : String @title: 'Chapter Type';
+  virtual isAttachmentsUploadable : Boolean;
+  virtual isFootnotesUploadable  : Boolean;
 }
 
 /** Adding {Notebooks,Writers} for user service */
@@ -73,6 +77,7 @@ entity Notebooks : managed, cuid {
   price             : Decimal;
   currency          : Currency;
   image             : LargeBinary @Core.MediaType: 'image/png';
+  virtual isAttachmentsUploadable : Boolean;
 }
 
 entity Pages : cuid, managed {
