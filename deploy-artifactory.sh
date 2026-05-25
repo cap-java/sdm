@@ -4,7 +4,7 @@ set -euo pipefail
 ########################################
 # CONFIGURATION
 ########################################
-JAVA_VERSION="${JAVA_VERSION:-17}"
+JAVA_VERSION="${JAVA_VERSION:-21}"
 MAVEN_VERSION="${MAVEN_VERSION:-3.6.3}"
 
 # These MUST come from Jenkins
