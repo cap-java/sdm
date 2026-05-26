@@ -118,6 +118,10 @@ public interface ApiInterface {
 
   String deleteEntityDraft(String appUrl, String entityName, String entityID);
 
+  public String downloadSelectedAttachments(
+      String appUrl, String entityName, String facetName, String entityID, List<String> ids)
+      throws IOException;
+
   public Map<String, Object> fetchChangelog(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
