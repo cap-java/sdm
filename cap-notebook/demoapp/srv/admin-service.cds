@@ -208,9 +208,6 @@ service AdminService @(requires: ['admin','system-user']) {
     action changelog() returns String;
     action downloadSelectedAttachments(ids: String) returns String;
   };
-  annotate AdminService.Chapters.attachments with @(
-    Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
-  );
 
   entity Chapters.references as projection on my.Chapters.references
     actions {
@@ -275,9 +272,6 @@ service AdminService @(requires: ['admin','system-user']) {
     action changelog() returns String;
     action downloadSelectedAttachments(ids: String) returns String;
   };
-  annotate AdminService.Chapters.footnotes with @(
-    Capabilities: {InsertRestrictions: {Insertable: up_.isFootnotesUploadable}}
-  );
 
   // Side effects on parent entities: structural changes (add/delete) on attachment
   // navigation collections trigger a re-read of the uploadable flag on the parent.
@@ -288,17 +282,6 @@ service AdminService @(requires: ['admin','system-user']) {
     },
     Common.SideEffects #sdmReferencesUploadable: {
       SourceEntities: ['references'],
-      TargetEntities: ['']
-    }
-  );
-
-  annotate AdminService.Chapters with @(
-    Common.SideEffects #sdmAttachmentsUploadable: {
-      SourceEntities: ['attachments'],
-      TargetEntities: ['']
-    },
-    Common.SideEffects #sdmFootnotesUploadable: {
-      SourceEntities: ['footnotes'],
       TargetEntities: ['']
     }
   );

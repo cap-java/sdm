@@ -64,8 +64,6 @@ entity Chapters : cuid, managed {
   description    : String;
   url            : String;
   chapterType  : String @title: 'Chapter Type';
-  virtual isAttachmentsUploadable : Boolean;
-  virtual isFootnotesUploadable  : Boolean;
 }
 
 /** Adding {Notebooks,Writers} for user service */
