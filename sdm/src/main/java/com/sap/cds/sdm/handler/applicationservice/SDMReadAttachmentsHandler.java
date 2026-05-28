@@ -426,7 +426,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     logger.info(
         "populateUploadableFlags: entity={} rows={}", target.getQualifiedName(), data.size());
 
-    // Path 1: target is a parent entity with maxCount compositions — populate virtual fields
     List<FacetInfo> facets = findFacetsWithMaxCount(target);
     if (!facets.isEmpty()) {
       logger.info(
@@ -499,11 +498,6 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     logger.info(
         "populateUploadableFlags Path2: entity={} checking for up_ expansion",
         target.getQualifiedName());
-    // Path 2: target is an attachment entity read with $expand=up_
-    // Fiori uses up_.isXxxUploadable (via InsertRestrictions.Insertable) to control the Upload
-    // button. After an attachment delete, Fiori refreshes the attachment list with $expand=up_ —
-    // this handler populates the virtual field on the expanded parent so the button re-enables
-    // immediately without requiring the user to save.
     populateUploadableFlagsViaUp(context, target, data);
   }
 
@@ -549,13 +543,13 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       return;
     }
 
-    Optional<CdsAnnotation<Object>> maxCountAnno =
+    Optional<CdsAnnotation<Object>> maxCountAnnotation =
         baseParentEntity
             .compositions()
             .filter(c -> facetName.equals(c.getName()))
             .findFirst()
             .flatMap(c -> c.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT));
-    if (!maxCountAnno.isPresent()) {
+    if (!maxCountAnnotation.isPresent()) {
       logger.info(
           "populateUploadableFlagsViaUp: no maxCount for facet={} on entity={}",
           facetName,
@@ -565,11 +559,11 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
     long maxCount;
     try {
-      maxCount = Long.parseLong(maxCountAnno.get().getValue().toString());
+      maxCount = Long.parseLong(String.valueOf(maxCountAnnotation.get().getValue()));
     } catch (NumberFormatException e) {
       logger.debug(
           "populateUploadableFlagsViaUp: invalid maxCount value={} for facet={}",
-          maxCountAnno.get().getValue(),
+          maxCountAnnotation.get().getValue(),
           facetName);
       return;
     }
@@ -631,9 +625,9 @@ public class SDMReadAttachmentsHandler implements EventHandler {
             composition -> {
               String compName = composition.getName();
               logger.debug("findFacetsWithMaxCount: checking composition={}", compName);
-              Optional<CdsAnnotation<Object>> maxCountAnno =
+              Optional<CdsAnnotation<Object>> maxCountAnnotation =
                   composition.findAnnotation(SDMConstants.ATTACHMENT_MAXCOUNT);
-              if (!maxCountAnno.isPresent()) {
+              if (!maxCountAnnotation.isPresent()) {
                 logger.debug(
                     "findFacetsWithMaxCount: no maxCount annotation for composition={}", compName);
                 return;
@@ -641,7 +635,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
 
               long maxCount;
               try {
-                maxCount = Long.parseLong(maxCountAnno.get().getValue().toString());
+                maxCount = Long.parseLong(maxCountAnnotation.get().getValue().toString());
               } catch (NumberFormatException e) {
                 logger.debug(
                     "findFacetsWithMaxCount: invalid maxCount value for composition={}", compName);
