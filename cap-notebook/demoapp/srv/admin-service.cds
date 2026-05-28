@@ -278,11 +278,11 @@ service AdminService @(requires: ['admin','system-user']) {
   annotate AdminService.Books with @(
     Common.SideEffects #sdmAttachmentsUploadable: {
       SourceEntities: ['attachments'],
-      TargetEntities: ['']
+      TargetProperties: ['isAttachmentsUploadable']
     },
     Common.SideEffects #sdmReferencesUploadable: {
       SourceEntities: ['references'],
-      TargetEntities: ['']
+      TargetProperties: ['isReferencesUploadable']
     }
   );
 
