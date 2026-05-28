@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.10.0
+
+### Added
+- Support download multiple attachments
+
+### Fixed
+- Localization for attachment reference fields
+- Service binding lookup to correctly resolve SDM bindings by tags
+- Technical user detection in the delete API to align with other API implementations
+- File extension change during attachment rename
+
 ## Version 1.9.0
 
 ### Added
