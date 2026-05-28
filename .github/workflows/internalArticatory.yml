@@ -1,7 +1,7 @@
 name: Internal Artifactory snapshot deploy
 
 env:
-  JAVA_VERSION: '17'
+  JAVA_VERSION: '21'
   MAVEN_VERSION: '3.6.3'
   ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
 
@@ -13,6 +13,7 @@ on:
           required: true
 jobs:
   build-and-deploy-artifactory:
+    environment: maven-central
     runs-on: ubuntu-latest
     permissions:
       contents: read
