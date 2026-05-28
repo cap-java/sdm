@@ -127,13 +127,41 @@ public class SDMCustomServiceHandler {
     Boolean isSystemUser = context.getSystemUser();
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    List<String> objectIds = context.getObjectIds();
+
+    if (!customPropertiesInSDM.isEmpty()) {
+      List<Map<String, String>> copyFailures =
+          findAttachmentsWithInvalidSecondaryProperties(
+              objectIds, customPropertiesInSDM, repositoryId, sdmCredentials, isSystemUser);
+      if (!copyFailures.isEmpty()) {
+        buildAndWarnCopyFailures(copyFailures, context);
+        // Remove invalid objectIds and proceed with valid ones
+        Set<String> invalidObjectIds =
+            copyFailures.stream()
+                .map(failure -> failure.get(OBJECT_ID_KEY))
+                .collect(Collectors.toSet());
+        objectIds =
+            objectIds.stream()
+                .filter(id -> !invalidObjectIds.contains(id))
+                .collect(Collectors.toList());
+        if (objectIds.isEmpty()) {
+          context.setCompleted();
+          logger.debug("END: Copy attachments event - all attachments have invalid properties");
+          return;
+        }
+        logger.info(
+            "Proceeding with {} valid attachments after filtering out {} invalid ones",
+            objectIds.size(),
+            invalidObjectIds.size());
+      }
+    }
+
     // Check if folder exists before trying to create it
     boolean folderExists =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser)
             != null;
     String folderId = ensureFolderExists(folderName, repositoryId, sdmCredentials, isSystemUser);
-
-    List<String> objectIds = context.getObjectIds();
 
     CopyAttachmentsRequest request =
         CopyAttachmentsRequest.builder()
@@ -176,6 +204,97 @@ public class SDMCustomServiceHandler {
         upID);
     context.setCompleted();
     logger.debug("END: Copy attachments event");
+  }
+
+  /**
+   * Checks source attachments for invalid secondary properties before copy. Returns a list of
+   * failures if any attachment has invalid properties; returns empty list if all are valid
+   */
+  private List<Map<String, String>> findAttachmentsWithInvalidSecondaryProperties(
+      List<String> objectIds,
+      Set<String> customPropertiesInSDM,
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser)
+      throws IOException {
+    List<String> secondaryTypes =
+        sdmService.getSecondaryTypes(repositoryId, sdmCredentials, isSystemUser);
+    List<String> validSecondaryProperties =
+        sdmService.getValidSecondaryProperties(
+            secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+
+    List<Map<String, String>> failures = new ArrayList<>();
+    for (String objectId : objectIds) {
+      List<String> invalidProperties =
+          getInvalidPropertiesForObject(
+              objectId,
+              customPropertiesInSDM,
+              validSecondaryProperties,
+              sdmCredentials,
+              isSystemUser);
+      if (!invalidProperties.isEmpty()) {
+        Map<String, String> failure = new HashMap<>();
+        failure.put(OBJECT_ID_KEY, objectId);
+        failure.put(
+            FAILURE_REASON_KEY,
+            SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX")
+                + String.join(", ", invalidProperties)
+                + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
+        failures.add(failure);
+      }
+    }
+    return failures;
+  }
+
+  /**
+   * Gets the list of invalid secondary properties for a single object from SDM. Returns empty list
+   * if all properties are valid or if metadata cannot be fetched
+   */
+  private List<String> getInvalidPropertiesForObject(
+      String objectId,
+      Set<String> customPropertiesInSDM,
+      List<String> validSecondaryProperties,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser) {
+    try {
+      JSONObject sdmMetadata = sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+      if (sdmMetadata == null || !sdmMetadata.has("succinctProperties")) {
+        return Collections.emptyList();
+      }
+      JSONObject succinctProperties = sdmMetadata.getJSONObject("succinctProperties");
+      Set<String> sdmResponseProperties = new HashSet<>(succinctProperties.keySet());
+
+      List<String> invalidProperties = new ArrayList<>();
+      for (String targetSdmProperty : customPropertiesInSDM) {
+        if (sdmResponseProperties.contains(targetSdmProperty)
+            && !validSecondaryProperties.contains(targetSdmProperty)) {
+          invalidProperties.add(targetSdmProperty);
+        }
+      }
+      return invalidProperties;
+    } catch (IOException e) {
+      logger.error(
+          "Copy validation - Failed to fetch metadata for attachment {}: {}",
+          objectId,
+          e.getMessage());
+      return Collections.emptyList();
+    }
+  }
+
+  /** Builds and emits a warning message for copy failures */
+  private void buildAndWarnCopyFailures(
+      List<Map<String, String>> copyFailures, AttachmentCopyEventContext context) {
+    StringBuilder warningMessage =
+        new StringBuilder(SDMUtils.getErrorMessage("FAILED_TO_COPY_ATTACHMENTS_PREFIX"));
+    for (Map<String, String> failure : copyFailures) {
+      warningMessage
+          .append("- ObjectId: ")
+          .append(failure.get(OBJECT_ID_KEY))
+          .append(", Reason: ")
+          .append(failure.get(FAILURE_REASON_KEY))
+          .append("\n");
+    }
+    context.getMessages().warn(warningMessage.toString());
   }
 
   /**
