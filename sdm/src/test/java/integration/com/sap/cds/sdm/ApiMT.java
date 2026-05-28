@@ -1051,6 +1051,7 @@ public class ApiMT implements ApiInterface {
     }
   }
 
+  @Override
   public String downloadSelectedAttachments(
       String appUrl, String entityName, String facetName, String entityID, List<String> ids)
       throws IOException {
