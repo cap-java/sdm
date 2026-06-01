@@ -6926,7 +6926,15 @@ class IntegrationTest_MultipleFacet {
           "Downloaded attachment in facet " + facet[i] + " should have a content field");
     }
 
-    // Step 5: Upload 2 more attachments to facet[0] and verify multi-download
+    // Step 5: Edit entity back to draft, upload 2 more attachments to facet[0], save, and verify
+    // multi-download
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
+    if (!editResponse.equals("Entity in draft mode")) {
+      api.deleteEntity(appUrl, entityName, downloadTestEntityID);
+      fail("Could not edit entity back to draft mode: " + editResponse);
+      return;
+    }
+
     List<String> multiIDs = new ArrayList<>();
     multiIDs.add(facetAttachmentIDs[0]);
     for (int i = 0; i < 2; i++) {
@@ -6934,12 +6942,20 @@ class IntegrationTest_MultipleFacet {
           api.createAttachment(
               appUrl, entityName, facet[0], downloadTestEntityID, srvpath, postData, pdfFile);
       if (!extraResp.get(0).equals("Attachment created")) {
-        api.deleteEntity(appUrl, entityName, downloadTestEntityID);
+        api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
         fail("Could not upload extra attachment to facet: " + facet[0]);
         return;
       }
       multiIDs.add(extraResp.get(1));
     }
+
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
+    if (!response.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
+      fail("Could not save entity draft after extra uploads: " + response);
+      return;
+    }
+
     String multiResult =
         api.downloadSelectedAttachments(
             appUrl, entityName, facet[0], downloadTestEntityID, multiIDs);
