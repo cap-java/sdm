@@ -6363,4 +6363,215 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, sourceBookID);
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
   }
+
+  @Test
+  @Order(76)
+  void testRenameChapterAttachmentWithExtensionChange() throws IOException {
+    System.out.println(
+        "Test (76) : Rename chapter attachment changing extension from .pdf to .txt across all facets - should return extension change warning");
+
+    // Step 1: Create a new book and chapter
+    String newBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (newBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+    }
+    String newChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, newBookID);
+    if (newChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, newBookID);
+      fail("Could not create chapter");
+    }
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+    if (!saveResponse.equals("Saved")) {
+      fail("Could not save book: " + saveResponse);
+    }
+
+    // Step 2: Upload a PDF attachment to each facet in the chapter
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", newChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+    if (!"Entity in draft mode".equals(editResponse)) {
+      fail("Could not put book in draft mode for PDF upload");
+    }
+
+    String[] facetAttachmentIDs = new String[facet.length];
+    for (int i = 0; i < facet.length; i++) {
+      facetAttachmentIDs[i] =
+          CreateandReturnFacetID(appUrl, serviceName, newChapterID, facet[i], postData, file);
+      if (facetAttachmentIDs[i] == null) {
+        api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+        api.deleteEntity(appUrl, bookEntityName, newBookID);
+        fail("Could not upload sample.pdf to chapter facet: " + facet[i]);
+      }
+    }
+
+    // Step 3: Save the book
+    String savedAfterUpload = api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+    if (!savedAfterUpload.equals("Saved")) {
+      api.deleteEntity(appUrl, bookEntityName, newBookID);
+      fail("Could not save book after PDF upload: " + savedAfterUpload);
+    }
+
+    // Step 4 & 5: Edit the book, rename each facet's attachment changing extension .pdf -> .txt
+    for (int i = 0; i < facet.length; i++) {
+      String editDraftResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+      if (!"Entity in draft mode".equals(editDraftResponse)) {
+        api.deleteEntity(appUrl, bookEntityName, newBookID);
+        fail("Could not put book in draft mode for rename on facet: " + facet[i]);
+      }
+
+      String renameResponse =
+          api.renameAttachment(
+              appUrl,
+              chapterEntityName,
+              facet[i],
+              newChapterID,
+              facetAttachmentIDs[i],
+              "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+        api.deleteEntity(appUrl, bookEntityName, newBookID);
+        fail("Could not rename chapter attachment on facet " + facet[i] + ": " + renameResponse);
+      }
+
+      // Step 6: Save and validate the extension change warning message
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
+          }
+        }
+      }
+
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
+    }
+
+    // Clean up
+    api.deleteEntity(appUrl, bookEntityName, newBookID);
+  }
+
+  @Test
+  @Order(77)
+  void testRenameChapterAttachmentWithExtensionChange_BeforeSave() throws IOException {
+    System.out.println(
+        "Test (77) : Upload chapter attachment in draft, rename changing extension before save across all facets - should return extension change warning");
+
+    for (int i = 0; i < facet.length; i++) {
+      // Step 1: Create a new book and chapter draft (do NOT save)
+      String newBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+      if (newBookID.equals("Could not create entity")) {
+        fail("Could not create book for facet: " + facet[i]);
+      }
+      String newChapterID =
+          api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, newBookID);
+      if (newChapterID.equals("Could not create entity")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, newBookID);
+        fail("Could not create chapter for facet: " + facet[i]);
+      }
+
+      // Step 2: Upload a PDF attachment to the chapter facet while book is still in draft (unsaved)
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", newChapterID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      String facetAttachmentID =
+          CreateandReturnFacetID(appUrl, serviceName, newChapterID, facet[i], postData, file);
+      if (facetAttachmentID == null) {
+        api.deleteEntityDraft(appUrl, bookEntityName, newBookID);
+        fail("Could not upload sample.pdf to chapter facet: " + facet[i]);
+      }
+
+      // Step 3: Rename the attachment changing extension from .pdf to .txt — book still not saved
+      String renameResponse =
+          api.renameAttachment(
+              appUrl,
+              chapterEntityName,
+              facet[i],
+              newChapterID,
+              facetAttachmentID,
+              "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.deleteEntityDraft(appUrl, bookEntityName, newBookID);
+        fail("Could not rename chapter attachment on facet " + facet[i] + ": " + renameResponse);
+      }
+
+      // Step 4: Save the book — should receive extension change warning, not "Saved"
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, bookEntityName, srvpath, newBookID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
+          }
+        }
+      }
+
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
+
+      // Clean up
+      api.deleteEntity(appUrl, bookEntityName, newBookID);
+    }
+  }
 }
