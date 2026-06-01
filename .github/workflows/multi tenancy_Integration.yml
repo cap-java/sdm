@@ -989,6 +989,7 @@ jobs:
     needs: [virusscan-test, virusscan-cleanup]
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         tenant: [TENANT1, TENANT2]
     steps:
