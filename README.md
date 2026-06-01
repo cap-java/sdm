@@ -14,7 +14,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Draft functionality : Provides the capability of working with draft attachments.
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Custom properties : Provides the capability to define custom properties for attachments.
-- Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user. Automatically disables the upload button in the UI when the limit is reached.
 - Maximum file size: Provides the capability to specify the maximum file size for attachments.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
@@ -37,6 +37,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Upload Button Auto-Disable in the UI](#upload-button-auto-disable-in-the-ui)
 - [Support for Maximum File Size](#support-for-maximum-file-size)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
@@ -494,9 +495,90 @@ Example for German language in `messages_de.properties`:
 SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 ```
 
-> **Note**
->
-> Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+#### Upload Button Auto-Disable in the UI
+
+When `maxCount` is configured, the plugin automatically computes a virtual boolean field (e.g. `isAttachmentsUploadable`) on the parent entity at read time and sets it to `false` when the limit is reached. To wire this up in your Fiori UI so the **Upload button is automatically disabled**, follow the steps below.
+
+**1. Declare the virtual field on the parent entity**
+
+Add a `virtual` boolean field for each `maxCount` annotated composition directly on the parent entity in your CDS schema. The field name must follow the pattern `is` + capitalised composition name + `Uploadable`:
+
+```cds
+entity Books : managed, cuid {
+  // ... other fields ...
+  virtual isAttachmentsUploadable : Boolean;
+  virtual isReferencesUploadable  : Boolean;
+
+  attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4};
+  references  : Composition of many Attachments @SDM.Attachments:{maxCount: 2};
+}
+```
+
+- For a composition named `attachments` declare `virtual isAttachmentsUploadable : Boolean`.
+- For `references` declare `virtual isReferencesUploadable : Boolean`, and so on.
+- Virtual fields are never stored in the database; the plugin populates them at read time.
+
+**2. Disable the Upload button via `InsertRestrictions`**
+
+Annotate each attachment entity in your service to bind its insertability to the virtual field on the parent:
+
+```cds
+annotate MyService.Books.attachments with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
+);
+```
+
+- Replace `MyService.Books.attachments` with your service and entity path.
+- Repeat for every composition facet that has a `maxCount`.
+
+**3. Refresh the parent after attachment changes via `SideEffects`**
+
+After an upload or deletion, Fiori must re-read the parent entity to pick up the updated virtual field and reflect the new button state. Add a named `Common.SideEffects` annotation on the parent entity:
+
+```cds
+annotate MyService.Books with @(
+  Common.SideEffects #attachmentsUploadable: {
+    SourceEntities: ['attachments'],
+    TargetProperties: ['']
+  }
+);
+```
+
+- `SourceEntities: ['attachments']` — triggers the refresh when the `attachments` list changes.
+- `TargetEntities: ['']` — re-fetches the parent entity (`Books`) so the updated `isAttachmentsUploadable` value is returned to the UI.
+- The qualifier (e.g. `#attachmentsUploadable`) can be any unique name; it is only needed to distinguish multiple `SideEffects` annotations on the same entity.
+
+**Example with multiple facets**
+
+If an entity has several `maxCount`-annotated compositions, add one `virtual field` declaration, one `InsertRestrictions`, and one `SideEffects` per facet:
+
+
+```cds
+annotate MyService.Books.attachments with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
+);
+
+annotate MyService.Books.references with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isReferencesUploadable}}
+);
+
+annotate MyService.Books with @(
+  Common.SideEffects #attachmentsUploadable: {
+    SourceEntities: ['attachments'],
+    TargetProperties: ['isAttachmentsUploadable']
+  },
+  Common.SideEffects #referencesUploadable: {
+    SourceEntities: ['references'],
+    TargetProperties: ['isAttachmentsUploadable']
+  }
+);
+```
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/db/schema.cds#L19) of `virtual field` declaration from a sample Bookshop app.
+
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/srv/admin-service.cds#L46) of `InsertRestriction` annotation from a sample Bookshop app.
+
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/srv/admin-service.cds#L279) of `SideEffects` annotation from a sample Bookshop app.
+
 
 ## Support for Maximum File Size
 

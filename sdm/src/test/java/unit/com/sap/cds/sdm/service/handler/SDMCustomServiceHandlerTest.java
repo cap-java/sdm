@@ -325,6 +325,172 @@ public class SDMCustomServiceHandlerTest {
     assertTrue(ex.getMessage().contains("Copy failed"));
   }
 
+  @Test
+  void testCopyAttachments_InvalidSecondaryProperty_BlocksCopy() throws IOException {
+    // Mock SDMCredentials
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock folder id retrieval
+    when(sdmService.getFolderIdByPath(any(), any(), any(), anyBoolean())).thenReturn(FOLDER_ID);
+
+    // Create mock context with custom property annotations on the entity
+    AttachmentCopyEventContext context = createMockContextWithCustomProperties();
+    when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
+
+    // Mock secondary types and valid secondary properties from SDM
+    when(sdmService.getSecondaryTypes(any(), any(), anyBoolean()))
+        .thenReturn(List.of("secondaryType1"));
+    when(sdmService.getValidSecondaryProperties(any(), any(), any(), anyBoolean()))
+        .thenReturn(List.of("validProp1", "validProp2"));
+
+    // Mock getObject: SDM response contains "invalidCustomProp" which is NOT in valid list
+    JSONObject sdmMetadata = new JSONObject();
+    JSONObject succinctProperties = new JSONObject();
+    succinctProperties.put("cmis:name", "test.pdf");
+    succinctProperties.put("invalidCustomProp", "someValue");
+    sdmMetadata.put("succinctProperties", succinctProperties);
+    when(sdmService.getObject(eq(OBJECT_ID), any(), anyBoolean())).thenReturn(sdmMetadata);
+
+    // Act
+    sdmCustomServiceHandler.copyAttachments(context);
+
+    // Assert: copy should be blocked entirely, no copy operation performed
+    verify(sdmService, never())
+        .copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any());
+    // Warning message should be issued
+    verify(context.getMessages(), times(1)).warn(any(String.class));
+    verify(context, times(1)).setCompleted();
+  }
+
+  @Test
+  void testCopyAttachments_MixedValidAndInvalidSecondaryProps_CopiesValidRejectsInvalid()
+      throws IOException {
+    // Mock SDMCredentials
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock folder id retrieval
+    when(sdmService.getFolderIdByPath(any(), any(), any(), anyBoolean())).thenReturn(FOLDER_ID);
+
+    String validObjectId = "validObjectId";
+    String invalidObjectId = "invalidObjectId";
+
+    // Create mock context with custom property annotations
+    AttachmentCopyEventContext context = createMockContextWithCustomProperties();
+    when(context.getObjectIds()).thenReturn(List.of(validObjectId, invalidObjectId));
+
+    // Mock secondary types and valid secondary properties
+    when(sdmService.getSecondaryTypes(any(), any(), anyBoolean()))
+        .thenReturn(List.of("secondaryType1"));
+    when(sdmService.getValidSecondaryProperties(any(), any(), any(), anyBoolean()))
+        .thenReturn(List.of("validProp1", "validProp2"));
+
+    // Mock getObject for valid attachment (does NOT have "invalidCustomProp" in response)
+    JSONObject validMetadata = new JSONObject();
+    JSONObject validProps = new JSONObject();
+    validProps.put("cmis:name", "valid.pdf");
+    validProps.put("validProp1", "someValue");
+    validMetadata.put("succinctProperties", validProps);
+    when(sdmService.getObject(eq(validObjectId), any(), anyBoolean())).thenReturn(validMetadata);
+
+    // Mock getObject for invalid attachment (HAS "invalidCustomProp" which is NOT in valid list)
+    JSONObject invalidMetadata = new JSONObject();
+    JSONObject invalidProps = new JSONObject();
+    invalidProps.put("cmis:name", "invalid.pdf");
+    invalidProps.put("invalidCustomProp", "someValue");
+    invalidMetadata.put("succinctProperties", invalidProps);
+    when(sdmService.getObject(eq(invalidObjectId), any(), anyBoolean()))
+        .thenReturn(invalidMetadata);
+
+    // Mock attachment metadata and copy for the valid attachment
+    CmisDocument cmisDocument = new CmisDocument();
+    cmisDocument.setType("sap-icon://document");
+    when(dbQuery.getAttachmentForObjectID(any(), any(), any(AttachmentCopyEventContext.class)))
+        .thenReturn(cmisDocument);
+
+    Map<String, String> attachmentData = new HashMap<>();
+    attachmentData.put("cmis:name", "valid.pdf");
+    attachmentData.put("cmis:contentStreamMimeType", "application/pdf");
+    attachmentData.put("cmis:objectId", "newCopiedObjectId");
+    when(sdmService.copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any()))
+        .thenReturn(attachmentData);
+
+    // Act
+    sdmCustomServiceHandler.copyAttachments(context);
+
+    // Assert: valid attachment should be copied, invalid one should be warned about
+    verify(sdmService, times(1))
+        .copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any());
+    verify(context.getMessages(), times(1)).warn(any(String.class));
+    verify(draftService, times(1)).newDraft(any());
+    verify(context, times(1)).setCompleted();
+  }
+
+  private AttachmentCopyEventContext createMockContextWithCustomProperties() {
+    AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
+    CdsElement mockAssociationElement = mock(CdsElement.class);
+    CdsAssociationType mockAssociationType = mock(CdsAssociationType.class);
+    CqnElementRef mockCqnElementRef = mock(CqnElementRef.class);
+
+    when(context.getParentEntity()).thenReturn("prefix.someIdentifier." + FACET);
+    when(context.getCompositionName()).thenReturn(FACET);
+    when(context.getUpId()).thenReturn(UP_ID);
+    when(context.getSystemUser()).thenReturn(true);
+    when(context.getObjectIds()).thenReturn(List.of(OBJECT_ID));
+
+    // Mock CdsModel and relevant entities and associations
+    CdsModel model = mock(CdsModel.class);
+    CdsEntity parentEntity = mock(CdsEntity.class);
+    CdsEntity draftEntity = mock(CdsEntity.class);
+    CdsEntity targetEntity = mock(CdsEntity.class);
+    CdsEntity compositionEntity = mock(CdsEntity.class);
+
+    // Mock composition element and its type
+    CdsElement compositionElement = mock(CdsElement.class);
+    CdsAssociationType compositionType = mock(CdsAssociationType.class);
+
+    // Setup expected behavior for model and parent entity
+    when(context.getModel()).thenReturn(model);
+    when(model.findEntity("prefix.someIdentifier." + FACET)).thenReturn(Optional.of(parentEntity));
+    when(model.findEntity("prefix.someIdentifier." + FACET + "." + FACET))
+        .thenReturn(Optional.of(compositionEntity));
+    when(model.findEntity(endsWith("_drafts"))).thenReturn(Optional.of(draftEntity));
+
+    // Mock the composition entity with a custom property annotation
+    CdsElement customPropertyElement = mock(CdsElement.class);
+    com.sap.cds.reflect.CdsAnnotation<Object> nameAnnotation =
+        mock(com.sap.cds.reflect.CdsAnnotation.class);
+    com.sap.cds.reflect.CdsType elementType = mock(com.sap.cds.reflect.CdsType.class);
+    when(elementType.isAssociation()).thenReturn(false);
+    when(customPropertyElement.getType()).thenReturn(elementType);
+    when(customPropertyElement.getName()).thenReturn("customField");
+    when(customPropertyElement.findAnnotation("SDM.Attachments.AdditionalProperty.name"))
+        .thenReturn(Optional.of(nameAnnotation));
+    when(nameAnnotation.getValue()).thenReturn("invalidCustomProp");
+    when(compositionEntity.elements()).thenReturn(Stream.of(customPropertyElement));
+
+    // Mock the composition element in parent entity
+    when(parentEntity.findElement(FACET)).thenReturn(Optional.of(compositionElement));
+    when(compositionElement.getType()).thenReturn(compositionType);
+    when(compositionType.isAssociation()).thenReturn(true);
+    when(compositionType.getTarget()).thenReturn(targetEntity);
+    when(targetEntity.getQualifiedName()).thenReturn("target.entity.name");
+
+    // Mock the draft entity's up_ association
+    when(draftEntity.findAssociation("up_")).thenReturn(Optional.of(mockAssociationElement));
+    when(mockAssociationElement.getType()).thenReturn(mockAssociationType);
+    when(mockAssociationType.refs()).thenReturn(Stream.of(mockCqnElementRef));
+    when(mockCqnElementRef.path()).thenReturn("ID");
+
+    // Mock messages
+    com.sap.cds.services.messages.Messages messages =
+        mock(com.sap.cds.services.messages.Messages.class);
+    when(context.getMessages()).thenReturn(messages);
+
+    return context;
+  }
+
   private AttachmentCopyEventContext createMockContext() {
     AttachmentCopyEventContext context = mock(AttachmentCopyEventContext.class);
     CdsElement mockAssociationElement = mock(CdsElement.class);
