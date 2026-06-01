@@ -191,11 +191,70 @@ jobs:
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  # Versioned tests run in parallel; first entry to start switches repo, others skip restage
-  # Skipped if integration-test fails
-  versioned-test:
+  # Single-job setup: switch CF app to versioned repo BEFORE matrix tests run.
+  # Avoids race condition where parallel matrix entries try to restage the same app simultaneously.
+  versioned-setup:
     runs-on: ubuntu-latest
     needs: integration-test
+    steps:
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
+
+      - name: Install Cloud Foundry CLI 🔧
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Determine Cloud Foundry Space 🌌
+        id: determine_space
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+            space="${{ secrets.CF_SPACE }}"
+          else
+            space="${{ github.event.inputs.cf_space }}"
+          fi
+          echo "space=$space" >> $GITHUB_OUTPUT
+
+      - name: Login to Cloud Foundry 🔑
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Switch to versioned repository 🔄
+        run: |
+          APP_GUID=$(cf app demoappjava-srv --guid)
+          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
+          if [ "$CURRENT" != "${{ secrets.VERSIONEDREPOSITORYID }}" ]; then
+            echo "🔄 Switching REPOSITORY_ID to versioned repository..."
+            cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
+            echo "🔄 Restaging application..."
+            cf restage demoappjava-srv > /dev/null 2>&1
+            echo "✅ Switched to versioned repository!"
+          else
+            echo "✅ Repository already set to versioned, skipping restage"
+          fi
+
+  # Versioned tests run in parallel against the already-switched repo
+  # Skipped if integration-test or versioned-setup fails
+  versioned-test:
+    runs-on: ubuntu-latest
+    needs: versioned-setup
     strategy:
       fail-fast: false
       matrix:
@@ -255,20 +314,6 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
-
-      - name: Ensure versioned repository is active 🔄
-        run: |
-          APP_GUID=$(cf app demoappjava-srv --guid)
-          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
-          if [ "$CURRENT" != "${{ secrets.VERSIONEDREPOSITORYID }}" ]; then
-            echo "🔄 Switching REPOSITORY_ID to versioned repository..."
-            cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VERSIONEDREPOSITORYID }}"
-            echo "🔄 Restaging application..."
-            cf restage demoappjava-srv > /dev/null 2>&1
-            echo "✅ Switched to versioned repository!"
-          else
-            echo "✅ Repository already set to versioned, skipping restage"
-          fi
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
@@ -341,11 +386,70 @@ jobs:
             -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single \
             -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  # Virus scan tests run in parallel; first entry to start switches repo, others skip restage
-  # Skipped if versioned-test fails
-  virusscan-test:
+  # Single-job setup: switch CF app to virus scan repo BEFORE matrix tests run.
+  # Avoids race condition where parallel matrix entries try to restage the same app simultaneously.
+  virusscan-setup:
     runs-on: ubuntu-latest
     needs: versioned-test
+    steps:
+      - name: Cache CF CLI 📦
+        id: cache-cf-cli
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/cf8
+          key: cf-cli-v8-${{ runner.os }}
+
+      - name: Install Cloud Foundry CLI 🔧
+        if: steps.cache-cf-cli.outputs.cache-hit != 'true'
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+
+      - name: Install jq 📦
+        run: |
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Determine Cloud Foundry Space 🌌
+        id: determine_space
+        run: |
+          if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
+            space="${{ secrets.CF_SPACE }}"
+          else
+            space="${{ github.event.inputs.cf_space }}"
+          fi
+          echo "space=$space" >> $GITHUB_OUTPUT
+
+      - name: Login to Cloud Foundry 🔑
+        run: |
+          cf login -a ${{ secrets.CF_API }} \
+            -u ${{ secrets.CF_USER }} \
+            -p ${{ secrets.CF_PASSWORD }} \
+            -o ${{ secrets.CF_ORG }} \
+            -s ${{ steps.determine_space.outputs.space }}
+
+      - name: Switch to virus scan repository 🔄
+        run: |
+          APP_GUID=$(cf app demoappjava-srv --guid)
+          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
+          if [ "$CURRENT" != "${{ secrets.VIRUSSCANREPOSITORYID }}" ]; then
+            echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
+            cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
+            echo "🔄 Restaging application..."
+            cf restage demoappjava-srv > /dev/null 2>&1
+            echo "✅ Switched to virus scan repository!"
+          else
+            echo "✅ Repository already set to virus scan, skipping restage"
+          fi
+
+  # Virus scan tests run in parallel against the already-switched repo
+  # Skipped if versioned-test or virusscan-setup fails
+  virusscan-test:
+    runs-on: ubuntu-latest
+    needs: virusscan-setup
     strategy:
       fail-fast: false
       matrix:
@@ -405,20 +509,6 @@ jobs:
             -p ${{ secrets.CF_PASSWORD }} \
             -o ${{ secrets.CF_ORG }} \
             -s ${{ steps.determine_space.outputs.space }}
-
-      - name: Ensure virus scan repository is active 🔄
-        run: |
-          APP_GUID=$(cf app demoappjava-srv --guid)
-          CURRENT=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
-          if [ "$CURRENT" != "${{ secrets.VIRUSSCANREPOSITORYID }}" ]; then
-            echo "🔄 Switching REPOSITORY_ID to virus scan repository..."
-            cf set-env demoappjava-srv REPOSITORY_ID "${{ secrets.VIRUSSCANREPOSITORYID }}"
-            echo "🔄 Restaging application..."
-            cf restage demoappjava-srv > /dev/null 2>&1
-            echo "✅ Switched to virus scan repository!"
-          else
-            echo "✅ Repository already set to virus scan, skipping restage"
-          fi
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
@@ -508,8 +598,8 @@ jobs:
   # Runs if either versioned-test or virusscan-test ran (since either switches the repo)
   virusscan-cleanup:
     runs-on: ubuntu-latest
-    needs: [versioned-test, virusscan-test]
-    if: always() && (needs.versioned-test.result != 'skipped' || needs.virusscan-test.result != 'skipped')
+    needs: [versioned-setup, versioned-test, virusscan-setup, virusscan-test]
+    if: always() && (needs.versioned-setup.result != 'skipped' || needs.virusscan-setup.result != 'skipped')
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
