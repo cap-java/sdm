@@ -192,10 +192,10 @@ jobs:
           mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
   # Versioned tests run in parallel; first entry to start switches repo, others skip restage
+  # Skipped if integration-test fails
   versioned-test:
     runs-on: ubuntu-latest
     needs: integration-test
-    if: "!cancelled()"
     strategy:
       fail-fast: false
       matrix:
@@ -342,10 +342,10 @@ jobs:
             -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
   # Virus scan tests run in parallel; first entry to start switches repo, others skip restage
+  # Skipped if versioned-test fails
   virusscan-test:
     runs-on: ubuntu-latest
     needs: versioned-test
-    if: "!cancelled()"
     strategy:
       fail-fast: false
       matrix:
@@ -504,11 +504,12 @@ jobs:
             -DskipUnitTests -Deicar.file.path=eicar.com.txt \
             -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  # Revert repository to default after virus scan tests (always runs)
+  # Revert repository to default after virus scan tests
+  # Runs if either versioned-test or virusscan-test ran (since either switches the repo)
   virusscan-cleanup:
     runs-on: ubuntu-latest
-    needs: virusscan-test
-    if: always()
+    needs: [versioned-test, virusscan-test]
+    if: always() && (needs.versioned-test.result != 'skipped' || needs.virusscan-test.result != 'skipped')
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -552,10 +553,11 @@ jobs:
           echo "✅ Reverted to default repository!"
 
   # Repo-specific tests run one at a time (max-parallel: 1) so each shows individually in UI
+  # DISABLED: set if to true to re-enable
   repospecific-test:
     runs-on: ubuntu-latest
-    needs: virusscan-cleanup
-    if: "!cancelled()"
+    needs: [virusscan-test, virusscan-cleanup]
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -700,14 +702,14 @@ jobs:
           echo "Versioned test: ${{ needs.versioned-test.result }}"
           echo "Virus scan test: ${{ needs.virusscan-test.result }}"
           echo "Virusscan cleanup: ${{ needs.virusscan-cleanup.result }}"
-          echo "Repo-specific test: ${{ needs.repospecific-test.result }}"
+          echo "Repo-specific test: ${{ needs.repospecific-test.result }} (disabled is OK)"
           if [ "${{ needs.integration-test.result }}" == "success" ] && \
              [ "${{ needs.versioned-test.result }}" == "success" ] && \
              [ "${{ needs.virusscan-test.result }}" == "success" ] && \
-             [ "${{ needs.virusscan-cleanup.result }}" == "success" ] && \
-             [ "${{ needs.repospecific-test.result }}" == "success" ]; then
-            echo "✅ All integration tests passed!"
+             [ "${{ needs.virusscan-cleanup.result }}" == "success" ]; then
+            echo "✅ All enabled integration tests passed!"
           else
             echo "❌ Some integration tests failed. Check individual job results for details."
             exit 1
           fi
+

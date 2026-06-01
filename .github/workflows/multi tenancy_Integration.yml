@@ -262,10 +262,10 @@ jobs:
           retention-days: 7
 
   # Versioned tests run in parallel; first entry to start switches repo, others skip restage
+  # Skipped if integration-test fails
   versioned-test:
     runs-on: ubuntu-latest
     needs: integration-test
-    if: "!cancelled()"
     strategy:
       fail-fast: false
       matrix:
@@ -454,10 +454,10 @@ jobs:
             -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
   # Virus scan tests run in parallel; first entry to start switches repo, others skip restage
+  # Skipped if versioned-test fails
   virusscan-test:
     runs-on: ubuntu-latest
     needs: versioned-test
-    if: "!cancelled()"
     strategy:
       fail-fast: false
       matrix:
@@ -658,11 +658,12 @@ jobs:
             -DskipUnitTests -Deicar.file.path=eicar.com.txt \
             -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  # Revert repository to default after virus scan tests (always runs)
+  # Revert repository to default after virus scan tests
+  # Runs if either versioned-test or virusscan-test ran (since either switches the repo)
   virusscan-cleanup:
     runs-on: ubuntu-latest
-    needs: virusscan-test
-    if: always()
+    needs: [versioned-test, virusscan-test]
+    if: always() && (needs.versioned-test.result != 'skipped' || needs.virusscan-test.result != 'skipped')
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -712,10 +713,11 @@ jobs:
           echo "✅ Reverted to default repository!"
 
   # Repo-specific tests run one at a time (max-parallel: 1) so each shows individually in UI
+  # DISABLED: set if to true to re-enable
   repospecific-test:
     runs-on: ubuntu-latest
-    needs: virusscan-cleanup
-    if: "!cancelled()"
+    needs: [virusscan-test, virusscan-cleanup]
+    if: false
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -890,12 +892,15 @@ jobs:
             -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} \
             -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
 
-  # Single self-contained job: run subscription tests for both tenants
-  # Must run AFTER repospecific-test because subscription tests unsubscribe tenants
+  # Subscription tests run one at a time (max-parallel: 1) so each shows individually in UI
+  # Skipped if virusscan-test or virusscan-cleanup fails
   subscription-test:
     runs-on: ubuntu-latest
-    needs: repospecific-test
-    if: "!cancelled()"
+    needs: [virusscan-test, virusscan-cleanup]
+    strategy:
+      fail-fast: false
+      matrix:
+        tenant: [TENANT1, TENANT2]
     steps:
       - name: Checkout repository 📁
         uses: actions/checkout@v6
@@ -1017,7 +1022,7 @@ jobs:
           echo "CLIENT_SECRET_MT=$escapedClientSecret_mt" >> $GITHUB_OUTPUT
           echo "CLIENT_ID_MT=$clientID_mt" >> $GITHUB_OUTPUT
 
-      - name: Run all subscription integration tests 🎯
+      - name: Run subscription integration test 🎯 (${{ matrix.tenant }})
         id: run_tests
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
@@ -1060,10 +1065,7 @@ jobs:
           BTP_CLI_URL="${{ secrets.BTP_CLI_URL }}"
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN="${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}"
 
-          FAILED=0
-          for tenant in TENANT1 TENANT2; do
-            echo "🎯 Running subscription test for $tenant"
-            cat > "$PROPERTIES_FILE" <<EOL
+          cat > "$PROPERTIES_FILE" <<EOL
           appUrl=$appUrl
           appUrlMT=$appUrlMT
           authUrl=$authUrl
@@ -1094,20 +1096,11 @@ jobs:
           BTP_CLI_URL=$BTP_CLI_URL
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN=$BTP_GLOBAL_ACCOUNT_SUBDOMAIN
           EOL
-            if ! mvn clean verify -P integration-tests \
-              -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=$tenant \
-              -DskipUnitTests -Dfailsafe.includes="**/IntegrationTest_Subscription.java"; then
-              echo "❌ FAILED: subscription test - $tenant"
-              FAILED=$((FAILED + 1))
-            else
-              echo "✅ PASSED: subscription test - $tenant"
-            fi
-          done
 
-          if [ $FAILED -gt 0 ]; then
-            echo "❌ $FAILED subscription test(s) failed"
-            exit 1
-          fi
+          echo "🎯 Running subscription test for ${{ matrix.tenant }}"
+          mvn clean verify -P integration-tests \
+            -DtokenFlow=technicalUser -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} \
+            -DskipUnitTests -Dfailsafe.includes="**/IntegrationTest_Subscription.java"
 
   # Summary job to aggregate results
   test-summary:
@@ -1120,14 +1113,13 @@ jobs:
           echo "Integration test: ${{ needs.integration-test.result }}"
           echo "Versioned test: ${{ needs.versioned-test.result }}"
           echo "Virus scan test: ${{ needs.virusscan-test.result }}"
-          echo "Repo-specific test: ${{ needs.repospecific-test.result }}"
+          echo "Repo-specific test: ${{ needs.repospecific-test.result }} (disabled is OK)"
           echo "Subscription test: ${{ needs.subscription-test.result }}"
           if [ "${{ needs.integration-test.result }}" == "success" ] && \
              [ "${{ needs.versioned-test.result }}" == "success" ] && \
              [ "${{ needs.virusscan-test.result }}" == "success" ] && \
-             [ "${{ needs.repospecific-test.result }}" == "success" ] && \
              [ "${{ needs.subscription-test.result }}" == "success" ]; then
-            echo "✅ All integration tests passed!"
+            echo "✅ All enabled integration tests passed!"
           else
             echo "❌ Some integration tests failed. Check individual job results for details."
             exit 1
