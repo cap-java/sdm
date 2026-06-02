@@ -7085,12 +7085,16 @@ class IntegrationTest_MultipleFacet {
     postData.put("mimeType", "application/pdf");
 
     // Step 2: Upload one pdf attachment to each of the 3 facets
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    File originalPdfFile = new File(classLoader.getResource("sample.pdf").getFile());
     String[] facetAttachmentIDs = new String[facet.length];
     for (int i = 0; i < facet.length; i++) {
+      File tempFacetFile = File.createTempFile("sample_mf_facet" + i + "_", ".pdf");
+      Files.copy(
+          originalPdfFile.toPath(), tempFacetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> createResp =
           api.createAttachment(
-              appUrl, entityName, facet[i], downloadTestEntityID, srvpath, postData, pdfFile);
+              appUrl, entityName, facet[i], downloadTestEntityID, srvpath, postData, tempFacetFile);
+      tempFacetFile.delete();
       if (!createResp.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
         fail("Could not upload pdf to facet: " + facet[i]);

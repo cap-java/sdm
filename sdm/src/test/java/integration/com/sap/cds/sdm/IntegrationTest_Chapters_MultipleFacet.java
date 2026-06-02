@@ -6598,6 +6598,7 @@ class IntegrationTest_Chapters_MultipleFacet {
 
     ClassLoader classLoader = getClass().getClassLoader();
     Map<String, List<String>> facetAttachmentIds = new HashMap<>();
+    int facetIndex = 0;
     for (String facetName : facet) {
       List<String> ids = new ArrayList<>();
       Map<String, Object> postData = new HashMap<>();
@@ -6607,10 +6608,13 @@ class IntegrationTest_Chapters_MultipleFacet {
       postData.put("modifiedBy", "test@test.com");
 
       postData.put("mimeType", "application/pdf");
-      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      File pdfOrig = new File(classLoader.getResource("sample.pdf").getFile());
+      File pdfFile = File.createTempFile("sample_ch_" + facetIndex + "_pdf_", ".pdf");
+      Files.copy(pdfOrig.toPath(), pdfFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> r1 =
           api.createAttachment(
               appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, pdfFile);
+      pdfFile.delete();
       if (!r1.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
         fail("Could not upload sample.pdf for facet " + facetName);
@@ -6619,10 +6623,13 @@ class IntegrationTest_Chapters_MultipleFacet {
       ids.add(r1.get(1));
 
       postData.put("mimeType", "application/txt");
-      File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+      File txtOrig = new File(classLoader.getResource("sample.txt").getFile());
+      File txtFile = File.createTempFile("sample_ch_" + facetIndex + "_txt_", ".txt");
+      Files.copy(txtOrig.toPath(), txtFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> r2 =
           api.createAttachment(
               appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, txtFile);
+      txtFile.delete();
       if (!r2.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
         fail("Could not upload sample.txt for facet " + facetName);
@@ -6631,10 +6638,13 @@ class IntegrationTest_Chapters_MultipleFacet {
       ids.add(r2.get(1));
 
       postData.put("mimeType", "application/exe");
-      File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+      File exeOrig = new File(classLoader.getResource("sample.exe").getFile());
+      File exeFile = File.createTempFile("sample_ch_" + facetIndex + "_exe_", ".exe");
+      Files.copy(exeOrig.toPath(), exeFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> r3 =
           api.createAttachment(
               appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, exeFile);
+      exeFile.delete();
       if (!r3.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
         fail("Could not upload sample.exe for facet " + facetName);
@@ -6642,6 +6652,7 @@ class IntegrationTest_Chapters_MultipleFacet {
       }
       ids.add(r3.get(1));
       facetAttachmentIds.put(facetName, ids);
+      facetIndex++;
     }
 
     for (String facetName : facet) {
