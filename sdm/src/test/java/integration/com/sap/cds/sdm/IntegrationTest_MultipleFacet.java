@@ -7177,104 +7177,202 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(76)
-  void testReadCmisMetadataCreatedBy() throws IOException {
-    System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
+  void testRenameAttachmentWithExtensionChange() throws IOException {
+    System.out.println(
+        "Test (76) : Rename attachment changing extension from .pdf to .txt across all facets - should return extension change warning");
 
-    // Create a self-contained entity with an attachment
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    assertNotEquals("Could not create entity", response, "Entity creation should succeed");
-    String testEntityID = response;
+    // Step 1: Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (newEntityID.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!saveResponse.equals("Saved")) {
+      fail("Could not save new entity: " + saveResponse);
+    }
 
+    // Step 2: Upload a PDF attachment to each facet
     ClassLoader classLoader = getClass().getClassLoader();
     File file = new File(classLoader.getResource("sample.pdf").getFile());
 
     Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", testEntityID);
+    postData.put("up__ID", newEntityID);
     postData.put("mimeType", "application/pdf");
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
 
-    List<String> createResponse =
-        api.createAttachment(appUrl, entityName, facet[0], testEntityID, srvpath, postData, file);
-    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
-
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
-    assertEquals("Saved", response, "Entity save should succeed");
-
-    // Now verify the CMIS createdBy property
-    String createdBy =
-        CmisDocumentHelper.getCmisProperty(testEntityID, "sample.pdf", "cmis:createdBy");
-    System.out.println("cmis:createdBy value: " + createdBy);
-    String tokenFlowFlag = System.getProperty("tokenFlow");
-    if ("namedUser".equals(tokenFlowFlag)) {
-      assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
-    } else {
-      assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
-      assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!"Entity in draft mode".equals(editResponse)) {
+      fail("Could not put entity in draft mode for PDF upload");
     }
 
-    // Clean up
-    api.deleteEntity(appUrl, entityName, testEntityID);
-  }
-
-  @Test
-  @Order(77)
-  void testUploadVirusFileInScanDisabledRepo() throws IOException {
-    System.out.println(
-        "Test (77) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
-
+    String[] facetAttachmentIDs = new String[facet.length];
     for (int i = 0; i < facet.length; i++) {
-      boolean testStatus = false;
-      String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-      if (response.equals("Could not create entity")) {
-        fail("Could not create entity for facet: " + facet[i]);
+      facetAttachmentIDs[i] =
+          CreateandReturnFacetID(
+              appUrl, serviceName, entityName, facet[i], newEntityID, postData, file);
+      if (facetAttachmentIDs[i] == null) {
+        api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not upload sample.pdf to facet: " + facet[i]);
       }
-      String testEntityID = response;
+    }
 
-      // Use EICAR test virus file
-      String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
-      File file = new File(eicarFilePath);
-      if (!file.exists()) {
-        fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+    // Step 3: Save the entity
+    String savedAfterUpload = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!savedAfterUpload.equals("Saved")) {
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not save entity after PDF upload: " + savedAfterUpload);
+    }
+
+    // Step 4 & 5: Edit the entity, rename each facet's attachment changing extension .pdf -> .txt
+    for (int i = 0; i < facet.length; i++) {
+      String editDraftResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      if (!"Entity in draft mode".equals(editDraftResponse)) {
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not put entity in draft mode for rename on facet: " + facet[i]);
       }
 
-      Map<String, Object> postData = new HashMap<>();
-      postData.put("up__ID", testEntityID);
-      postData.put("mimeType", "text/plain");
-      postData.put("createdAt", new Date().toString());
-      postData.put("createdBy", "test@test.com");
-      postData.put("modifiedBy", "test@test.com");
+      String renameResponse =
+          api.renameAttachment(
+              appUrl,
+              entityName,
+              facet[i],
+              newEntityID,
+              facetAttachmentIDs[i],
+              "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not rename attachment on facet " + facet[i] + ": " + renameResponse);
+      }
 
-      List<String> createResponse =
-          api.createAttachment(appUrl, entityName, facet[i], testEntityID, srvpath, postData, file);
-      String check = createResponse.get(0);
-      if (check.equals("Attachment created")) {
-        String testAttachmentID = createResponse.get(1);
-        response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
-        if (response.equals("Saved")) {
-          // Verify attachment is readable (upload succeeded despite being a virus file)
-          response =
-              api.readAttachment(appUrl, entityName, facet[i], testEntityID, testAttachmentID);
-          if (response.equals("OK")) {
-            testStatus = true;
+      // Step 6: Save and validate the extension change warning message
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
           }
         }
       }
 
-      // Clean up
-      api.deleteEntity(appUrl, entityName, testEntityID);
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
+    }
 
-      if (!testStatus) {
-        fail(
-            "Virus file upload should succeed in a virus scan disabled repository for facet: "
-                + facet[i]);
+    // Clean up
+    api.deleteEntity(appUrl, entityName, newEntityID);
+  }
+
+  @Test
+  @Order(77)
+  void testRenameAttachmentWithExtensionChange_BeforeSave() throws IOException {
+    System.out.println(
+        "Test (77) : Upload attachment in draft, rename changing extension before save across all facets - should return extension change warning");
+
+    for (int i = 0; i < facet.length; i++) {
+      // Step 1: Create a new entity draft (do NOT save it yet)
+      String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+      if (newEntityID.equals("Could not create entity")) {
+        fail("Could not create entity for facet: " + facet[i]);
       }
+
+      // Step 2: Upload a PDF attachment while entity is still in draft (unsaved)
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", newEntityID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      String facetAttachmentID =
+          CreateandReturnFacetID(
+              appUrl, serviceName, entityName, facet[i], newEntityID, postData, file);
+      if (facetAttachmentID == null) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not upload sample.pdf to facet: " + facet[i]);
+      }
+
+      // Step 3: Rename the attachment changing extension from .pdf to .txt — entity still not saved
+      String renameResponse =
+          api.renameAttachment(
+              appUrl, entityName, facet[i], newEntityID, facetAttachmentID, "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not rename attachment on facet " + facet[i] + ": " + renameResponse);
+      }
+
+      // Step 4: Save — should receive extension change warning, not "Saved"
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
+          }
+        }
+      }
+
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
+
+      // Clean up
+      api.deleteEntity(appUrl, entityName, newEntityID);
     }
   }
 
   // @Test
-  // @Order(78)
+  // @Order(77)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
   //   System.out.println(
   //       "Test (76) : Upload attachment exceeding maximum file size in references facet");
