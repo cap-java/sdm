@@ -6990,67 +6990,10 @@ class IntegrationTest_SingleFacet {
     }
     String draftAttachmentID3 = createResponse3.get(1);
 
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
-
-    // Helper: build the draft download URL for a given first attachment ID
-    // IsActiveEntity=false targets the draft entity
-    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
-        (firstId, ids) -> {
-          String url =
-              "https://"
-                  + appUrl
-                  + "/odata/v4/"
-                  + srvpath
-                  + "/"
-                  + entityName
-                  + "(ID="
-                  + draftEntityID
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + facetName
-                  + "(up__ID="
-                  + draftEntityID
-                  + ",ID="
-                  + firstId
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + srvpath
-                  + ".downloadSelectedAttachments";
-
-          String idsParam = String.join(",", ids);
-          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
-          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
-          Request req =
-              new Request.Builder()
-                  .url(url)
-                  .post(body)
-                  .addHeader("Authorization", "Bearer " + token)
-                  .build();
-          try (Response resp = client.newCall(req).execute()) {
-            if (!resp.isSuccessful()) {
-              throw new RuntimeException(
-                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
-            }
-            String respBody = resp.body().string();
-            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
-            if (responseMap.containsKey("value")) {
-              return responseMap.get("value").toString();
-            }
-            return respBody;
-          } catch (IOException e) {
-            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
-          }
-        };
-
     // Step 3: Select first attachment - Download button should be enabled even in draft state
     String singleDownloadResult =
-        callDraftDownload.apply(draftAttachmentID1, List.of(draftAttachmentID1));
+        api.downloadSelectedAttachmentsDraft(
+            appUrl, entityName, facetName, draftEntityID, List.of(draftAttachmentID1));
     JSONArray singleResultArray = new JSONArray(singleDownloadResult);
     assertEquals(1, singleResultArray.length(), "Expected 1 result in download response");
     JSONObject singleResult = singleResultArray.getJSONObject(0);
@@ -7063,8 +7006,11 @@ class IntegrationTest_SingleFacet {
 
     // Step 4: Select all 3 and download while entity is still in draft state
     String multiDownloadResult =
-        callDraftDownload.apply(
-            draftAttachmentID1,
+        api.downloadSelectedAttachmentsDraft(
+            appUrl,
+            entityName,
+            facetName,
+            draftEntityID,
             List.of(draftAttachmentID1, draftAttachmentID2, draftAttachmentID3));
     JSONArray multiResultArray = new JSONArray(multiDownloadResult);
     assertEquals(3, multiResultArray.length(), "Expected 3 results in download response");
@@ -7167,64 +7113,10 @@ class IntegrationTest_SingleFacet {
       return;
     }
 
-    // Inline draft download helper (IsActiveEntity=false)
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
-
-    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
-        (firstId, ids) -> {
-          String url =
-              "https://"
-                  + appUrl
-                  + "/odata/v4/"
-                  + srvpath
-                  + "/"
-                  + entityName
-                  + "(ID="
-                  + testEntityID
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + facetName
-                  + "(up__ID="
-                  + testEntityID
-                  + ",ID="
-                  + firstId
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + srvpath
-                  + ".downloadSelectedAttachments";
-          String idsParam = String.join(",", ids);
-          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
-          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
-          Request req =
-              new Request.Builder()
-                  .url(url)
-                  .post(body)
-                  .addHeader("Authorization", "Bearer " + token)
-                  .build();
-          try (Response resp = client.newCall(req).execute()) {
-            if (!resp.isSuccessful()) {
-              throw new RuntimeException(
-                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
-            }
-            String respBody = resp.body().string();
-            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
-            if (responseMap.containsKey("value")) {
-              return responseMap.get("value").toString();
-            }
-            return respBody;
-          } catch (IOException e) {
-            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
-          }
-        };
-
     // Step 7: Select only pdf - Download button should be enabled (succeeds)
-    String pdfOnlyResult = callDraftDownload.apply(pdfAttachmentID, List.of(pdfAttachmentID));
+    String pdfOnlyResult =
+        api.downloadSelectedAttachmentsDraft(
+            appUrl, entityName, facetName, testEntityID, List.of(pdfAttachmentID));
     JSONArray pdfOnlyArray = new JSONArray(pdfOnlyResult);
     assertEquals(1, pdfOnlyArray.length(), "Expected 1 result when only pdf is selected");
     assertEquals(
@@ -7235,7 +7127,8 @@ class IntegrationTest_SingleFacet {
     // Step 8: Select pdf + link - Download button should be disabled
     // (link attachment returns error status, disabling the download)
     String mixedResult =
-        callDraftDownload.apply(pdfAttachmentID, List.of(pdfAttachmentID, linkAttachmentID));
+        api.downloadSelectedAttachmentsDraft(
+            appUrl, entityName, facetName, testEntityID, List.of(pdfAttachmentID, linkAttachmentID));
     JSONArray mixedArray = new JSONArray(mixedResult);
     assertEquals(2, mixedArray.length(), "Expected 2 results when pdf and link are selected");
 

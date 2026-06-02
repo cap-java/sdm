@@ -1052,6 +1052,55 @@ public class ApiMT implements ApiInterface {
   }
 
   @Override
+  public String downloadSelectedAttachmentsDraft(
+      String appUrl, String entityName, String facetName, String entityID, List<String> ids)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)"
+            + "/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ids.get(0)
+            + ",IsActiveEntity=false)"
+            + "/AdminService.downloadSelectedAttachments";
+
+    String idsParam = String.join(",", ids);
+    String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
+
+    RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not download attachments: "
+                + response.code()
+                + " - "
+                + response.body().string());
+      }
+      String responseBody = response.body().string();
+      Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
+      if (responseMap.containsKey("value")) {
+        return responseMap.get("value").toString();
+      }
+      return responseBody;
+    } catch (IOException e) {
+      System.out.println("Error while downloading attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   public String downloadSelectedAttachments(
       String appUrl, String entityName, String facetName, String entityID, List<String> ids)
       throws IOException {
