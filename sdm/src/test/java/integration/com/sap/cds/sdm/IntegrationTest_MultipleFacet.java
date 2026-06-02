@@ -6867,508 +6867,202 @@ class IntegrationTest_MultipleFacet {
 
   @Test
   @Order(76)
-  void testDownloadAttachmentsAcrossMultipleFacets() throws IOException {
+  void testRenameAttachmentWithExtensionChange() throws IOException {
     System.out.println(
-        "Test (76): Create entity, upload attachments to each facet, and verify"
-            + " download works across all facets");
+        "Test (76) : Rename attachment changing extension from .pdf to .txt across all facets - should return extension change warning");
 
-    // Step 1: Create entity
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (response.equals("Could not create entity")) {
+    // Step 1: Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (newEntityID.equals("Could not create entity")) {
       fail("Could not create entity");
-      return;
     }
-    String downloadTestEntityID = response;
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!saveResponse.equals("Saved")) {
+      fail("Could not save new entity: " + saveResponse);
+    }
 
+    // Step 2: Upload a PDF attachment to each facet
     ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
     Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", downloadTestEntityID);
+    postData.put("up__ID", newEntityID);
+    postData.put("mimeType", "application/pdf");
     postData.put("createdAt", new Date().toString());
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
-    postData.put("mimeType", "application/pdf");
 
-    // Step 2: Upload one pdf attachment to each of the 3 facets
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!"Entity in draft mode".equals(editResponse)) {
+      fail("Could not put entity in draft mode for PDF upload");
+    }
+
     String[] facetAttachmentIDs = new String[facet.length];
     for (int i = 0; i < facet.length; i++) {
-      List<String> createResp =
-          api.createAttachment(
-              appUrl, entityName, facet[i], downloadTestEntityID, srvpath, postData, pdfFile);
-      if (!createResp.get(0).equals("Attachment created")) {
-        api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
-        fail("Could not upload pdf to facet: " + facet[i]);
-        return;
+      facetAttachmentIDs[i] =
+          CreateandReturnFacetID(
+              appUrl, serviceName, entityName, facet[i], newEntityID, postData, file);
+      if (facetAttachmentIDs[i] == null) {
+        api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not upload sample.pdf to facet: " + facet[i]);
       }
-      facetAttachmentIDs[i] = createResp.get(1);
     }
 
-    // Step 3: Save entity draft
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
-    if (!response.equals("Saved")) {
-      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
-      fail("Could not save entity draft: " + response);
-      return;
+    // Step 3: Save the entity
+    String savedAfterUpload = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!savedAfterUpload.equals("Saved")) {
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not save entity after PDF upload: " + savedAfterUpload);
     }
 
-    // Step 4: Verify download works from each facet independently
+    // Step 4 & 5: Edit the entity, rename each facet's attachment changing extension .pdf -> .txt
     for (int i = 0; i < facet.length; i++) {
-      String downloadResult =
-          api.downloadSelectedAttachments(
-              appUrl, entityName, facet[i], downloadTestEntityID, List.of(facetAttachmentIDs[i]));
-      JSONArray resultArray = new JSONArray(downloadResult);
-      assertEquals(1, resultArray.length(), "Expected 1 result from facet: " + facet[i]);
-      JSONObject result = resultArray.getJSONObject(0);
-      assertEquals(
-          "success", result.getString("status"), "Download should succeed for facet: " + facet[i]);
-      assertTrue(
-          result.has("content"),
-          "Downloaded attachment in facet " + facet[i] + " should have a content field");
-    }
-
-    // Step 5: Edit entity back to draft, upload 2 more attachments to facet[0], save, and verify
-    // multi-download
-    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      api.deleteEntity(appUrl, entityName, downloadTestEntityID);
-      fail("Could not edit entity back to draft mode: " + editResponse);
-      return;
-    }
-
-    List<String> multiIDs = new ArrayList<>();
-    multiIDs.add(facetAttachmentIDs[0]);
-    for (int i = 0; i < 2; i++) {
-      List<String> extraResp =
-          api.createAttachment(
-              appUrl, entityName, facet[0], downloadTestEntityID, srvpath, postData, pdfFile);
-      if (!extraResp.get(0).equals("Attachment created")) {
-        api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
-        fail("Could not upload extra attachment to facet: " + facet[0]);
-        return;
+      String editDraftResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      if (!"Entity in draft mode".equals(editDraftResponse)) {
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not put entity in draft mode for rename on facet: " + facet[i]);
       }
-      multiIDs.add(extraResp.get(1));
-    }
 
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
-    if (!response.equals("Saved")) {
-      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
-      fail("Could not save entity draft after extra uploads: " + response);
-      return;
-    }
+      String renameResponse =
+          api.renameAttachment(
+              appUrl,
+              entityName,
+              facet[i],
+              newEntityID,
+              facetAttachmentIDs[i],
+              "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+        api.deleteEntity(appUrl, entityName, newEntityID);
+        fail("Could not rename attachment on facet " + facet[i] + ": " + renameResponse);
+      }
 
-    String multiResult =
-        api.downloadSelectedAttachments(
-            appUrl, entityName, facet[0], downloadTestEntityID, multiIDs);
-    JSONArray multiArray = new JSONArray(multiResult);
-    assertEquals(3, multiArray.length(), "Expected 3 results from multi-download in " + facet[0]);
-    for (int i = 0; i < multiArray.length(); i++) {
-      assertEquals(
-          "success",
-          multiArray.getJSONObject(i).getString("status"),
-          "Attachment " + (i + 1) + " in " + facet[0] + " should download successfully");
+      // Step 6: Save and validate the extension change warning message
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
+      assertTrue(
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
+
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
+          }
+        }
+      }
+
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
     }
 
     // Clean up
-    api.deleteEntity(appUrl, entityName, downloadTestEntityID);
+    api.deleteEntity(appUrl, entityName, newEntityID);
   }
 
   @Test
   @Order(77)
-  void testDownloadButtonDisabledWhenLinkSelectedAcrossFacets() throws IOException {
+  void testRenameAttachmentWithExtensionChange_BeforeSave() throws IOException {
     System.out.println(
-        "Test (77): Upload pdf to one facet and link to another; verify download"
-            + " button enabled for pdf facet only, disabled when link-facet item selected");
+        "Test (77) : Upload attachment in draft, rename changing extension before save across all facets - should return extension change warning");
 
-    // Step 1: Create entity
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (response.equals("Could not create entity")) {
-      fail("Could not create entity");
-      return;
-    }
-    String testEntityID = response;
-
-    ClassLoader classLoader = getClass().getClassLoader();
-
-    // Step 2: Upload pdf to facet[0] (attachments)
-    Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", testEntityID);
-    postData.put("mimeType", "application/pdf");
-    postData.put("createdAt", new Date().toString());
-    postData.put("createdBy", "test@test.com");
-    postData.put("modifiedBy", "test@test.com");
-
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
-    List<String> createResponse =
-        api.createAttachment(
-            appUrl, entityName, facet[0], testEntityID, srvpath, postData, pdfFile);
-    if (!createResponse.get(0).equals("Attachment created")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not upload pdf to facet: " + facet[0]);
-      return;
-    }
-    String pdfAttachmentID = createResponse.get(1);
-
-    // Step 3: Create a link in facet[1] (references)
-    String linkResponse =
-        api.createLink(
-            appUrl, entityName, facet[1], testEntityID, "TestLink", "https://www.example.com");
-    if (!linkResponse.equals("Link created successfully")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not create link in facet: " + facet[1]);
-      return;
-    }
-
-    // Step 4: Save entity
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
-    if (!response.equals("Saved")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not save entity draft: " + response);
-      return;
-    }
-
-    // Fetch link attachment ID from facet[1] metadata
-    List<Map<String, Object>> facet1Attachments =
-        api.fetchEntityMetadata(appUrl, entityName, facet[1], testEntityID);
-    String linkAttachmentID =
-        facet1Attachments.stream()
-            .filter(
-                a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
-            .map(a -> (String) a.get("ID"))
-            .findFirst()
-            .orElse(null);
-    if (linkAttachmentID == null) {
-      api.deleteEntity(appUrl, entityName, testEntityID);
-      fail("Could not find link attachment in facet: " + facet[1]);
-      return;
-    }
-
-    // Step 5: Download pdf from facet[0] - Download button should be enabled
-    String pdfOnlyResult =
-        api.downloadSelectedAttachments(
-            appUrl, entityName, facet[0], testEntityID, List.of(pdfAttachmentID));
-    JSONArray pdfOnlyArray = new JSONArray(pdfOnlyResult);
-    assertEquals(1, pdfOnlyArray.length(), "Expected 1 result for pdf download from " + facet[0]);
-    assertEquals(
-        "success",
-        pdfOnlyArray.getJSONObject(0).getString("status"),
-        "Download button should be enabled: pdf in " + facet[0] + " should download successfully");
-
-    // Step 6: Attempt to download link from facet[1] - Download button should be disabled
-    String linkResult =
-        api.downloadSelectedAttachments(
-            appUrl, entityName, facet[1], testEntityID, List.of(linkAttachmentID));
-    JSONArray linkArray = new JSONArray(linkResult);
-    assertEquals(
-        1, linkArray.length(), "Expected 1 result for link download attempt from " + facet[1]);
-    JSONObject linkItem = linkArray.getJSONObject(0);
-    assertEquals(
-        "error",
-        linkItem.getString("status"),
-        "Download button should be disabled: link in " + facet[1] + " should return error");
-    assertEquals(
-        "Download is not supported for link attachments",
-        linkItem.getString("message"),
-        "Error message for link download in " + facet[1] + " should match");
-
-    // Clean up
-    api.deleteEntity(appUrl, entityName, testEntityID);
-  }
-
-  @Test
-  @Order(78)
-  void testDownloadAttachmentsAcrossMultipleFacetsInDraftState() throws IOException {
-    System.out.println(
-        "Test (78): Create entity in draft state, upload attachments to each"
-            + " facet, download before saving");
-
-    // Step 1: Create entity draft (do NOT save)
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (response.equals("Could not create entity")) {
-      fail("Could not create entity");
-      return;
-    }
-    String draftEntityID = response;
-
-    ClassLoader classLoader = getClass().getClassLoader();
-    Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", draftEntityID);
-    postData.put("createdAt", new Date().toString());
-    postData.put("createdBy", "test@test.com");
-    postData.put("modifiedBy", "test@test.com");
-    postData.put("mimeType", "application/pdf");
-
-    // Step 2: Upload one pdf to each of the 3 facets (entity stays in draft state)
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
-    String[] draftFacetAttachmentIDs = new String[facet.length];
     for (int i = 0; i < facet.length; i++) {
-      List<String> createResp =
-          api.createAttachment(
-              appUrl, entityName, facet[i], draftEntityID, srvpath, postData, pdfFile);
-      if (!createResp.get(0).equals("Attachment created")) {
-        api.deleteEntityDraft(appUrl, entityName, draftEntityID);
-        fail("Could not upload pdf to facet in draft state: " + facet[i]);
-        return;
+      // Step 1: Create a new entity draft (do NOT save it yet)
+      String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+      if (newEntityID.equals("Could not create entity")) {
+        fail("Could not create entity for facet: " + facet[i]);
       }
-      draftFacetAttachmentIDs[i] = createResp.get(1);
-    }
 
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
+      // Step 2: Upload a PDF attachment while entity is still in draft (unsaved)
+      ClassLoader classLoader = getClass().getClassLoader();
+      File file = new File(classLoader.getResource("sample.pdf").getFile());
 
-    // Helper: call draft download for a specific facet and attachment list
-    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
-        (facetAndId, ids) -> {
-          String[] parts = facetAndId.split("\\|");
-          String facetName = parts[0];
-          String firstId = parts[1];
-          String url =
-              "https://"
-                  + appUrl
-                  + "/odata/v4/"
-                  + srvpath
-                  + "/"
-                  + entityName
-                  + "(ID="
-                  + draftEntityID
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + facetName
-                  + "(up__ID="
-                  + draftEntityID
-                  + ",ID="
-                  + firstId
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + srvpath
-                  + ".downloadSelectedAttachments";
-          String idsParam = String.join(",", ids);
-          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
-          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
-          Request req =
-              new Request.Builder()
-                  .url(url)
-                  .post(body)
-                  .addHeader("Authorization", "Bearer " + token)
-                  .build();
-          try (Response resp = client.newCall(req).execute()) {
-            if (!resp.isSuccessful()) {
-              throw new RuntimeException(
-                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
-            }
-            String respBody = resp.body().string();
-            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
-            if (responseMap.containsKey("value")) {
-              return responseMap.get("value").toString();
-            }
-            return respBody;
-          } catch (IOException e) {
-            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
-          }
-        };
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", newEntityID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
 
-    // Step 3: Verify download works from each facet in draft state
-    for (int i = 0; i < facet.length; i++) {
-      String key = facet[i] + "|" + draftFacetAttachmentIDs[i];
-      String downloadResult = callDraftDownload.apply(key, List.of(draftFacetAttachmentIDs[i]));
-      JSONArray resultArray = new JSONArray(downloadResult);
-      assertEquals(
-          1, resultArray.length(), "Expected 1 result from facet in draft state: " + facet[i]);
-      JSONObject result = resultArray.getJSONObject(0);
-      assertEquals(
-          "success",
-          result.getString("status"),
-          "Download should succeed in draft state for facet: " + facet[i]);
+      String facetAttachmentID =
+          CreateandReturnFacetID(
+              appUrl, serviceName, entityName, facet[i], newEntityID, postData, file);
+      if (facetAttachmentID == null) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not upload sample.pdf to facet: " + facet[i]);
+      }
+
+      // Step 3: Rename the attachment changing extension from .pdf to .txt — entity still not saved
+      String renameResponse =
+          api.renameAttachment(
+              appUrl, entityName, facet[i], newEntityID, facetAttachmentID, "renamed_document.txt");
+      if (!"Renamed".equals(renameResponse)) {
+        api.deleteEntityDraft(appUrl, entityName, newEntityID);
+        fail("Could not rename attachment on facet " + facet[i] + ": " + renameResponse);
+      }
+
+      // Step 4: Save — should receive extension change warning, not "Saved"
+      String saveWithWarningResponse =
+          api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      assertNotNull(saveWithWarningResponse, "Response should not be null for facet: " + facet[i]);
+
+      String expectedMessage =
+          "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+      com.fasterxml.jackson.databind.JsonNode messagesNode =
+          new ObjectMapper().readTree(saveWithWarningResponse);
       assertTrue(
-          result.has("content"),
-          "Downloaded attachment in draft facet " + facet[i] + " should have a content field");
-    }
+          messagesNode.isArray(),
+          "sap-messages response should be a JSON array for facet: " + facet[i]);
 
-    // Clean up - entity was never saved, so delete the draft
-    api.deleteEntityDraft(appUrl, entityName, draftEntityID);
-  }
-
-  @Test
-  @Order(79)
-  void testDownloadButtonWithPdfAndLinkAcrossFacetsInDraftState() throws IOException {
-    System.out.println(
-        "Test (79): Upload pdf to one facet and link to another, save entity, edit"
-            + " (draft state), verify download button enabled for pdf facet, disabled for link"
-            + " facet");
-
-    // Step 1: Create entity draft
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
-    if (response.equals("Could not create entity")) {
-      fail("Could not create entity");
-      return;
-    }
-    String testEntityID = response;
-
-    ClassLoader classLoader = getClass().getClassLoader();
-
-    // Step 2: Upload pdf to facet[0] (attachments)
-    Map<String, Object> postData = new HashMap<>();
-    postData.put("up__ID", testEntityID);
-    postData.put("mimeType", "application/pdf");
-    postData.put("createdAt", new Date().toString());
-    postData.put("createdBy", "test@test.com");
-    postData.put("modifiedBy", "test@test.com");
-
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
-    List<String> createResponse =
-        api.createAttachment(
-            appUrl, entityName, facet[0], testEntityID, srvpath, postData, pdfFile);
-    if (!createResponse.get(0).equals("Attachment created")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not upload pdf to facet: " + facet[0]);
-      return;
-    }
-    String pdfAttachmentID = createResponse.get(1);
-
-    // Step 3: Create a link in facet[1] (references)
-    String linkResponse =
-        api.createLink(
-            appUrl, entityName, facet[1], testEntityID, "TestLink", "https://www.example.com");
-    if (!linkResponse.equals("Link created successfully")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not create link in facet: " + facet[1]);
-      return;
-    }
-
-    // Fetch link attachment ID from draft metadata of facet[1]
-    List<Map<String, Object>> draftFacet1Attachments =
-        api.fetchEntityMetadataDraft(appUrl, entityName, facet[1], testEntityID);
-    String linkAttachmentID =
-        draftFacet1Attachments.stream()
-            .filter(
-                a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
-            .map(a -> (String) a.get("ID"))
-            .findFirst()
-            .orElse(null);
-    if (linkAttachmentID == null) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not find link attachment in draft facet: " + facet[1]);
-      return;
-    }
-
-    // Step 4: Save entity
-    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
-    if (!response.equals("Saved")) {
-      api.deleteEntityDraft(appUrl, entityName, testEntityID);
-      fail("Could not save entity draft: " + response);
-      return;
-    }
-
-    // Step 5: Edit entity - puts it back into draft state
-    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, testEntityID);
-    if (!editResponse.equals("Entity in draft mode")) {
-      api.deleteEntity(appUrl, entityName, testEntityID);
-      fail("Could not put entity into edit/draft mode: " + editResponse);
-      return;
-    }
-
-    // Inline draft download helper (IsActiveEntity=false)
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
-
-    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
-        (facetAndId, ids) -> {
-          String[] parts = facetAndId.split("\\|");
-          String facetName = parts[0];
-          String firstId = parts[1];
-          String url =
-              "https://"
-                  + appUrl
-                  + "/odata/v4/"
-                  + srvpath
-                  + "/"
-                  + entityName
-                  + "(ID="
-                  + testEntityID
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + facetName
-                  + "(up__ID="
-                  + testEntityID
-                  + ",ID="
-                  + firstId
-                  + ",IsActiveEntity=false)"
-                  + "/"
-                  + srvpath
-                  + ".downloadSelectedAttachments";
-          String idsParam = String.join(",", ids);
-          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
-          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
-          Request req =
-              new Request.Builder()
-                  .url(url)
-                  .post(body)
-                  .addHeader("Authorization", "Bearer " + token)
-                  .build();
-          try (Response resp = client.newCall(req).execute()) {
-            if (!resp.isSuccessful()) {
-              throw new RuntimeException(
-                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
-            }
-            String respBody = resp.body().string();
-            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
-            if (responseMap.containsKey("value")) {
-              return responseMap.get("value").toString();
-            }
-            return respBody;
-          } catch (IOException e) {
-            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
+      boolean foundExtensionError = false;
+      for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+        if (messageNode.has("message")) {
+          String message = messageNode.get("message").asText();
+          if (message.contains("Changing the file extension is not allowed")) {
+            foundExtensionError = true;
+            assertEquals(
+                expectedMessage,
+                message,
+                "Extension change error message does not match for facet: " + facet[i]);
+            break;
           }
-        };
+        }
+      }
 
-    // Step 6: Select pdf from facet[0] in draft state - Download button should be enabled
-    String pdfOnlyResult =
-        callDraftDownload.apply(facet[0] + "|" + pdfAttachmentID, List.of(pdfAttachmentID));
-    JSONArray pdfOnlyArray = new JSONArray(pdfOnlyResult);
-    assertEquals(
-        1,
-        pdfOnlyArray.length(),
-        "Expected 1 result for pdf download from " + facet[0] + " in draft state");
-    assertEquals(
-        "success",
-        pdfOnlyArray.getJSONObject(0).getString("status"),
-        "Download button should be enabled in draft state: pdf in " + facet[0] + " should succeed");
+      assertTrue(
+          foundExtensionError,
+          "Expected extension change warning not found for facet: "
+              + facet[i]
+              + ". Full response: "
+              + saveWithWarningResponse);
 
-    // Step 7: Select link from facet[1] in draft state - Download button should be disabled
-    String linkOnlyResult =
-        callDraftDownload.apply(facet[1] + "|" + linkAttachmentID, List.of(linkAttachmentID));
-    JSONArray linkOnlyArray = new JSONArray(linkOnlyResult);
-    assertEquals(
-        1,
-        linkOnlyArray.length(),
-        "Expected 1 result for link download attempt from " + facet[1] + " in draft state");
-    JSONObject linkItem = linkOnlyArray.getJSONObject(0);
-    assertEquals(
-        "error",
-        linkItem.getString("status"),
-        "Download button should be disabled in draft state: link in "
-            + facet[1]
-            + " should return error");
-    assertEquals(
-        "Download is not supported for link attachments",
-        linkItem.getString("message"),
-        "Error message for link download in " + facet[1] + " in draft state should match");
-
-    // Clean up
-    api.deleteEntity(appUrl, entityName, testEntityID);
+      // Clean up
+      api.deleteEntity(appUrl, entityName, newEntityID);
+    }
   }
 
   // @Test
-  // @Order(76)
+  // @Order(77)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
   //   System.out.println(
   //       "Test (76) : Upload attachment exceeding maximum file size in references facet");
