@@ -7133,10 +7133,14 @@ class IntegrationTest_MultipleFacet {
 
     List<String> multiIDs = new ArrayList<>();
     multiIDs.add(facetAttachmentIDs[0]);
+    File[] extraFiles = {
+      new File(classLoader.getResource("sample1.pdf").getFile()),
+      new File(classLoader.getResource("sample2.pdf").getFile())
+    };
     for (int i = 0; i < 2; i++) {
       List<String> extraResp =
           api.createAttachment(
-              appUrl, entityName, facet[0], downloadTestEntityID, srvpath, postData, pdfFile);
+              appUrl, entityName, facet[0], downloadTestEntityID, srvpath, postData, extraFiles[i]);
       if (!extraResp.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
         fail("Could not upload extra attachment to facet: " + facet[0]);
