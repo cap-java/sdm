@@ -7128,7 +7128,11 @@ class IntegrationTest_SingleFacet {
     // (link attachment returns error status, disabling the download)
     String mixedResult =
         api.downloadSelectedAttachmentsDraft(
-            appUrl, entityName, facetName, testEntityID, List.of(pdfAttachmentID, linkAttachmentID));
+            appUrl,
+            entityName,
+            facetName,
+            testEntityID,
+            List.of(pdfAttachmentID, linkAttachmentID));
     JSONArray mixedArray = new JSONArray(mixedResult);
     assertEquals(2, mixedArray.length(), "Expected 2 results when pdf and link are selected");
 
