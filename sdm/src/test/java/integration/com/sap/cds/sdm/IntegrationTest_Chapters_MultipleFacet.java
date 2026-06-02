@@ -6950,7 +6950,9 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
 
     ClassLoader classLoader = getClass().getClassLoader();
+    File origPdfFile = new File(classLoader.getResource("sample.pdf").getFile());
     Map<String, String> facetPdfId = new HashMap<>();
+    int facetIdx = 0;
     for (String facetName : facet) {
       Map<String, Object> postData = new HashMap<>();
       postData.put("up__ID", testChapterID);
@@ -6959,16 +6961,19 @@ class IntegrationTest_Chapters_MultipleFacet {
       postData.put("createdBy", "test@test.com");
       postData.put("modifiedBy", "test@test.com");
 
-      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      File tempPdf = File.createTempFile("sample_ch_link_" + facetIdx + "_", ".pdf");
+      Files.copy(origPdfFile.toPath(), tempPdf.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> pdfResponse =
           api.createAttachment(
-              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, tempPdf);
+      tempPdf.delete();
       if (!pdfResponse.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
         fail("Could not upload pdf for facet " + facetName);
         return;
       }
       facetPdfId.put(facetName, pdfResponse.get(1));
+      facetIdx++;
 
       String linkResp =
           api.createLink(

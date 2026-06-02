@@ -7302,12 +7302,15 @@ class IntegrationTest_MultipleFacet {
     postData.put("mimeType", "application/pdf");
 
     // Step 2: Upload one pdf to each of the 3 facets (entity stays in draft state)
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    File origPdfFile = new File(classLoader.getResource("sample.pdf").getFile());
     String[] draftFacetAttachmentIDs = new String[facet.length];
     for (int i = 0; i < facet.length; i++) {
+      File tempFacetFile = File.createTempFile("sample_mf_draft_facet" + i + "_", ".pdf");
+      Files.copy(origPdfFile.toPath(), tempFacetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       List<String> createResp =
           api.createAttachment(
-              appUrl, entityName, facet[i], draftEntityID, srvpath, postData, pdfFile);
+              appUrl, entityName, facet[i], draftEntityID, srvpath, postData, tempFacetFile);
+      tempFacetFile.delete();
       if (!createResp.get(0).equals("Attachment created")) {
         api.deleteEntityDraft(appUrl, entityName, draftEntityID);
         fail("Could not upload pdf to facet in draft state: " + facet[i]);
@@ -7364,10 +7367,13 @@ class IntegrationTest_MultipleFacet {
     postData.put("createdBy", "test@test.com");
     postData.put("modifiedBy", "test@test.com");
 
-    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    File origPdf = new File(classLoader.getResource("sample.pdf").getFile());
+    File tempPdf = File.createTempFile("sample_mf_draftlink_", ".pdf");
+    Files.copy(origPdf.toPath(), tempPdf.toPath(), StandardCopyOption.REPLACE_EXISTING);
     List<String> createResponse =
         api.createAttachment(
-            appUrl, entityName, facet[0], testEntityID, srvpath, postData, pdfFile);
+            appUrl, entityName, facet[0], testEntityID, srvpath, postData, tempPdf);
+    tempPdf.delete();
     if (!createResponse.get(0).equals("Attachment created")) {
       api.deleteEntityDraft(appUrl, entityName, testEntityID);
       fail("Could not upload pdf to facet: " + facet[0]);
