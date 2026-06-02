@@ -6616,6 +6616,180 @@ class IntegrationTest_SingleFacet {
     }
   }
 
+  @Test
+  @Order(76)
+  void testRenameAttachmentWithExtensionChange() throws IOException {
+    System.out.println(
+        "Test (76) : Rename attachment changing extension from .pdf to .txt - should return extension change warning");
+
+    // Step 1: Create a new entity
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (newEntityID.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+    String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!saveResponse.equals("Saved")) {
+      fail("Could not save new entity: " + saveResponse);
+    }
+
+    // Step 2: Upload a PDF attachment
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", newEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (editResponse != "Entity in draft mode") {
+      fail("Could not put entity in draft mode for PDF upload");
+    }
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, newEntityID, srvpath, postData, file);
+    String check = createResponse.get(0);
+    if (!check.equals("Attachment created")) {
+      fail("Could not upload sample.pdf: " + check);
+    }
+    String newAttachmentID = createResponse.get(1);
+
+    // Step 3: Save the entity
+    String savedAfterUpload = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (!savedAfterUpload.equals("Saved")) {
+      fail("Could not save entity after PDF upload: " + savedAfterUpload);
+    }
+
+    // Step 4: Edit the entity
+    String editDraftResponse = api.editEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    if (editDraftResponse != "Entity in draft mode") {
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not put entity in draft mode for rename");
+    }
+
+    // Step 5: Rename the attachment changing the extension from .pdf to .txt
+    String renameResponse =
+        api.renameAttachment(
+            appUrl, entityName, facetName, newEntityID, newAttachmentID, "renamed_document.txt");
+    if (!renameResponse.equals("Renamed")) {
+      api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+      api.deleteEntity(appUrl, entityName, newEntityID);
+      fail("Could not rename attachment: " + renameResponse);
+    }
+
+    // Step 6: Save and validate the extension change error message
+    String saveWithWarningResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertNotNull(saveWithWarningResponse, "Response should not be null");
+
+    String expectedMessage =
+        "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+    com.fasterxml.jackson.databind.JsonNode messagesNode =
+        new ObjectMapper().readTree(saveWithWarningResponse);
+    assertTrue(messagesNode.isArray(), "sap-messages response should be a JSON array");
+
+    boolean foundExtensionError = false;
+    for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+      if (messageNode.has("message")) {
+        String message = messageNode.get("message").asText();
+        if (message.contains("Changing the file extension is not allowed")) {
+          foundExtensionError = true;
+          assertEquals(
+              expectedMessage,
+              message,
+              "Extension change error message does not match expected value");
+          break;
+        }
+      }
+    }
+
+    assertTrue(
+        foundExtensionError,
+        "Expected extension change warning not found in response. Full response: "
+            + saveWithWarningResponse);
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, newEntityID);
+  }
+
+  @Test
+  @Order(77)
+  void testRenameAttachmentWithExtensionChange_WhileUpload() throws IOException {
+    System.out.println(
+        "Test (77) : Upload attachment in draft, rename changing extension before save - should return extension change warning");
+
+    // Step 1: Create a new entity draft (do NOT save it yet)
+    String newEntityID = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (newEntityID.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+
+    // Step 2: Upload a PDF attachment while entity is still in draft (unsaved)
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", newEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, newEntityID, srvpath, postData, file);
+    String check = createResponse.get(0);
+    if (!check.equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, newEntityID);
+      fail("Could not upload sample.pdf: " + check);
+    }
+    String newAttachmentID = createResponse.get(1);
+
+    // Step 3: Rename the attachment changing extension from .pdf to .txt — entity still not saved
+    String renameResponse =
+        api.renameAttachment(
+            appUrl, entityName, facetName, newEntityID, newAttachmentID, "renamed_document.txt");
+    if (!renameResponse.equals("Renamed")) {
+      api.deleteEntityDraft(appUrl, entityName, newEntityID);
+      fail("Could not rename attachment: " + renameResponse);
+    }
+
+    // Step 4: Save — should receive extension change warning, not "Saved"
+    String saveWithWarningResponse = api.saveEntityDraft(appUrl, entityName, srvpath, newEntityID);
+    assertNotNull(saveWithWarningResponse, "Response should not be null");
+
+    String expectedMessage =
+        "Changing the file extension is not allowed. The file \"renamed_document.txt\" must retain its original extension \".pdf\".";
+
+    com.fasterxml.jackson.databind.JsonNode messagesNode =
+        new ObjectMapper().readTree(saveWithWarningResponse);
+    assertTrue(messagesNode.isArray(), "sap-messages response should be a JSON array");
+
+    boolean foundExtensionError = false;
+    for (com.fasterxml.jackson.databind.JsonNode messageNode : messagesNode) {
+      if (messageNode.has("message")) {
+        String message = messageNode.get("message").asText();
+        if (message.contains("Changing the file extension is not allowed")) {
+          foundExtensionError = true;
+          assertEquals(
+              expectedMessage,
+              message,
+              "Extension change error message does not match expected value");
+          break;
+        }
+      }
+    }
+
+    assertTrue(
+        foundExtensionError,
+        "Expected extension change warning not found in response. Full response: "
+            + saveWithWarningResponse);
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, newEntityID);
+  }
+
   // @Test
   // @Order(78)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
