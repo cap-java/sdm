@@ -6765,112 +6765,35 @@ class IntegrationTest_Chapters_MultipleFacet {
       facetAttachmentIds.put(facetName, ids);
     }
 
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
-
     for (String facetName : facet) {
       List<String> ids = facetAttachmentIds.get(facetName);
-      String baseUrl =
-          "https://"
-              + appUrl
-              + "/odata/v4/"
-              + srvpath
-              + "/"
-              + chapterEntityName
-              + "(ID="
-              + draftChapterID
-              + ",IsActiveEntity=false)"
-              + "/"
-              + facetName
-              + "(up__ID="
-              + draftChapterID
-              + ",ID="
-              + ids.get(0)
-              + ",IsActiveEntity=false)"
-              + "/"
-              + srvpath
-              + ".downloadSelectedAttachments";
 
-      RequestBody singleBody =
-          RequestBody.create(
-              MediaType.parse("application/json"), "{\"ids\": \"" + ids.get(0) + "\"}");
-      Request singleReq =
-          new Request.Builder()
-              .url(baseUrl)
-              .post(singleBody)
-              .addHeader("Authorization", "Bearer " + token)
-              .build();
-      try (Response resp = client.newCall(singleReq).execute()) {
-        if (!resp.isSuccessful()) {
-          api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
-          fail(
-              "Single draft download failed for facet "
-                  + facetName
-                  + ": "
-                  + resp.code()
-                  + " - "
-                  + resp.body().string());
-          return;
-        }
-        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
-        String result =
-            responseMap.containsKey("value")
-                ? responseMap.get("value").toString()
-                : responseMap.toString();
-        JSONArray singleArray = new JSONArray(result);
-        assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+      String singleResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, draftChapterID, List.of(ids.get(0)));
+      JSONArray singleArray = new JSONArray(singleResult);
+      assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+      assertEquals(
+          "success",
+          singleArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled in draft state for facet " + facetName);
+      assertTrue(
+          singleArray.getJSONObject(0).has("content"),
+          "Attachment should have content field for facet " + facetName);
+
+      String multiResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, draftChapterID, ids);
+      JSONArray multiArray = new JSONArray(multiResult);
+      assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
+      for (int j = 0; j < multiArray.length(); j++) {
         assertEquals(
             "success",
-            singleArray.getJSONObject(0).getString("status"),
-            "Download button should be enabled in draft state for facet " + facetName);
+            multiArray.getJSONObject(j).getString("status"),
+            "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
         assertTrue(
-            singleArray.getJSONObject(0).has("content"),
-            "Attachment should have content field for facet " + facetName);
-      }
-
-      String multiIdsParam = String.join(",", ids);
-      RequestBody multiBody =
-          RequestBody.create(
-              MediaType.parse("application/json"), "{\"ids\": \"" + multiIdsParam + "\"}");
-      Request multiReq =
-          new Request.Builder()
-              .url(baseUrl)
-              .post(multiBody)
-              .addHeader("Authorization", "Bearer " + token)
-              .build();
-      try (Response resp = client.newCall(multiReq).execute()) {
-        if (!resp.isSuccessful()) {
-          api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
-          fail(
-              "Multi draft download failed for facet "
-                  + facetName
-                  + ": "
-                  + resp.code()
-                  + " - "
-                  + resp.body().string());
-          return;
-        }
-        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
-        String result =
-            responseMap.containsKey("value")
-                ? responseMap.get("value").toString()
-                : responseMap.toString();
-        JSONArray multiArray = new JSONArray(result);
-        assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
-        for (int j = 0; j < multiArray.length(); j++) {
-          assertEquals(
-              "success",
-              multiArray.getJSONObject(j).getString("status"),
-              "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
-          assertTrue(
-              multiArray.getJSONObject(j).has("content"),
-              "Attachment " + (j + 1) + " should have content field for facet " + facetName);
-        }
+            multiArray.getJSONObject(j).has("content"),
+            "Attachment " + (j + 1) + " should have content field for facet " + facetName);
       }
     }
 
@@ -6964,119 +6887,43 @@ class IntegrationTest_Chapters_MultipleFacet {
       return;
     }
 
-    OkHttpClient client =
-        new OkHttpClient.Builder()
-            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    ObjectMapper objectMapper = new ObjectMapper();
-
     for (String facetName : facet) {
       String pdfId = facetPdfId.get(facetName);
       String linkId = facetLinkId.get(facetName);
-      String baseUrl =
-          "https://"
-              + appUrl
-              + "/odata/v4/"
-              + srvpath
-              + "/"
-              + chapterEntityName
-              + "(ID="
-              + testChapterID
-              + ",IsActiveEntity=false)"
-              + "/"
-              + facetName
-              + "(up__ID="
-              + testChapterID
-              + ",ID="
-              + pdfId
-              + ",IsActiveEntity=false)"
-              + "/"
-              + srvpath
-              + ".downloadSelectedAttachments";
 
-      RequestBody pdfBody =
-          RequestBody.create(MediaType.parse("application/json"), "{\"ids\": \"" + pdfId + "\"}");
-      Request pdfReq =
-          new Request.Builder()
-              .url(baseUrl)
-              .post(pdfBody)
-              .addHeader("Authorization", "Bearer " + token)
-              .build();
-      try (Response resp = client.newCall(pdfReq).execute()) {
-        if (!resp.isSuccessful()) {
-          api.deleteEntity(appUrl, bookEntityName, testBookID);
-          fail(
-              "PDF-only draft download failed for facet "
-                  + facetName
-                  + ": "
-                  + resp.code()
-                  + " - "
-                  + resp.body().string());
-          return;
-        }
-        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
-        String result =
-            responseMap.containsKey("value")
-                ? responseMap.get("value").toString()
-                : responseMap.toString();
-        JSONArray pdfArray = new JSONArray(result);
-        assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
-        assertEquals(
-            "success",
-            pdfArray.getJSONObject(0).getString("status"),
-            "Download button should be enabled for pdf in draft state, facet " + facetName);
-      }
+      String pdfResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId));
+      JSONArray pdfArray = new JSONArray(pdfResult);
+      assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
+      assertEquals(
+          "success",
+          pdfArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled for pdf in draft state, facet " + facetName);
 
-      String mixedIdsParam = pdfId + "," + linkId;
-      RequestBody mixedBody =
-          RequestBody.create(
-              MediaType.parse("application/json"), "{\"ids\": \"" + mixedIdsParam + "\"}");
-      Request mixedReq =
-          new Request.Builder()
-              .url(baseUrl)
-              .post(mixedBody)
-              .addHeader("Authorization", "Bearer " + token)
-              .build();
-      try (Response resp = client.newCall(mixedReq).execute()) {
-        if (!resp.isSuccessful()) {
-          api.deleteEntity(appUrl, bookEntityName, testBookID);
-          fail(
-              "Mixed draft download failed for facet "
-                  + facetName
-                  + ": "
-                  + resp.code()
-                  + " - "
-                  + resp.body().string());
-          return;
+      String mixedResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId, linkId));
+      JSONArray mixedArray = new JSONArray(mixedResult);
+      assertEquals(
+          2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
+      JSONObject linkResult = null;
+      for (int j = 0; j < mixedArray.length(); j++) {
+        JSONObject item = mixedArray.getJSONObject(j);
+        if (linkId.equals(item.getString("id"))) {
+          linkResult = item;
+          break;
         }
-        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
-        String result =
-            responseMap.containsKey("value")
-                ? responseMap.get("value").toString()
-                : responseMap.toString();
-        JSONArray mixedArray = new JSONArray(result);
-        assertEquals(
-            2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
-        JSONObject linkResult = null;
-        for (int j = 0; j < mixedArray.length(); j++) {
-          JSONObject item = mixedArray.getJSONObject(j);
-          if (linkId.equals(item.getString("id"))) {
-            linkResult = item;
-            break;
-          }
-        }
-        assertNotNull(linkResult, "Link result should be present for facet " + facetName);
-        assertEquals(
-            "error",
-            linkResult.getString("status"),
-            "Download button should be disabled: link should return error for facet " + facetName);
-        assertEquals(
-            "Download is not supported for link attachments",
-            linkResult.getString("message"),
-            "Error message should match for facet " + facetName);
       }
+      assertNotNull(linkResult, "Link result should be present for facet " + facetName);
+      assertEquals(
+          "error",
+          linkResult.getString("status"),
+          "Download button should be disabled: link should return error for facet " + facetName);
+      assertEquals(
+          "Download is not supported for link attachments",
+          linkResult.getString("message"),
+          "Error message should match for facet " + facetName);
     }
 
     api.deleteEntity(appUrl, bookEntityName, testBookID);
