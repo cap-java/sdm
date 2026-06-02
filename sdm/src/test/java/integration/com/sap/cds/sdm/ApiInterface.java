@@ -121,4 +121,8 @@ public interface ApiInterface {
   public Map<String, Object> fetchChangelog(
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
+
+  public String downloadSelectedAttachments(
+      String appUrl, String entityName, String facetName, String entityID, List<String> ids)
+      throws IOException;
 }

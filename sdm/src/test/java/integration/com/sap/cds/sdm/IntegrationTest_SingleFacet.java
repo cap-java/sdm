@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import okhttp3.*;
 import okio.ByteString;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 
@@ -6533,6 +6534,571 @@ class IntegrationTest_SingleFacet {
 
     // Clean up
     api.deleteEntity(appUrl, entityName, newEntityID);
+  }
+
+  @Test
+  @Order(78)
+  void testDownloadMultipleAttachments() throws IOException {
+    System.out.println(
+        "Test (76): Create entity, upload 3 attachments (pdf, txt, exe), and download all");
+    boolean testStatus = false;
+
+    // Step 1: Create entity
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+      return;
+    }
+    String downloadTestEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+
+    // Step 2: Upload pdf, txt, exe in one draft session
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", downloadTestEntityID);
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Upload pdf
+    postData.put("mimeType", "application/pdf");
+    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    List<String> createResponse1 =
+        api.createAttachment(
+            appUrl, entityName, facetName, downloadTestEntityID, srvpath, postData, pdfFile);
+    if (!createResponse1.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
+      fail("Could not upload sample.pdf");
+      return;
+    }
+    String downloadAttachmentID1 = createResponse1.get(1);
+
+    // Upload txt
+    postData.put("mimeType", "application/txt");
+    File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+    List<String> createResponse2 =
+        api.createAttachment(
+            appUrl, entityName, facetName, downloadTestEntityID, srvpath, postData, txtFile);
+    if (!createResponse2.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
+      fail("Could not upload sample.txt");
+      return;
+    }
+    String downloadAttachmentID2 = createResponse2.get(1);
+
+    // Upload exe
+    postData.put("mimeType", "application/exe");
+    File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+    List<String> createResponse3 =
+        api.createAttachment(
+            appUrl, entityName, facetName, downloadTestEntityID, srvpath, postData, exeFile);
+    if (!createResponse3.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
+      fail("Could not upload sample.exe");
+      return;
+    }
+    String downloadAttachmentID3 = createResponse3.get(1);
+
+    // Step 3: Save entity draft
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, downloadTestEntityID);
+    if (!response.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, entityName, downloadTestEntityID);
+      fail("Could not save entity draft: " + response);
+      return;
+    }
+
+    // Step 4: Select first attachment - Download button should be enabled
+    // Verify download works with a single attachment selection
+    String singleDownloadResult =
+        api.downloadSelectedAttachments(
+            appUrl, entityName, facetName, downloadTestEntityID, List.of(downloadAttachmentID1));
+    JSONArray singleResultArray = new JSONArray(singleDownloadResult);
+    assertEquals(1, singleResultArray.length(), "Expected 1 result in download response");
+    JSONObject singleResult = singleResultArray.getJSONObject(0);
+    assertEquals(
+        "success",
+        singleResult.getString("status"),
+        "Download button should be enabled: single attachment download should succeed");
+    assertTrue(singleResult.has("content"), "Downloaded attachment should have a content field");
+
+    // Step 5: Select all 3 and click download
+    String multiDownloadResult =
+        api.downloadSelectedAttachments(
+            appUrl,
+            entityName,
+            facetName,
+            downloadTestEntityID,
+            List.of(downloadAttachmentID1, downloadAttachmentID2, downloadAttachmentID3));
+    JSONArray multiResultArray = new JSONArray(multiDownloadResult);
+    assertEquals(3, multiResultArray.length(), "Expected 3 results in download response");
+    for (int i = 0; i < multiResultArray.length(); i++) {
+      JSONObject result = multiResultArray.getJSONObject(i);
+      assertEquals(
+          "success",
+          result.getString("status"),
+          "Attachment " + (i + 1) + " should download successfully");
+      assertTrue(
+          result.has("content"),
+          "Attachment " + (i + 1) + " should have a content field in the response");
+    }
+    testStatus = true;
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, downloadTestEntityID);
+
+    if (!testStatus) {
+      fail("Multiple attachment download test failed");
+    }
+  }
+
+  @Test
+  @Order(79)
+  void testDownloadButtonDisabledWhenLinkSelected() throws IOException {
+    System.out.println(
+        "Test (77): Download button enabled for pdf only; disabled when link is also selected");
+
+    // Step 1: Create entity (already in draft mode)
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+      return;
+    }
+    String testEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+
+    // Step 2: Upload one pdf attachment (entity is already in draft mode)
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, testEntityID, srvpath, postData, pdfFile);
+    if (!createResponse.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not upload sample.pdf");
+      return;
+    }
+    String pdfAttachmentID = createResponse.get(1);
+
+    // Step 3: Create a link attachment (entity still in draft mode)
+    String linkResponse =
+        api.createLink(
+            appUrl, entityName, facetName, testEntityID, "TestLink", "https://www.example.com");
+    if (!linkResponse.equals("Link created successfully")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not create link attachment");
+      return;
+    }
+
+    // Save entity draft
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    if (!response.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not save entity draft: " + response);
+      return;
+    }
+
+    // Fetch metadata to find the link attachment ID (mimeType = "application/internet-shortcut")
+    List<Map<String, Object>> allAttachments =
+        api.fetchEntityMetadata(appUrl, entityName, facetName, testEntityID);
+    String linkAttachmentID =
+        allAttachments.stream()
+            .filter(
+                a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+            .map(a -> (String) a.get("ID"))
+            .findFirst()
+            .orElse(null);
+    if (linkAttachmentID == null) {
+      api.deleteEntity(appUrl, entityName, testEntityID);
+      fail("Could not find link attachment in entity metadata");
+      return;
+    }
+
+    // Step 4: Select only the pdf - Download button should be enabled (succeeds)
+    String pdfOnlyResult =
+        api.downloadSelectedAttachments(
+            appUrl, entityName, facetName, testEntityID, List.of(pdfAttachmentID));
+    JSONArray pdfOnlyArray = new JSONArray(pdfOnlyResult);
+    assertEquals(1, pdfOnlyArray.length(), "Expected 1 result when only pdf is selected");
+    assertEquals(
+        "success",
+        pdfOnlyArray.getJSONObject(0).getString("status"),
+        "Download button should be enabled: pdf-only download should succeed");
+
+    // Step 5: Select both pdf and link - Download button should be disabled
+    // (link attachment returns error status, disabling the download)
+    String mixedResult =
+        api.downloadSelectedAttachments(
+            appUrl,
+            entityName,
+            facetName,
+            testEntityID,
+            List.of(pdfAttachmentID, linkAttachmentID));
+    JSONArray mixedArray = new JSONArray(mixedResult);
+    assertEquals(2, mixedArray.length(), "Expected 2 results when pdf and link are selected");
+
+    // Find the result for the link attachment and assert it has error status
+    JSONObject linkResult = null;
+    for (int i = 0; i < mixedArray.length(); i++) {
+      JSONObject item = mixedArray.getJSONObject(i);
+      if (linkAttachmentID.equals(item.getString("id"))) {
+        linkResult = item;
+        break;
+      }
+    }
+    assertNotNull(linkResult, "Result for link attachment should be present");
+    assertEquals(
+        "error",
+        linkResult.getString("status"),
+        "Download button should be disabled: link attachment download should return error");
+    assertEquals(
+        "Download is not supported for link attachments",
+        linkResult.getString("message"),
+        "Error message for link attachment download should match");
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
+  }
+
+  @Test
+  @Order(80)
+  void testDownloadMultipleAttachmentsInDraftState() throws IOException {
+    System.out.println(
+        "Test (78): Create entity in draft state, upload 3 attachments (pdf, txt, exe), and"
+            + " download before saving");
+    boolean testStatus = false;
+
+    // Step 1: Create entity draft (do NOT save)
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+      return;
+    }
+    String draftEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+
+    // Step 2: Upload pdf, txt, exe while entity remains in draft state
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", draftEntityID);
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    // Upload pdf
+    postData.put("mimeType", "application/pdf");
+    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    List<String> createResponse1 =
+        api.createAttachment(
+            appUrl, entityName, facetName, draftEntityID, srvpath, postData, pdfFile);
+    if (!createResponse1.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, draftEntityID);
+      fail("Could not upload sample.pdf");
+      return;
+    }
+    String draftAttachmentID1 = createResponse1.get(1);
+
+    // Upload txt
+    postData.put("mimeType", "application/txt");
+    File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+    List<String> createResponse2 =
+        api.createAttachment(
+            appUrl, entityName, facetName, draftEntityID, srvpath, postData, txtFile);
+    if (!createResponse2.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, draftEntityID);
+      fail("Could not upload sample.txt");
+      return;
+    }
+    String draftAttachmentID2 = createResponse2.get(1);
+
+    // Upload exe
+    postData.put("mimeType", "application/exe");
+    File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+    List<String> createResponse3 =
+        api.createAttachment(
+            appUrl, entityName, facetName, draftEntityID, srvpath, postData, exeFile);
+    if (!createResponse3.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, draftEntityID);
+      fail("Could not upload sample.exe");
+      return;
+    }
+    String draftAttachmentID3 = createResponse3.get(1);
+
+    OkHttpClient client =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    // Helper: build the draft download URL for a given first attachment ID
+    // IsActiveEntity=false targets the draft entity
+    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
+        (firstId, ids) -> {
+          String url =
+              "https://"
+                  + appUrl
+                  + "/odata/v4/"
+                  + srvpath
+                  + "/"
+                  + entityName
+                  + "(ID="
+                  + draftEntityID
+                  + ",IsActiveEntity=false)"
+                  + "/"
+                  + facetName
+                  + "(up__ID="
+                  + draftEntityID
+                  + ",ID="
+                  + firstId
+                  + ",IsActiveEntity=false)"
+                  + "/"
+                  + srvpath
+                  + ".downloadSelectedAttachments";
+
+          String idsParam = String.join(",", ids);
+          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
+          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
+          Request req =
+              new Request.Builder()
+                  .url(url)
+                  .post(body)
+                  .addHeader("Authorization", "Bearer " + token)
+                  .build();
+          try (Response resp = client.newCall(req).execute()) {
+            if (!resp.isSuccessful()) {
+              throw new RuntimeException(
+                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
+            }
+            String respBody = resp.body().string();
+            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
+            if (responseMap.containsKey("value")) {
+              return responseMap.get("value").toString();
+            }
+            return respBody;
+          } catch (IOException e) {
+            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
+          }
+        };
+
+    // Step 3: Select first attachment - Download button should be enabled even in draft state
+    String singleDownloadResult =
+        callDraftDownload.apply(draftAttachmentID1, List.of(draftAttachmentID1));
+    JSONArray singleResultArray = new JSONArray(singleDownloadResult);
+    assertEquals(1, singleResultArray.length(), "Expected 1 result in download response");
+    JSONObject singleResult = singleResultArray.getJSONObject(0);
+    assertEquals(
+        "success",
+        singleResult.getString("status"),
+        "Download button should be enabled in draft state: single attachment download should"
+            + " succeed");
+    assertTrue(singleResult.has("content"), "Downloaded attachment should have a content field");
+
+    // Step 4: Select all 3 and download while entity is still in draft state
+    String multiDownloadResult =
+        callDraftDownload.apply(
+            draftAttachmentID1,
+            List.of(draftAttachmentID1, draftAttachmentID2, draftAttachmentID3));
+    JSONArray multiResultArray = new JSONArray(multiDownloadResult);
+    assertEquals(3, multiResultArray.length(), "Expected 3 results in download response");
+    for (int i = 0; i < multiResultArray.length(); i++) {
+      JSONObject result = multiResultArray.getJSONObject(i);
+      assertEquals(
+          "success",
+          result.getString("status"),
+          "Attachment " + (i + 1) + " should download successfully in draft state");
+      assertTrue(
+          result.has("content"),
+          "Attachment " + (i + 1) + " should have a content field in the response");
+    }
+    testStatus = true;
+
+    // Clean up - entity was never saved, so delete the draft
+    api.deleteEntityDraft(appUrl, entityName, draftEntityID);
+
+    if (!testStatus) {
+      fail("Multiple attachment download in draft state test failed");
+    }
+  }
+
+  @Test
+  @Order(81)
+  void testDownloadButtonWithPdfAndLinkInDraftState() throws IOException {
+    System.out.println(
+        "Test (79): Upload pdf and link, save entity, edit entity (draft state),"
+            + " download button enabled for pdf only, disabled when link also selected");
+
+    // Step 1: Create entity draft
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+      return;
+    }
+    String testEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+
+    // Step 2: Upload one pdf attachment (entity in draft state)
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, entityName, facetName, testEntityID, srvpath, postData, pdfFile);
+    if (!createResponse.get(0).equals("Attachment created")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not upload sample.pdf");
+      return;
+    }
+    // Capture pdf attachment ID directly from upload response (draft state, reliable)
+    String pdfAttachmentID = createResponse.get(1);
+
+    // Step 3: Create a link attachment (entity still in draft state)
+    String linkResponse =
+        api.createLink(
+            appUrl, entityName, facetName, testEntityID, "TestLink", "https://www.example.com");
+    if (!linkResponse.equals("Link created successfully")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not create link attachment");
+      return;
+    }
+
+    // Fetch link attachment ID from draft metadata while still in draft state
+    List<Map<String, Object>> draftAttachments =
+        api.fetchEntityMetadataDraft(appUrl, entityName, facetName, testEntityID);
+    String linkAttachmentID =
+        draftAttachments.stream()
+            .filter(
+                a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+            .map(a -> (String) a.get("ID"))
+            .findFirst()
+            .orElse(null);
+    if (linkAttachmentID == null) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not find link attachment in draft entity metadata");
+      return;
+    }
+
+    // Step 4: Save entity
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    if (!response.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, entityName, testEntityID);
+      fail("Could not save entity draft: " + response);
+      return;
+    }
+
+    // Step 5: Edit entity - puts it back into draft state
+    String editResponse = api.editEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    if (!editResponse.equals("Entity in draft mode")) {
+      api.deleteEntity(appUrl, entityName, testEntityID);
+      fail("Could not put entity into edit/draft mode: " + editResponse);
+      return;
+    }
+
+    // Inline draft download helper (IsActiveEntity=false)
+    OkHttpClient client =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    java.util.function.BiFunction<String, List<String>, String> callDraftDownload =
+        (firstId, ids) -> {
+          String url =
+              "https://"
+                  + appUrl
+                  + "/odata/v4/"
+                  + srvpath
+                  + "/"
+                  + entityName
+                  + "(ID="
+                  + testEntityID
+                  + ",IsActiveEntity=false)"
+                  + "/"
+                  + facetName
+                  + "(up__ID="
+                  + testEntityID
+                  + ",ID="
+                  + firstId
+                  + ",IsActiveEntity=false)"
+                  + "/"
+                  + srvpath
+                  + ".downloadSelectedAttachments";
+          String idsParam = String.join(",", ids);
+          String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
+          RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
+          Request req =
+              new Request.Builder()
+                  .url(url)
+                  .post(body)
+                  .addHeader("Authorization", "Bearer " + token)
+                  .build();
+          try (Response resp = client.newCall(req).execute()) {
+            if (!resp.isSuccessful()) {
+              throw new RuntimeException(
+                  "Draft download failed: " + resp.code() + " - " + resp.body().string());
+            }
+            String respBody = resp.body().string();
+            Map<?, ?> responseMap = objectMapper.readValue(respBody, Map.class);
+            if (responseMap.containsKey("value")) {
+              return responseMap.get("value").toString();
+            }
+            return respBody;
+          } catch (IOException e) {
+            throw new RuntimeException("Draft download error: " + e.getMessage(), e);
+          }
+        };
+
+    // Step 7: Select only pdf - Download button should be enabled (succeeds)
+    String pdfOnlyResult = callDraftDownload.apply(pdfAttachmentID, List.of(pdfAttachmentID));
+    JSONArray pdfOnlyArray = new JSONArray(pdfOnlyResult);
+    assertEquals(1, pdfOnlyArray.length(), "Expected 1 result when only pdf is selected");
+    assertEquals(
+        "success",
+        pdfOnlyArray.getJSONObject(0).getString("status"),
+        "Download button should be enabled in draft state: pdf-only download should succeed");
+
+    // Step 8: Select pdf + link - Download button should be disabled
+    // (link attachment returns error status, disabling the download)
+    String mixedResult =
+        callDraftDownload.apply(pdfAttachmentID, List.of(pdfAttachmentID, linkAttachmentID));
+    JSONArray mixedArray = new JSONArray(mixedResult);
+    assertEquals(2, mixedArray.length(), "Expected 2 results when pdf and link are selected");
+
+    JSONObject linkResult = null;
+    for (int i = 0; i < mixedArray.length(); i++) {
+      JSONObject item = mixedArray.getJSONObject(i);
+      if (linkAttachmentID.equals(item.getString("id"))) {
+        linkResult = item;
+        break;
+      }
+    }
+    assertNotNull(linkResult, "Result for link attachment should be present");
+    assertEquals(
+        "error",
+        linkResult.getString("status"),
+        "Download button should be disabled in draft state: link attachment should return error");
+    assertEquals(
+        "Download is not supported for link attachments",
+        linkResult.getString("message"),
+        "Error message for link attachment download should match");
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
   }
 
   // @Test

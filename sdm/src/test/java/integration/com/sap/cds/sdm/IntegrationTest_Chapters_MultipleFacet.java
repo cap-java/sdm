@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import okhttp3.*;
 import okio.ByteString;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 
@@ -6573,5 +6574,619 @@ class IntegrationTest_Chapters_MultipleFacet {
       // Clean up
       api.deleteEntity(appUrl, bookEntityName, newBookID);
     }
+  }
+
+  @Test
+  @Order(78)
+  void testDownloadMultipleAttachmentsInDraftState() throws IOException {
+    System.out.println(
+        "Test (76): Create book+chapter, upload pdf/txt/exe per facet in draft state, download"
+            + " before saving");
+
+    String draftBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (draftBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String draftChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, draftBookID);
+    if (draftChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, List<String>> facetAttachmentIds = new HashMap<>();
+    for (String facetName : facet) {
+      List<String> ids = new ArrayList<>();
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", draftChapterID);
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      postData.put("mimeType", "application/pdf");
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> r1 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, pdfFile);
+      if (!r1.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.pdf for facet " + facetName);
+        return;
+      }
+      ids.add(r1.get(1));
+
+      postData.put("mimeType", "application/txt");
+      File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+      List<String> r2 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, txtFile);
+      if (!r2.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.txt for facet " + facetName);
+        return;
+      }
+      ids.add(r2.get(1));
+
+      postData.put("mimeType", "application/exe");
+      File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+      List<String> r3 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, exeFile);
+      if (!r3.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.exe for facet " + facetName);
+        return;
+      }
+      ids.add(r3.get(1));
+      facetAttachmentIds.put(facetName, ids);
+    }
+
+    OkHttpClient client =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    for (String facetName : facet) {
+      List<String> ids = facetAttachmentIds.get(facetName);
+      String baseUrl =
+          "https://"
+              + appUrl
+              + "/odata/v4/"
+              + srvpath
+              + "/"
+              + chapterEntityName
+              + "(ID="
+              + draftChapterID
+              + ",IsActiveEntity=false)"
+              + "/"
+              + facetName
+              + "(up__ID="
+              + draftChapterID
+              + ",ID="
+              + ids.get(0)
+              + ",IsActiveEntity=false)"
+              + "/"
+              + srvpath
+              + ".downloadSelectedAttachments";
+
+      RequestBody singleBody =
+          RequestBody.create(
+              MediaType.parse("application/json"), "{\"ids\": \"" + ids.get(0) + "\"}");
+      Request singleReq =
+          new Request.Builder()
+              .url(baseUrl)
+              .post(singleBody)
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response resp = client.newCall(singleReq).execute()) {
+        if (!resp.isSuccessful()) {
+          api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+          fail(
+              "Single draft download failed for facet "
+                  + facetName
+                  + ": "
+                  + resp.code()
+                  + " - "
+                  + resp.body().string());
+          return;
+        }
+        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
+        String result =
+            responseMap.containsKey("value")
+                ? responseMap.get("value").toString()
+                : responseMap.toString();
+        JSONArray singleArray = new JSONArray(result);
+        assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+        assertEquals(
+            "success",
+            singleArray.getJSONObject(0).getString("status"),
+            "Download button should be enabled in draft state for facet " + facetName);
+        assertTrue(
+            singleArray.getJSONObject(0).has("content"),
+            "Attachment should have content field for facet " + facetName);
+      }
+
+      String multiIdsParam = String.join(",", ids);
+      RequestBody multiBody =
+          RequestBody.create(
+              MediaType.parse("application/json"), "{\"ids\": \"" + multiIdsParam + "\"}");
+      Request multiReq =
+          new Request.Builder()
+              .url(baseUrl)
+              .post(multiBody)
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response resp = client.newCall(multiReq).execute()) {
+        if (!resp.isSuccessful()) {
+          api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+          fail(
+              "Multi draft download failed for facet "
+                  + facetName
+                  + ": "
+                  + resp.code()
+                  + " - "
+                  + resp.body().string());
+          return;
+        }
+        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
+        String result =
+            responseMap.containsKey("value")
+                ? responseMap.get("value").toString()
+                : responseMap.toString();
+        JSONArray multiArray = new JSONArray(result);
+        assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
+        for (int j = 0; j < multiArray.length(); j++) {
+          assertEquals(
+              "success",
+              multiArray.getJSONObject(j).getString("status"),
+              "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
+          assertTrue(
+              multiArray.getJSONObject(j).has("content"),
+              "Attachment " + (j + 1) + " should have content field for facet " + facetName);
+        }
+      }
+    }
+
+    api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+  }
+
+  @Test
+  @Order(79)
+  void testDownloadButtonDisabledWithLinkInDraftState() throws IOException {
+    System.out.println(
+        "Test (77): Upload pdf and link per facet to chapter, save book, edit (draft state),"
+            + " pdf download enabled, pdf+link download disabled");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, String> facetPdfId = new HashMap<>();
+    Map<String, String> facetLinkId = new HashMap<>();
+    for (String facetName : facet) {
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> pdfResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+      if (!pdfResponse.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload pdf for facet " + facetName);
+        return;
+      }
+      facetPdfId.put(facetName, pdfResponse.get(1));
+
+      String linkResp =
+          api.createLink(
+              appUrl,
+              chapterEntityName,
+              facetName,
+              testChapterID,
+              "TestLink",
+              "https://www.example.com");
+      if (!linkResp.equals("Link created successfully")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not create link for facet " + facetName);
+        return;
+      }
+
+      List<Map<String, Object>> draftMeta =
+          api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facetName, testChapterID);
+      String linkId =
+          draftMeta.stream()
+              .filter(
+                  a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+              .map(a -> (String) a.get("ID"))
+              .findFirst()
+              .orElse(null);
+      if (linkId == null) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not find link attachment in draft metadata for facet " + facetName);
+        return;
+      }
+      facetLinkId.put(facetName, linkId);
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!editResponse.equals("Entity in draft mode")) {
+      api.deleteEntity(appUrl, bookEntityName, testBookID);
+      fail("Could not put book into edit/draft mode: " + editResponse);
+      return;
+    }
+
+    OkHttpClient client =
+        new OkHttpClient.Builder()
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    for (String facetName : facet) {
+      String pdfId = facetPdfId.get(facetName);
+      String linkId = facetLinkId.get(facetName);
+      String baseUrl =
+          "https://"
+              + appUrl
+              + "/odata/v4/"
+              + srvpath
+              + "/"
+              + chapterEntityName
+              + "(ID="
+              + testChapterID
+              + ",IsActiveEntity=false)"
+              + "/"
+              + facetName
+              + "(up__ID="
+              + testChapterID
+              + ",ID="
+              + pdfId
+              + ",IsActiveEntity=false)"
+              + "/"
+              + srvpath
+              + ".downloadSelectedAttachments";
+
+      RequestBody pdfBody =
+          RequestBody.create(MediaType.parse("application/json"), "{\"ids\": \"" + pdfId + "\"}");
+      Request pdfReq =
+          new Request.Builder()
+              .url(baseUrl)
+              .post(pdfBody)
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response resp = client.newCall(pdfReq).execute()) {
+        if (!resp.isSuccessful()) {
+          api.deleteEntity(appUrl, bookEntityName, testBookID);
+          fail(
+              "PDF-only draft download failed for facet "
+                  + facetName
+                  + ": "
+                  + resp.code()
+                  + " - "
+                  + resp.body().string());
+          return;
+        }
+        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
+        String result =
+            responseMap.containsKey("value")
+                ? responseMap.get("value").toString()
+                : responseMap.toString();
+        JSONArray pdfArray = new JSONArray(result);
+        assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
+        assertEquals(
+            "success",
+            pdfArray.getJSONObject(0).getString("status"),
+            "Download button should be enabled for pdf in draft state, facet " + facetName);
+      }
+
+      String mixedIdsParam = pdfId + "," + linkId;
+      RequestBody mixedBody =
+          RequestBody.create(
+              MediaType.parse("application/json"), "{\"ids\": \"" + mixedIdsParam + "\"}");
+      Request mixedReq =
+          new Request.Builder()
+              .url(baseUrl)
+              .post(mixedBody)
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response resp = client.newCall(mixedReq).execute()) {
+        if (!resp.isSuccessful()) {
+          api.deleteEntity(appUrl, bookEntityName, testBookID);
+          fail(
+              "Mixed draft download failed for facet "
+                  + facetName
+                  + ": "
+                  + resp.code()
+                  + " - "
+                  + resp.body().string());
+          return;
+        }
+        Map<?, ?> responseMap = objectMapper.readValue(resp.body().string(), Map.class);
+        String result =
+            responseMap.containsKey("value")
+                ? responseMap.get("value").toString()
+                : responseMap.toString();
+        JSONArray mixedArray = new JSONArray(result);
+        assertEquals(
+            2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
+        JSONObject linkResult = null;
+        for (int j = 0; j < mixedArray.length(); j++) {
+          JSONObject item = mixedArray.getJSONObject(j);
+          if (linkId.equals(item.getString("id"))) {
+            linkResult = item;
+            break;
+          }
+        }
+        assertNotNull(linkResult, "Link result should be present for facet " + facetName);
+        assertEquals(
+            "error",
+            linkResult.getString("status"),
+            "Download button should be disabled: link should return error for facet " + facetName);
+        assertEquals(
+            "Download is not supported for link attachments",
+            linkResult.getString("message"),
+            "Error message should match for facet " + facetName);
+      }
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(80)
+  void testDownloadMultipleAttachmentsInActiveState() throws IOException {
+    System.out.println(
+        "Test (78): Create book+chapter, upload pdf/txt/exe per facet, save, download in active"
+            + " state");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, List<String>> facetAttachmentIds = new HashMap<>();
+    for (String facetName : facet) {
+      List<String> ids = new ArrayList<>();
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      postData.put("mimeType", "application/pdf");
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> r1 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+      if (!r1.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.pdf for facet " + facetName);
+        return;
+      }
+      ids.add(r1.get(1));
+
+      postData.put("mimeType", "application/txt");
+      File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+      List<String> r2 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, txtFile);
+      if (!r2.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.txt for facet " + facetName);
+        return;
+      }
+      ids.add(r2.get(1));
+
+      postData.put("mimeType", "application/exe");
+      File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+      List<String> r3 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, exeFile);
+      if (!r3.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.exe for facet " + facetName);
+        return;
+      }
+      ids.add(r3.get(1));
+      facetAttachmentIds.put(facetName, ids);
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    for (String facetName : facet) {
+      List<String> ids = facetAttachmentIds.get(facetName);
+
+      String singleResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(ids.get(0)));
+      JSONArray singleArray = new JSONArray(singleResult);
+      assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+      assertEquals(
+          "success",
+          singleArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled: single download should succeed for facet "
+              + facetName);
+      assertTrue(
+          singleArray.getJSONObject(0).has("content"),
+          "Downloaded attachment should have a content field for facet " + facetName);
+
+      String multiResult =
+          api.downloadSelectedAttachments(appUrl, chapterEntityName, facetName, testChapterID, ids);
+      JSONArray multiArray = new JSONArray(multiResult);
+      assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
+      for (int j = 0; j < multiArray.length(); j++) {
+        assertEquals(
+            "success",
+            multiArray.getJSONObject(j).getString("status"),
+            "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
+        assertTrue(
+            multiArray.getJSONObject(j).has("content"),
+            "Attachment " + (j + 1) + " should have content field for facet " + facetName);
+      }
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(81)
+  void testDownloadButtonDisabledWithLinkInActiveState() throws IOException {
+    System.out.println(
+        "Test (79): Upload pdf and link per facet to chapter, save book, pdf download enabled,"
+            + " pdf+link download disabled in active state");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, String> facetPdfId = new HashMap<>();
+    for (String facetName : facet) {
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> pdfResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+      if (!pdfResponse.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload pdf for facet " + facetName);
+        return;
+      }
+      facetPdfId.put(facetName, pdfResponse.get(1));
+
+      String linkResp =
+          api.createLink(
+              appUrl,
+              chapterEntityName,
+              facetName,
+              testChapterID,
+              "TestLink",
+              "https://www.example.com");
+      if (!linkResp.equals("Link created successfully")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not create link for facet " + facetName);
+        return;
+      }
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    for (String facetName : facet) {
+      String pdfId = facetPdfId.get(facetName);
+
+      List<Map<String, Object>> activeMetadata =
+          api.fetchEntityMetadata(appUrl, chapterEntityName, facetName, testChapterID);
+      String linkId =
+          activeMetadata.stream()
+              .filter(
+                  a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+              .map(a -> (String) a.get("ID"))
+              .findFirst()
+              .orElse(null);
+      if (linkId == null) {
+        api.deleteEntity(appUrl, bookEntityName, testBookID);
+        fail("Could not find link attachment in active metadata for facet " + facetName);
+        return;
+      }
+
+      String pdfOnlyResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId));
+      JSONArray pdfArray = new JSONArray(pdfOnlyResult);
+      assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
+      assertEquals(
+          "success",
+          pdfArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled: pdf download should succeed for facet " + facetName);
+
+      String mixedResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId, linkId));
+      JSONArray mixedArray = new JSONArray(mixedResult);
+      assertEquals(
+          2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
+      JSONObject linkResult = null;
+      for (int j = 0; j < mixedArray.length(); j++) {
+        JSONObject item = mixedArray.getJSONObject(j);
+        if (linkId.equals(item.getString("id"))) {
+          linkResult = item;
+          break;
+        }
+      }
+      assertNotNull(linkResult, "Link result should be present for facet " + facetName);
+      assertEquals(
+          "error",
+          linkResult.getString("status"),
+          "Download button should be disabled: link should return error for facet " + facetName);
+      assertEquals(
+          "Download is not supported for link attachments",
+          linkResult.getString("message"),
+          "Error message should match for facet " + facetName);
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 }
