@@ -121,10 +121,10 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '
-            .resources[]
-            | select(.relationships.app.data.name == "demoappjava-srv")
-            | .guid' | head -1)
+          app_guid=$(cf app demoappjava-srv --guid)
+          binding_guid=$(echo "$bindings_response" | jq -r \
+            --arg app_guid "$app_guid" \
+            '.resources[] | select(.relationships.app.data.guid == $app_guid) | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
@@ -390,10 +390,10 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '
-            .resources[]
-            | select(.relationships.app.data.name == "demoappjava-srv")
-            | .guid' | head -1)
+          app_guid=$(cf app demoappjava-srv --guid)
+          binding_guid=$(echo "$bindings_response" | jq -r \
+            --arg app_guid "$app_guid" \
+            '.resources[] | select(.relationships.app.data.guid == $app_guid) | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
@@ -624,10 +624,10 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '
-            .resources[]
-            | select(.relationships.app.data.name == "demoappjava-srv")
-            | .guid' | head -1)
+          app_guid=$(cf app demoappjava-srv --guid)
+          binding_guid=$(echo "$bindings_response" | jq -r \
+            --arg app_guid "$app_guid" \
+            '.resources[] | select(.relationships.app.data.guid == $app_guid) | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
@@ -862,10 +862,10 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '
-            .resources[]
-            | select(.relationships.app.data.name == "demoappjava-srv")
-            | .guid' | head -1)
+          app_guid=$(cf app demoappjava-srv --guid)
+          binding_guid=$(echo "$bindings_response" | jq -r \
+            --arg app_guid "$app_guid" \
+            '.resources[] | select(.relationships.app.data.guid == $app_guid) | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
