@@ -121,9 +121,12 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '
+            .resources[]
+            | select(.relationships.app.data.name == "demoappjava-srv")
+            | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
@@ -137,8 +140,14 @@ jobs:
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
           echo "::add-mask::$cmis_client_id"
+          cmis_url=$(echo "$binding_details" | jq -r '.credentials.endpoints.ecm_service // .credentials.url // empty')
+          if [ -z "$cmis_url" ]; then
+            echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
+          fi
+          echo "::add-mask::$cmis_url"
           echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
           echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
       - name: Download virus test file 📥
         run: |
@@ -158,6 +167,7 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
           CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
+          CMIS_URL_FROM_CF: ${{ steps.fetch_credentials_cmis.outputs.CMIS_URL }}
         run: |
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
@@ -173,7 +183,7 @@ jobs:
           versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
           virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
           defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
+          CMIS_URL="${{ env.CMIS_URL_FROM_CF }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           echo "::add-mask::$clientSecret"
@@ -380,9 +390,12 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '
+            .resources[]
+            | select(.relationships.app.data.name == "demoappjava-srv")
+            | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
@@ -396,8 +409,14 @@ jobs:
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
           echo "::add-mask::$cmis_client_id"
+          cmis_url=$(echo "$binding_details" | jq -r '.credentials.endpoints.ecm_service // .credentials.url // empty')
+          if [ -z "$cmis_url" ]; then
+            echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
+          fi
+          echo "::add-mask::$cmis_url"
           echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
           echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Run versioned integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
@@ -406,6 +425,7 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
           CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
+          CMIS_URL_FROM_CF: ${{ steps.fetch_credentials_cmis.outputs.CMIS_URL }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -420,7 +440,7 @@ jobs:
           versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
           virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
           defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
+          CMIS_URL="${{ env.CMIS_URL_FROM_CF }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           cat > "$PROPERTIES_FILE" <<EOL
@@ -604,9 +624,12 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '
+            .resources[]
+            | select(.relationships.app.data.name == "demoappjava-srv")
+            | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
@@ -620,8 +643,14 @@ jobs:
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
           echo "::add-mask::$cmis_client_id"
+          cmis_url=$(echo "$binding_details" | jq -r '.credentials.endpoints.ecm_service // .credentials.url // empty')
+          if [ -z "$cmis_url" ]; then
+            echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
+          fi
+          echo "::add-mask::$cmis_url"
           echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
           echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Download virus test file 📥
@@ -642,6 +671,7 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
           CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
+          CMIS_URL_FROM_CF: ${{ steps.fetch_credentials_cmis.outputs.CMIS_URL }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -656,7 +686,7 @@ jobs:
           versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
           virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
           defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
+          CMIS_URL="${{ env.CMIS_URL_FROM_CF }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           cat > "$PROPERTIES_FILE" <<EOL
@@ -832,9 +862,12 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
           fi
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '
+            .resources[]
+            | select(.relationships.app.data.name == "demoappjava-srv")
+            | .guid' | head -1)
           if [ -z "$binding_guid" ]; then
-            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
@@ -848,8 +881,14 @@ jobs:
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
           echo "::add-mask::$cmis_client_id"
+          cmis_url=$(echo "$binding_details" | jq -r '.credentials.endpoints.ecm_service // .credentials.url // empty')
+          if [ -z "$cmis_url" ]; then
+            echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
+          fi
+          echo "::add-mask::$cmis_url"
           echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
           echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Run repo-specific integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
@@ -858,6 +897,7 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
           CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
+          CMIS_URL_FROM_CF: ${{ steps.fetch_credentials_cmis.outputs.CMIS_URL }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -872,7 +912,7 @@ jobs:
           versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
           virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
           defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
+          CMIS_URL="${{ env.CMIS_URL_FROM_CF }}"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           cat > "$PROPERTIES_FILE" <<EOL
