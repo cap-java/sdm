@@ -129,13 +129,13 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.uaa.clientsecret // .credentials.clientsecret // empty')
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
           escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
           echo "::add-mask::$escapedCmisClientSecret"
-          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
@@ -398,13 +398,13 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.uaa.clientsecret // .credentials.clientsecret // empty')
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
           escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
           echo "::add-mask::$escapedCmisClientSecret"
-          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
@@ -632,13 +632,13 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.uaa.clientsecret // .credentials.clientsecret // empty')
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
           escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
           echo "::add-mask::$escapedCmisClientSecret"
-          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
@@ -870,13 +870,13 @@ jobs:
             echo "❌ Error: Unable to retrieve SDM binding GUID for demoappjava-srv"; exit 1;
           fi
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
-          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.uaa.clientsecret // .credentials.clientsecret // empty')
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
           escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
           echo "::add-mask::$escapedCmisClientSecret"
-          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
           fi
