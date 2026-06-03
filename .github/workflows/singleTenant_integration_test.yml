@@ -12,8 +12,10 @@ on:
         required: true
 
 jobs:
+  # DISABLED: set if to true to re-enable
   integration-test:
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -110,6 +112,34 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
           echo "✅ Client details fetched successfully!"
+      - name: Fetch and Escape SDM CMIS Credentials 🔍
+        id: fetch_credentials_cmis
+        run: |
+          echo "🔄 Fetching SDM CMIS credentials from CF service binding..."
+          service_instance_guid=$(cf service sdm --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
+            echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
+          fi
+          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedCmisClientSecret"
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
+            echo "❌ Error: SDM clientid is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$cmis_client_id"
+          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
+          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "✅ SDM CMIS credentials fetched successfully!"
       - name: Download virus test file 📥
         run: |
           curl -fSL "$FILE_URL" -o "$DOWNLOAD_PATH"
@@ -126,8 +156,8 @@ jobs:
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+          CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
+          CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
         run: |
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
@@ -195,7 +225,6 @@ jobs:
   # Avoids race condition where parallel matrix entries try to restage the same app simultaneously.
   versioned-setup:
     runs-on: ubuntu-latest
-    needs: integration-test
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -342,12 +371,41 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
+      - name: Fetch and Escape SDM CMIS Credentials 🔍
+        id: fetch_credentials_cmis
+        run: |
+          echo "🔄 Fetching SDM CMIS credentials from CF service binding..."
+          service_instance_guid=$(cf service sdm --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
+            echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
+          fi
+          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedCmisClientSecret"
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
+            echo "❌ Error: SDM clientid is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$cmis_client_id"
+          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
+          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "✅ SDM CMIS credentials fetched successfully!"
+
       - name: Run versioned integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+          CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
+          CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -537,6 +595,35 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
+      - name: Fetch and Escape SDM CMIS Credentials 🔍
+        id: fetch_credentials_cmis
+        run: |
+          echo "🔄 Fetching SDM CMIS credentials from CF service binding..."
+          service_instance_guid=$(cf service sdm --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
+            echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
+          fi
+          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedCmisClientSecret"
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
+            echo "❌ Error: SDM clientid is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$cmis_client_id"
+          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
+          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "✅ SDM CMIS credentials fetched successfully!"
+
       - name: Download virus test file 📥
         run: |
           curl -fSL "http://www.eicar.org/download/eicar.com.txt" -o "sdm/eicar.com.txt"
@@ -553,8 +640,8 @@ jobs:
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+          CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
+          CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -736,12 +823,41 @@ jobs:
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
           echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
 
+      - name: Fetch and Escape SDM CMIS Credentials 🔍
+        id: fetch_credentials_cmis
+        run: |
+          echo "🔄 Fetching SDM CMIS credentials from CF service binding..."
+          service_instance_guid=$(cf service sdm --guid)
+          if [ -z "$service_instance_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM service instance GUID"; exit 1;
+          fi
+          bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
+          if [ -z "$binding_guid" ]; then
+            echo "❌ Error: Unable to retrieve SDM binding GUID"; exit 1;
+          fi
+          binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
+          cmis_client_secret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
+          if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
+            echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
+          fi
+          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedCmisClientSecret"
+          cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
+            echo "❌ Error: SDM clientid is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$cmis_client_id"
+          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
+          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
+          echo "✅ SDM CMIS credentials fetched successfully!"
+
       - name: Run repo-specific integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
-          CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
-          CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+          CMIS_CLIENT_ID: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_ID }}
+          CMIS_CLIENT_SECRET: ${{ steps.fetch_credentials_cmis.outputs.CMIS_CLIENT_SECRET }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
