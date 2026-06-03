@@ -12,10 +12,8 @@ on:
         required: true
 
 jobs:
-  # DISABLED: set if to true to re-enable
   integration-test:
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -235,6 +233,7 @@ jobs:
   # Avoids race condition where parallel matrix entries try to restage the same app simultaneously.
   versioned-setup:
     runs-on: ubuntu-latest
+    needs: integration-test
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
