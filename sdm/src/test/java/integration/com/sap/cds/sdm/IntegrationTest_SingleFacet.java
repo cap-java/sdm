@@ -6740,6 +6740,131 @@ class IntegrationTest_SingleFacet {
     api.deleteEntity(appUrl, entityName, newEntityID);
   }
 
+  @Test
+  @Order(78)
+  void testReadCmisMetadataCreatedBy() throws Exception {
+    System.out.println("Test (78) : Read CMIS metadata and verify createdBy field");
+
+    // Create a self-contained entity with an attachment
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", response, "Entity creation should succeed");
+    String testEntityID = response;
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, testEntityID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    // Save entity to commit attachment to DI
+    response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+    assertEquals("Saved", response, "Entity save should succeed");
+
+    // Verify createdBy CMIS property
+    String createdBy =
+        CmisDocumentHelper.getCmisProperty(testEntityID, "sample.pdf", "cmis:createdBy");
+    System.out.println("cmis:createdBy value: " + createdBy);
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    if ("namedUser".equals(tokenFlowFlag)) {
+      assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+    } else {
+      assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
+      assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
+    }
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
+  }
+
+  @Test
+  @Order(79)
+  void testUploadVirusFileInScanDisabledRepo() throws IOException {
+    System.out.println(
+        "Test (79) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
+
+    boolean testStatus = false;
+    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    if (response.equals("Could not create entity")) {
+      fail("Could not create entity");
+    }
+    String testEntityID = response;
+
+    // Use EICAR test virus file
+    String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+    File file = new File(eicarFilePath);
+    if (!file.exists()) {
+      fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+    }
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testEntityID);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, testEntityID, srvpath, postData, file);
+    String check = createResponse.get(0);
+    if (check.equals("Attachment created")) {
+      String testAttachmentID = createResponse.get(1);
+      response = api.saveEntityDraft(appUrl, entityName, srvpath, testEntityID);
+      if (response.equals("Saved")) {
+        boolean uploadCompleted = waitForUploadCompletion(testEntityID, testAttachmentID, 120);
+        if (uploadCompleted) {
+          // Verify attachment is readable (upload succeeded despite being a virus file)
+          response =
+              api.readAttachment(appUrl, entityName, facetName, testEntityID, testAttachmentID);
+          assertEquals("OK", response, "Virus file should be readable in scan-disabled repository");
+          testStatus = true;
+        }
+      }
+    }
+
+    // Clean up
+    api.deleteEntity(appUrl, entityName, testEntityID);
+
+    if (!testStatus) {
+      fail("Virus file upload should succeed in a virus scan disabled repository");
+    }
+  }
+
+  private boolean waitForUploadCompletion(
+      String entityId, String attachmentId, int timeoutSeconds) {
+    int maxIterations = timeoutSeconds / 2;
+    for (int i = 0; i < maxIterations; i++) {
+      try {
+        Map<String, Object> metadata =
+            api.fetchMetadata(appUrl, entityName, facetName, entityId, attachmentId);
+        String uploadStatus = (String) metadata.get("uploadStatus");
+
+        if ("Success".equals(uploadStatus)) {
+          return true;
+        } else if ("Failed".equals(uploadStatus)) {
+          System.err.println("Upload failed for attachment: " + attachmentId);
+          return false;
+        }
+
+        Thread.sleep(2000);
+      } catch (Exception e) {
+        System.err.println(
+            "Error checking upload status for attachment " + attachmentId + ": " + e.getMessage());
+        return false;
+      }
+    }
+
+    System.err.println("Upload timed out for attachment: " + attachmentId);
+    return false;
+  }
+
   // @Test
   // @Order(78)
   // void testUploadAttachmentExceedingMaximumFileSize() throws IOException {
@@ -6791,7 +6916,7 @@ class IntegrationTest_SingleFacet {
   // }
 
   @Test
-  @Order(79)
+  @Order(80)
   void testRenameToDuplicateFilename_BackendConflict_ErrorThrown() throws Exception {
     System.out.println(
         "Test (79) : Rename attachment to name that exists in backend — expect DI error");
@@ -6851,7 +6976,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(80)
+  @Order(81)
   void testUploadDuplicateAttachment_DIError_RemovedFromDrafts() throws IOException {
     System.out.println(
         "Test (80) : Upload attachment that triggers DI error — verify error message and attachment removed from drafts");
@@ -6929,7 +7054,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(81)
+  @Order(82)
   void testReadAttachment_DeletedFromBackend_NotAvailable() throws IOException {
     System.out.println(
         "Test (81) : Read attachment after it has been deleted from repository backend"
@@ -6983,7 +7108,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(82)
+  @Order(83)
   void testDeleteAttachment_NotPresentInRepository_RemovedFromUI() throws Exception {
     System.out.println(
         "Test (82) : Delete attachment when it is not present in the repository — expect removed from UI");
@@ -7039,7 +7164,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(83)
+  @Order(84)
   void testDeleteEntity_FolderAndContentDeletedFromRepository() throws Exception {
     System.out.println(
         "Test (83) : Delete entity — expect entity and attachments no longer accessible via app");
@@ -7083,7 +7208,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(84)
+  @Order(85)
   void testDiscardDraft_AttachmentsAndFolderDeletedFromDI() throws Exception {
     System.out.println(
         "Test (84) : Discard draft after uploading attachments — expect attachments and folder deleted from DI");
@@ -7124,7 +7249,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(85)
+  @Order(86)
   void testDeleteAllAttachments_FolderDeletedFromDI() throws Exception {
     System.out.println(
         "Test (85) : Delete all attachments from entity — expect folder deleted from DI");
@@ -7188,7 +7313,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(86)
+  @Order(87)
   void testCopyInvalidAttachments_IntoNewEntity_NothingCopied() throws Exception {
     System.out.println(
         "Test (86) : Copy attachments with invalid secondary property into a new entity"
@@ -7261,7 +7386,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(87)
+  @Order(88)
   void testCopyInvalidAttachments_IntoExistingEntity_NothingCopied() throws Exception {
     System.out.println(
         "Test (87) : Copy attachments with invalid secondary property into an existing entity"
@@ -7365,7 +7490,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(88)
+  @Order(89)
   void testCopyInvalidAttachments_FromDraftEntity_IntoNewEntity_Fails() throws Exception {
     System.out.println(
         "Test (88) : Copy attachments with invalid secondary property from draft entity"
@@ -7447,7 +7572,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(89)
+  @Order(90)
   void testCopyEditedFileName_FromOneEntityToAnother() throws Exception {
     System.out.println(
         "Test (89) : Copy attachment with edited filename from one entity to another"
@@ -7537,7 +7662,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(90)
+  @Order(91)
   void testLinkAttachment_CreatedByIsUserNotClientId() throws Exception {
     System.out.println(
         "Test (90) : Create a link attachment and verify createdBy/modifiedBy is the user,"
@@ -7591,7 +7716,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(91)
+  @Order(92)
   void testDeleteLink_NotPresentInRepository_RemovedFromUI() throws Exception {
     System.out.println(
         "Test (91) : Delete a link that has been removed from the repository"
@@ -7644,7 +7769,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(92)
+  @Order(93)
   void testRenameLinkToDuplicateName_BackendConflict_ErrorThrown() throws Exception {
     System.out.println(
         "Test (92) : Create a link via backend, rename existing link to same name"
@@ -7702,7 +7827,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(93)
+  @Order(94)
   void testRenameLink_WhitespaceOnly_WarningThrown() throws Exception {
     System.out.println(
         "Test (93) : Rename a link with whitespace-only name"
@@ -7755,7 +7880,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(94)
+  @Order(95)
   void testDiscardDraftEditedLink_RevertsToOriginalUrl() throws Exception {
     System.out.println(
         "Test (94) : Create link, save, edit link URL, discard draft"
@@ -7822,7 +7947,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(95)
+  @Order(96)
   void testMoveAttachments_FromSdmFolder_ToTargetEntity() throws Exception {
     System.out.println(
         "Test (95) : Move attachments from standalone SDM folder to target entity"
@@ -7891,7 +8016,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(96)
+  @Order(97)
   void testMoveAttachments_FromSdmFolder_DuplicateInTarget_Skipped() throws Exception {
     System.out.println(
         "Test (96) : Move attachments from SDM folder when duplicate exists in target"
@@ -7978,7 +8103,7 @@ class IntegrationTest_SingleFacet {
   }
 
   @Test
-  @Order(97)
+  @Order(98)
   void testMoveAttachments_FromSdmFolder_WithSecondaryProperties_Preserved() throws Exception {
     System.out.println(
         "Test (97) : Move attachments from SDM folder with secondary properties and links"
