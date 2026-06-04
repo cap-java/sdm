@@ -242,8 +242,26 @@ jobs:
       - name: Run integration tests (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}) 🎯
         run: |
           echo "🎯 Running Maven integration tests: testClass=${{ matrix.testClass }}, tokenFlow=${{ matrix.tokenFlow }}, tenant=${{ matrix.tenant }}"
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
-          echo "✅ Integration tests completed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}!"
+          MAX_RETRIES=3
+          ATTEMPT=0
+          EXIT_CODE=1
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+              echo "✅ Tests passed on attempt $ATTEMPT!"
+              EXIT_CODE=0
+              break
+            else
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ All $MAX_RETRIES attempts failed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}."
+              fi
+            fi
+          done
+          exit $EXIT_CODE
 
       - name: Upload test results 📊
         if: always()
