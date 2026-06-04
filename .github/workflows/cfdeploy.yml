@@ -53,18 +53,6 @@ jobs:
           mvn clean install -P unit-tests -DskipIntegrationTests
           echo "✅ Build and packaging completed successfully!"
 
-      - name: Verify and Checkout Deploy Branch 🔄
-        run: |
-          git fetch origin
-          echo "📂 Verifying 'local_deploy' branch..."
-          if git rev-parse --verify origin/local_deploy; then
-            git checkout local_deploy
-            echo "✅ Branch checked out successfully!"
-          else
-            echo "❌ Branch 'local_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
-
       - name: Set REPOSITORY_ID 🔍
         id: set_repository_id
         run: |
@@ -88,7 +76,7 @@ jobs:
           echo "Current Branch: 📂"
           git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp/app
+          cd /home/runner/work/sdm/sdm/app/single-tenant/personal-space/demoapp/app
           echo "Changed to app directory 📂"
           pwd
 
@@ -143,25 +131,13 @@ jobs:
           java-version: 21
           distribution: 'temurin'
 
-      - name: Verify and Checkout Deploy Branch 🔄
-        run: |
-          git fetch origin
-          echo "📂 Verifying 'develop_deploy' branch..."
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
-            echo "✅ Branch checked out successfully!"
-          else
-            echo "❌ Branch 'develop_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
-
       - name: Override cds.services.version (runtime only)
         if: ${{ github.event.inputs.cds_services_version != '' }}
         env:
           TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
         run: |
           echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/single-tenant/central-space/demoapp | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -223,7 +199,7 @@ jobs:
           echo "Current Branch: 📂"
           git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/app/single-tenant/central-space/demoapp
 
           cd app
           echo "🔄 Removing node_modules for fresh install..."

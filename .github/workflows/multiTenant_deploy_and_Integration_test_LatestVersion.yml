@@ -47,12 +47,6 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-      
       - name: Override cds.services.version (runtime only)
         env:
           TARGET_CDS_SERVICES_VERSION: 4.3.1
@@ -60,7 +54,7 @@ jobs:
           set -e
           echo "=== cds.services.version Override Step ==="
           echo "Target version to apply: ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/multi-tenant/central-space/cloud-cap-samples-java | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -76,7 +70,7 @@ jobs:
           done
 
           echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
-          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
           if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "NOTE: Effective value already equals target; files will still be normalized to target string."
@@ -92,7 +86,7 @@ jobs:
           grep -R "<cds.services.version>" $FILES || true
 
           echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
-          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
           if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
@@ -104,23 +98,29 @@ jobs:
 
 
       - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             pwd
             echo "✔️ Directory changed!"
 
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
+            sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
       - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: | 
             echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."

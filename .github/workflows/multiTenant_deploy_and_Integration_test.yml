@@ -51,29 +51,29 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-
       - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             pwd
             echo "✔️ Directory changed!"
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
+            sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
       - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: | 
             echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."

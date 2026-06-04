@@ -57,19 +57,13 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-      
       - name: Override cds.services.version (runtime only)
         if: ${{ github.event.inputs.cds_services_version != '' }}
         env:
           TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
         run: |
           echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/multi-tenant/personal-space/cloud-cap-samples-java | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -82,22 +76,28 @@ jobs:
         shell: bash
 
       - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
         run: |
             pwd
             echo "✔️ Directory changed!"
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
         run: |
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
+            sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
       - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
         run: | 
             echo "🚀 Deploying to -s ${{ steps.determine_space.outputs.space }}..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."

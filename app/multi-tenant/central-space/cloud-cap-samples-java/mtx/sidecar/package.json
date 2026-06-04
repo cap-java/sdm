@@ -1,0 +1,25 @@
+{
+  "dependencies": {
+    "@cap-js/hana": "^2.1.1",
+    "@sap/cds": ">=9.8.0",
+    "@sap/cds-mtxs": "^3",
+    "@sap/xssec": "^4.2.7",
+    "express": "^4"
+  },
+  "devDependencies": {
+    "sqlite3": "^5"
+  },
+  "engines": {
+    "node": "^20"
+  },
+  "cds": {
+    "profiles": ["mtx-sidecar", "java"],
+    "[development]": {
+      "requires": { "auth": "dummy" }
+    }
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "build": "cds build ../.. --for mtx-sidecar --production && cd gen && npm install"
+  }
+}

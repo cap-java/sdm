@@ -33,16 +33,6 @@ jobs:
           java-version: 21
           distribution: 'temurin'
 
-      - name: Verify and Checkout Deploy Branch
-        run: |
-          git fetch origin
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
-          else
-            echo "Branch 'develop_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
-
       - name: Override cds.services.version (runtime only)
         env:
           TARGET_CDS_SERVICES_VERSION: 4.3.1
@@ -50,7 +40,7 @@ jobs:
           set -e
           echo "=== cds.services.version Override Step ==="
           echo "Target version to apply: ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/single-tenant/central-space/demoapp | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -66,7 +56,7 @@ jobs:
           done
 
           echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
-          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -f app/single-tenant/central-space/demoapp/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
           if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "NOTE: Effective value already equals target; files will still be normalized to target string."
@@ -82,7 +72,7 @@ jobs:
           grep -R "<cds.services.version>" $FILES || true
 
           echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
-          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -f app/single-tenant/central-space/demoapp/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
           if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
@@ -121,12 +111,17 @@ jobs:
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           echo "Current Branch......"
           git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/app/single-tenant/central-space/demoapp
           # Removing node_modules & package-lock.json
           cd app
           rm -rf node_modules package-lock.json
@@ -134,7 +129,7 @@ jobs:
           npm i
 
           cd ..
-          
+
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           

@@ -33,16 +33,6 @@ jobs:
           java-version: 21
           distribution: 'temurin'
 
-      - name: Verify and Checkout Deploy Branch
-        run: |
-          git fetch origin
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
-          else
-            echo "Branch 'develop_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
-
       - name: Deleting the sdm directory for fresh build
         run: |
           pwd
@@ -70,12 +60,17 @@ jobs:
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm-root:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
       #     mvn dependency:get -Dartifact=com.sap.cds:sdm:LATEST -DrepoUrl=https://maven.pkg.github.com/cap-java/sdm
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Prepare and Deploy to Cloud Foundry
         run: |
           echo "Current Branch......"
           git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/app/single-tenant/central-space/demoapp
           # Removing node_modules & package-lock.json
           cd app
           rm -rf node_modules package-lock.json
@@ -83,7 +78,7 @@ jobs:
           npm i
 
           cd ..
-          
+
           # Replace placeholder with actual REPOSITORY_ID value
           sed -i 's|__REPOSITORY_ID__|'${{ steps.set_repository_id.outputs.repository_id }}'|g' ./mta.yaml
           

@@ -14,10 +14,10 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout the develop_deploy branch
+      - name: Checkout the develop branch
         uses: actions/checkout@v6
         with:
-          ref: develop_deploy
+          ref: develop
 
       - name: Install dependencies
         run: |
@@ -26,9 +26,9 @@ jobs:
         id: run_script
         run: |
           #!/bin/bash
-          
+
           # Define the target file
-          FILE_PATH="cap-notebook/demoapp/app/index.html"
+          FILE_PATH="app/single-tenant/central-space/demoapp/app/index.html"
           
           # Function to get the latest version and its corresponding latest patch version
           fetch_versions() {
@@ -107,5 +107,5 @@ jobs:
             Current Version: ${{ steps.run_script.outputs.current_version }}
             Latest patch version: ${{ steps.run_script.outputs.latest_version }}
           branch: 'update-sapui5-version'
-          base: develop_deploy
+          base: develop
           assignees: yashmeet29
