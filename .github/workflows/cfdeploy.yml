@@ -73,6 +73,11 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
           git branch
@@ -109,11 +114,6 @@ jobs:
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          set +x
-          echo "::add-mask::$CF_API"
-          echo "::add-mask::$CF_USER"
-          echo "::add-mask::$CF_PASSWORD"
-          echo "::add-mask::$CF_ORG"
           cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 
@@ -207,6 +207,11 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
           git branch
@@ -243,11 +248,6 @@ jobs:
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          set +x
-          echo "::add-mask::$CF_API"
-          echo "::add-mask::$CF_USER"
-          echo "::add-mask::$CF_PASSWORD"
-          echo "::add-mask::$CF_ORG"
           cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 

@@ -129,7 +129,13 @@ jobs:
           CF_ORG: ${{ secrets.CF_ORG }}
           CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
-            echo "🚀 Deploying to $CF_SPACE..."
+            set +x
+            echo "::add-mask::$CF_API"
+            echo "::add-mask::$CF_USER"
+            echo "::add-mask::$CF_PASSWORD"
+            echo "::add-mask::$CF_ORG"
+            echo "::add-mask::$CF_SPACE"
+            echo "🚀 Deploying..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
             # Install cf CLI plugin
@@ -143,12 +149,6 @@ jobs:
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            set +x
-            echo "::add-mask::$CF_API"
-            echo "::add-mask::$CF_USER"
-            echo "::add-mask::$CF_PASSWORD"
-            echo "::add-mask::$CF_ORG"
-            echo "::add-mask::$CF_SPACE"
             cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null
             echo "✅ Logged in successfully!"
 
@@ -228,13 +228,13 @@ jobs:
           CF_ORG: ${{ secrets.CF_ORG }}
           CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
-          echo "🔄 Logging in to Cloud Foundry using space: ${{ steps.determine_space.outputs.space }}"
           set +x
           echo "::add-mask::$CF_API"
           echo "::add-mask::$CF_USER"
           echo "::add-mask::$CF_PASSWORD"
           echo "::add-mask::$CF_ORG"
           echo "::add-mask::$CF_SPACE"
+          echo "🔄 Logging in to Cloud Foundry..."
           cf login -a "$CF_API" \
             -u "$CF_USER" \
             -p "$CF_PASSWORD" \

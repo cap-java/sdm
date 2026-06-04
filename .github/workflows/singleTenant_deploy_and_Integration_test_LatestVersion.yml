@@ -119,6 +119,12 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::$CF_SPACE"
           echo "Current Branch......"
           git branch
           pwd
