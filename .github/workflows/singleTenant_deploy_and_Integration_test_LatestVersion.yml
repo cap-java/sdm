@@ -152,7 +152,7 @@ jobs:
           cf install-plugin multiapps -f
 
           # Login to Cloud Foundry again to ensure session is active
-          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE"
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null
 
           # Deploy the application
           echo "Running cf deploy"
@@ -227,7 +227,7 @@ jobs:
             -u "$CF_USER" \
             -p "$CF_PASSWORD" \
             -o "$CF_ORG" \
-            -s "$CF_SPACE"
+            -s "$CF_SPACE" > /dev/null
 
       - name: Fetch and Escape Client Secret
         id: fetch_secret

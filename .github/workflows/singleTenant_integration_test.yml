@@ -84,13 +84,14 @@ jobs:
           echo "::add-mask::$CF_USER"
           echo "::add-mask::$CF_PASSWORD"
           echo "::add-mask::$CF_ORG"
+          echo "::add-mask::${{ steps.determine_space.outputs.space }}"
           echo "🔄 Logging in to Cloud Foundry..."
           echo "Space Name: ${{ steps.determine_space.outputs.space }}"
           cf login -a "$CF_API" \
             -u "$CF_USER" \
             -p "$CF_PASSWORD" \
             -o "$CF_ORG" \
-            -s ${{ steps.determine_space.outputs.space }}
+            -s ${{ steps.determine_space.outputs.space }} > /dev/null
           echo "✅ Logged in successfully!"
 
       - name: Fetch and Escape Client Details for single tenant 🔍

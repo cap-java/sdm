@@ -102,7 +102,7 @@ jobs:
             echo "::add-mask::$CF_PASSWORD"
             echo "::add-mask::$CF_ORG"
             echo "::add-mask::$CF_SPACE"
-            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE"
+            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null
             echo "✅ Logged in successfully!"
 
             # Deploy the application
@@ -192,7 +192,7 @@ jobs:
             -u "$CF_USER" \
             -p "$CF_PASSWORD" \
             -o "$CF_ORG" \
-            -s "$CF_SPACE"
+            -s "$CF_SPACE" > /dev/null
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials

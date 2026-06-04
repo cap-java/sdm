@@ -124,7 +124,7 @@ jobs:
             echo "::add-mask::$CF_USER"
             echo "::add-mask::$CF_PASSWORD"
             echo "::add-mask::$CF_ORG"
-            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }}
+            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
             echo "✅ Logged in successfully!"
 
             # Deploy the application
