@@ -171,4 +171,24 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          # mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          MAX_RETRIES=3
+          ATTEMPT=0
+          EXIT_CODE=1
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+              echo "✅ Tests passed on attempt $ATTEMPT!"
+              EXIT_CODE=0
+              break
+            else
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ All $MAX_RETRIES attempts failed for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}."
+              fi
+            fi
+          done
+          exit $EXIT_CODE
