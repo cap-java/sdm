@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   deploy:
+    environment: dev
     runs-on: ubuntu-latest
 
     steps:
@@ -98,7 +99,12 @@ jobs:
 
       - name: Deploy to Cloud Foundry ☁️
         working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
-        run: | 
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+        run: |
             echo "🚀 Deploying to -s ${{ steps.determine_space.outputs.space }}..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
@@ -107,13 +113,18 @@ jobs:
             echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
             sudo apt update
             sudo apt install cf8-cli
-            
+
             cf install-plugin multiapps -f
             echo "✅ Cloud Foundry CLI setup complete!"
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+            set +x
+            echo "::add-mask::$CF_API"
+            echo "::add-mask::$CF_USER"
+            echo "::add-mask::$CF_PASSWORD"
+            echo "::add-mask::$CF_ORG"
+            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }}
             echo "✅ Logged in successfully!"
 
             # Deploy the application

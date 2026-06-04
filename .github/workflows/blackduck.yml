@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   build:
+    environment: dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,11 +41,15 @@ jobs:
         run: curl --silent -O https://detect.blackduck.com/detect9.sh
 
       - name: Run & analyze BlackDuck Scan
+        env:
+          BLACKDUCK_TOKEN: ${{ secrets.BLACKDUCK_TOKEN }}
         run: |
+          set +x
+          echo "::add-mask::$BLACKDUCK_TOKEN"
           bash ./detect9.sh -d \
           --logging.level.com.synopsys.integration=DEBUG  \
           --blackduck.url="https://sap.blackducksoftware.com" \
-          --blackduck.api.token=""${{ secrets.BLACKDUCK_TOKEN }}""   \
+          --blackduck.api.token="$BLACKDUCK_TOKEN"   \
           --detect.blackduck.signature.scanner.arguments="--min-scan-interval=0" \
           --detect.maven.build.command="install -P unit-tests  -DskipIntegrationTests" \
           --detect.latest.release.version="9.6.0" \

@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   sonar-scan:
+    environment: dev
     runs-on: ubuntu-latest
 
     steps:
@@ -45,7 +46,12 @@ jobs:
           fi
 
       - name: Run SonarQube analysis
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          set +x
+          echo "::add-mask::$SONAR_TOKEN"
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             sonar-scanner \
               -Dsonar.projectKey=cap-java-sdm \
@@ -57,8 +63,8 @@ jobs:
               -Dsonar.inclusions=**/*.java \
               -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,app/**/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/**,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/RepoKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/TokenCacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryTypesKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryPropertiesKey.java \
               -Dsonar.java.file.suffixes=.java \
-              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-              -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.login="$SONAR_TOKEN" \
               -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
               -Dsonar.pullrequest.branch=${{ github.head_ref }} \
               -Dsonar.pullrequest.base=${{ github.base_ref }}
@@ -73,8 +79,8 @@ jobs:
               -Dsonar.inclusions=**/*.java \
               -Dsonar.exclusions=**/target/**,**/node_modules/**,sdm/src/main/test/**,app/**/*.capnb,sdm/src/main/java/com/sap/cds/sdm/model/**,sdm/src/main/java/com/sap/cds/sdm/caching/CacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/RepoKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/TokenCacheKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryTypesKey.java,sdm/src/main/java/com/sap/cds/sdm/caching/SecondaryPropertiesKey.java \
               -Dsonar.java.file.suffixes=.java \
-              -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-              -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.login="$SONAR_TOKEN"
           fi
 
       - name: Quality Gate Check

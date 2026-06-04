@@ -17,6 +17,7 @@ on:
 jobs:
   # Parallel integration tests using matrix strategy
   integration-test:
+    environment: dev
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -65,9 +66,11 @@ jobs:
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
+        env:
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
+            space="$CF_SPACE"
           else
             space="${{ github.event.inputs.cf_space }}"
           fi
@@ -75,12 +78,22 @@ jobs:
           echo "space=$space" >> $GITHUB_OUTPUT
 
       - name: Login to Cloud Foundry 🔑
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Logging in to Cloud Foundry using space: ${{ steps.determine_space.outputs.space }}"
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
+          cf login -a "$CF_API" \
+            -u "$CF_USER" \
+            -p "$CF_PASSWORD" \
+            -o "$CF_ORG" \
             -s ${{ steps.determine_space.outputs.space }}
 
       - name: Fetch and Escape Client Details for single tenant 🔍
@@ -157,23 +170,32 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
           CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
+          AUTHURLMT1: ${{ secrets.AUTHURLMT1 }}
+          AUTHURLMT2: ${{ secrets.AUTHURLMT2 }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
+          NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
         run: |
           echo "🚀 Preparing credentials for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
+          set +x
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          appUrl="$CF_ORG-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="$CF_ORG-${{ steps.determine_space.outputs.space }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="$CAPAUTH_URL"
+          authUrlMT1="$AUTHURLMT1"
+          authUrlMT2="$AUTHURLMT2"
+          clientID="$CLIENT_ID"
+          clientSecret="$CLIENT_SECRET"
+          clientIDMT="$CLIENT_ID_MT"
+          clientSecretMT="$CLIENT_SECRET_MT"
+          username="$CF_USER"
+          password="$CF_PASSWORD"
+          noSDMRoleUsername="$NOSDMROLEUSERNAME"
+          noSDMRoleUserPassword="$NOSDMROLEUSERPASSWORD"
 
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
@@ -233,6 +255,7 @@ jobs:
 
   # Summary job to aggregate results
   test-summary:
+    environment: dev
     runs-on: ubuntu-latest
     needs: integration-test
     if: always()
