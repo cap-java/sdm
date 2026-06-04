@@ -33,7 +33,10 @@ permissions:
 jobs:
   Deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.workflow_choice == 'Deploy' }}
+    # Security: Only run Deploy in original repo, not forks
+    if: |
+      github.repository == 'cap-java/sdm' &&
+      github.event.inputs.workflow_choice == 'Deploy'
 
     steps:
       - name: Checkout repository 📁
@@ -129,7 +132,10 @@ jobs:
 
   SnapshotDeploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.workflow_choice == 'Snapshot Deploy' }}
+    # Security: Only run Snapshot Deploy in original repo, not forks
+    if: |
+      github.repository == 'cap-java/sdm' &&
+      github.event.inputs.workflow_choice == 'Snapshot Deploy'
 
     steps:
       - name: Checkout repository 📁

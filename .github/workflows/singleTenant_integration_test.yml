@@ -11,8 +11,13 @@ on:
         description: 'Specify the branch to use for integration tests'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   integration-test:
+    # Security: Only run in original repo, not forks
+    if: github.repository == 'cap-java/sdm'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
