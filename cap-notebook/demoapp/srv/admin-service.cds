@@ -28,7 +28,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -63,7 +63,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -98,7 +98,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -130,7 +130,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -161,7 +161,7 @@ service AdminService @(requires: ['admin','system-user']) {
         targetFacet: String,
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -194,7 +194,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -226,7 +226,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -258,7 +258,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
@@ -304,7 +304,7 @@ service AdminService @(requires: ['admin','system-user']) {
         sourceFacet: String,      // Optional: if not provided, no source cleanup
     ) returns MoveAttachmentsResult;  // Return structured type
 
-    @(Common.SideEffects : {TargetEntities: ['']},)
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
     action createLink(
       in:many $self,
       @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
