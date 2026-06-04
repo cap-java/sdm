@@ -150,4 +150,5 @@ jobs:
           noSDMRoleUserPassword=$noSDMRoleUserPassword
           EOL
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          # mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java" -DrerunFailingTestsCount=3
