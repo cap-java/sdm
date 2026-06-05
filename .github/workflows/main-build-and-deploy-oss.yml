@@ -46,7 +46,6 @@ jobs:
           retention-days: 1
 
   build:
-    environment: maven-central
     runs-on: ubuntu-latest
     needs: update-version
     steps:
