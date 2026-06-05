@@ -35,9 +35,7 @@ jobs:
         run: |
           mvn clean install -P unit-tests -DskipIntegrationTests
           mvn clean install -f app/single-tenant/central-space/demoapp/pom.xml -DskipTests
-          mvn clean install -f app/single-tenant/personal-space/demoapp/pom.xml -DskipTests
           mvn clean install -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -DskipTests
-          mvn clean install -f app/multi-tenant/personal-space/cloud-cap-samples-java/pom.xml -DskipTests
         
       # - name: Download Synopsys Detect Script
       #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
