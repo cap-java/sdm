@@ -33,7 +33,9 @@ jobs:
           
       - name: Install dependencies
         run: |
-          mvn clean install -P unit-tests  -DskipIntegrationTests
+          mvn clean install -P unit-tests -DskipIntegrationTests
+          mvn clean install -f app/single-tenant/central-space/demoapp/pom.xml -DskipTests
+          mvn clean install -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -DskipTests
         
       # - name: Download Synopsys Detect Script
       #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
@@ -61,4 +63,4 @@ jobs:
           --detect.project.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0" \
           --detect.project.version.name="1.0" \
           --detect.code.location.name="SAP_DOC_MGMT_CAPPLUGIN_JAVA1.0/1.0" \
-          --detect.source.path="/home/runner/work/sdm/sdm/sdm"
+          --detect.source.path="/home/runner/work/sdm/sdm"

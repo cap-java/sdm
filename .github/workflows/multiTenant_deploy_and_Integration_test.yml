@@ -1,11 +1,9 @@
 name: Multi Tenancy Deploy & Integration Test🚀
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - develop
-
   workflow_dispatch:
 
 permissions:
@@ -16,7 +14,6 @@ permissions:
 jobs:
   deploy:
     environment: dev
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -375,7 +372,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: integration-test
-    if: always() && github.event.pull_request.merged == true
+    if: always()
     steps:
       - name: Check test results 📋
         run: |
