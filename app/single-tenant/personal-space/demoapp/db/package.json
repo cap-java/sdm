@@ -1,0 +1,15 @@
+{
+    "name": "deploy",
+    "dependencies": {
+      "hdb": "^0",
+      "@sap/hdi-deploy": "^5"
+    },
+    "engines": {
+      "node": "^20"
+    },
+    "scripts": {
+      "start": "node node_modules/@sap/hdi-deploy/deploy.js --use-hdb",
+      "build": "npm ci && npx cds build .. --for hana --production"
+    }
+  }
+  

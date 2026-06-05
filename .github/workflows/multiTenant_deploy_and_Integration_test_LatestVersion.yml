@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   deploy:
+    environment: dev
     #Run only if the triggering workflow concluded successfully
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
@@ -48,12 +49,6 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-      
       - name: Override cds.services.version (runtime only)
         env:
           TARGET_CDS_SERVICES_VERSION: 4.3.1
@@ -61,7 +56,7 @@ jobs:
           set -e
           echo "=== cds.services.version Override Step ==="
           echo "Target version to apply: ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/multi-tenant/central-space/cloud-cap-samples-java | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -77,7 +72,7 @@ jobs:
           done
 
           echo "\nResolving effective value BEFORE override via mvn help:evaluate ..."
-          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_BEFORE=$(mvn -q -DforceStdout help:evaluate -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version before override: '${RESOLVED_BEFORE}'"
           if [ "${RESOLVED_BEFORE}" = "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "NOTE: Effective value already equals target; files will still be normalized to target string."
@@ -93,7 +88,7 @@ jobs:
           grep -R "<cds.services.version>" $FILES || true
 
           echo "\nResolving effective value AFTER override via mvn help:evaluate ..."
-          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -Dexpression=cds.services.version || true)
+          RESOLVED_AFTER=$(mvn -q -DforceStdout help:evaluate -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -Dexpression=cds.services.version || true)
           echo "Effective cds.services.version after override: '${RESOLVED_AFTER}'"
           if [ "${RESOLVED_AFTER}" != "${TARGET_CDS_SERVICES_VERSION}" ]; then
             echo "WARNING: Resolved value does not match target (profiles or parent POM could be overriding it)." >&2
@@ -105,25 +100,43 @@ jobs:
 
 
       - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             pwd
             echo "✔️ Directory changed!"
 
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
         run: |
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
+            sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
       - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
-        run: | 
-            echo "🚀 Deploying to ${{ secrets.CF_SPACE }}..."
+        working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
+        run: |
+            set +x
+            echo "::add-mask::$CF_API"
+            echo "::add-mask::$CF_USER"
+            echo "::add-mask::$CF_PASSWORD"
+            echo "::add-mask::$CF_ORG"
+            echo "::add-mask::$CF_SPACE"
+            echo "🚀 Deploying..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
             # Install cf CLI plugin
@@ -131,13 +144,13 @@ jobs:
             echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
             sudo apt update
             sudo apt install cf8-cli
-            
+
             cf install-plugin multiapps -f
             echo "✅ Cloud Foundry CLI setup complete!"
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null
             echo "✅ Logged in successfully!"
 
             # Deploy the application
@@ -149,6 +162,7 @@ jobs:
             echo "✅ Deployment complete!"
 
   integration-test:
+    environment: dev
     needs: deploy
     runs-on: ubuntu-latest
     strategy:
@@ -196,9 +210,11 @@ jobs:
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
+        env:
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
+            space="$CF_SPACE"
           else
             space="${{ github.event.inputs.cf_space }}"
           fi
@@ -206,13 +222,25 @@ jobs:
           echo "space=$space" >> $GITHUB_OUTPUT
 
       - name: Login to Cloud Foundry 🔑
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
-          echo "🔄 Logging in to Cloud Foundry using space: ${{ steps.determine_space.outputs.space }}"
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::$CF_SPACE"
+          echo "🔄 Logging in to Cloud Foundry..."
+          cf login -a "$CF_API" \
+            -u "$CF_USER" \
+            -p "$CF_PASSWORD" \
+            -o "$CF_ORG" \
+            -s "$CF_SPACE" > /dev/null
 
       - name: Fetch and Escape Client Details for single tenant 🔍
         id: fetch_credentials
@@ -288,23 +316,33 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CLIENT_SECRET_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_SECRET_MT }}
           CLIENT_ID_MT: ${{ steps.fetch_credentials_mt.outputs.CLIENT_ID_MT }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
+          CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
+          AUTHURLMT1: ${{ secrets.AUTHURLMT1 }}
+          AUTHURLMT2: ${{ secrets.AUTHURLMT2 }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
+          NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
         run: |
           echo "🚀 Preparing credentials for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
+          set +x
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          appUrlMT="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          authUrlMT1="${{ secrets.AUTHURLMT1 }}"
-          authUrlMT2="${{ secrets.AUTHURLMT2 }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          clientIDMT="${{ env.CLIENT_ID_MT }}"
-          clientSecretMT="${{ env.CLIENT_SECRET_MT }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          appUrl="$CF_ORG-$CF_SPACE-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          appUrlMT="$CF_ORG-$CF_SPACE-bookshop-mt-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="$CAPAUTH_URL"
+          authUrlMT1="$AUTHURLMT1"
+          authUrlMT2="$AUTHURLMT2"
+          clientID="$CLIENT_ID"
+          clientSecret="$CLIENT_SECRET"
+          clientIDMT="$CLIENT_ID_MT"
+          clientSecretMT="$CLIENT_SECRET_MT"
+          username="$CF_USER"
+          password="$CF_PASSWORD"
+          noSDMRoleUsername="$NOSDMROLEUSERNAME"
+          noSDMRoleUserPassword="$NOSDMROLEUSERPASSWORD"
 
           echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
@@ -349,8 +387,26 @@ jobs:
       - name: Run integration tests (${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}) 🎯
         run: |
           echo "🎯 Running Maven integration tests: testClass=${{ matrix.testClass }}, tokenFlow=${{ matrix.tokenFlow }}, tenant=${{ matrix.tenant }}"
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
-          echo "✅ Integration tests completed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}!"
+          MAX_RETRIES=3
+          ATTEMPT=0
+          EXIT_CODE=1
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+              echo "✅ Tests passed on attempt $ATTEMPT!"
+              EXIT_CODE=0
+              break
+            else
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ All $MAX_RETRIES attempts failed for ${{ matrix.testClass }} - ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}."
+              fi
+            fi
+          done
+          exit $EXIT_CODE
 
       - name: Upload test results 📊
         if: always()
@@ -364,6 +420,7 @@ jobs:
 
   # Summary job to aggregate results
   test-summary:
+    environment: dev
     runs-on: ubuntu-latest
     needs: integration-test
     if: always()

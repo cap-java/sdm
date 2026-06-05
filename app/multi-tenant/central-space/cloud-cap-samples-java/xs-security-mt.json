@@ -1,0 +1,37 @@
+{
+	"scopes": [
+		{
+			"name": "$XSAPPNAME.admin",
+			"description": "admin"
+		},
+		{
+			"name": "$XSAPPNAME.mtcallback",
+			"description": "Multi Tenancy Callback Access",
+			"grant-as-authority-to-apps": [
+				"$XSAPPNAME(application,sap-provisioning,tenant-onboarding)"
+			]
+		},
+		{
+			"name": "$XSAPPNAME.mtdeployment",
+			"description": "Scope to trigger a re-deployment of the database artifacts"
+		},
+    		{
+      			"name": "$XSAPPNAME.cds.ExtensionDeveloper",
+      			"description": "Extend CAP applications via extension projects"
+    		}
+	],
+	"authorities-inheritance": false,
+	"authorities": [
+		"$XSAPPNAME.mtdeployment"
+	],
+	
+	"role-templates": [
+		{
+			"name": "admin",
+			"description": "generated",
+			"scope-references": [
+				"$XSAPPNAME.admin"
+			]
+		}
+	]
+}
