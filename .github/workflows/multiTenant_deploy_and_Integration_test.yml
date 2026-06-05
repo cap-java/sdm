@@ -58,7 +58,7 @@ jobs:
       - name: Set REPOSITORY_ID 🔍
         id: set_repository_id
         run: |
-          echo "repository_id=${{ secrets.REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+          echo "repository_id=${{ secrets.MULTITENANT_REPOSITORY_ID }}" >> $GITHUB_OUTPUT
 
       - name: Run mbt build 🔨
         working-directory: app/multi-tenant/central-space/cloud-cap-samples-java
