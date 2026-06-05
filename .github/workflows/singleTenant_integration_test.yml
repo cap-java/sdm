@@ -131,8 +131,7 @@ jobs:
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
-          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedCmisClientSecret"
+          echo "::add-mask::$cmis_client_secret"
           cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
@@ -143,9 +142,9 @@ jobs:
             echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
           fi
           echo "::add-mask::$cmis_url"
-          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
-          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
-          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_SECRET=%s\n' "$cmis_client_secret" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_ID=%s\n' "$cmis_client_id" >> $GITHUB_OUTPUT
+          printf 'CMIS_URL=%s\n' "$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
       - name: Download virus test file 📥
         run: |
@@ -401,8 +400,7 @@ jobs:
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
-          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedCmisClientSecret"
+          echo "::add-mask::$cmis_client_secret"
           cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
@@ -413,9 +411,9 @@ jobs:
             echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
           fi
           echo "::add-mask::$cmis_url"
-          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
-          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
-          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_SECRET=%s\n' "$cmis_client_secret" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_ID=%s\n' "$cmis_client_id" >> $GITHUB_OUTPUT
+          printf 'CMIS_URL=%s\n' "$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Run versioned integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
@@ -635,8 +633,7 @@ jobs:
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
-          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedCmisClientSecret"
+          echo "::add-mask::$cmis_client_secret"
           cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
@@ -647,9 +644,9 @@ jobs:
             echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
           fi
           echo "::add-mask::$cmis_url"
-          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
-          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
-          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_SECRET=%s\n' "$cmis_client_secret" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_ID=%s\n' "$cmis_client_id" >> $GITHUB_OUTPUT
+          printf 'CMIS_URL=%s\n' "$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Download virus test file 📥
@@ -873,8 +870,7 @@ jobs:
           if [ -z "$cmis_client_secret" ] || [ "$cmis_client_secret" == "null" ]; then
             echo "❌ Error: SDM clientsecret is not set or is null"; exit 1;
           fi
-          escapedCmisClientSecret=$(echo "$cmis_client_secret" | sed 's/\$/\\$/g')
-          echo "::add-mask::$escapedCmisClientSecret"
+          echo "::add-mask::$cmis_client_secret"
           cmis_client_id=$(echo "$binding_details" | jq -r '.credentials.uaa.clientid // .credentials.clientid // empty')
           if [ -z "$cmis_client_id" ] || [ "$cmis_client_id" == "null" ]; then
             echo "❌ Error: SDM clientid is not set or is null"; exit 1;
@@ -885,9 +881,9 @@ jobs:
             echo "❌ Error: SDM CMIS URL not found in binding details"; exit 1;
           fi
           echo "::add-mask::$cmis_url"
-          echo "CMIS_CLIENT_SECRET=$escapedCmisClientSecret" >> $GITHUB_OUTPUT
-          echo "CMIS_CLIENT_ID=$cmis_client_id" >> $GITHUB_OUTPUT
-          echo "CMIS_URL=$cmis_url" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_SECRET=%s\n' "$cmis_client_secret" >> $GITHUB_OUTPUT
+          printf 'CMIS_CLIENT_ID=%s\n' "$cmis_client_id" >> $GITHUB_OUTPUT
+          printf 'CMIS_URL=%s\n' "$cmis_url" >> $GITHUB_OUTPUT
           echo "✅ SDM CMIS credentials fetched successfully!"
 
       - name: Run repo-specific integration tests 🎯 (${{ matrix.testClass }} - ${{ matrix.tokenFlow }})
