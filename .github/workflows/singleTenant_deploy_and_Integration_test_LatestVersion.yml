@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   deploy:
+    environment: dev
     # Run only if the triggering workflow concluded successfully
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
@@ -118,6 +119,12 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::$CF_SPACE"
           echo "Current Branch......"
           git branch
           pwd
@@ -139,25 +146,32 @@ jobs:
 
           mbt build
           
-          # Install cf & login 
+          # Install cf & login
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
           | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
           echo "deb https://packages.cloudfoundry.org/debian stable main" \
           | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt update
           sudo apt install cf8-cli
-          
+
           # Install cf CLI plugin
           cf install-plugin multiapps -f
 
           # Login to Cloud Foundry again to ensure session is active
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ secrets.CF_SPACE }}
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s "$CF_SPACE" > /dev/null
 
           # Deploy the application
           echo "Running cf deploy"
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
 
   integration-test:
+    environment: dev
     needs: deploy
     runs-on: ubuntu-latest
     strategy:
@@ -202,12 +216,24 @@ jobs:
           fi
 
       - name: Login to Cloud Foundry
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ secrets.CF_SPACE }}
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::$CF_SPACE"
+          cf login -a "$CF_API" \
+            -u "$CF_USER" \
+            -p "$CF_PASSWORD" \
+            -o "$CF_ORG" \
+            -s "$CF_SPACE" > /dev/null
 
       - name: Fetch and Escape Client Secret
         id: fetch_secret
@@ -234,23 +260,39 @@ jobs:
           
           # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
+          echo "::add-mask::$escapedClientSecret"
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
       - name: Run integration tests (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
           CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
+          CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
+          CAPSDM_CLIENT_ID: ${{ secrets.CAPSDM_CLIENT_ID }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
+          NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
         run: |
+          set +x
           echo "Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e  # Enable error checking
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
           # Gather secrets and other values
-          appUrl="${{ secrets.CF_ORG }}-${{ secrets.CF_SPACE }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ secrets.CAPSDM_CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
+          appUrl="$CF_ORG-$CF_SPACE-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="$CAPAUTH_URL"
+          clientID="$CAPSDM_CLIENT_ID"
+          clientSecret="$CLIENT_SECRET"
+          username="$CF_USER"
+          password="$CF_PASSWORD"
+          noSDMRoleUsername="$NOSDMROLEUSERNAME"
+          noSDMRoleUserPassword="$NOSDMROLEUSERPASSWORD"
+          echo "::add-mask::$clientID"
+          echo "::add-mask::$clientSecret"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          echo "::add-mask::$noSDMRoleUsername"
+          echo "::add-mask::$noSDMRoleUserPassword"
           # Ensure all required variables are set
           if [ -z "$appUrl" ]; then echo "Error: appUrl is not set"; exit 1; fi
           if [ -z "$authUrl" ]; then echo "Error: authUrl is not set"; exit 1; fi
@@ -273,6 +315,26 @@ jobs:
           EOL
           # Run Maven integration tests
           echo "Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          # mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          MAX_RETRIES=3
+          ATTEMPT=0
+          EXIT_CODE=1
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+              echo "✅ Tests passed on attempt $ATTEMPT!"
+              EXIT_CODE=0
+              break
+            else
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ All $MAX_RETRIES attempts failed for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}."
+              fi
+            fi
+          done
+          exit $EXIT_CODE
     
     

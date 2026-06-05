@@ -32,6 +32,7 @@ permissions:
 
 jobs:
   Deploy:
+    environment: dev
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.workflow_choice == 'Deploy' }}
 
@@ -72,6 +73,11 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
           git branch
@@ -108,14 +114,20 @@ jobs:
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 
           echo "🚀 Running cf deploy..."
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
           echo "✅ Deployment complete!"
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
 
   SnapshotDeploy:
+    environment: dev
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.workflow_choice == 'Snapshot Deploy' }}
 
@@ -195,6 +207,11 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
           git branch
@@ -231,9 +248,14 @@ jobs:
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 
           echo "🚀 Running cf deploy..."
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
           echo "✅ Deployment complete!"
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
