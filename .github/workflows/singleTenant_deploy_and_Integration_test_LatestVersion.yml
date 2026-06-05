@@ -126,7 +126,6 @@ jobs:
           echo "::add-mask::$CF_ORG"
           echo "::add-mask::$CF_SPACE"
           echo "Current Branch......"
-          git branch
           pwd
           cd /home/runner/work/sdm/sdm/app/single-tenant/central-space/demoapp
           # Removing node_modules & package-lock.json
