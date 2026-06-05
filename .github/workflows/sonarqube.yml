@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   sonar-scan:
-    environment: dev
+    environment: pr-analysis
     runs-on: ubuntu-latest
 
     steps:
