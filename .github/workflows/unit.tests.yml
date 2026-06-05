@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   unitTests:
-    environment: dev
     runs-on: ubuntu-latest
     strategy:
       matrix:
