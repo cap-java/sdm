@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    environment: dev
+    # environment: dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
