@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    # environment: dev
+    environment: pr-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
