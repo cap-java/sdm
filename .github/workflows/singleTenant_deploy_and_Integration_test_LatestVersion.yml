@@ -234,40 +234,41 @@ jobs:
             -o "$CF_ORG" \
             -s "$CF_SPACE" > /dev/null
 
-      - name: Fetch and Escape Client Secret
-        id: fetch_secret
+      - name: Fetch and Escape Client Details for single tenant 🔍
+        id: fetch_credentials
         run: |
-          # Fetch the service instance GUID
+          echo "🔄 Fetching client details for single tenant..."
           service_instance_guid=$(cf service demoappjava-public-uaa --guid)
           if [ -z "$service_instance_guid" ]; then
-            echo "Error: Unable to retrieve service instance GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve service instance GUID"; exit 1;
           fi
-          # Fetch the binding GUID
           bindings_response=$(cf curl "/v3/service_credential_bindings?service_instance_guids=${service_instance_guid}")
-          
-          binding_guid=$(echo $bindings_response | jq -r '.resources[0].guid')
+          binding_guid=$(echo "$bindings_response" | jq -r '.resources[0].guid')
           if [ -z "$binding_guid" ]; then
-            echo "Error: Unable to retrieve binding GUID"; exit 1;
+            echo "❌ Error: Unable to retrieve binding GUID"; exit 1;
           fi
-          
-          # Fetch the clientSecret
           binding_details=$(cf curl "/v3/service_credential_bindings/${binding_guid}/details")
           clientSecret=$(echo "$binding_details" | jq -r '.credentials.clientsecret')
           if [ -z "$clientSecret" ] || [ "$clientSecret" == "null" ]; then
-            echo "Error: clientSecret is not set or is null"; exit 1;
+            echo "❌ Error: clientSecret is not set or is null"; exit 1;
           fi
-          
-          # Escape any $ characters in the clientSecret
           escapedClientSecret=$(echo "$clientSecret" | sed 's/\$/\\$/g')
           echo "::add-mask::$escapedClientSecret"
+          clientID=$(echo "$binding_details" | jq -r '.credentials.clientid')
+          if [ -z "$clientID" ] || [ "$clientID" == "null" ]; then
+            echo "❌ Error: clientID is not set or is null"; exit 1;
+          fi
+          echo "::add-mask::$clientID"
           echo "CLIENT_SECRET=$escapedClientSecret" >> $GITHUB_OUTPUT
+          echo "CLIENT_ID=$clientID" >> $GITHUB_OUTPUT
+          echo "✅ Client details fetched successfully!"
       - name: Run integration tests (${{ matrix.tokenFlow }} - ${{ matrix.testClass }})
         env:
-          CLIENT_SECRET: ${{ steps.fetch_secret.outputs.CLIENT_SECRET }}
+          CLIENT_SECRET: ${{ steps.fetch_credentials.outputs.CLIENT_SECRET }}
+          CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CF_ORG: ${{ secrets.CF_ORG }}
           CF_SPACE: ${{ secrets.CF_SPACE }}
           CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
-          CAPSDM_CLIENT_ID: ${{ secrets.CAPSDM_CLIENT_ID }}
           CF_USER: ${{ secrets.CF_USER }}
           CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
           NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
@@ -280,7 +281,7 @@ jobs:
           # Gather secrets and other values
           appUrl="$CF_ORG-$CF_SPACE-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
           authUrl="$CAPAUTH_URL"
-          clientID="$CAPSDM_CLIENT_ID"
+          clientID="$CLIENT_ID"
           clientSecret="$CLIENT_SECRET"
           username="$CF_USER"
           password="$CF_PASSWORD"
