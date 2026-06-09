@@ -6741,7 +6741,6 @@ class IntegrationTest_SingleFacet {
     api.deleteEntity(appUrl, entityName, newEntityID);
   }
 
-
   @Test
   @Order(78)
   void testReadCmisMetadataCreatedBy() throws Exception {

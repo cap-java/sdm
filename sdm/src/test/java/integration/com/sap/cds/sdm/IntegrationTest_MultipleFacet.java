@@ -7372,7 +7372,6 @@ class IntegrationTest_MultipleFacet {
     }
   }
 
-
   @Test
   @Order(78)
   void testReadCmisMetadataCreatedBy() throws IOException {
