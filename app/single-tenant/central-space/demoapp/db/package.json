@@ -9,7 +9,7 @@
     },
     "scripts": {
       "start": "node node_modules/@sap/hdi-deploy/deploy.js --use-hdb",
-      "build": "npm ci && npx cds build .. --for hana --production"
+      "build": "npm i && npx cds build .. --for hana --production"
     }
   }
   
