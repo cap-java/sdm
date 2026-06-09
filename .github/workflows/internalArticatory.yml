@@ -87,11 +87,17 @@ jobs:
 
       - name: Verify artifact in Artifactory
         if: ${{ endsWith(steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version, '-SNAPSHOT') }}
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
         run: |
+          set +x
+          echo "::add-mask::$CAP_DEPLOYMENT_USER"
+          echo "::add-mask::$CAP_DEPLOYMENT_PASS"
           group_path="com/sap/cds/sdm"
           version="${{ steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version }}"
           echo "Checking metadata for $version"
-          curl -u "${{ secrets.CAP_DEPLOYMENT_USER }}:${{ secrets.CAP_DEPLOYMENT_PASS }}" -f -I \
+          curl -u "$CAP_DEPLOYMENT_USER:$CAP_DEPLOYMENT_PASS" -f -I \
             "$ARTIFACTORY_URL/$group_path/$version/maven-metadata.xml" || { echo "Metadata not found"; exit 1; }
           echo "Artifact metadata accessible for $version"
       - name: Summary

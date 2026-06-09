@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import okhttp3.*;
 import okio.ByteString;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 
@@ -2709,12 +2710,12 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
   }
 
-  // Tests 28 and 29 removed - chapters have no attachment limit
+  // // Tests 28 and 29 removed - chapters have no attachment limit
 
-  // Tests 28-29 skipped - chapters have no attachment limit
+  // // Tests 28-29 skipped - chapters have no attachment limit
 
   @Test
-  @Order(30)
+  @Order(28)
   void testDiscardBookDraftWithoutChapterAttachments() {
     System.out.println("Test (30) : Discard book draft without adding chapter attachments");
     Boolean testStatus = false;
@@ -2738,7 +2739,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(31)
+  @Order(29)
   void testDiscardBookDraftWithChapterAttachments() throws IOException {
     System.out.println("Test (31): Discard book draft with chapter attachments");
     boolean testStatus = false;
@@ -2785,11 +2786,11 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
   }
 
-  // Tests 32-34 covered in tests 19, 23, 24
-  // Tests 37-41 skipped - copy with notes/secondary properties not applicable
+  // // Tests 32-34 covered in tests 19, 23, 24
+  // // Tests 37-41 skipped - copy with notes/secondary properties not applicable
 
   @Test
-  @Order(42)
+  @Order(30)
   void testCreateLinkSuccessInChapter() throws IOException {
     System.out.println("Test (42): Create link in chapter");
     List<String> attachments = new ArrayList<>();
@@ -2851,7 +2852,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(43)
+  @Order(31)
   void testCreateLinkDifferentChapter() throws IOException {
     System.out.println("Test (43): Create link with same name in different chapter");
 
@@ -2891,7 +2892,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(44)
+  @Order(32)
   void testCreateLinkFailureInChapter() throws IOException {
     System.out.println("Test (44): Create link fails due to invalid URL and name in chapter");
 
@@ -3001,7 +3002,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(45)
+  @Order(33)
   void testCreateLinkNoSDMRolesInChapter() throws IOException {
     System.out.println("Test (45): Create link fails due to no SDM roles assigned in chapter");
 
@@ -3052,7 +3053,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(46)
+  @Order(34)
   void testDeleteLinkInChapter() throws IOException {
     System.out.println("Test (46): Delete link in chapter");
     List<List<String>> attachments = new ArrayList<>();
@@ -4259,10 +4260,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
   }
 
-  // ============= LINK RENAME TESTS (47-49) =============
+  // // ============= LINK RENAME TESTS (47-49) =============
 
   @Test
-  @Order(47)
+  @Order(42)
   void testRenameLinkSuccess() throws IOException {
     System.out.println("Test (47): Rename link in chapter");
 
@@ -4325,7 +4326,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(48)
+  @Order(43)
   void testRenameLinkDuplicate() throws IOException {
     System.out.println("Test (48): Rename link in chapter fails due to duplicate error");
 
@@ -4413,7 +4414,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(49)
+  @Order(44)
   void testRenameLinkUnsupportedCharacters() throws IOException {
     System.out.println("Test (49): Rename link in chapter fails due to unsupported characters");
 
@@ -4476,10 +4477,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 
-  // ============= LINK EDIT TESTS (50-53) =============
+  // // ============= LINK EDIT TESTS (50-53) =============
 
   @Test
-  @Order(50)
+  @Order(45)
   void testEditLinkSuccess() throws IOException {
     System.out.println("Test (50): Edit existing link URL in chapter");
 
@@ -4565,7 +4566,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(51)
+  @Order(46)
   void testEditLinkFailureInvalidURL() throws IOException {
     System.out.println("Test (51): Edit link with invalid URL fails in chapter");
 
@@ -4627,7 +4628,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(52)
+  @Order(47)
   void testEditLinkFailureEmptyURL() throws IOException {
     System.out.println("Test (52): Edit link with empty URL fails in chapter");
 
@@ -4687,7 +4688,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(53)
+  @Order(48)
   void testEditLinkNoSDMRoles() throws IOException {
     System.out.println("Test (53): Edit link fails due to no SDM roles assigned in chapter");
 
@@ -4747,10 +4748,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 
-  // ============= COPY LINK TESTS (54-58) =============
+  // // ============= COPY LINK TESTS (54-58) =============
 
   @Test
-  @Order(54)
+  @Order(49)
   void testCopyLinkSuccessNewChapter() throws IOException {
     System.out.println("Test (54): Copy link from one chapter to another new chapter");
 
@@ -4840,7 +4841,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(55)
+  @Order(50)
   void testCopyLinkUnsuccessfulInvalidObjectId() throws IOException {
     System.out.println("Test (55): Copy invalid link object ID to chapter fails");
 
@@ -4877,7 +4878,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(56)
+  @Order(51)
   void testCopyLinkToExistingChapter() throws IOException {
     System.out.println("Test (56): Copy link to existing chapter that has attachments");
 
@@ -4978,7 +4979,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(57)
+  @Order(52)
   void testCopyLinkNoSDMRoles() throws IOException {
     System.out.println("Test (57): Copy link fails due to no SDM roles");
 
@@ -5050,7 +5051,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(58)
+  @Order(53)
   void testCopyLinkFromDraftChapter() throws IOException {
     System.out.println("Test (58): Copy link from draft chapter to another chapter");
 
@@ -5135,10 +5136,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
   }
 
-  // ============= COPY ATTACHMENTS DRAFT MODE (59) =============
+  // // ============= COPY ATTACHMENTS DRAFT MODE (59) =============
 
   @Test
-  @Order(59)
+  @Order(54)
   void testCopyAttachmentsSuccessNewChapterDraft() throws IOException {
     System.out.println("Test (59): Copy attachments from one chapter to another in draft mode");
 
@@ -5264,10 +5265,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
   }
 
-  // ============= CHANGELOG TESTS (60-64) =============
+  // // ============= CHANGELOG TESTS (60-64) =============
 
   @Test
-  @Order(60)
+  @Order(55)
   void testViewChangelogForNewlyCreatedAttachment() throws IOException {
     System.out.println("Test (60): View changelog for newly created attachment in chapter");
 
@@ -5336,7 +5337,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(61)
+  @Order(56)
   void testChangelogAfterModifyingNoteAndCustomProperty() throws IOException {
     System.out.println("Test (61): Changelog after modifying note and custom property in chapter");
 
@@ -5422,7 +5423,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(62)
+  @Order(57)
   void testChangelogAfterRenamingAttachment() throws IOException {
     System.out.println("Test (62): Changelog after renaming attachment in chapter");
 
@@ -5507,7 +5508,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(63)
+  @Order(58)
   void testChangelogForCopiedAttachment() throws IOException {
     System.out.println("Test (63): Changelog for copied attachment in chapter");
 
@@ -5598,7 +5599,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(64)
+  @Order(59)
   void testChangelogForNewChapter() throws IOException {
     System.out.println("Test (64): Changelog for attachment in newly created chapter");
 
@@ -5656,10 +5657,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
   }
 
-  // ============= MOVE ATTACHMENT TESTS (65-75) =============
+  // // ============= MOVE ATTACHMENT TESTS (65-75) =============
 
   @Test
-  @Order(65)
+  @Order(60)
   void testMoveAttachmentsWithSourceFacet() throws IOException {
     System.out.println("Test (65): Move attachments from source chapter to target chapter");
 
@@ -5789,7 +5790,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(66)
+  @Order(61)
   void testMoveAttachmentsToChapterWithDuplicate() throws IOException {
     System.out.println("Test (66): Move attachments to chapter with duplicate attachment");
 
@@ -5876,7 +5877,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(67)
+  @Order(62)
   void testMoveAttachmentsWithNotesAndSecondaryProperties() throws IOException {
     System.out.println("Test (67): Move attachments with notes and secondary properties");
 
@@ -5985,7 +5986,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(68)
+  @Order(63)
   void testMoveAttachmentsPartialFailure() throws IOException {
     System.out.println("Test (68): Move attachments with partial failure (invalid object ID)");
 
@@ -6063,7 +6064,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(69)
+  @Order(64)
   void testMoveAttachmentsEmptyList() throws IOException {
     System.out.println("Test (69): Move attachments with empty object ID list");
 
@@ -6109,7 +6110,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(70)
+  @Order(65)
   void testMoveAttachmentsToSameChapter() throws IOException {
     System.out.println("Test (70): Move attachments to same chapter (should handle gracefully)");
 
@@ -6182,7 +6183,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(71)
+  @Order(66)
   void testMoveAttachmentsBetweenFacets() throws IOException {
     System.out.println("Test (71): Move attachments between different facets in chapters");
 
@@ -6256,7 +6257,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(72)
+  @Order(67)
   void testMoveMultipleAttachments() throws IOException {
     System.out.println("Test (72): Move multiple attachments at once between chapters");
 
@@ -6359,7 +6360,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(73)
+  @Order(68)
   void testMoveAttachmentsAllFacets() throws IOException {
     System.out.println("Test (73): Move attachments from all facets between chapters");
 
@@ -6450,7 +6451,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(74)
+  @Order(69)
   void testChainMoveAttachments() throws IOException {
     System.out.println("Test (74): Chain move attachments: Source -> Target1 -> Target2");
 
@@ -6567,7 +6568,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(75)
+  @Order(70)
   void testMoveAttachmentsWithoutSDMRole() throws IOException {
     System.out.println("Test (75): Move attachments fails without SDM role");
 
@@ -6667,7 +6668,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(76)
+  @Order(71)
   void testRenameChapterAttachmentWithExtensionChange() throws IOException {
     System.out.println(
         "Test (76) : Rename chapter attachment changing extension from .pdf to .txt across all facets - should return extension change warning");
@@ -6786,7 +6787,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(77)
+  @Order(72)
   void testRenameChapterAttachmentWithExtensionChange_BeforeSave() throws IOException {
     System.out.println(
         "Test (77) : Upload chapter attachment in draft, rename changing extension before save across all facets - should return extension change warning");
@@ -6878,7 +6879,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(78)
+  @Order(73)
   void testReadCmisMetadataCreatedBy() throws IOException {
     System.out.println("Test (78) : Read CMIS metadata and verify createdBy field");
 
@@ -6925,7 +6926,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(79)
+  @Order(74)
   void testUploadVirusFileInScanDisabledRepo() throws IOException {
     System.out.println(
         "Test (79) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
@@ -6989,7 +6990,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(80)
+  @Order(75)
   void testRenameToDuplicateFilename_BackendConflict_ErrorThrown() throws Exception {
     System.out.println(
         "Test (80) : Rename attachment to name that exists in backend — expect DI error");
@@ -7037,12 +7038,10 @@ class IntegrationTest_Chapters_MultipleFacet {
     assertTrue(
         response.contains("already exists") || response.contains("error"),
         "Error should indicate duplicate filename. Actual: " + response);
-
-    api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 
   @Test
-  @Order(81)
+  @Order(76)
   void testUploadDuplicateAttachment_DIError_RemovedFromDrafts() throws IOException {
     System.out.println(
         "Test (81) : Upload duplicate attachment — expect DI error and removed from drafts");
@@ -7092,7 +7091,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(82)
+  @Order(77)
   void testReadAttachment_DeletedFromBackend_NotAvailable() throws IOException {
     System.out.println(
         "Test (82) : Read attachment after backend deletion — verify app handles gracefully");
@@ -7137,7 +7136,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(83)
+  @Order(78)
   void testDeleteAttachment_NotPresentInRepository_RemovedFromUI() throws Exception {
     System.out.println("Test (83) : Delete attachment not in repository — expect removed from UI");
 
@@ -7187,7 +7186,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(84)
+  @Order(79)
   void testDeleteEntity_FolderAndContentDeletedFromRepository() throws Exception {
     System.out.println(
         "Test (84) : Delete book — expect chapter folder and all attachments deleted from DI");
@@ -7229,7 +7228,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(85)
+  @Order(80)
   void testDiscardDraft_AttachmentsAndFolderDeletedFromDI() throws Exception {
     System.out.println("Test (85) : Discard draft — expect attachments and folder deleted from DI");
 
@@ -7267,7 +7266,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(86)
+  @Order(81)
   void testDeleteAllAttachments_FolderDeletedFromDI() throws Exception {
     System.out.println("Test (86) : Delete all attachments — expect folder deleted from DI");
 
@@ -7323,7 +7322,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(87)
+  @Order(82)
   void testCopyInvalidAttachments_IntoNewEntity_NothingCopied() throws Exception {
     System.out.println(
         "Test (87) : Copy attachments with invalid secondary property into new entity"
@@ -7395,7 +7394,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(88)
+  @Order(83)
   void testCopyInvalidAttachments_IntoExistingEntity_NothingCopied() throws Exception {
     System.out.println(
         "Test (88) : Copy attachments with invalid secondary property into existing entity"
@@ -7495,7 +7494,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(89)
+  @Order(84)
   void testCopyEditedFileName_FromOneEntityToAnother() throws Exception {
     System.out.println(
         "Test (89) : Copy attachment with edited filename — expect target shows edited name");
@@ -7584,7 +7583,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(90)
+  @Order(85)
   void testLinkAttachment_CreatedByIsUserNotClientId() throws Exception {
     System.out.println(
         "Test (90) : Create link and verify createdBy is the user, not the clientID");
@@ -7631,7 +7630,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(91)
+  @Order(86)
   void testDeleteLink_NotPresentInRepository_RemovedFromUI() throws Exception {
     System.out.println("Test (91) : Delete link not in repository — expect removed from UI");
 
@@ -7675,7 +7674,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(92)
+  @Order(87)
   void testRenameLinkToDuplicateName_BackendConflict_ErrorThrown() throws Exception {
     System.out.println("Test (92) : Rename link to duplicate name — expect error");
 
@@ -7723,7 +7722,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(93)
+  @Order(88)
   void testRenameLink_WhitespaceOnly_WarningThrown() throws Exception {
     System.out.println("Test (93) : Rename link with whitespace-only name — expect warning");
 
@@ -7767,7 +7766,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(94)
+  @Order(89)
   void testDiscardDraftEditedLink_RevertsToOriginalUrl() throws Exception {
     System.out.println("Test (94) : Edit link URL, discard draft — expect revert to original URL");
 
@@ -7817,7 +7816,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(95)
+  @Order(90)
   void testMoveAttachments_FromSdmFolder_ToTargetEntity() throws Exception {
     System.out.println("Test (95) : Move attachments from SDM folder to target chapter");
 
@@ -7880,7 +7879,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(96)
+  @Order(91)
   void testMoveAttachments_FromSdmFolder_DuplicateInTarget_Skipped() throws Exception {
     System.out.println(
         "Test (96) : Move from SDM folder with duplicate in target — expect duplicate skipped");
@@ -7958,7 +7957,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(97)
+  @Order(92)
   void testMoveAttachments_FromSdmFolder_WithSecondaryProperties_Preserved() throws Exception {
     System.out.println(
         "Test (97) : Move from SDM folder with secondary properties — expect preserved");
@@ -8082,5 +8081,482 @@ class IntegrationTest_Chapters_MultipleFacet {
 
     api.deleteEntity(appUrl, bookEntityName, targetBookID);
     api.deleteEntity(appUrl, bookEntityName, sourceBookID);
+  }
+
+  @Test
+  @Order(93)
+  void testDownloadMultipleAttachmentsInDraftState() throws IOException {
+    System.out.println(
+        "Test (76): Create book+chapter, upload pdf/txt/exe per facet in draft state, download"
+            + " before saving");
+
+    String draftBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (draftBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String draftChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, draftBookID);
+    if (draftChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, List<String>> facetAttachmentIds = new HashMap<>();
+    int facetIndex = 0;
+    for (String facetName : facet) {
+      List<String> ids = new ArrayList<>();
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", draftChapterID);
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      postData.put("mimeType", "application/pdf");
+      File pdfOrig = new File(classLoader.getResource("sample.pdf").getFile());
+      File pdfFile = File.createTempFile("sample_ch_" + facetIndex + "_pdf_", ".pdf");
+      Files.copy(pdfOrig.toPath(), pdfFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      List<String> r1 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, pdfFile);
+      pdfFile.delete();
+      if (!r1.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.pdf for facet " + facetName);
+        return;
+      }
+      ids.add(r1.get(1));
+
+      postData.put("mimeType", "application/txt");
+      File txtOrig = new File(classLoader.getResource("sample.txt").getFile());
+      File txtFile = File.createTempFile("sample_ch_" + facetIndex + "_txt_", ".txt");
+      Files.copy(txtOrig.toPath(), txtFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      List<String> r2 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, txtFile);
+      txtFile.delete();
+      if (!r2.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.txt for facet " + facetName);
+        return;
+      }
+      ids.add(r2.get(1));
+
+      postData.put("mimeType", "application/exe");
+      File exeOrig = new File(classLoader.getResource("sample.exe").getFile());
+      File exeFile = File.createTempFile("sample_ch_" + facetIndex + "_exe_", ".exe");
+      Files.copy(exeOrig.toPath(), exeFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      List<String> r3 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, draftChapterID, srvpath, postData, exeFile);
+      exeFile.delete();
+      if (!r3.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+        fail("Could not upload sample.exe for facet " + facetName);
+        return;
+      }
+      ids.add(r3.get(1));
+      facetAttachmentIds.put(facetName, ids);
+      facetIndex++;
+    }
+
+    for (String facetName : facet) {
+      List<String> ids = facetAttachmentIds.get(facetName);
+
+      String singleResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, draftChapterID, List.of(ids.get(0)));
+      JSONArray singleArray = new JSONArray(singleResult);
+      assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+      assertEquals(
+          "success",
+          singleArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled in draft state for facet " + facetName);
+      assertTrue(
+          singleArray.getJSONObject(0).has("content"),
+          "Attachment should have content field for facet " + facetName);
+
+      String multiResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, draftChapterID, ids);
+      JSONArray multiArray = new JSONArray(multiResult);
+      assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
+      for (int j = 0; j < multiArray.length(); j++) {
+        assertEquals(
+            "success",
+            multiArray.getJSONObject(j).getString("status"),
+            "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
+        assertTrue(
+            multiArray.getJSONObject(j).has("content"),
+            "Attachment " + (j + 1) + " should have content field for facet " + facetName);
+      }
+    }
+
+    api.deleteEntityDraft(appUrl, bookEntityName, draftBookID);
+  }
+
+  @Test
+  @Order(94)
+  void testDownloadButtonDisabledWithLinkInDraftState() throws IOException {
+    System.out.println(
+        "Test (77): Upload pdf and link per facet to chapter, save book, edit (draft state),"
+            + " pdf download enabled, pdf+link download disabled");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, String> facetPdfId = new HashMap<>();
+    Map<String, String> facetLinkId = new HashMap<>();
+    for (String facetName : facet) {
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> pdfResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+      if (!pdfResponse.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload pdf for facet " + facetName);
+        return;
+      }
+      facetPdfId.put(facetName, pdfResponse.get(1));
+
+      String linkResp =
+          api.createLink(
+              appUrl,
+              chapterEntityName,
+              facetName,
+              testChapterID,
+              "TestLink",
+              "https://www.example.com");
+      if (!linkResp.equals("Link created successfully")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not create link for facet " + facetName);
+        return;
+      }
+
+      List<Map<String, Object>> draftMeta =
+          api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facetName, testChapterID);
+      String linkId =
+          draftMeta.stream()
+              .filter(
+                  a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+              .map(a -> (String) a.get("ID"))
+              .findFirst()
+              .orElse(null);
+      if (linkId == null) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not find link attachment in draft metadata for facet " + facetName);
+        return;
+      }
+      facetLinkId.put(facetName, linkId);
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    String editResponse = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!editResponse.equals("Entity in draft mode")) {
+      api.deleteEntity(appUrl, bookEntityName, testBookID);
+      fail("Could not put book into edit/draft mode: " + editResponse);
+      return;
+    }
+
+    for (String facetName : facet) {
+      String pdfId = facetPdfId.get(facetName);
+      String linkId = facetLinkId.get(facetName);
+
+      String pdfResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId));
+      JSONArray pdfArray = new JSONArray(pdfResult);
+      assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
+      assertEquals(
+          "success",
+          pdfArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled for pdf in draft state, facet " + facetName);
+
+      String mixedResult =
+          api.downloadSelectedAttachmentsDraft(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId, linkId));
+      JSONArray mixedArray = new JSONArray(mixedResult);
+      assertEquals(
+          2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
+      JSONObject linkResult = null;
+      for (int j = 0; j < mixedArray.length(); j++) {
+        JSONObject item = mixedArray.getJSONObject(j);
+        if (linkId.equals(item.getString("id"))) {
+          linkResult = item;
+          break;
+        }
+      }
+      assertNotNull(linkResult, "Link result should be present for facet " + facetName);
+      assertEquals(
+          "error",
+          linkResult.getString("status"),
+          "Download button should be disabled: link should return error for facet " + facetName);
+      assertEquals(
+          "Download is not supported for link attachments",
+          linkResult.getString("message"),
+          "Error message should match for facet " + facetName);
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(95)
+  void testDownloadMultipleAttachmentsInActiveState() throws IOException {
+    System.out.println(
+        "Test (78): Create book+chapter, upload pdf/txt/exe per facet, save, download in active"
+            + " state");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    Map<String, List<String>> facetAttachmentIds = new HashMap<>();
+    for (String facetName : facet) {
+      List<String> ids = new ArrayList<>();
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      postData.put("mimeType", "application/pdf");
+      File pdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+      List<String> r1 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, pdfFile);
+      if (!r1.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.pdf for facet " + facetName);
+        return;
+      }
+      ids.add(r1.get(1));
+
+      postData.put("mimeType", "application/txt");
+      File txtFile = new File(classLoader.getResource("sample.txt").getFile());
+      List<String> r2 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, txtFile);
+      if (!r2.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.txt for facet " + facetName);
+        return;
+      }
+      ids.add(r2.get(1));
+
+      postData.put("mimeType", "application/exe");
+      File exeFile = new File(classLoader.getResource("sample.exe").getFile());
+      List<String> r3 =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, exeFile);
+      if (!r3.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload sample.exe for facet " + facetName);
+        return;
+      }
+      ids.add(r3.get(1));
+      facetAttachmentIds.put(facetName, ids);
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    for (String facetName : facet) {
+      List<String> ids = facetAttachmentIds.get(facetName);
+
+      String singleResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(ids.get(0)));
+      JSONArray singleArray = new JSONArray(singleResult);
+      assertEquals(1, singleArray.length(), "Expected 1 result for facet " + facetName);
+      assertEquals(
+          "success",
+          singleArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled: single download should succeed for facet "
+              + facetName);
+      assertTrue(
+          singleArray.getJSONObject(0).has("content"),
+          "Downloaded attachment should have a content field for facet " + facetName);
+
+      String multiResult =
+          api.downloadSelectedAttachments(appUrl, chapterEntityName, facetName, testChapterID, ids);
+      JSONArray multiArray = new JSONArray(multiResult);
+      assertEquals(3, multiArray.length(), "Expected 3 results for facet " + facetName);
+      for (int j = 0; j < multiArray.length(); j++) {
+        assertEquals(
+            "success",
+            multiArray.getJSONObject(j).getString("status"),
+            "Attachment " + (j + 1) + " should download successfully for facet " + facetName);
+        assertTrue(
+            multiArray.getJSONObject(j).has("content"),
+            "Attachment " + (j + 1) + " should have content field for facet " + facetName);
+      }
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(96)
+  void testDownloadButtonDisabledWithLinkInActiveState() throws IOException {
+    System.out.println(
+        "Test (79): Upload pdf and link per facet to chapter, save book, pdf download enabled,"
+            + " pdf+link download disabled in active state");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    if (testBookID.equals("Could not create entity")) {
+      fail("Could not create book");
+      return;
+    }
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    if (testChapterID.equals("Could not create entity")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not create chapter");
+      return;
+    }
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File origPdfFile = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, String> facetPdfId = new HashMap<>();
+    int facetIdx = 0;
+    for (String facetName : facet) {
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "application/pdf");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      File tempPdf = File.createTempFile("sample_ch_link_" + facetIdx + "_", ".pdf");
+      Files.copy(origPdfFile.toPath(), tempPdf.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      List<String> pdfResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facetName, testChapterID, srvpath, postData, tempPdf);
+      tempPdf.delete();
+      if (!pdfResponse.get(0).equals("Attachment created")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not upload pdf for facet " + facetName);
+        return;
+      }
+      facetPdfId.put(facetName, pdfResponse.get(1));
+      facetIdx++;
+
+      String linkResp =
+          api.createLink(
+              appUrl,
+              chapterEntityName,
+              facetName,
+              testChapterID,
+              "TestLink",
+              "https://www.example.com");
+      if (!linkResp.equals("Link created successfully")) {
+        api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+        fail("Could not create link for facet " + facetName);
+        return;
+      }
+    }
+
+    String saveResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    if (!saveResponse.equals("Saved")) {
+      api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+      fail("Could not save book: " + saveResponse);
+      return;
+    }
+
+    for (String facetName : facet) {
+      String pdfId = facetPdfId.get(facetName);
+
+      List<Map<String, Object>> activeMetadata =
+          api.fetchEntityMetadata(appUrl, chapterEntityName, facetName, testChapterID);
+      String linkId =
+          activeMetadata.stream()
+              .filter(
+                  a -> "application/internet-shortcut".equalsIgnoreCase((String) a.get("mimeType")))
+              .map(a -> (String) a.get("ID"))
+              .findFirst()
+              .orElse(null);
+      if (linkId == null) {
+        api.deleteEntity(appUrl, bookEntityName, testBookID);
+        fail("Could not find link attachment in active metadata for facet " + facetName);
+        return;
+      }
+
+      String pdfOnlyResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId));
+      JSONArray pdfArray = new JSONArray(pdfOnlyResult);
+      assertEquals(1, pdfArray.length(), "Expected 1 result for pdf-only for facet " + facetName);
+      assertEquals(
+          "success",
+          pdfArray.getJSONObject(0).getString("status"),
+          "Download button should be enabled: pdf download should succeed for facet " + facetName);
+
+      String mixedResult =
+          api.downloadSelectedAttachments(
+              appUrl, chapterEntityName, facetName, testChapterID, List.of(pdfId, linkId));
+      JSONArray mixedArray = new JSONArray(mixedResult);
+      assertEquals(
+          2, mixedArray.length(), "Expected 2 results for pdf+link for facet " + facetName);
+      JSONObject linkResult = null;
+      for (int j = 0; j < mixedArray.length(); j++) {
+        JSONObject item = mixedArray.getJSONObject(j);
+        if (linkId.equals(item.getString("id"))) {
+          linkResult = item;
+          break;
+        }
+      }
+      assertNotNull(linkResult, "Link result should be present for facet " + facetName);
+      assertEquals(
+          "error",
+          linkResult.getString("status"),
+          "Download button should be disabled: link should return error for facet " + facetName);
+      assertEquals(
+          "Download is not supported for link attachments",
+          linkResult.getString("message"),
+          "Error message should match for facet " + facetName);
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
   }
 }

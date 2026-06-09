@@ -1,0 +1,96 @@
+namespace my.bookshop;
+
+using {
+    Currency,
+    sap,
+    managed,
+    cuid
+} from '@sap/cds/common';
+using my.bookshop.Reviews from './reviews';
+using my.bookshop.TechnicalBooleanFlag from './common';
+
+@fiori.draft.enabled
+entity Books : cuid, managed {
+    title        : localized String(111);
+    descr        : localized String(1111);
+    author       : Association to Authors;
+    genre        : Association to Genres;
+    stock        : Integer;
+    price        : Decimal(9, 2);
+    currency     : Currency;
+    rating       : Decimal(2, 1);
+    reviews      : Association to many Reviews
+                       on reviews.book = $self;
+    isReviewable : TechnicalBooleanFlag not null default true;
+    cHapters : Composition of many Chapters on cHapters.book = $self;
+    pages : Composition of many Pages on pages.book = $self;
+    virtual isAttachmentsUploadable : Boolean;
+    virtual isReferencesUploadable  : Boolean;
+}
+
+entity Authors : cuid, managed {
+    @assert.format : '^\p{Lu}.*' // assert that name starts with a capital letter
+    name         : String(111);
+    dateOfBirth  : Date;
+    dateOfDeath  : Date;
+    placeOfBirth : String;
+    placeOfDeath : String;
+    books        : Association to many Books
+                       on books.author = $self;
+}
+
+// annotations for Data Privacy
+annotate Authors with
+@PersonalData : { DataSubjectRole : 'Author', EntitySemantics : 'DataSubject' }
+{
+  ID    @PersonalData.FieldSemantics : 'DataSubjectID';
+  name  @PersonalData.IsPotentiallySensitive;
+}
+
+/**
+ * Hierarchically organized Code List for Genres
+ */
+entity Genres : sap.common.CodeList {
+    key ID       : Integer;
+        parent   : Association to Genres;
+        children : Composition of many Genres
+                       on children.parent = $self;
+}
+
+/** Adding {Notebooks,Writers} for user service */
+entity Notebooks : managed, cuid {
+  @mandatory title  : localized String(111);
+  descr             : localized String(1111);
+  @mandatory writer : Association to Writers;
+  stock             : Integer;
+  price             : Decimal;
+  currency          : Currency;
+  image             : LargeBinary @Core.MediaType: 'image/png';
+  virtual isAttachmentsUploadable : Boolean;
+}
+
+entity Writers : managed, cuid {
+  @mandatory name : String(111);
+  dateOfBirth     : Date;
+  dateOfDeath     : Date;
+  placeOfBirth    : String;
+  placeOfDeath    : String;
+  notebooks       : Association to many Notebooks
+                      on notebooks.writer = $self;
+}
+
+entity Chapters : cuid, managed {
+  book       : Association to Books;
+  title          : String @title: 'Chapter Title';
+  description    : String;
+  url            : String;
+  chapterType  : String @title: 'Chapter Type';
+}
+
+entity Pages : cuid, managed {
+  book       : Association to Books;
+  title          : String @title: 'Page Title';
+  description    : String;
+  url            : String;
+  pageType  : String @title: 'Page Type';
+}
