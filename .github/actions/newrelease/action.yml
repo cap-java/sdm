@@ -28,14 +28,14 @@ runs:
     - name: Update version
       run: |
         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-        echo $VERSION > cap-notebook/version.txt
+        echo $VERSION > app/single-tenant/central-space/demoapp/version.txt
         mvn --no-transfer-progress versions:set-property -Dproperty=revision -DnewVersion=$VERSION
         #chmod +x ensure-license.sh
         #./ensure-license.sh
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git checkout -b Release_v1.10.0
-        git add cap-notebook/version.txt
+        git add app/single-tenant/central-space/demoapp/version.txt
         git commit -am "Update version to $VERSION"
         git push --set-upstream origin Release_v1.10.0
       shell: bash
