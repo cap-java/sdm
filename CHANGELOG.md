@@ -8,12 +8,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### Added
 - Support download multiple attachments
+- Support disabling of upload button when maximum allowed attachments count is reached
 
 ### Fixed
 - Localization for attachment reference fields
 - Service binding lookup to correctly resolve SDM bindings by tags
 - Technical user detection in the delete API to align with other API implementations
 - File extension change during attachment rename
+- Copying of invalid secondary properties during copy operation
 
 ## Version 1.9.0
 
