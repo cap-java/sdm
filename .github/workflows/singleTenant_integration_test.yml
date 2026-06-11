@@ -947,32 +947,11 @@ jobs:
         env:
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
         run: |
-          # ─── DIAGNOSTICS: prove what secret value we received (length only — does NOT leak the secret) ───
-          echo "🔍 DEFAULTREPOSITORYID length: ${#DEFAULTREPOSITORYID}"
-          echo "🔍 First 4 chars (masked if real UUID): ${DEFAULTREPOSITORYID:0:4}"
-          echo "🔍 Equals literal name? $([ "$DEFAULTREPOSITORYID" = "DEFAULTREPOSITORYID" ] && echo "YES — secret value IS the literal string DEFAULTREPOSITORYID" || echo "no")"
-          echo "🔍 Is empty? $([ -z "$DEFAULTREPOSITORYID" ] && echo "YES — secret resolved to empty" || echo "no")"
-          # Hard-stop if obviously wrong
-          if [ -z "$DEFAULTREPOSITORYID" ] || [ "$DEFAULTREPOSITORYID" = "DEFAULTREPOSITORYID" ]; then
-            echo "❌ DEFAULTREPOSITORYID secret is missing or contains the literal placeholder string."
-            echo "   Fix: GitHub → Settings → Environments → dev → Secrets → DEFAULTREPOSITORYID → paste the actual UUID"
-            exit 1
-          fi
-          if [ ${#DEFAULTREPOSITORYID} -lt 30 ]; then
-            echo "⚠️ DEFAULTREPOSITORYID is shorter than expected (length=${#DEFAULTREPOSITORYID}). A real CMIS repo UUID is ~36 chars."
-            echo "   Aborting to prevent corrupting the CF app's REPOSITORY_ID."
-            exit 1
-          fi
           echo "🔄 Reverting REPOSITORY_ID to default repository..."
           cf set-env demoappjava-srv REPOSITORY_ID "$DEFAULTREPOSITORYID"
           echo "🔄 Restaging application..."
           cf restage demoappjava-srv > /dev/null 2>&1
           echo "✅ Reverted to default repository!"
-          # Verify what actually got set on the app (CF redacts values it considers credentials, but env var values are visible)
-          APP_GUID=$(cf app demoappjava-srv --guid)
-          ACTUAL=$(cf curl "/v3/apps/${APP_GUID}/environment_variables" | jq -r '.var.REPOSITORY_ID // empty')
-          echo "🔍 Post-restage REPOSITORY_ID length on app: ${#ACTUAL}"
-          echo "🔍 Post-restage REPOSITORY_ID first 4 chars: ${ACTUAL:0:4}"
 
   # Repo-specific tests run one at a time (max-parallel: 1) so each shows individually in UI
   # DISABLED: set if to true to re-enable
