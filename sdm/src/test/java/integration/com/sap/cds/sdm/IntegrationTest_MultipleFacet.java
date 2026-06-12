@@ -8,6 +8,8 @@ import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import okhttp3.*;
 import org.json.JSONArray;
