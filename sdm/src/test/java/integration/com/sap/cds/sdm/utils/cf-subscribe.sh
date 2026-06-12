@@ -1,0 +1,225 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/../../../../../../../resources/credentials.properties"
+
+# Load key=value pairs from .properties file without shell expansion of values
+load_props() {
+  local key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*$ || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key//[[:space:]]/}"
+    [[ -z "$key" ]] && continue
+    printf -v "$key" '%s' "$val"
+  done < "$1"
+}
+
+# --- Load config ---
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  echo "ERROR: Config file not found"
+  exit 1
+fi
+
+load_props "$CONFIG_FILE"
+
+# --- Resolve tenant-specific subaccount via ACTIVE_TENANT env var (1 or 2) ---
+TENANT_SUFFIX="${ACTIVE_TENANT:-1}"
+SUBACCOUNT_VAR="consumerSubaccountIdMT${TENANT_SUFFIX}"
+consumerSubaccountIdMT="${!SUBACCOUNT_VAR}"
+
+# --- Resolve consumer credentials ---
+CONSUMER_USER="${username}"
+CONSUMER_PASS="${password}"
+BTP_URL="${BTP_CLI_URL:-https://cli.btp.cloud.sap}"
+
+# --- Validate required variables ---
+for var in CONSUMER_USER consumerSubaccountIdMT SAAS_APP_NAME; do
+  if [[ -z "${!var:-}" ]]; then
+    echo "ERROR: Required variable $var is not set in config"
+    exit 1
+  fi
+done
+
+echo "=== BTP Subaccount SaaS Subscription ==="
+echo "=========================================="
+
+# --- BTP Login ---
+echo ""
+echo "Logging in to SAP BTP..."
+LOGIN_ARGS=(--url "$BTP_URL" --user "$CONSUMER_USER")
+if [[ -n "${CONSUMER_PASS:-}" ]]; then
+  LOGIN_ARGS+=(--password "$CONSUMER_PASS")
+fi
+if [[ -n "${BTP_GLOBAL_ACCOUNT_SUBDOMAIN:-}" ]]; then
+  LOGIN_ARGS+=(--subdomain "$BTP_GLOBAL_ACCOUNT_SUBDOMAIN")
+fi
+btp logout > /dev/null 2>&1 || true
+btp login "${LOGIN_ARGS[@]}" > /dev/null 2>&1
+
+# --- Check current subscription status ---
+GET_ARGS=(--subaccount "$consumerSubaccountIdMT" --of-app "$SAAS_APP_NAME")
+if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
+  GET_ARGS+=(--plan "$SAAS_APP_PLAN")
+fi
+
+# Use list to find the exact app row and check its state
+# Use -w (whole word) so "NOT_SUBSCRIBED" does NOT match "SUBSCRIBED"
+CURRENT_STATE=$(btp list accounts/subscription --subaccount "$consumerSubaccountIdMT" 2>/dev/null \
+  | grep -F "$SAAS_APP_NAME" | grep -ow "SUBSCRIBED" | head -1 || true)
+
+if [[ "$CURRENT_STATE" == "SUBSCRIBED" ]]; then
+  echo ""
+  echo "Already subscribed to '$SAAS_APP_NAME' — skipping subscription step."
+else
+  # --- Wait for any transitional state to settle before subscribing ---
+  echo ""
+  echo "Checking subscription state before subscribing..."
+  SKIP_SUBSCRIBE=false
+  for ((wait_attempt=1; wait_attempt<=30; wait_attempt++)); do
+    RAW_STATE=$(btp get accounts/subscription "${GET_ARGS[@]}" 2>/dev/null | grep -i "status:" | awk '{print $2}' || true)
+    if [[ -z "$RAW_STATE" ]] || echo "$RAW_STATE" | grep -qi "NOT_SUBSCRIBED"; then
+      echo "Subscription is in stable state — proceeding."
+      break
+    elif echo "$RAW_STATE" | grep -qi "SUBSCRIBED" && ! echo "$RAW_STATE" | grep -qi "NOT_SUBSCRIBED"; then
+      echo "Already subscribed (detected via get) — skipping subscription step."
+      SKIP_SUBSCRIBE=true
+      break
+    elif echo "$RAW_STATE" | grep -qi "FAILED"; then
+      echo "Previous operation failed (${RAW_STATE}) — proceeding with subscribe."
+      break
+    else
+      echo "  State: ${RAW_STATE} — waiting 10s for stable state (attempt $wait_attempt/30)..."
+      sleep 10
+    fi
+  done
+
+  if [[ "$SKIP_SUBSCRIBE" == "true" ]]; then
+    echo ""
+    echo "Done."
+    exit 0
+  fi
+
+  # --- Subscribe to SaaS application at subaccount level ---
+  echo ""
+  echo "Subscribing to SaaS application..."
+  SUBSCRIBE_ARGS=(--subaccount "$consumerSubaccountIdMT" --to-app "$SAAS_APP_NAME")
+  if [[ -n "${SAAS_APP_PLAN:-}" ]]; then
+    SUBSCRIBE_ARGS+=(--plan "$SAAS_APP_PLAN")
+  fi
+  btp subscribe accounts/subaccount "${SUBSCRIBE_ARGS[@]}" > /dev/null 2>&1
+
+  # --- Wait for subscription to complete ---
+  echo ""
+  echo "Waiting for subscription to be ready..."
+  while true; do
+    STATE=$(btp get accounts/subscription "${GET_ARGS[@]}" 2>/dev/null | grep -i "status:" | awk '{print $2}' || true)
+    if echo "$STATE" | grep -qi "SUBSCRIBED"; then
+      echo "Subscription is active."
+      break
+    elif echo "$STATE" | grep -qi "SUBSCRIBE_FAILED"; then
+      echo "ERROR: Subscription failed."
+      exit 1
+    else
+      echo "  State: ${STATE:-pending} — waiting 10s..."
+      sleep 10
+    fi
+  done
+fi
+
+echo ""
+echo "Done."
+
+# --- Add roles to role collection after subscription ---
+
+IFS=',' read -ra _colls_raw   <<< "${ROLE_COLLECTION_NAME:-}"
+
+COLLECTIONS_ARRAY=()
+for _c in ${_colls_raw[@]+"${_colls_raw[@]}"}; do
+  _c="${_c#"${_c%%[![:space:]]*}"}"; _c="${_c%"${_c##*[![:space:]]}"}"
+  [[ -n "$_c" ]] && COLLECTIONS_ARRAY+=("$_c")
+done
+
+if [[ ${#COLLECTIONS_ARRAY[@]} -eq 0 ]]; then
+  echo ""
+  echo "No ROLE_COLLECTION_NAME configured — skipping role setup."
+  exit 0
+fi
+
+ROLE_FILTER="${APP_ROLE_FILTER:-$SAAS_APP_NAME}"
+
+echo ""
+echo "=== Role Collection Setup ==="
+echo "Fetching roles for app filter: '$ROLE_FILTER'..."
+
+# After a fresh subscription, role templates can take time to be provisioned.
+MATCHED_ROLES=""
+ROLES_RAW=""
+MAX_RETRIES=6
+RETRY_INTERVAL=30
+for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
+  ROLES_RAW=$(btp list security/role --subaccount "$consumerSubaccountIdMT" 2>&1) || true
+
+  if echo "$ROLES_RAW" | grep -qi "^error\|FAILED"; then
+    echo "ERROR: Could not fetch roles from subaccount."
+    exit 1
+  fi
+
+  MATCHED_ROLES=$(echo "$ROLES_RAW" \
+    | grep -i "$ROLE_FILTER" \
+    | awk '{print $1 "|" $3 "|" $2}' \
+    || true)
+
+  if [[ -n "$MATCHED_ROLES" ]]; then
+    break
+  fi
+
+  if [[ $attempt -lt $MAX_RETRIES ]]; then
+    echo "  Roles for '$ROLE_FILTER' not yet provisioned (attempt $attempt/$MAX_RETRIES) — waiting ${RETRY_INTERVAL}s..."
+    sleep "$RETRY_INTERVAL"
+  fi
+done
+
+if [[ -z "$MATCHED_ROLES" ]]; then
+  echo "WARNING: No matching roles found after $MAX_RETRIES attempts."
+  exit 0
+fi
+
+ROLE_COUNT=$(echo "$MATCHED_ROLES" | wc -l | tr -d ' ')
+echo "Found $ROLE_COUNT role(s) to add."
+
+for COLLECTION_NAME in "${COLLECTIONS_ARRAY[@]}"; do
+  echo ""
+  echo "--- Adding roles to collection: '$COLLECTION_NAME' ---"
+
+  # Create the role collection if it doesn't already exist
+  COLLECTION_EXISTS=$(btp list security/role-collection --subaccount "$consumerSubaccountIdMT" 2>/dev/null \
+    | awk -v name="$COLLECTION_NAME" '$1 == name {found=1} END {print found+0}' || echo 0)
+  if [[ "$COLLECTION_EXISTS" != "1" ]]; then
+    echo "Creating role collection '$COLLECTION_NAME'..."
+    btp create security/role-collection "$COLLECTION_NAME" \
+      --subaccount "$consumerSubaccountIdMT" \
+      --description "Auto-created role collection for $SAAS_APP_NAME" \
+      > /dev/null 2>&1 \
+      && echo "Role collection created." \
+      || echo "WARNING: Could not create role collection — continuing."
+  fi
+
+  # Add each role to the collection
+  while IFS='|' read -r RNAME RTEMPLATE RAPPID; do
+    [[ -z "$RNAME" ]] && continue
+    btp add security/role "$RNAME" \
+      --to-role-collection "$COLLECTION_NAME" \
+      --subaccount "$consumerSubaccountIdMT" \
+      --of-app "$RAPPID" \
+      --of-role-template "$RTEMPLATE" \
+      > /dev/null 2>&1 \
+      && echo "  Role '$RNAME' added." \
+      || echo "  WARNING: Could not add role '$RNAME' (may already exist) — continuing."
+  done <<< "$MATCHED_ROLES"
+done
+
+echo ""
+echo "Role setup complete."
