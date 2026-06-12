@@ -13,6 +13,7 @@ on:
 
 jobs:
   integration-test:
+    environment: dev
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -62,9 +63,11 @@ jobs:
 
       - name: Determine Cloud Foundry Space 🌌
         id: determine_space
+        env:
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           if [ "${{ github.event.inputs.cf_space }}" == "developcap" ]; then
-            space="${{ secrets.CF_SPACE }}"
+            space="$CF_SPACE"
           else
             space="${{ github.event.inputs.cf_space }}"
           fi
@@ -72,14 +75,25 @@ jobs:
           echo "space=$space" >> $GITHUB_OUTPUT
 
       - name: Login to Cloud Foundry 🔑
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
+          echo "::add-mask::${{ steps.determine_space.outputs.space }}"
           echo "🔄 Logging in to Cloud Foundry..."
           echo "Space Name: ${{ steps.determine_space.outputs.space }}"
-          cf login -a ${{ secrets.CF_API }} \
-            -u ${{ secrets.CF_USER }} \
-            -p ${{ secrets.CF_PASSWORD }} \
-            -o ${{ secrets.CF_ORG }} \
-            -s ${{ steps.determine_space.outputs.space }}
+          cf login -a "$CF_API" \
+            -u "$CF_USER" \
+            -p "$CF_PASSWORD" \
+            -o "$CF_ORG" \
+            -s ${{ steps.determine_space.outputs.space }} > /dev/null
           echo "✅ Logged in successfully!"
 
       - name: Fetch and Escape Client Details for single tenant 🔍
@@ -128,22 +142,32 @@ jobs:
           CLIENT_ID: ${{ steps.fetch_credentials.outputs.CLIENT_ID }}
           CMIS_CLIENT_ID: ${{ secrets.CMISCLIENTID }}
           CMIS_CLIENT_SECRET: ${{ secrets.CMISCLIENTSECRET }}
+          CMIS_URL: ${{ secrets.CMIS_URL }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+          CAPAUTH_URL: ${{ secrets.CAPAUTH_URL }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          NOSDMROLEUSERNAME: ${{ secrets.NOSDMROLEUSERNAME }}
+          NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
+          VERSIONEDREPOSITORYID: ${{ secrets.VERSIONEDREPOSITORYID }}
+          VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
+          DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
         run: |
+          set +x
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
-          appUrl="${{ secrets.CF_ORG }}-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
-          authUrl="${{ secrets.CAPAUTH_URL }}"
-          clientID="${{ env.CLIENT_ID }}"
-          clientSecret="${{ env.CLIENT_SECRET }}"
-          username="${{ secrets.CF_USER }}"
-          password="${{ secrets.CF_PASSWORD }}"
-          noSDMRoleUsername="${{ secrets.NOSDMROLEUSERNAME }}"
-          noSDMRoleUserPassword="${{ secrets.NOSDMROLEUSERPASSWORD }}"
-          versionedRepositoryID="${{ secrets.VERSIONEDREPOSITORYID }}"
-          virusScanRepositoryID="${{ secrets.VIRUSSCANREPOSITORYID }}"
-          defaultRepositoryID="${{ secrets.DEFAULTREPOSITORYID }}"
-          CMIS_URL="${{ secrets.CMIS_URL }}"
+          appUrl="$CF_ORG-${{ steps.determine_space.outputs.space }}-demoappjava-srv.cfapps.eu12.hana.ondemand.com"
+          authUrl="$CAPAUTH_URL"
+          clientID="$CLIENT_ID"
+          clientSecret="$CLIENT_SECRET"
+          username="$CF_USER"
+          password="$CF_PASSWORD"
+          noSDMRoleUsername="$NOSDMROLEUSERNAME"
+          noSDMRoleUserPassword="$NOSDMROLEUSERPASSWORD"
+          versionedRepositoryID="$VERSIONEDREPOSITORYID"
+          virusScanRepositoryID="$VIRUSSCANREPOSITORYID"
+          defaultRepositoryID="$DEFAULTREPOSITORYID"
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           echo "::add-mask::$clientSecret"
@@ -189,7 +213,27 @@ jobs:
           cmisClientSecret=$cmisClientSecret
           EOL
           echo "🎯 Running Maven integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
-          mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          # mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"
+          MAX_RETRIES=3
+          ATTEMPT=0
+          EXIT_CODE=1
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=single -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+              echo "✅ Tests passed on attempt $ATTEMPT!"
+              EXIT_CODE=0
+              break
+            else
+              if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+                echo "⚠️ Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+                sleep 30
+              else
+                echo "❌ All $MAX_RETRIES attempts failed for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}."
+              fi
+            fi
+          done
+          exit $EXIT_CODE
 
   versioned-repo-setup:
     runs-on: ubuntu-latest

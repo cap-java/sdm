@@ -29,7 +29,6 @@ runs:
   steps:
     - name: "Echo Inputs"
       run: |
-        echo "user: ${{ inputs.user }}"
         echo "profile: ${{ inputs.profile }}"
       shell: bash
 
@@ -45,9 +44,13 @@ runs:
 
     - name: "Import GPG Key"
       run: |
-        echo "${{ inputs.pgp-private-key }}" | gpg --batch --passphrase "$PASSPHRASE" --import
-      shell: bash  
+        set +x
+        echo "::add-mask::$PGP_PRIVATE_KEY"
+        echo "::add-mask::$PASSPHRASE"
+        echo "$PGP_PRIVATE_KEY" | gpg --batch --passphrase "$PASSPHRASE" --import
+      shell: bash
       env:
+        PGP_PRIVATE_KEY: ${{ inputs.pgp-private-key }}
         PASSPHRASE: ${{ inputs.pgp-passphrase }}
 
     - name: "Ensure Local Repo Directory"
@@ -57,12 +60,17 @@ runs:
       shell: bash
 
     - name: Deploy to Maven Central
-      run: >
-        mvn -B -ntp --show-version
-        -Dmaven.install.skip=true
-        -Dmaven.test.skip=true
-        -Dgpg.passphrase="$GPG_PASSPHRASE"
-        -Dgpg.keyname="$GPG_PUB_KEY"
+      run: |
+        set +x
+        echo "::add-mask::$MAVEN_CENTRAL_USER"
+        echo "::add-mask::$MAVEN_CENTRAL_PASSWORD"
+        echo "::add-mask::$GPG_PASSPHRASE"
+        echo "::add-mask::$GPG_PUB_KEY"
+        mvn -B -ntp --show-version \
+        -Dmaven.install.skip=true \
+        -Dmaven.test.skip=true \
+        -Dgpg.passphrase="$GPG_PASSPHRASE" \
+        -Dgpg.keyname="$GPG_PUB_KEY" \
         clean deploy -P deploy-release
       shell: bash
       env:
