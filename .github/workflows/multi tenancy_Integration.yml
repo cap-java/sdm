@@ -251,6 +251,8 @@ jobs:
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           defaultRepositoryID="$DEFAULTREPOSITORYID"
           defaultRepositoryIDMT="$DEFAULTREPOSITORYIDMT"
+
+          echo "::add-mask::$clientSecret"
           echo "::add-mask::$clientID"
           echo "::add-mask::$clientSecretMT"
           echo "::add-mask::$clientIDMT"
@@ -322,7 +324,7 @@ jobs:
           while [ $ATTEMPT -lt $MAX_RETRIES ]; do
             ATTEMPT=$((ATTEMPT + 1))
             echo "🔄 Attempt $ATTEMPT of $MAX_RETRIES..."
-            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
+            if mvn clean verify -P integration-tests -DtokenFlow=${{ matrix.tokenFlow }} -DtenancyModel=multi -Dtenant=${{ matrix.tenant }} -DskipUnitTests -Deicar.file.path=eicar.com.txt -Dfailsafe.includes="**/${{ matrix.testClass }}.java"; then
               echo "✅ Tests passed on attempt $ATTEMPT!"
               EXIT_CODE=0
               break
