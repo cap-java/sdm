@@ -334,6 +334,7 @@ jobs:
           VERSIONEDREPOSITORYID: ${{ secrets.VERSIONEDREPOSITORYID }}
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set +x
           echo "🚀 Starting integration tests for ${{ matrix.tokenFlow }} - ${{ matrix.testClass }}..."
@@ -631,6 +632,7 @@ jobs:
           VERSIONEDREPOSITORYID: ${{ secrets.VERSIONEDREPOSITORYID }}
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -914,6 +916,7 @@ jobs:
           VERSIONEDREPOSITORYID: ${{ secrets.VERSIONEDREPOSITORYID }}
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -1183,6 +1186,7 @@ jobs:
           VERSIONEDREPOSITORYID: ${{ secrets.VERSIONEDREPOSITORYID }}
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"

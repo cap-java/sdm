@@ -310,6 +310,7 @@ jobs:
           NOSDMROLEUSERPASSWORD: ${{ secrets.NOSDMROLEUSERPASSWORD }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
           DEFAULTREPOSITORYIDMT: ${{ secrets.DEFAULTREPOSITORYIDMT }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           echo "🚀 Preparing credentials for ${{ matrix.tokenFlow }} - ${{ matrix.tenant }}..."
           set +x
@@ -678,6 +679,7 @@ jobs:
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
           DEFAULTREPOSITORYIDMT: ${{ secrets.DEFAULTREPOSITORYIDMT }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -1006,6 +1008,7 @@ jobs:
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
           DEFAULTREPOSITORYIDMT: ${{ secrets.DEFAULTREPOSITORYIDMT }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -1320,6 +1323,7 @@ jobs:
           VIRUSSCANREPOSITORYID: ${{ secrets.VIRUSSCANREPOSITORYID }}
           DEFAULTREPOSITORYID: ${{ secrets.DEFAULTREPOSITORYID }}
           DEFAULTREPOSITORYIDMT: ${{ secrets.DEFAULTREPOSITORYIDMT }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
@@ -1589,6 +1593,7 @@ jobs:
           CONSUMERSUBDOMAINMT: ${{ secrets.CONSUMERSUBDOMAINMT }}
           BTP_CLI_URL: ${{ secrets.BTP_CLI_URL }}
           BTP_GLOBAL_ACCOUNT_SUBDOMAIN: ${{ secrets.BTP_GLOBAL_ACCOUNT_SUBDOMAIN }}
+          CF_SPACE: ${{ secrets.CF_SPACE }}
         run: |
           set -e
           PROPERTIES_FILE="sdm/src/test/resources/credentials.properties"
