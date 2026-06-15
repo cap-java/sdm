@@ -448,4 +448,96 @@ class IntegrationTest_Subscription {
     assertTrue(
         verifyResult.containsIgnoreCase("FOUND"), "Check output should confirm repo was found");
   }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Test 6 — Register custom CMIS Secondary Types in the subscribed repository
+  //          and verify they are queryable.
+  //
+  // After test 5 the consumer is subscribed and SUBSCRIPTION_REPO_EXTERNAL_ID
+  // is onboarded. We POST two secondary-type definitions (read from JSON
+  // resources) via the CMIS browser-binding's createType action, then query
+  // each one back via cmisselector=typeDefinition to confirm registration.
+  //
+  // The register-type helper treats "already exists" responses as success so
+  // re-runs of this test against the same repo are idempotent.
+  // ───────────────────────────────────────────────────────────────────────────
+  @Test
+  @Order(6)
+  void testSubscribedTenant_RegisterSecondaryTypes_VerifyAvailable() throws Exception {
+    System.out.println(
+        "Test (6) : Register CMIS secondary types in subscribed repo and verify they are queryable");
+
+    final String typeManageScript =
+        "src/test/java/integration/com/sap/cds/sdm/utils/sdm-type-manage.sh";
+
+    final String[][] secondaryTypes = {
+      {"abc:bo", "src/test/resources/secondary-types/abc-bo-type.json"},
+      {"Working:DocumentInfo", "src/test/resources/secondary-types/documentinfo-type.json"}
+    };
+
+    // Pre-condition: subscription must be active and the repo must be onboarded
+    // (left in place by test 5 / @BeforeAll).
+    assertNotNull(cmisEnv, "cmisEnv is null — CMIS token was not fetched in @BeforeAll");
+    System.out.println("  Verifying subscription repo is present before registering types...");
+    ShellScriptRunner.Result preCheck = repoCheck(SUBSCRIPTION_REPO_EXTERNAL_ID);
+    assertEquals(
+        0,
+        preCheck.getExitCode(),
+        "Pre-condition: repo '"
+            + SUBSCRIPTION_REPO_EXTERNAL_ID
+            + "' must exist before type registration");
+
+    for (String[] entry : secondaryTypes) {
+      String typeId = entry[0];
+      String typeFile = entry[1];
+
+      // Step 1: Register the secondary type
+      System.out.println("  Registering secondary type '" + typeId + "' from " + typeFile + "...");
+      int registerExit =
+          ShellScriptRunner.run(
+              cmisEnv,
+              typeManageScript,
+              "register-type",
+              "--externalId",
+              SUBSCRIPTION_REPO_EXTERNAL_ID,
+              "--typeFile",
+              typeFile,
+              "--subdomain",
+              consumerSubdomain);
+      assertEquals(
+          0,
+          registerExit,
+          "register-type for '"
+              + typeId
+              + "' should succeed (exit 0 = created or already-exists, idempotent)");
+
+      // Step 2: Verify the type is queryable
+      System.out.println("  Verifying secondary type '" + typeId + "' is queryable...");
+      ShellScriptRunner.Result getResult =
+          ShellScriptRunner.runAndCaptureAll(
+              cmisEnv,
+              typeManageScript,
+              "get-type",
+              "--externalId",
+              SUBSCRIPTION_REPO_EXTERNAL_ID,
+              "--typeId",
+              typeId,
+              "--subdomain",
+              consumerSubdomain);
+      assertEquals(
+          0,
+          getResult.getExitCode(),
+          "get-type for '" + typeId + "' should succeed (HTTP 200 + body contains the typeId)");
+      assertTrue(
+          getResult.containsIgnoreCase("FOUND"),
+          "get-type output for '" + typeId + "' should contain 'FOUND'");
+    }
+
+    System.out.println(
+        "  ✅ All "
+            + secondaryTypes.length
+            + " secondary types registered and verified in '"
+            + SUBSCRIPTION_REPO_EXTERNAL_ID
+            + "'.");
+  }
 }
