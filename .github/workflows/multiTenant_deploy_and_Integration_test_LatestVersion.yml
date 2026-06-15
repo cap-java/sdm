@@ -1669,7 +1669,7 @@ jobs:
           cmisClientID="$CMIS_CLIENT_ID"
           cmisClientSecret="$CMIS_CLIENT_SECRET"
           SAAS_APP_NAME="bookshop-mt-sdmgoogleworkspacedev-$CF_SPACE"
-          ROLE_COLLECTION_NAME="ak-test"
+          ROLE_COLLECTION_NAME="test-cases-role"
           APP_ROLE_FILTER="bookshop-mt-sdmgoogleworkspacedev-$CF_SPACE"
 
           cat > "$PROPERTIES_FILE" <<EOL
