@@ -41,11 +41,24 @@ class IntegrationTest_Subscription {
   private static Properties credentials;
   private static String consumerSubdomain;
 
+  /** Cached OAuth2 token for the consumer subdomain — fetched once in @BeforeAll. */
+  private static Map<String, String> cmisEnv;
+
   @BeforeAll
   static void setup() throws Exception {
     credentials = Credentials.getCredentials(System.getProperty("tenant", "TENANT1"));
     consumerSubdomain = credentials.getProperty("consumerSubdomainMT");
     assertNotNull(consumerSubdomain, "consumerSubdomainMT must be set in credentials.properties");
+
+    // Fetch OAuth2 token once for all CMIS calls in this test run.
+    // Stored in cmisEnv and passed via CMIS_ACCESS_TOKEN env var to sdm-repo-manage.sh,
+    // which short-circuits the per-call HTTP token fetch in get_token().
+    System.out.println("BeforeAll: Fetching CMIS access token...");
+    String token =
+        ShellScriptRunner.runAndCaptureOutput(
+            REPO_MANAGE_SCRIPT, "get-token", "--subdomain", consumerSubdomain);
+    assertNotNull(token, "CMIS access token must not be null");
+    cmisEnv = Map.of("CMIS_ACCESS_TOKEN", token);
 
     // Ensure subscription is active before tests run
     System.out.println("BeforeAll: Ensuring app is subscribed...");
@@ -55,39 +68,33 @@ class IntegrationTest_Subscription {
 
     // Verify repo exists after subscription; if not, onboard it
     System.out.println("BeforeAll: Checking if repo exists...");
-    ShellScriptRunner.Result repoResult =
-        ShellScriptRunner.runAndCaptureAll(
-            REPO_MANAGE_SCRIPT,
-            "check",
-            "--externalId",
-            SUBSCRIPTION_REPO_EXTERNAL_ID,
-            "--subdomain",
-            consumerSubdomain);
+    ShellScriptRunner.Result repoResult = repoCheck(SUBSCRIPTION_REPO_EXTERNAL_ID);
     if (repoResult.getExitCode() != 0) {
       System.out.println("BeforeAll: Repo not found — onboarding...");
-      int onboardExit =
-          ShellScriptRunner.run(
-              REPO_MANAGE_SCRIPT,
-              "onboard",
-              "--externalId",
-              SUBSCRIPTION_REPO_EXTERNAL_ID,
-              "--subdomain",
-              consumerSubdomain);
-      assertEquals(0, onboardExit, "Repo onboard should succeed");
+      assertEquals(0, repoOnboard(SUBSCRIPTION_REPO_EXTERNAL_ID), "Repo onboard should succeed");
       Thread.sleep(10_000);
     }
     System.out.println("BeforeAll: Subscription active and repo verified.");
   }
 
   /** Check if a repo exists in the consumer scope. Returns the Result. */
-  private ShellScriptRunner.Result repoCheck(String externalId) throws Exception {
+  private static ShellScriptRunner.Result repoCheck(String externalId) throws Exception {
+    assertNotNull(cmisEnv, "cmisEnv is null — CMIS token was not fetched in @BeforeAll");
     return ShellScriptRunner.runAndCaptureAll(
-        REPO_MANAGE_SCRIPT, "check", "--externalId", externalId, "--subdomain", consumerSubdomain);
+        cmisEnv,
+        REPO_MANAGE_SCRIPT,
+        "check",
+        "--externalId",
+        externalId,
+        "--subdomain",
+        consumerSubdomain);
   }
 
   /** Onboard a repo in the consumer scope. Returns exit code. */
-  private int repoOnboard(String externalId) throws Exception {
+  private static int repoOnboard(String externalId) throws Exception {
+    assertNotNull(cmisEnv, "cmisEnv is null — CMIS token was not fetched in @BeforeAll");
     return ShellScriptRunner.run(
+        cmisEnv,
         REPO_MANAGE_SCRIPT,
         "onboard",
         "--externalId",
@@ -97,8 +104,10 @@ class IntegrationTest_Subscription {
   }
 
   /** Offboard a repo in the consumer scope. Returns the Result. */
-  private ShellScriptRunner.Result repoOffboard(String externalId) throws Exception {
+  private static ShellScriptRunner.Result repoOffboard(String externalId) throws Exception {
+    assertNotNull(cmisEnv, "cmisEnv is null — CMIS token was not fetched in @BeforeAll");
     return ShellScriptRunner.runAndCaptureAll(
+        cmisEnv,
         REPO_MANAGE_SCRIPT,
         "offboard",
         "--externalId",
@@ -108,14 +117,66 @@ class IntegrationTest_Subscription {
   }
 
   /** Check if a repo exists in provider scope (no --subdomain). Returns the Result. */
-  private ShellScriptRunner.Result repoCheckProviderScope(String externalId) throws Exception {
+  private static ShellScriptRunner.Result repoCheckProviderScope(String externalId)
+      throws Exception {
     return ShellScriptRunner.runAndCaptureAll(
         REPO_MANAGE_SCRIPT, "check", "--externalId", externalId);
   }
 
   /** Onboard a repo in provider scope (no --subdomain). Returns exit code. */
-  private int repoOnboardProviderScope(String externalId) throws Exception {
+  private static int repoOnboardProviderScope(String externalId) throws Exception {
     return ShellScriptRunner.run(REPO_MANAGE_SCRIPT, "onboard", "--externalId", externalId);
+  }
+
+  /**
+   * Polls the CMIS API until the repo returns NOT_FOUND (exit 1) in the consumer scope, or the
+   * timeout is reached. Offboarding is async, so this retries every {@code intervalMs} up to {@code
+   * maxRetries} times before failing the test.
+   */
+  private static void assertRepoOffboarded(String externalId) throws Exception {
+    int maxRetries = 6;
+    int intervalMs = 15_000;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      ShellScriptRunner.Result result = repoCheck(externalId);
+      if (result.getExitCode() == 1) {
+        System.out.println(
+            "  ✅ Repo '"
+                + externalId
+                + "' confirmed offboarded via CMIS (NOT_FOUND, attempt "
+                + attempt
+                + "/"
+                + maxRetries
+                + ")");
+        return;
+      }
+      if (result.getExitCode() != 0) {
+        fail(
+            "CMIS check returned unexpected exit code "
+                + result.getExitCode()
+                + " for repo '"
+                + externalId
+                + "' (expected 0=found or 1=not_found). Output:\n"
+                + result.getOutput());
+        return;
+      }
+      if (attempt < maxRetries) {
+        System.out.println(
+            "  Repo still visible after unsubscribe (attempt "
+                + attempt
+                + "/"
+                + maxRetries
+                + ") — retrying in "
+                + (intervalMs / 1000)
+                + "s...");
+        Thread.sleep(intervalMs);
+      }
+    }
+    fail(
+        "Repo '"
+            + externalId
+            + "' still exists in consumer scope "
+            + (maxRetries * intervalMs / 1000)
+            + "s after unsubscription");
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -196,6 +257,10 @@ class IntegrationTest_Subscription {
         0,
         verifyOther.getExitCode(),
         "Other repo '" + otherRepo + "' should still exist after unsubscription");
+
+    // Extra check: verify via CMIS API that the subscription repo is no longer accessible
+    System.out.println("  Verifying subscription repo offboarded via CMIS API...");
+    assertRepoOffboarded(SUBSCRIPTION_REPO_EXTERNAL_ID);
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -248,6 +313,10 @@ class IntegrationTest_Subscription {
         offboarded,
         "CF logs should confirm repo was offboarded. Logs:\n"
             + logOutput.substring(0, Math.min(logOutput.length(), 2000)));
+
+    // Extra check: verify via CMIS API that the subscription repo is no longer accessible
+    System.out.println("  Verifying subscription repo offboarded via CMIS API...");
+    assertRepoOffboarded(SUBSCRIPTION_REPO_EXTERNAL_ID);
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -260,7 +329,7 @@ class IntegrationTest_Subscription {
         "Test (4) : Unsubscribe when repo doesn't exist — expect logs to indicate 404 from DI");
 
     // Pre-condition: Ensure subscribed but repo does NOT exist
-    // Wait extra time for test 4's unsubscribe to fully complete
+    // Wait extra time for test 3's unsubscribe to fully complete
     Thread.sleep(30_000);
 
     System.out.println("  Subscribing...");
@@ -324,6 +393,10 @@ class IntegrationTest_Subscription {
         has404Indication,
         "CF logs should indicate a 404 or 'not found' when offboarding non-existent repo. Logs:\n"
             + logOutput.substring(0, Math.min(logOutput.length(), 2000)));
+
+    // Extra check: verify via CMIS API that the repo is still absent in consumer scope
+    System.out.println("  Verifying repo remains absent via CMIS API...");
+    assertRepoOffboarded(SUBSCRIPTION_REPO_EXTERNAL_ID);
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -374,5 +447,97 @@ class IntegrationTest_Subscription {
         "Repository '" + SUBSCRIPTION_REPO_EXTERNAL_ID + "' should exist after subscription");
     assertTrue(
         verifyResult.containsIgnoreCase("FOUND"), "Check output should confirm repo was found");
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Test 6 — Register custom CMIS Secondary Types in the subscribed repository
+  //          and verify they are queryable.
+  //
+  // After test 5 the consumer is subscribed and SUBSCRIPTION_REPO_EXTERNAL_ID
+  // is onboarded. We POST two secondary-type definitions (read from JSON
+  // resources) via the CMIS browser-binding's createType action, then query
+  // each one back via cmisselector=typeDefinition to confirm registration.
+  //
+  // The register-type helper treats "already exists" responses as success so
+  // re-runs of this test against the same repo are idempotent.
+  // ───────────────────────────────────────────────────────────────────────────
+  @Test
+  @Order(6)
+  void testSubscribedTenant_RegisterSecondaryTypes_VerifyAvailable() throws Exception {
+    System.out.println(
+        "Test (6) : Register CMIS secondary types in subscribed repo and verify they are queryable");
+
+    final String typeManageScript =
+        "src/test/java/integration/com/sap/cds/sdm/utils/sdm-type-manage.sh";
+
+    final String[][] secondaryTypes = {
+      {"abc:bo", "src/test/resources/secondary-types/abc-bo-type.json"},
+      {"Working:DocumentInfo", "src/test/resources/secondary-types/documentinfo-type.json"}
+    };
+
+    // Pre-condition: subscription must be active and the repo must be onboarded
+    // (left in place by test 5 / @BeforeAll).
+    assertNotNull(cmisEnv, "cmisEnv is null — CMIS token was not fetched in @BeforeAll");
+    System.out.println("  Verifying subscription repo is present before registering types...");
+    ShellScriptRunner.Result preCheck = repoCheck(SUBSCRIPTION_REPO_EXTERNAL_ID);
+    assertEquals(
+        0,
+        preCheck.getExitCode(),
+        "Pre-condition: repo '"
+            + SUBSCRIPTION_REPO_EXTERNAL_ID
+            + "' must exist before type registration");
+
+    for (String[] entry : secondaryTypes) {
+      String typeId = entry[0];
+      String typeFile = entry[1];
+
+      // Step 1: Register the secondary type
+      System.out.println("  Registering secondary type '" + typeId + "' from " + typeFile + "...");
+      int registerExit =
+          ShellScriptRunner.run(
+              cmisEnv,
+              typeManageScript,
+              "register-type",
+              "--externalId",
+              SUBSCRIPTION_REPO_EXTERNAL_ID,
+              "--typeFile",
+              typeFile,
+              "--subdomain",
+              consumerSubdomain);
+      assertEquals(
+          0,
+          registerExit,
+          "register-type for '"
+              + typeId
+              + "' should succeed (exit 0 = created or already-exists, idempotent)");
+
+      // Step 2: Verify the type is queryable
+      System.out.println("  Verifying secondary type '" + typeId + "' is queryable...");
+      ShellScriptRunner.Result getResult =
+          ShellScriptRunner.runAndCaptureAll(
+              cmisEnv,
+              typeManageScript,
+              "get-type",
+              "--externalId",
+              SUBSCRIPTION_REPO_EXTERNAL_ID,
+              "--typeId",
+              typeId,
+              "--subdomain",
+              consumerSubdomain);
+      assertEquals(
+          0,
+          getResult.getExitCode(),
+          "get-type for '" + typeId + "' should succeed (HTTP 200 + body contains the typeId)");
+      assertTrue(
+          getResult.containsIgnoreCase("FOUND"),
+          "get-type output for '" + typeId + "' should contain 'FOUND'");
+    }
+
+    System.out.println(
+        "  ✅ All "
+            + secondaryTypes.length
+            + " secondary types registered and verified in '"
+            + SUBSCRIPTION_REPO_EXTERNAL_ID
+            + "'.");
   }
 }

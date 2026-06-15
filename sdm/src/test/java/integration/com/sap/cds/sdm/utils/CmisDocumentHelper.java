@@ -13,6 +13,8 @@ public class CmisDocumentHelper {
 
   private static final String CREATE_SCRIPT =
       "src/test/java/integration/com/sap/cds/sdm/utils/create.sh";
+  private static final String CREATE_FOLDER_SCRIPT =
+      "src/test/java/integration/com/sap/cds/sdm/utils/create-folder.sh";
   private static final String GET_OBJECT_ID_SCRIPT =
       "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh";
   private static final String DELETE_SCRIPT =
@@ -42,10 +44,76 @@ public class CmisDocumentHelper {
     return null;
   }
 
+  public static Map<String, String> getCmisEnvPublic() {
+    return getCmisEnv();
+  }
+
   /**
-   * Resolves the CMIS parent folder ID from {@code entityId + "__attachments"}, then uploads a
-   * local file to that folder via create.sh.
+   * Creates a folder in the CMIS repository root via create-folder.sh and returns its object ID.
    *
+   * @param folderName the name of the folder to create
+   * @return the CMIS object ID of the created folder
+   */
+  public static String createFolderInCmis(String folderName) {
+    try {
+      Map<String, String> env = getCmisEnv();
+      String output = ShellScriptRunner.runAndCaptureOutput(env, CREATE_FOLDER_SCRIPT, folderName);
+      if (output != null && output.contains("Object ID:")) {
+        return output.substring(output.lastIndexOf("Object ID:") + 11).trim();
+      }
+      fail("create-folder.sh did not return an Object ID. Output: " + output);
+      return null;
+    } catch (Exception e) {
+      fail("Failed to create folder in CMIS: " + e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Uploads a local file to a specific CMIS folder (by folder object ID) via create.sh and returns
+   * the created document's object ID.
+   *
+   * @param cmisName the name the document will have in the CMIS repository
+   * @param filePath path to the local file to upload
+   * @param parentFolderObjectId the CMIS object ID of the parent folder
+   * @return the CMIS object ID of the created document
+   */
+  public static String createDocumentInFolder(
+      String cmisName, String filePath, String parentFolderObjectId) {
+    try {
+      Map<String, String> env = getCmisEnv();
+      String output =
+          ShellScriptRunner.runAndCaptureOutput(
+              env, CREATE_SCRIPT, cmisName, filePath, parentFolderObjectId);
+      if (output != null && output.contains("Object ID:")) {
+        return output.substring(output.lastIndexOf("Object ID:") + 11).trim();
+      }
+      fail("create.sh did not return an Object ID. Output: " + output);
+      return null;
+    } catch (Exception e) {
+      fail("Failed to create document in CMIS folder: " + e.getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Deletes a CMIS object (folder or document) by its object ID via delete.sh.
+   *
+   * @param objectId the CMIS object ID to delete
+   */
+  public static void deleteObjectFromCmis(String objectId) {
+    try {
+      Map<String, String> env = getCmisEnv();
+      int exitCode = ShellScriptRunner.run(env, DELETE_SCRIPT, objectId);
+      if (exitCode != 0) {
+        System.out.println("WARNING: delete.sh exited with non-zero code: " + exitCode);
+      }
+    } catch (Exception e) {
+      System.out.println("WARNING: Failed to delete CMIS object: " + e.getMessage());
+    }
+  }
+
+  /**
    * @param cmisName the name the document will have in the CMIS repository
    * @param filePath path to the local file to upload
    * @param entityId the entity ID whose attachments folder is the upload target
@@ -152,31 +220,57 @@ public class CmisDocumentHelper {
    * @return the JSON metadata string returned by the CMIS API
    */
   public static String readDocumentMetadataFromCmis(String entityId, String fileName) {
-    try {
-      Map<String, String> env = getCmisEnv();
-      String folderName = entityId + "__attachments";
-      String folderLine =
-          ShellScriptRunner.runAndCaptureOutput(env, GET_OBJECT_ID_SCRIPT, folderName);
-      String parentFolderObjectId =
-          folderLine != null && folderLine.contains(": ")
-              ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
-              : folderLine;
+    int maxRetries = 5;
+    int retryDelayMs = 15000;
+    Exception lastException = null;
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        Map<String, String> env = getCmisEnv();
+        String folderName = entityId + "__attachments";
+        String folderLine =
+            ShellScriptRunner.runAndCaptureOutput(env, GET_OBJECT_ID_SCRIPT, folderName);
+        String parentFolderObjectId =
+            folderLine != null && folderLine.contains(": ")
+                ? folderLine.substring(folderLine.lastIndexOf(": ") + 2).trim()
+                : folderLine;
 
-      String docLine =
-          ShellScriptRunner.runAndCaptureOutput(
-              env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
-      String documentObjectId =
-          docLine != null && docLine.contains(": ")
-              ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
-              : docLine;
+        String docLine =
+            ShellScriptRunner.runAndCaptureOutput(
+                env, GET_OBJECT_ID_SCRIPT, fileName, parentFolderObjectId, "cmis:document");
+        String documentObjectId =
+            docLine != null && docLine.contains(": ")
+                ? docLine.substring(docLine.lastIndexOf(": ") + 2).trim()
+                : docLine;
 
-      String metadata =
-          ShellScriptRunner.runAndCaptureOutput(env, GET_METADATA_SCRIPT, documentObjectId);
-      return metadata;
-    } catch (Exception e) {
-      fail("Failed to read document metadata from CMIS: " + e.getMessage());
-      return null;
+        String metadata =
+            ShellScriptRunner.runAndCaptureOutput(env, GET_METADATA_SCRIPT, documentObjectId);
+        return metadata;
+      } catch (Exception e) {
+        lastException = e;
+        if (attempt < maxRetries
+            && e.getMessage() != null
+            && e.getMessage().contains("No cmis:document found")) {
+          System.out.println(
+              "CMIS document not found yet (eventual consistency), retrying after "
+                  + retryDelayMs
+                  + "ms... (attempt "
+                  + attempt
+                  + "/"
+                  + maxRetries
+                  + ")");
+          try {
+            Thread.sleep(retryDelayMs);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        } else {
+          break;
+        }
+      }
     }
+    fail("Failed to read document metadata from CMIS: " + lastException.getMessage());
+    return null;
   }
 
   /**
@@ -199,6 +293,21 @@ public class CmisDocumentHelper {
       return valueNode.asText();
     } catch (Exception e) {
       fail("Failed to get CMIS property '" + propertyName + "': " + e.getMessage());
+      return null;
+    }
+  }
+
+  public static String getCmisPropertyOrNull(
+      String entityId, String fileName, String propertyName) {
+    try {
+      String metadata = readDocumentMetadataFromCmis(entityId, fileName);
+      JsonNode root = new ObjectMapper().readTree(metadata);
+      JsonNode valueNode = root.path("properties").path(propertyName).path("value");
+      if (valueNode.isMissingNode() || valueNode.isNull()) {
+        return null;
+      }
+      return valueNode.asText();
+    } catch (Exception e) {
       return null;
     }
   }

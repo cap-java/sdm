@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import integration.com.sap.cds.sdm.utils.CmisDocumentHelper;
+import integration.com.sap.cds.sdm.utils.ShellScriptRunner;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -1066,6 +1067,34 @@ class IntegrationTest_Chapters_MultipleFacet {
           response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID5);
           System.out.println("Save response: " + response);
           if ("Saved".equals(response)) {
+            // --- CMIS backend validation (only for attachments facet i==0) ---
+            {
+              int i = 0;
+              String cmisName =
+                  CmisDocumentHelper.getCmisProperty(chapterID5, name[i], "cmis:name");
+              assertEquals(
+                  name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
+              String cmisString =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      chapterID5, name[i], "Working:DocumentInfoRecordString");
+              assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
+              String cmisInt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      chapterID5, name[i], "Working:DocumentInfoRecordInt");
+              assertEquals(
+                  String.valueOf(secondaryPropertyInt),
+                  cmisInt,
+                  "DocumentInfoRecordInt should match for " + facet[i]);
+              String cmisBool =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      chapterID5, name[i], "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
+              String cmisDate =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      chapterID5, name[i], "Working:DocumentInfoRecordDate");
+              assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+            }
             testStatus = true;
           }
         } else {
@@ -1337,6 +1366,32 @@ class IntegrationTest_Chapters_MultipleFacet {
       if (counter == facet.length) {
         response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, bookID5);
         if (response.equals("Saved")) {
+          // --- CMIS backend validation (only for attachments facet i==0) ---
+          {
+            int i = 0;
+            String cmisName = CmisDocumentHelper.getCmisProperty(chapterID5, name[i], "cmis:name");
+            assertEquals(name[i], cmisName, "CMIS should reflect renamed filename for " + facet[i]);
+            String cmisString =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    chapterID5, name[i], "Working:DocumentInfoRecordString");
+            assertNotNull(cmisString, "DocumentInfoRecordString should be set for " + facet[i]);
+            String cmisInt =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    chapterID5, name[i], "Working:DocumentInfoRecordInt");
+            assertEquals(
+                String.valueOf(secondaryPropertyInt),
+                cmisInt,
+                "DocumentInfoRecordInt should match for " + facet[i]);
+            String cmisBool =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    chapterID5, name[i], "Working:DocumentInfoRecordBoolean");
+            assertEquals(
+                "true", cmisBool, "DocumentInfoRecordBoolean should be true for " + facet[i]);
+            String cmisDate =
+                CmisDocumentHelper.getCmisPropertyOrNull(
+                    chapterID5, name[i], "Working:DocumentInfoRecordDate");
+            assertNotNull(cmisDate, "DocumentInfoRecordDate should be set for " + facet[i]);
+          }
           testStatus = true;
           System.out.println("Renamed & updated Secondary properties for chapter attachment");
         }
@@ -1477,6 +1532,27 @@ class IntegrationTest_Chapters_MultipleFacet {
 
             if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
               System.out.println("Book saved with expected invalid property errors");
+              // --- CMIS backend validation: no changes should persist in DI (only for attachments
+              // facet) ---
+              {
+                String cmisName =
+                    CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
+                assertEquals(
+                    "sample.pdf",
+                    cmisName,
+                    "Filename should NOT be changed in CMIS for " + facet[0]);
+                String cmisId1 =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.pdf", "abc:myId1");
+                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[0]);
+                String cmisString =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.pdf", "Working:DocumentInfoRecordString");
+                assertNull(
+                    cmisString,
+                    "Valid props should not persist when invalid props cause rejection for "
+                        + facet[0]);
+              }
               testStatus = true;
               System.out.println(
                   "Rename & update secondary properties for chapter attachment is unsuccessful");
@@ -1642,6 +1718,20 @@ class IntegrationTest_Chapters_MultipleFacet {
 
             if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
               System.out.println("Book saved with expected invalid property errors");
+              // --- CMIS backend validation: no changes should persist in DI (only for attachments
+              // facet) ---
+              {
+                String cmisName =
+                    CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
+                assertEquals(
+                    "sample.pdf",
+                    cmisName,
+                    "Filename should NOT be changed in CMIS for " + facet[0]);
+                String cmisId1 =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.pdf", "abc:myId1");
+                assertNull(cmisId1, "Invalid property abc:myId1 should not exist for " + facet[0]);
+              }
               testStatus = true;
               System.out.println(
                   "Rename & update secondary properties for chapter attachment is unsuccessful");
@@ -1957,6 +2047,55 @@ class IntegrationTest_Chapters_MultipleFacet {
             response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, tempBookID);
             if (response.equals("Saved")) {
               System.out.println("Book saved");
+              // --- CMIS backend validation (only for attachments facet i==0) ---
+              {
+                String cmisName =
+                    CmisDocumentHelper.getCmisProperty(tempChapterID, name1, "cmis:name");
+                assertEquals(
+                    name1, cmisName, "CMIS should reflect renamed filename for PDF " + facet[0]);
+                String cmisString =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, name1, "Working:DocumentInfoRecordString");
+                assertNotNull(
+                    cmisString, "DocumentInfoRecordString should be set for PDF " + facet[0]);
+                String cmisInt =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, name1, "Working:DocumentInfoRecordInt");
+                assertEquals(
+                    String.valueOf(secondaryPropertyInt),
+                    cmisInt,
+                    "DocumentInfoRecordInt should match for PDF " + facet[0]);
+                String cmisBool =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, name1, "Working:DocumentInfoRecordBoolean");
+                assertEquals(
+                    "true",
+                    cmisBool,
+                    "DocumentInfoRecordBoolean should be true for PDF " + facet[0]);
+              }
+              // TXT - only Boolean was set
+              {
+                String cmisBoolTxt =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.txt", "Working:DocumentInfoRecordBoolean");
+                assertEquals(
+                    "true",
+                    cmisBoolTxt,
+                    "DocumentInfoRecordBoolean should be true for TXT " + facet[0]);
+              }
+              // EXE - String + Int were set
+              {
+                String cmisStringExe =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.exe", "Working:DocumentInfoRecordString");
+                assertNotNull(
+                    cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
+                String cmisIntExe =
+                    CmisDocumentHelper.getCmisPropertyOrNull(
+                        tempChapterID, "sample.exe", "Working:DocumentInfoRecordInt");
+                assertNotNull(
+                    cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[0]);
+              }
               testStatus = true;
               System.out.println("Renamed & updated Secondary properties for chapter attachments");
             }
@@ -2190,6 +2329,43 @@ class IntegrationTest_Chapters_MultipleFacet {
 
           if (hasAttachmentsError && hasReferencesError && hasFootnotesError) {
             System.out.println("Book saved with expected invalid property errors");
+            // --- CMIS backend validation (only for attachments facet) ---
+            // PDF: invalid prop was used, so nothing should persist
+            {
+              String cmisName =
+                  CmisDocumentHelper.getCmisProperty(tempChapterID, "sample.pdf", "cmis:name");
+              assertEquals(
+                  "sample.pdf",
+                  cmisName,
+                  "PDF filename should NOT be changed in CMIS for " + facet[0]);
+              String cmisId1 =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      tempChapterID, "sample.pdf", "abc:myId1");
+              assertNull(
+                  cmisId1, "Invalid property abc:myId1 should not exist for PDF " + facet[0]);
+            }
+            // TXT: valid Boolean was set — should persist
+            {
+              String cmisBoolTxt =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      tempChapterID, "sample.txt", "Working:DocumentInfoRecordBoolean");
+              assertEquals(
+                  "true",
+                  cmisBoolTxt,
+                  "DocumentInfoRecordBoolean should be true for TXT " + facet[0]);
+            }
+            // EXE: valid String + Int were set — should persist
+            {
+              String cmisStringExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      tempChapterID, "sample.exe", "Working:DocumentInfoRecordString");
+              assertNotNull(
+                  cmisStringExe, "DocumentInfoRecordString should be set for EXE " + facet[0]);
+              String cmisIntExe =
+                  CmisDocumentHelper.getCmisPropertyOrNull(
+                      tempChapterID, "sample.exe", "Working:DocumentInfoRecordInt");
+              assertNotNull(cmisIntExe, "DocumentInfoRecordInt should be set for EXE " + facet[0]);
+            }
             testStatus = true;
             System.out.println(
                 "Rename & update unsuccessful for invalid properties and successful for valid attachments");
@@ -6579,6 +6755,1211 @@ class IntegrationTest_Chapters_MultipleFacet {
 
   @Test
   @Order(73)
+  void testReadCmisMetadataCreatedBy() throws IOException {
+    System.out.println("Test (78) : Read CMIS metadata and verify createdBy field");
+
+    // Create own book and chapter to be self-contained
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    // Now check the createdBy CMIS property
+    String createdBy =
+        CmisDocumentHelper.getCmisProperty(testChapterID, "sample.pdf", "cmis:createdBy");
+    System.out.println("cmis:createdBy value: " + createdBy);
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    if ("namedUser".equals(tokenFlowFlag)) {
+      assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
+    } else {
+      assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
+      assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
+    }
+
+    // Cleanup
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(74)
+  void testUploadVirusFileInScanDisabledRepo() throws IOException {
+    System.out.println(
+        "Test (79) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
+
+    for (int i = 0; i < facet.length; i++) {
+      boolean testStatus = false;
+
+      // Create book and chapter
+      String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+      if (testBookID.equals("Could not create entity")) {
+        fail("Could not create book for facet: " + facet[i]);
+      }
+
+      String testChapterID =
+          api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+      if (testChapterID.equals("Could not create entity")) {
+        fail("Could not create chapter for facet: " + facet[i]);
+      }
+
+      // Use EICAR test virus file
+      String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
+      File file = new File(eicarFilePath);
+      if (!file.exists()) {
+        fail("EICAR virus test file not found at: " + file.getAbsolutePath());
+      }
+
+      Map<String, Object> postData = new HashMap<>();
+      postData.put("up__ID", testChapterID);
+      postData.put("mimeType", "text/plain");
+      postData.put("createdAt", new Date().toString());
+      postData.put("createdBy", "test@test.com");
+      postData.put("modifiedBy", "test@test.com");
+
+      List<String> createResponse =
+          api.createAttachment(
+              appUrl, chapterEntityName, facet[i], testChapterID, srvpath, postData, file);
+      String check = createResponse.get(0);
+      if (check.equals("Attachment created")) {
+        String testAttachmentID = createResponse.get(1);
+        String savedResponse = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+        if (savedResponse.equals("Saved")) {
+          // Verify attachment is readable (upload succeeded despite being a virus file)
+          savedResponse =
+              api.readAttachment(
+                  appUrl, chapterEntityName, facet[i], testChapterID, testAttachmentID);
+          if (savedResponse.equals("OK")) {
+            testStatus = true;
+          }
+        }
+      }
+
+      // Clean up
+      api.deleteEntity(appUrl, bookEntityName, testBookID);
+
+      if (!testStatus) {
+        fail(
+            "Virus file upload should succeed in a virus scan disabled repository for facet: "
+                + facet[i]);
+      }
+    }
+  }
+
+  @Test
+  @Order(75)
+  void testRenameToDuplicateFilename_BackendConflict_ErrorThrown() throws Exception {
+    System.out.println(
+        "Test (80) : Rename attachment to name that exists in backend — expect DI error");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+    String testAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    String conflictingName = "backend-file.pdf";
+    CmisDocumentHelper.createDocumentInCmis(
+        conflictingName, classLoader.getResource("sample.pdf").getFile(), testChapterID);
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    response =
+        api.renameAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, testAttachmentID, conflictingName);
+    assertEquals("Renamed", response, "Rename in draft should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertNotEquals("Saved", response, "Save should fail due to duplicate filename in DI");
+    assertTrue(
+        response.contains("already exists") || response.contains("error"),
+        "Error should indicate duplicate filename. Actual: " + response);
+  }
+
+  @Test
+  @Order(76)
+  void testUploadDuplicateAttachment_DIError_RemovedFromDrafts() throws IOException {
+    System.out.println(
+        "Test (81) : Upload duplicate attachment — expect DI error and removed from drafts");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "First upload should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    List<String> duplicateResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    String errorResponse = duplicateResponse.get(0);
+    assertNotEquals("Attachment created", errorResponse, "Duplicate upload should fail");
+    assertTrue(
+        errorResponse.contains("already exists") || errorResponse.contains("error"),
+        "Error should contain DI message. Actual: " + errorResponse);
+
+    List<Map<String, Object>> draftAttachments =
+        api.fetchEntityMetadataDraft(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(1, draftAttachments.size(), "Only original attachment should remain in drafts");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(77)
+  void testReadAttachment_DeletedFromBackend_NotAvailable() throws IOException {
+    System.out.println(
+        "Test (82) : Read attachment after backend deletion — verify app handles gracefully");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+    String testAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    CmisDocumentHelper.deleteDocumentFromCmis(testChapterID, "sample.pdf");
+
+    response =
+        api.readAttachment(appUrl, chapterEntityName, facet[0], testChapterID, testAttachmentID);
+    System.out.println("  Read response after backend deletion: " + response);
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(1, attachments.size(), "App should still show the attachment in its metadata");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(78)
+  void testDeleteAttachment_NotPresentInRepository_RemovedFromUI() throws Exception {
+    System.out.println("Test (83) : Delete attachment not in repository — expect removed from UI");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+    String testAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    CmisDocumentHelper.deleteDocumentFromCmis(testChapterID, "sample.pdf");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    response =
+        api.deleteAttachment(appUrl, chapterEntityName, facet[0], testChapterID, testAttachmentID);
+    assertEquals("Deleted", response, "Delete should succeed even if not in repo");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed after delete");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(0, attachments.size(), "No attachments should remain after deletion");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(79)
+  void testDeleteEntity_FolderAndContentDeletedFromRepository() throws Exception {
+    System.out.println(
+        "Test (84) : Delete book — expect chapter folder and all attachments deleted from DI");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    response = api.deleteEntity(appUrl, bookEntityName, testBookID);
+    assertEquals("Entity Deleted", response, "Book deletion should succeed");
+
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0,
+        attachmentsAfterDelete.size(),
+        "Chapter attachments should not be accessible after book deletion");
+  }
+
+  @Test
+  @Order(80)
+  void testDiscardDraft_AttachmentsAndFolderDeletedFromDI() throws Exception {
+    System.out.println("Test (85) : Discard draft — expect attachments and folder deleted from DI");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+
+    String response = api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+    assertEquals("Entity Draft Deleted", response, "Discard draft should succeed");
+
+    List<Map<String, Object>> attachmentsAfterDiscard =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0,
+        attachmentsAfterDiscard.size(),
+        "Chapter should have no attachments after discarding draft");
+  }
+
+  @Test
+  @Order(81)
+  void testDeleteAllAttachments_FolderDeletedFromDI() throws Exception {
+    System.out.println("Test (86) : Delete all attachments — expect folder deleted from DI");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", testChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0), "Attachment upload should succeed");
+    String attachID1 = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    String folderName = testChapterID + "__attachments";
+    ShellScriptRunner.Result folderCheck =
+        ShellScriptRunner.runAndCaptureAll(
+            CmisDocumentHelper.getCmisEnvPublic(),
+            "src/test/java/integration/com/sap/cds/sdm/utils/get-object-id.sh",
+            folderName);
+    assertEquals(0, folderCheck.getExitCode(), "Chapter folder should exist in CMIS");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    response = api.deleteAttachment(appUrl, chapterEntityName, facet[0], testChapterID, attachID1);
+    assertEquals("Deleted", response, "Delete attachment should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed after deleting all attachments");
+
+    List<Map<String, Object>> attachmentsAfterDelete =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertEquals(
+        0, attachmentsAfterDelete.size(), "Chapter should have no attachments after deleting all");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(82)
+  void testCopyInvalidAttachments_IntoNewEntity_NothingCopied() throws Exception {
+    System.out.println(
+        "Test (87) : Copy attachments with invalid secondary property into new entity"
+            + " — expect copy succeeds but invalid property not propagated");
+
+    String sourceBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", sourceBookID, "Source book creation should succeed");
+
+    String sourceChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, sourceBookID);
+    assertNotEquals(
+        "Could not create entity", sourceChapterID, "Source chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", sourceChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0));
+    String sourceAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Saved", response, "Source book save should succeed");
+
+    api.updateInvalidSecondaryProperty(
+        appUrl,
+        chapterEntityName,
+        facet[0],
+        sourceChapterID,
+        sourceAttachmentID,
+        "invalidTestValue");
+
+    Map<String, Object> sourceMetadata =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], sourceChapterID, sourceAttachmentID);
+    assertNotNull(sourceMetadata.get("objectId"), "Source should have objectId");
+    String sourceObjectId = sourceMetadata.get("objectId").toString();
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectId);
+
+    String copyResponse =
+        api.copyAttachment(appUrl, chapterEntityName, facet[0], targetChapterID, objectIdsToCopy);
+    assertEquals("Attachments copied successfully", copyResponse, "Copy should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Save should succeed — copy does not propagate invalid props");
+
+    String cmisInvalidProp =
+        CmisDocumentHelper.getCmisPropertyOrNull(targetChapterID, "sample.pdf", "abc:myId1");
+    assertNull(cmisInvalidProp, "Invalid property should NOT be propagated via copy");
+
+    api.deleteEntity(appUrl, bookEntityName, sourceBookID);
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+  }
+
+  @Test
+  @Order(83)
+  void testCopyInvalidAttachments_IntoExistingEntity_NothingCopied() throws Exception {
+    System.out.println(
+        "Test (88) : Copy attachments with invalid secondary property into existing entity"
+            + " — expect copy succeeds, invalid property not propagated");
+
+    String sourceBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", sourceBookID, "Source book creation should succeed");
+
+    String sourceChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, sourceBookID);
+    assertNotEquals(
+        "Could not create entity", sourceChapterID, "Source chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File filePdf = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", sourceChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, srvpath, postData, filePdf);
+    assertEquals("Attachment created", createResponse.get(0));
+    String sourceAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Saved", response, "Source book save should succeed");
+
+    api.updateInvalidSecondaryProperty(
+        appUrl,
+        chapterEntityName,
+        facet[0],
+        sourceChapterID,
+        sourceAttachmentID,
+        "invalidTestValue");
+
+    Map<String, Object> sourceMetadata =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], sourceChapterID, sourceAttachmentID);
+    String sourceObjectId = sourceMetadata.get("objectId").toString();
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    File file1Pdf = new File(classLoader.getResource("sample1.pdf").getFile());
+    Map<String, Object> postDataTarget = new HashMap<>();
+    postDataTarget.put("up__ID", targetChapterID);
+    postDataTarget.put("mimeType", "application/pdf");
+    postDataTarget.put("createdAt", new Date().toString());
+    postDataTarget.put("createdBy", "test@test.com");
+    postDataTarget.put("modifiedBy", "test@test.com");
+
+    List<String> targetCreateResponse =
+        api.createAttachment(
+            appUrl,
+            chapterEntityName,
+            facet[0],
+            targetChapterID,
+            srvpath,
+            postDataTarget,
+            file1Pdf);
+    assertEquals("Attachment created", targetCreateResponse.get(0));
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Target book save should succeed");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Entity in draft mode", response, "Target book should enter draft mode");
+
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectId);
+
+    String copyResponse =
+        api.copyAttachment(appUrl, chapterEntityName, facet[0], targetChapterID, objectIdsToCopy);
+    assertEquals("Attachments copied successfully", copyResponse, "Copy should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Save should succeed");
+
+    List<Map<String, Object>> targetAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    assertEquals(2, targetAttachments.size(), "Target should have 2 attachments");
+
+    String cmisInvalidProp =
+        CmisDocumentHelper.getCmisPropertyOrNull(targetChapterID, "sample.pdf", "abc:myId1");
+    assertNull(cmisInvalidProp, "Invalid property should NOT be propagated via copy");
+
+    api.deleteEntity(appUrl, bookEntityName, sourceBookID);
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+  }
+
+  @Test
+  @Order(84)
+  void testCopyEditedFileName_FromOneEntityToAnother() throws Exception {
+    System.out.println(
+        "Test (89) : Copy attachment with edited filename — expect target shows edited name");
+
+    String sourceBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", sourceBookID, "Source book creation should succeed");
+
+    String sourceChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, sourceBookID);
+    assertNotEquals(
+        "Could not create entity", sourceChapterID, "Source chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", sourceChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, srvpath, postData, file);
+    assertEquals("Attachment created", createResponse.get(0));
+    String sourceAttachmentID = createResponse.get(1);
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Saved", response, "Source book save should succeed");
+
+    String editedFileName = "sampleEdited.pdf";
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Entity in draft mode", response);
+
+    response =
+        api.renameAttachment(
+            appUrl,
+            chapterEntityName,
+            facet[0],
+            sourceChapterID,
+            sourceAttachmentID,
+            editedFileName);
+    assertEquals("Renamed", response, "Rename should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Saved", response, "Source book save after rename should succeed");
+
+    Map<String, Object> sourceMetadata =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], sourceChapterID, sourceAttachmentID);
+    assertEquals(editedFileName, sourceMetadata.get("fileName"));
+    String sourceObjectId = sourceMetadata.get("objectId").toString();
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    List<String> objectIdsToCopy = new ArrayList<>();
+    objectIdsToCopy.add(sourceObjectId);
+
+    String copyResponse =
+        api.copyAttachment(appUrl, chapterEntityName, facet[0], targetChapterID, objectIdsToCopy);
+    assertEquals("Attachments copied successfully", copyResponse, "Copy should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Target book save should succeed");
+
+    List<Map<String, Object>> targetAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    assertFalse(targetAttachments.isEmpty(), "Target should have attachments");
+
+    boolean foundEditedFile = false;
+    for (Map<String, Object> attachment : targetAttachments) {
+      if (editedFileName.equals(attachment.get("fileName"))) {
+        foundEditedFile = true;
+        break;
+      }
+    }
+    assertTrue(foundEditedFile, "Target should have attachment with edited filename");
+
+    api.deleteEntity(appUrl, bookEntityName, sourceBookID);
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+  }
+
+  @Test
+  @Order(85)
+  void testLinkAttachment_CreatedByIsUserNotClientId() throws Exception {
+    System.out.println(
+        "Test (90) : Create link and verify createdBy is the user, not the clientID");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    String linkName = "testLink";
+    String linkUrl = "https://www.example.com";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], testChapterID, linkName, linkUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertFalse(attachments.isEmpty(), "Chapter should have at least one attachment (link)");
+
+    String linkID = (String) attachments.get(0).get("ID");
+    Map<String, Object> metadata =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], testChapterID, linkID);
+    String createdBy = (String) metadata.get("createdBy");
+    String modifiedBy = (String) metadata.get("modifiedBy");
+
+    assertNotNull(createdBy, "createdBy should not be null");
+    assertNotNull(modifiedBy, "modifiedBy should not be null");
+
+    String tokenFlowFlag = System.getProperty("tokenFlow");
+    if ("namedUser".equals(tokenFlowFlag)) {
+      assertEquals(username, createdBy, "createdBy should be the user");
+      assertEquals(username, modifiedBy, "modifiedBy should be the user");
+    } else {
+      assertFalse(createdBy.isEmpty(), "createdBy should not be empty");
+      assertFalse(modifiedBy.isEmpty(), "modifiedBy should not be empty");
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(86)
+  void testDeleteLink_NotPresentInRepository_RemovedFromUI() throws Exception {
+    System.out.println("Test (91) : Delete link not in repository — expect removed from UI");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    String linkName = "linkToDelete";
+    String linkUrl = "https://www.example.com/delete-test";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], testChapterID, linkName, linkUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertFalse(attachments.isEmpty(), "Chapter should have the link");
+    String linkID = (String) attachments.get(0).get("ID");
+
+    CmisDocumentHelper.deleteDocumentFromCmis(testChapterID, linkName);
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    response = api.deleteAttachment(appUrl, chapterEntityName, facet[0], testChapterID, linkID);
+    assertEquals("Deleted", response, "Delete link should succeed in the UI");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed after deleting link");
+
+    List<Map<String, Object>> remainingAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertTrue(remainingAttachments.isEmpty(), "No attachments should remain");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(87)
+  void testRenameLinkToDuplicateName_BackendConflict_ErrorThrown() throws Exception {
+    System.out.println("Test (92) : Rename link to duplicate name — expect error");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    String linkName = "originalLink";
+    String linkUrl = "https://www.example.com/original";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], testChapterID, linkName, linkUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertFalse(attachments.isEmpty(), "Chapter should have the link");
+    String linkID = (String) attachments.get(0).get("ID");
+
+    String conflictingName = "backendLink";
+    ClassLoader classLoader = getClass().getClassLoader();
+    CmisDocumentHelper.createDocumentInCmis(
+        conflictingName, classLoader.getResource("sample.pdf").getFile(), testChapterID);
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    response =
+        api.renameAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, linkID, conflictingName);
+    assertEquals("Renamed", response, "Rename in draft should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertNotEquals("Saved", response, "Save should fail due to duplicate filename in DI");
+    assertTrue(
+        response.contains("already exist") || response.contains("error"),
+        "Error should indicate duplicate filename. Actual: " + response);
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(88)
+  void testRenameLink_WhitespaceOnly_WarningThrown() throws Exception {
+    System.out.println("Test (93) : Rename link with whitespace-only name — expect warning");
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    String linkName = "linkToRename";
+    String linkUrl = "https://www.example.com/rename-test";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], testChapterID, linkName, linkUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertFalse(attachments.isEmpty(), "Chapter should have the link");
+    String linkID = (String) attachments.get(0).get("ID");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    String whitespaceOnlyName = "     ";
+    response =
+        api.renameAttachment(
+            appUrl, chapterEntityName, facet[0], testChapterID, linkID, whitespaceOnlyName);
+    assertEquals("Renamed", response, "Rename in draft should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertNotEquals("Saved", response, "Save should not succeed with whitespace-only filename");
+    assertTrue(
+        response.contains("cannot be empty") || response.contains("could not be updated"),
+        "Warning should indicate filename issue. Actual: " + response);
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(89)
+  void testDiscardDraftEditedLink_RevertsToOriginalUrl() throws Exception {
+    System.out.println("Test (94) : Edit link URL, discard draft — expect revert to original URL");
+
+    String originalUrl = "https://abc.com";
+    String editedUrl = "https://xyz.com";
+
+    String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", testBookID, "Book creation should succeed");
+
+    String testChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
+    assertNotEquals("Could not create entity", testChapterID, "Chapter creation should succeed");
+
+    String linkName = "discardTestLink";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], testChapterID, linkName, originalUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Saved", response, "Book save should succeed");
+
+    List<Map<String, Object>> attachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], testChapterID);
+    assertFalse(attachments.isEmpty(), "Chapter should have the link");
+    String linkID = (String) attachments.get(0).get("ID");
+
+    Map<String, Object> metadataBefore =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], testChapterID, linkID);
+    assertEquals(originalUrl, metadataBefore.get("linkUrl"), "Link should have original URL");
+
+    response = api.editEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
+    assertEquals("Entity in draft mode", response, "Book should enter draft mode");
+
+    String editResponse =
+        api.editLink(appUrl, chapterEntityName, facet[0], testChapterID, linkID, editedUrl);
+    assertEquals("Link edited successfully", editResponse, "Link edit should succeed in draft");
+
+    response = api.deleteEntityDraft(appUrl, bookEntityName, testBookID);
+    assertEquals("Entity Draft Deleted", response, "Discard draft should succeed");
+
+    Map<String, Object> metadataAfterDiscard =
+        api.fetchMetadata(appUrl, chapterEntityName, facet[0], testChapterID, linkID);
+    assertEquals(
+        originalUrl, metadataAfterDiscard.get("linkUrl"), "Link URL should revert to original");
+
+    api.deleteEntity(appUrl, bookEntityName, testBookID);
+  }
+
+  @Test
+  @Order(90)
+  void testMoveAttachments_FromSdmFolder_ToTargetEntity() throws Exception {
+    System.out.println("Test (95) : Move attachments from SDM folder to target chapter");
+
+    String folderName = "move-test-folder-" + System.currentTimeMillis();
+    String sourceFolderId = CmisDocumentHelper.createFolderInCmis(folderName);
+    assertNotNull(sourceFolderId, "Source folder should be created in CMIS");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    String pdfPath = classLoader.getResource("sample.pdf").getFile();
+    String pdf1Path = classLoader.getResource("sample1.pdf").getFile();
+
+    String docId1 =
+        CmisDocumentHelper.createDocumentInFolder("sample.pdf", pdfPath, sourceFolderId);
+    String docId2 =
+        CmisDocumentHelper.createDocumentInFolder("sample1.pdf", pdf1Path, sourceFolderId);
+    assertNotNull(docId1, "First document should be created");
+    assertNotNull(docId2, "Second document should be created");
+
+    List<String> objectIdsToMove = new ArrayList<>();
+    objectIdsToMove.add(docId1);
+    objectIdsToMove.add(docId2);
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Target book save should succeed");
+
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            chapterEntityName,
+            facet[0],
+            targetChapterID,
+            sourceFolderId,
+            objectIdsToMove,
+            targetFacet,
+            null);
+    assertNotNull(moveResult, "Move result should not be null");
+
+    List<Map<String, Object>> targetAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    assertEquals(2, targetAttachments.size(), "Target should have 2 attachments after move");
+
+    for (Map<String, Object> attachment : targetAttachments) {
+      String attachmentId = (String) attachment.get("ID");
+      String readResponse =
+          api.readAttachment(appUrl, chapterEntityName, facet[0], targetChapterID, attachmentId);
+      assertEquals("OK", readResponse, "Moved attachment should be readable");
+    }
+
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+    CmisDocumentHelper.deleteObjectFromCmis(sourceFolderId);
+  }
+
+  @Test
+  @Order(91)
+  void testMoveAttachments_FromSdmFolder_DuplicateInTarget_Skipped() throws Exception {
+    System.out.println(
+        "Test (96) : Move from SDM folder with duplicate in target — expect duplicate skipped");
+
+    String folderName = "move-dup-test-folder-" + System.currentTimeMillis();
+    String sourceFolderId = CmisDocumentHelper.createFolderInCmis(folderName);
+    assertNotNull(sourceFolderId, "Source folder should be created in CMIS");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    String pdfPath = classLoader.getResource("sample.pdf").getFile();
+    String pdf1Path = classLoader.getResource("sample1.pdf").getFile();
+
+    String docId1 =
+        CmisDocumentHelper.createDocumentInFolder("sample.pdf", pdfPath, sourceFolderId);
+    String docId2 =
+        CmisDocumentHelper.createDocumentInFolder("sample1.pdf", pdf1Path, sourceFolderId);
+    assertNotNull(docId1, "First document should be created");
+    assertNotNull(docId2, "Second document should be created");
+
+    List<String> objectIdsToMove = new ArrayList<>();
+    objectIdsToMove.add(docId1);
+    objectIdsToMove.add(docId2);
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    File duplicateFile = new File(classLoader.getResource("sample.pdf").getFile());
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", targetChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], targetChapterID, srvpath, postData, duplicateFile);
+    assertEquals("Attachment created", createResponse.get(0));
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Target book save should succeed");
+
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            chapterEntityName,
+            facet[0],
+            targetChapterID,
+            sourceFolderId,
+            objectIdsToMove,
+            targetFacet,
+            null);
+    assertNotNull(moveResult, "Move result should not be null");
+
+    List<Map<String, Object>> targetAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    assertEquals(
+        2, targetAttachments.size(), "Target should have 2 attachments (1 orig + 1 moved)");
+
+    List<String> fileNames =
+        targetAttachments.stream()
+            .map(a -> (String) a.get("fileName"))
+            .collect(Collectors.toList());
+    assertTrue(fileNames.contains("sample.pdf"), "Target should have sample.pdf");
+    assertTrue(fileNames.contains("sample1.pdf"), "Target should have sample1.pdf (moved)");
+
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+    CmisDocumentHelper.deleteObjectFromCmis(sourceFolderId);
+  }
+
+  @Test
+  @Order(92)
+  void testMoveAttachments_FromSdmFolder_WithSecondaryProperties_Preserved() throws Exception {
+    System.out.println(
+        "Test (97) : Move from SDM folder with secondary properties — expect preserved");
+
+    String sourceBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", sourceBookID, "Source book creation should succeed");
+
+    String sourceChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, sourceBookID);
+    assertNotEquals(
+        "Could not create entity", sourceChapterID, "Source chapter creation should succeed");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File filePdf = new File(classLoader.getResource("sample.pdf").getFile());
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", sourceChapterID);
+    postData.put("mimeType", "application/pdf");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse1 =
+        api.createAttachment(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, srvpath, postData, filePdf);
+    assertEquals("Attachment created", createResponse1.get(0));
+    String attachId1 = createResponse1.get(1);
+
+    String linkName = "testMoveLink";
+    String linkUrl = "https://www.example.com/move-test";
+    String createLinkResponse =
+        api.createLink(appUrl, chapterEntityName, facet[0], sourceChapterID, linkName, linkUrl);
+    assertEquals("Link created successfully", createLinkResponse, "Link creation should succeed");
+
+    String notesValue = "Move test note";
+    MediaType mediaType = MediaType.parse("application/json");
+    RequestBody notesBody = RequestBody.create(mediaType, "{\"note\": \"" + notesValue + "\"}");
+    String updateNotes1 =
+        api.updateSecondaryProperty(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, attachId1, notesBody);
+    assertEquals("Updated", updateNotes1, "Notes update should succeed");
+
+    Integer customIntValue = 42;
+    RequestBody intBody =
+        RequestBody.create(mediaType, "{\"customProperty2\": " + customIntValue + "}");
+    String updateInt1 =
+        api.updateSecondaryProperty(
+            appUrl, chapterEntityName, facet[0], sourceChapterID, attachId1, intBody);
+    assertEquals("Updated", updateInt1, "Custom property update should succeed");
+
+    String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, sourceBookID);
+    assertEquals("Saved", response, "Source book save should succeed");
+
+    List<String> objectIdsToMove = new ArrayList<>();
+    String sourceFolderIdLocal = null;
+
+    List<Map<String, Object>> sourceAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], sourceChapterID);
+    for (Map<String, Object> attachment : sourceAttachments) {
+      String attId = (String) attachment.get("ID");
+      Map<String, Object> metadata =
+          api.fetchMetadata(appUrl, chapterEntityName, facet[0], sourceChapterID, attId);
+      if (metadata.get("objectId") != null) {
+        objectIdsToMove.add(metadata.get("objectId").toString());
+      }
+      if (sourceFolderIdLocal == null && metadata.get("folderId") != null) {
+        sourceFolderIdLocal = metadata.get("folderId").toString();
+      }
+    }
+    assertNotNull(sourceFolderIdLocal, "Source folder ID should be found");
+    assertFalse(objectIdsToMove.isEmpty(), "Should have objectIds to move");
+
+    String targetBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    assertNotEquals("Could not create entity", targetBookID, "Target book creation should succeed");
+
+    String targetChapterID =
+        api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, targetBookID);
+    assertNotEquals(
+        "Could not create entity", targetChapterID, "Target chapter creation should succeed");
+
+    response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, targetBookID);
+    assertEquals("Saved", response, "Target book save should succeed");
+
+    String targetFacet = serviceName + "." + chapterEntityName + "." + facet[0];
+    Map<String, Object> moveResult =
+        api.moveAttachment(
+            appUrl,
+            chapterEntityName,
+            facet[0],
+            targetChapterID,
+            sourceFolderIdLocal,
+            objectIdsToMove,
+            targetFacet,
+            null);
+    assertNotNull(moveResult, "Move result should not be null");
+
+    List<Map<String, Object>> targetAttachments =
+        api.fetchEntityMetadata(appUrl, chapterEntityName, facet[0], targetChapterID);
+    assertEquals(
+        sourceAttachments.size(), targetAttachments.size(), "Target should have all attachments");
+
+    boolean foundWithNotes = false;
+    boolean foundLink = false;
+    for (Map<String, Object> attachment : targetAttachments) {
+      String attId = (String) attachment.get("ID");
+      Map<String, Object> metadata =
+          api.fetchMetadata(appUrl, chapterEntityName, facet[0], targetChapterID, attId);
+
+      if (notesValue.equals(metadata.get("note"))) {
+        foundWithNotes = true;
+        assertEquals(
+            customIntValue, metadata.get("customProperty2"), "Custom property should be preserved");
+      }
+      if (linkUrl.equals(metadata.get("linkUrl"))) {
+        foundLink = true;
+      }
+    }
+    assertTrue(
+        foundWithNotes, "Attachment with notes and secondary properties should be preserved");
+    assertTrue(foundLink, "Link should be moved successfully");
+
+    api.deleteEntity(appUrl, bookEntityName, targetBookID);
+    api.deleteEntity(appUrl, bookEntityName, sourceBookID);
+  }
+
+  @Test
+  @Order(93)
   void testDownloadMultipleAttachmentsInDraftState() throws IOException {
     System.out.println(
         "Test (76): Create book+chapter, upload pdf/txt/exe per facet in draft state, download"
@@ -6692,7 +8073,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(74)
+  @Order(94)
   void testDownloadButtonDisabledWithLinkInDraftState() throws IOException {
     System.out.println(
         "Test (77): Upload pdf and link per facet to chapter, save book, edit (draft state),"
@@ -6821,7 +8202,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(75)
+  @Order(95)
   void testDownloadMultipleAttachmentsInActiveState() throws IOException {
     System.out.println(
         "Test (78): Create book+chapter, upload pdf/txt/exe per facet, save, download in active"
@@ -6931,7 +8312,7 @@ class IntegrationTest_Chapters_MultipleFacet {
   }
 
   @Test
-  @Order(76)
+  @Order(96)
   void testDownloadButtonDisabledWithLinkInActiveState() throws IOException {
     System.out.println(
         "Test (79): Upload pdf and link per facet to chapter, save book, pdf download enabled,"
@@ -7052,85 +8433,5 @@ class IntegrationTest_Chapters_MultipleFacet {
     }
 
     api.deleteEntity(appUrl, bookEntityName, testBookID);
-  }
-
-  @Test
-  @Order(77)
-  void testReadCmisMetadataCreatedBy() {
-    System.out.println("Test (76) : Read CMIS metadata and verify createdBy field");
-    String createdBy =
-        CmisDocumentHelper.getCmisProperty(chapterID, "sample.pdf", "cmis:createdBy");
-    System.out.println("cmis:createdBy value: " + createdBy);
-    String tokenFlowFlag = System.getProperty("tokenFlow");
-    if ("namedUser".equals(tokenFlowFlag)) {
-      assertEquals(username, createdBy, "cmis:createdBy should match username from credentials");
-    } else {
-      assertNotNull(createdBy, "cmis:createdBy should not be null for technical user");
-      assertFalse(createdBy.isEmpty(), "cmis:createdBy should not be empty for technical user");
-    }
-  }
-
-  @Test
-  @Order(78)
-  void testUploadVirusFileInScanDisabledRepo() throws IOException {
-    System.out.println(
-        "Test (77) : Upload EICAR virus file in virus scan disabled repo — expect upload to succeed");
-
-    for (int i = 0; i < facet.length; i++) {
-      boolean testStatus = false;
-
-      // Create book and chapter
-      String testBookID = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
-      if (testBookID.equals("Could not create entity")) {
-        fail("Could not create book for facet: " + facet[i]);
-      }
-
-      String testChapterID =
-          api.createEntityDraft(appUrl, chapterEntityName, entityName2, srvpath, testBookID);
-      if (testChapterID.equals("Could not create entity")) {
-        fail("Could not create chapter for facet: " + facet[i]);
-      }
-
-      // Use EICAR test virus file
-      String eicarFilePath = System.getProperty("eicar.file.path", "eicar.com.txt");
-      File file = new File(eicarFilePath);
-      if (!file.exists()) {
-        fail("EICAR virus test file not found at: " + file.getAbsolutePath());
-      }
-
-      Map<String, Object> postData = new HashMap<>();
-      postData.put("up__ID", testChapterID);
-      postData.put("mimeType", "text/plain");
-      postData.put("createdAt", new Date().toString());
-      postData.put("createdBy", "test@test.com");
-      postData.put("modifiedBy", "test@test.com");
-
-      List<String> createResponse =
-          api.createAttachment(
-              appUrl, chapterEntityName, facet[i], testChapterID, srvpath, postData, file);
-      String check = createResponse.get(0);
-      if (check.equals("Attachment created")) {
-        String testAttachmentID = createResponse.get(1);
-        String response = api.saveEntityDraft(appUrl, bookEntityName, srvpath, testBookID);
-        if (response.equals("Saved")) {
-          // Verify attachment is readable (upload succeeded despite being a virus file)
-          response =
-              api.readAttachment(
-                  appUrl, chapterEntityName, facet[i], testChapterID, testAttachmentID);
-          if (response.equals("OK")) {
-            testStatus = true;
-          }
-        }
-      }
-
-      // Clean up
-      api.deleteEntity(appUrl, bookEntityName, testBookID);
-
-      if (!testStatus) {
-        fail(
-            "Virus file upload should succeed in a virus scan disabled repository for facet: "
-                + facet[i]);
-      }
-    }
   }
 }

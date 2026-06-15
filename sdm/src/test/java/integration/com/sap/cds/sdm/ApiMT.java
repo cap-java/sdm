@@ -13,8 +13,9 @@ public class ApiMT implements ApiInterface {
   private final OkHttpClient httpClient;
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
-  private static final int MAX_RETRIES = 3;
+  private static final int MAX_RETRIES = 5;
   private static final int RETRY_DELAY_MS = 1000;
+  private static final int UPDATE_CONFLICT_RETRY_DELAY_MS = 5000;
 
   public ApiMT(Map<String, String> config) {
     this.config = new HashMap<>(config);
@@ -42,6 +43,24 @@ public class ApiMT implements ApiInterface {
           response.close();
           Thread.sleep(RETRY_DELAY_MS);
           continue;
+        }
+        // Retry on updateConflict (repository lock) — HTTP 500 or 409
+        if ((response.code() == 500 || response.code() == 409) && attempt < MAX_RETRIES) {
+          ResponseBody body = response.peekBody(8192);
+          String bodyStr = body.string();
+          if (bodyStr.contains("updateConflict") || bodyStr.contains("is currently blocked")) {
+            System.out.println(
+                "Repository lock detected (updateConflict), retrying after "
+                    + UPDATE_CONFLICT_RETRY_DELAY_MS
+                    + "ms... (attempt "
+                    + attempt
+                    + "/"
+                    + MAX_RETRIES
+                    + ")");
+            response.close();
+            Thread.sleep(UPDATE_CONFLICT_RETRY_DELAY_MS);
+            continue;
+          }
         }
         return response;
       } catch (java.net.SocketTimeoutException e) {
