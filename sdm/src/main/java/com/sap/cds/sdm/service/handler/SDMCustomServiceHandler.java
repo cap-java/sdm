@@ -1970,15 +1970,8 @@ public class SDMCustomServiceHandler {
         }
       }
 
-      String baseKeyField =
-          request.getUpIdKey() != null ? request.getUpIdKey().replace("up__", "") : "ID";
-      var insert =
-          Insert.into(
-                  request.getParentEntity(),
-                  e ->
-                      e.filter(e.get(baseKeyField).eq(request.getUpID()))
-                          .to(request.getCompositionName()))
-              .entry(updatedFields);
+      String targetEntityName = request.getParentEntity() + "." + request.getCompositionName();
+      var insert = Insert.into(targetEntityName).entry(updatedFields);
 
       DraftService matchingService =
           draftService.stream()
