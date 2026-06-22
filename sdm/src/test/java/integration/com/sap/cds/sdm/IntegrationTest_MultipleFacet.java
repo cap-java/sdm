@@ -3979,7 +3979,7 @@ class IntegrationTest_MultipleFacet {
         String errorMessage = json.getJSONObject("error").getString("message");
         assertEquals("500", errorCode);
         if (facetName.equals("references")) {
-          assertEquals("Cannot upload more than 5 attachments.", errorMessage);
+          assertEquals("Maximum number of attachments reached in English", errorMessage);
         } else if (facetName.equals("attachments")) {
           assertEquals("Maximum number of attachments reached in English", errorMessage);
         }
