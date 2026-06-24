@@ -5,7 +5,7 @@
       "@sap/hdi-deploy": "^5"
     },
     "engines": {
-      "node": "22.x"
+      "node": "^20"
     },
     "scripts": {
       "start": "node node_modules/@sap/hdi-deploy/deploy.js --use-hdb",
