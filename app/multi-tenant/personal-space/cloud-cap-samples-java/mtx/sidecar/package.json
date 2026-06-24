@@ -10,7 +10,7 @@
     "sqlite3": "^5"
   },
   "engines": {
-    "node": "^20"
+    "node": "22.x"
   },
   "cds": {
     "profiles": ["mtx-sidecar", "java"],
