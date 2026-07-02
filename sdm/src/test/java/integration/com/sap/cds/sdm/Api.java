@@ -1295,4 +1295,50 @@ public class Api implements ApiInterface {
       throw new IOException("Error fetching changelog: " + e.getMessage(), e);
     }
   }
+
+  public String createAttachmentInActive(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
+            + facetName
+            + "/"
+            + serviceName
+            + ".createAttachmentInActive";
+
+    RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+
+    Request request =
+        new Request.Builder()
+            .url(url)
+            .post(body)
+            .addHeader("Authorization", token)
+            .addHeader("Content-Type", "application/json")
+            .build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        String errorBody = response.body() != null ? response.body().string() : "";
+        System.out.println(
+            "createAttachmentInActive failed for "
+                + entityName
+                + "."
+                + facetName
+                + ". Error: "
+                + errorBody);
+        return errorBody;
+      }
+      return "Attachment created in active entity";
+    } catch (IOException e) {
+      System.out.println("createAttachmentInActive failed: " + e.getMessage());
+      return "Could not create attachment in active entity";
+    }
+  }
 }

@@ -129,4 +129,7 @@ public interface ApiInterface {
   public String downloadSelectedAttachmentsDraft(
       String appUrl, String entityName, String facetName, String entityID, List<String> ids)
       throws IOException;
+
+  public String createAttachmentInActive(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException;
 }
