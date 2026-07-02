@@ -169,6 +169,115 @@ class IntegrationTest_ActiveEntity {
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Pre-test cleanup: remove any stale test-fixture books (author == "author")
+    // from prior runs. Failures here are logged but never block the tests so
+    // we can still see the real test outcome.
+    // ───────────────────────────────────────────────────────────────────────
+    cleanupStaleTestData(client);
+  }
+
+  /**
+   * Deletes any leftover {@code Books} rows whose {@code author} field equals the test-fixture
+   * literal {@code "author"} — both active and draft. Stale rows from a previously crashed run can
+   * leave the CAP draft/attachments table in a state that makes follow-up active-entity tests fail
+   * with "filename does not exist" errors. Running this before each suite gives every test a clean
+   * baseline.
+   *
+   * <p>Best-effort: any IO/HTTP failure is logged with a warning and the method returns so the real
+   * tests can still run and surface the actual error.
+   */
+  private static void cleanupStaleTestData(OkHttpClient client) {
+    // MT app exposes books at /api/admin/Books; ST app at /odata/v4/AdminService/Books.
+    // The Api/ApiMT helpers know the right path — we mirror their URL construction here.
+    String tenancyModel = System.getProperty("tenancyModel");
+    String baseUrl =
+        "multi".equals(tenancyModel)
+            ? "https://" + appUrl + "/api/admin/" + entityName
+            : "https://" + appUrl + "/odata/v4/" + srvpath + "/" + entityName;
+    int activeDeleted = cleanupBookSet(client, baseUrl + "?$filter=author eq 'author'", true);
+    int draftDeleted =
+        cleanupBookSet(
+            client, baseUrl + "?$filter=author eq 'author' and IsActiveEntity eq false", false);
+    System.out.println(
+        "🧹 Pre-test cleanup: deleted "
+            + activeDeleted
+            + " active and "
+            + draftDeleted
+            + " draft fixture book(s) (author='author')");
+  }
+
+  /**
+   * Fetches all books matching {@code filterUrl} and deletes each by ID. Returns count successfully
+   * deleted. Never throws — IO failures are swallowed with a warning so cleanup never blocks tests.
+   */
+  private static int cleanupBookSet(OkHttpClient client, String filterUrl, boolean active) {
+    int deleted = 0;
+    try {
+      Request listReq =
+          new Request.Builder()
+              .url(filterUrl)
+              .get()
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response listRes = client.newCall(listReq).execute()) {
+        if (listRes.code() != 200) {
+          System.out.println(
+              "⚠️ Cleanup list ("
+                  + (active ? "active" : "draft")
+                  + ") returned HTTP "
+                  + listRes.code()
+                  + " — skipping");
+          return 0;
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(listRes.body().string());
+        com.fasterxml.jackson.databind.JsonNode values = root.path("value");
+        if (!values.isArray()) {
+          return 0;
+        }
+        for (com.fasterxml.jackson.databind.JsonNode book : values) {
+          String id = book.path("ID").asText("");
+          if (id.isEmpty()) {
+            continue;
+          }
+          try {
+            String resp =
+                active
+                    ? api.deleteEntity(appUrl, entityName, id)
+                    : api.deleteEntityDraft(appUrl, entityName, id);
+            if ("Entity Deleted".equals(resp) || "Deleted".equals(resp)) {
+              deleted++;
+            } else {
+              System.out.println(
+                  "⚠️ Cleanup could not delete "
+                      + (active ? "active" : "draft")
+                      + " book "
+                      + id
+                      + " (response: "
+                      + resp
+                      + ")");
+            }
+          } catch (Exception innerEx) {
+            System.out.println(
+                "⚠️ Cleanup delete failed for "
+                    + (active ? "active" : "draft")
+                    + " book "
+                    + id
+                    + ": "
+                    + innerEx.getMessage());
+          }
+        }
+      }
+    } catch (Exception e) {
+      System.out.println(
+          "⚠️ Cleanup "
+              + (active ? "active" : "draft")
+              + " list-fetch failed (continuing): "
+              + e.getMessage());
+    }
+    return deleted;
   }
 
   @Test
