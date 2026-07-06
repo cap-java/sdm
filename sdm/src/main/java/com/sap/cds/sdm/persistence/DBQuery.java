@@ -52,8 +52,9 @@ public class DBQuery {
         upID,
         upIdKey,
         attachmentEntity.getQualifiedName());
-    List<String> columns = new ArrayList<>(
-        java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "mimeType"));
+    List<String> columns =
+        new ArrayList<>(
+            java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "mimeType"));
     if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
       columns.add("IsActiveEntity");
     }
@@ -383,8 +384,8 @@ public class DBQuery {
         upID,
         SDMConstants.REPOSITORY_ID,
         attachmentEntity.getQualifiedName());
-    List<String> columns = new ArrayList<>(
-        java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId"));
+    List<String> columns =
+        new ArrayList<>(java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId"));
     if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
       columns.add("IsActiveEntity");
     }
@@ -521,8 +522,10 @@ public class DBQuery {
           folderId,
           entity);
       attachmentEntity = context.getModel().findEntity(entity);
-      List<String> activeColumns = new ArrayList<>(
-          java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus"));
+      List<String> activeColumns =
+          new ArrayList<>(
+              java.util.Arrays.asList(
+                  "fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus"));
       if (attachmentEntity.isPresent()
           && attachmentEntity.get().findElement("IsActiveEntity").isPresent()) {
         activeColumns.add(1, "IsActiveEntity");

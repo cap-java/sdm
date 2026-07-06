@@ -467,7 +467,8 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       for (CdsData row : data) {
         // Determine draft state per row — a single result set can mix active and draft records.
         // On a non-draft entity IsActiveEntity is absent; default to false (active).
-        boolean rowIsDraft = entityHasDraftSupport && Boolean.FALSE.equals(row.get("IsActiveEntity"));
+        boolean rowIsDraft =
+            entityHasDraftSupport && Boolean.FALSE.equals(row.get("IsActiveEntity"));
         Object keyVal = row.get(keyField);
         if (keyVal == null) {
           logger.debug("populateUploadableFlags Path1: skipping row with null keyVal");
