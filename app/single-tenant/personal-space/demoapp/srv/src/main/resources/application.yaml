@@ -9,3 +9,13 @@ spring:
   data-source:
     auto-config:
       enabled: false
+cds:
+  security:
+    mock.users:
+      admin:
+        password: admin
+        roles:
+          - admin
+          - system-user
+      user:
+        password: user
