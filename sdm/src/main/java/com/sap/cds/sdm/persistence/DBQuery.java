@@ -52,9 +52,14 @@ public class DBQuery {
         upID,
         upIdKey,
         attachmentEntity.getQualifiedName());
+    List<String> columns = new ArrayList<>(
+        java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "mimeType"));
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      columns.add("IsActiveEntity");
+    }
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
+            .columns(columns.toArray(new String[0]))
             .where(doc -> doc.get(upIdKey).eq(upID));
     Result result = persistenceService.run(q);
     logger.debug("Found {} attachment(s) for upID: {}", result.rowCount(), upID);
@@ -378,9 +383,14 @@ public class DBQuery {
         upID,
         SDMConstants.REPOSITORY_ID,
         attachmentEntity.getQualifiedName());
+    List<String> columns = new ArrayList<>(
+        java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId"));
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      columns.add("IsActiveEntity");
+    }
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .columns(columns.toArray(new String[0]))
             .where(
                 doc ->
                     doc.get(upIdKey)
@@ -511,16 +521,15 @@ public class DBQuery {
           folderId,
           entity);
       attachmentEntity = context.getModel().findEntity(entity);
+      List<String> activeColumns = new ArrayList<>(
+          java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus"));
+      if (attachmentEntity.isPresent()
+          && attachmentEntity.get().findElement("IsActiveEntity").isPresent()) {
+        activeColumns.add(1, "IsActiveEntity");
+      }
       q =
           Select.from(attachmentEntity.get())
-              .columns(
-                  "fileName",
-                  "IsActiveEntity",
-                  "ID",
-                  "folderId",
-                  "repositoryId",
-                  "objectId",
-                  "uploadStatus")
+              .columns(activeColumns.toArray(new String[0]))
               .where(doc -> doc.get("folderId").eq(folderId));
       result = persistenceService.run(q);
       for (Row row : result.list()) {
