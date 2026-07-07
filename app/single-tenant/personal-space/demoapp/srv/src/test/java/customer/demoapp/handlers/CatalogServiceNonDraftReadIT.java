@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -43,6 +44,7 @@ class CatalogServiceNonDraftReadIT {
      * populateUploadableFlags tries to SELECT IsActiveEntity from a non-draft attachment entity.
      */
     @Test
+    @WithMockUser
     void nonDraftReadOfBooksWithAttachmentsMustReturn200() throws Exception {
         mockMvc.perform(get(BOOKS_URI))
                .andExpect(status().isOk())
@@ -57,6 +59,7 @@ class CatalogServiceNonDraftReadIT {
      * processed without error.
      */
     @Test
+    @WithMockUser
     void nonDraftReadWithTopOneStillReturns200() throws Exception {
         mockMvc.perform(get(BOOKS_URI + "?$top=1"))
                .andExpect(status().isOk())
@@ -70,6 +73,7 @@ class CatalogServiceNonDraftReadIT {
      * populateUploadableFlags fully, hitting getAttachmentsForUPID once per facet.
      */
     @Test
+    @WithMockUser
     void nonDraftReadWithFilterStillReturns200() throws Exception {
         mockMvc.perform(get(BOOKS_URI + "?$filter=stock gt 0"))
                .andExpect(status().isOk())
