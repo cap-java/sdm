@@ -228,6 +228,8 @@ public class SDMReadAttachmentsHandlerPopulateUploadableFlagsTest {
     when(target.getQualifiedName()).thenReturn("sap.capire.Books");
     when(target.compositions()).thenAnswer(inv -> Stream.of(buildComposition("attachments", "3")));
     when(target.elements()).thenAnswer(inv -> Stream.of(buildKeyElement("ID")));
+    // entity has draft support — IsActiveEntity element is present
+    when(target.findElement("IsActiveEntity")).thenReturn(Optional.of(mock(CdsElement.class)));
     // isDraft=true because IsActiveEntity=false
     when(model.findEntity("sap.capire.Books.attachments_drafts"))
         .thenReturn(Optional.of(draftAttachmentEntity));
@@ -262,6 +264,8 @@ public class SDMReadAttachmentsHandlerPopulateUploadableFlagsTest {
     when(target.getQualifiedName()).thenReturn("sap.capire.Books");
     when(target.compositions()).thenAnswer(inv -> Stream.of(buildComposition("attachments", "2")));
     when(target.elements()).thenAnswer(inv -> Stream.of(buildKeyElement("ID")));
+    // entity has draft support — IsActiveEntity element is present
+    when(target.findElement("IsActiveEntity")).thenReturn(Optional.of(mock(CdsElement.class)));
     when(model.findEntity("sap.capire.Books.attachments_drafts")).thenReturn(Optional.empty());
     when(model.findEntity("sap.capire.Books.attachments"))
         .thenReturn(Optional.of(activeAttachmentEntity));
