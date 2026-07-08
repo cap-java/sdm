@@ -18,7 +18,7 @@
          <dependency>
           <groupId>com.sap.cds</groupId>
            <artifactId>sdm</artifactId>
-          <version>1.10.0</version>
+          <version>1.0.0-RC1</version>
         </dependency>
 
 
@@ -44,12 +44,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
