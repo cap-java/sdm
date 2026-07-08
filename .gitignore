@@ -1,6 +1,9 @@
 sdm/target/
+**/target/
 .flattened-pom.xml
 node_modules/
+**/package-lock.json
+**/src/gen/
 
 # Compiled class file
 *.class
@@ -22,6 +25,12 @@ node_modules/
 *.zip
 *.tar.gz
 *.rar
+*.hdbtable
+*.hdbview
+*.xml
+*.json
+*.sql
+*.mtar
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*

@@ -1798,6 +1798,211 @@ public class SDMServiceGenericHandlerTest {
   }
 
   @Test
+  void testHandleDraftDiscardForLinks_OnlyDirectAttachmentsProcessedViaPathMapping()
+      throws IOException {
+    // Verifies that handleDraftDiscardForLinks uses getDirectAttachmentPathMapping (not
+    // getAttachmentPathMapping) on the root entity — i.e. only direct attachments on the root
+    // are processed via Path 1. Nested attachments are handled exclusively by
+    // revertNestedEntityLinks.
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+
+      attachmentUtilsMock
+          .when(
+              () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(eq(parentActiveEntity)))
+          .thenReturn(new HashMap<>());
+
+      sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext);
+
+      // getDirectAttachmentPathMapping must be called on the root entity
+      attachmentUtilsMock.verify(
+          () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(eq(parentActiveEntity)),
+          times(1));
+
+      // getAttachmentPathMapping must NOT be called on the root entity
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(cdsModel), eq(parentActiveEntity), any()),
+          never());
+    }
+  }
+
+  @Test
+  void testHandleDraftDiscardForLinks_DirectAttachmentOnRootIsReverted() throws IOException {
+    // Verifies that when the root entity has a direct attachment composition,
+    // revertLinksForComposition is called for it via Path 1 (getDirectAttachmentPathMapping).
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsEntity attachmentDraftEntity = mock(CdsEntity.class);
+    CdsEntity attachmentActiveEntity = mock(CdsEntity.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+    when(parentActiveEntity.compositions()).thenReturn(Stream.empty());
+
+    // Direct attachment on root
+    Map<String, String> directMapping = new HashMap<>();
+    directMapping.put("AdminService.Books.attachments", "AdminService.Books.attachments");
+
+    when(cdsModel.findEntity("AdminService.Books.attachments_drafts"))
+        .thenReturn(Optional.of(attachmentDraftEntity));
+    when(cdsModel.findEntity("AdminService.Books.attachments"))
+        .thenReturn(Optional.of(attachmentActiveEntity));
+
+    CdsElement upElement = mock(CdsElement.class);
+    when(attachmentDraftEntity.elements()).thenReturn(Stream.of(upElement));
+    when(upElement.getName()).thenReturn("up__ID");
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(attachmentDraftEntity)).thenReturn("up__ID");
+
+    Result emptyResult = mock(Result.class);
+    when(emptyResult.iterator()).thenReturn(Collections.emptyIterator());
+    when(persistenceService.run(any(CqnSelect.class))).thenReturn(emptyResult);
+
+    SDMCredentials sdmCredentials = mock(SDMCredentials.class);
+    UserInfo userInfo = mock(UserInfo.class);
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+    when(draftContext.getUserInfo()).thenReturn(userInfo);
+    when(userInfo.isSystemUser()).thenReturn(false);
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+      attachmentUtilsMock
+          .when(
+              () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(eq(parentActiveEntity)))
+          .thenReturn(directMapping);
+
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+
+      // persistence was called — confirming revertLinksForComposition was entered for the direct
+      // attachment
+      verify(persistenceService, atLeastOnce()).run(any(CqnSelect.class));
+    }
+  }
+
+  @Test
+  void testHandleDraftDiscardForLinks_GrandchildAttachmentDoesNotCrash() throws IOException {
+    // Regression test for the bug: root → Chapters (no attachments) → Sections (has attachments).
+    // With the old code, getAttachmentPathMapping on root would construct a wrong entity name
+    // "AdminService.Chapters.attachments" causing NoSuchElementException.
+    // With the fix, getDirectAttachmentPathMapping returns empty for root (no direct attachments),
+    // and revertNestedEntityLinks correctly handles Sections via Chapters.
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+    CdsEntity parentActiveEntity = mock(CdsEntity.class);
+    CdsElement chaptersComposition = mock(CdsElement.class);
+    CdsAssociationType chaptersAssocType = mock(CdsAssociationType.class);
+    CdsEntity chaptersEntity = mock(CdsEntity.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.of(parentActiveEntity));
+
+    // Root has one composition: Chapters (no direct attachments)
+    when(parentActiveEntity.compositions()).thenReturn(Stream.of(chaptersComposition));
+    when(chaptersComposition.getType()).thenReturn(chaptersAssocType);
+    when(chaptersAssocType.getTarget()).thenReturn(chaptersEntity);
+    when(chaptersEntity.getQualifiedName()).thenReturn("AdminService.Chapters");
+
+    // Chapters_drafts does not exist (simulates non-draft-enabled or grandchild scenario)
+    when(cdsModel.findEntity("AdminService.Chapters_drafts")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+
+      // Root has NO direct attachments
+      attachmentUtilsMock
+          .when(
+              () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(eq(parentActiveEntity)))
+          .thenReturn(new HashMap<>());
+
+      // Must not throw NoSuchElementException
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+
+      // getDirectAttachmentPathMapping called on root — not getAttachmentPathMapping
+      attachmentUtilsMock.verify(
+          () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(eq(parentActiveEntity)),
+          times(1));
+      attachmentUtilsMock.verify(
+          () ->
+              AttachmentsHandlerUtils.getAttachmentPathMapping(
+                  eq(cdsModel), eq(parentActiveEntity), any()),
+          never());
+    }
+  }
+
+  @Test
+  void testHandleDraftDiscardForLinks_ActiveEntityNotFound_SkipsDirectAttachments()
+      throws IOException {
+    // When the active entity is not found in the model, no attachment processing should occur.
+    DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
+    CdsEntity parentDraftEntity = mock(CdsEntity.class);
+    CqnAnalyzer analyzer = mock(CqnAnalyzer.class);
+    AnalysisResult analysisResult = mock(AnalysisResult.class);
+    CqnDelete cqnDelete = mock(CqnDelete.class);
+
+    when(draftContext.getTarget()).thenReturn(parentDraftEntity);
+    when(parentDraftEntity.getQualifiedName()).thenReturn("AdminService.Books_drafts");
+    when(draftContext.getModel()).thenReturn(cdsModel);
+    when(draftContext.getCqn()).thenReturn(cqnDelete);
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(analyzer);
+    when(analyzer.analyze(cqnDelete)).thenReturn(analysisResult);
+    when(analysisResult.rootKeys()).thenReturn(Map.of("ID", "book123"));
+    when(cdsModel.findEntity("AdminService.Books")).thenReturn(Optional.empty());
+
+    try (var attachmentUtilsMock =
+        mockStatic(
+            com.sap.cds.sdm.handler.applicationservice.helper.AttachmentsHandlerUtils.class)) {
+
+      assertDoesNotThrow(() -> sdmServiceGenericHandler.handleDraftDiscardForLinks(draftContext));
+
+      // Neither method should be called since active entity is absent
+      attachmentUtilsMock.verify(
+          () -> AttachmentsHandlerUtils.getDirectAttachmentPathMapping(any()), never());
+      attachmentUtilsMock.verify(
+          () -> AttachmentsHandlerUtils.getAttachmentPathMapping(any(), any(), any()), never());
+    }
+  }
+
+  @Test
   void testRevertNestedEntityLinks_WithNullParentId() throws IOException {
 
     DraftCancelEventContext draftContext = mock(DraftCancelEventContext.class);
