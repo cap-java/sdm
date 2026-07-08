@@ -13,7 +13,6 @@ on:
 permissions:
   contents: read # allows workflow to checkout private repository
   pull-requests: read # allows SonarQube to decorate PRs with analysis results
-  packages: read # allows workflow to download dependencies from GitHub Packages
 
 jobs:
   build:
@@ -31,22 +30,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Configure Maven for GitHub Packages
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<EOF
-          <settings>
-            <servers>
-              <server>
-                <id>github-snapshot</id>
-                <username>${{ github.actor }}</username>
-                <password>${{ secrets.GITHUB_TOKEN }}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Install dependencies
         run: |
           mvn clean install -P unit-tests -DskipIntegrationTests
