@@ -196,10 +196,7 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
     int draftDeleted =
         cleanupBookSet(
             client,
-            baseUrl
-                + "?$filter=author/name eq '"
-                + AUTHOR_NAME
-                + "' and IsActiveEntity eq false",
+            baseUrl + "?$filter=author/name eq '" + AUTHOR_NAME + "' and IsActiveEntity eq false",
             false);
     System.out.println(
         "🧹 Pre-test cleanup: deleted "
