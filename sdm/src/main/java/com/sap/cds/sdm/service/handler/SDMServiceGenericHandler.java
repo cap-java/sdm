@@ -187,18 +187,13 @@ public class SDMServiceGenericHandler implements EventHandler {
     logger.debug("Processing draft cancel for entity: {}", parentEntityName);
 
     Optional<CdsEntity> parentActiveEntityOpt = context.getModel().findEntity(parentEntityName);
-    Map<String, String> compositionPathMapping =
-        parentActiveEntityOpt
-            .map(
-                cdsEntity ->
-                    AttachmentsHandlerUtils.getAttachmentPathMapping(
-                        context.getModel(), cdsEntity, persistenceService))
-            .orElse(new HashMap<>());
-
-    logger.debug("Found {} composition paths to process", compositionPathMapping.size());
-    for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
-      String attachmentCompositionDefinition = entry.getKey();
-      revertLinksForComposition(context, parentKeys, attachmentCompositionDefinition);
+    if (parentActiveEntityOpt.isPresent()) {
+      Map<String, String> compositionPathMapping =
+          AttachmentsHandlerUtils.getDirectAttachmentPathMapping(parentActiveEntityOpt.get());
+      logger.debug("Found {} composition paths to process", compositionPathMapping.size());
+      for (Map.Entry<String, String> entry : compositionPathMapping.entrySet()) {
+        revertLinksForComposition(context, parentKeys, entry.getKey());
+      }
     }
     revertNestedEntityLinks(context);
     logger.debug("END: Handle draft discard for links");
@@ -697,7 +692,13 @@ public class SDMServiceGenericHandler implements EventHandler {
       throws ServiceException {
     logger.debug("Checking attachment constraints for upID: {}", upID);
     CdsModel cdsModel = context.getModel();
-    CdsEntity attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName()).get();
+    CdsEntity attachmentEntity =
+        cdsModel
+            .findEntity(context.getTarget().getQualifiedName())
+            .orElseThrow(
+                () ->
+                    new ServiceException(
+                        "Entity not found in model: " + context.getTarget().getQualifiedName()));
 
     // Fetch the row count for current repository
     Result result =

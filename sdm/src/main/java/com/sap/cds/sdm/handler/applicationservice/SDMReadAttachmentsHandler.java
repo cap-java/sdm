@@ -460,9 +460,15 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       CdsModel model = context.getModel();
       // Cache keyed by "facetName|parentId|isDraft" to avoid one DB query per row per facet.
       Map<String, Boolean> uploadableCache = new HashMap<>();
+
+      // Non-draft entities have no IsActiveEntity; treat every row as active (isDraft=false).
+      boolean entityHasDraftSupport = target.findElement("IsActiveEntity").isPresent();
+
       for (CdsData row : data) {
         // Determine draft state per row — a single result set can mix active and draft records.
-        boolean rowIsDraft = Boolean.FALSE.equals(row.get("IsActiveEntity"));
+        // On a non-draft entity IsActiveEntity is absent; default to false (active).
+        boolean rowIsDraft =
+            entityHasDraftSupport && Boolean.FALSE.equals(row.get("IsActiveEntity"));
         Object keyVal = row.get(keyField);
         if (keyVal == null) {
           logger.debug("populateUploadableFlags Path1: skipping row with null keyVal");
