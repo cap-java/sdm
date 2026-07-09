@@ -13,6 +13,23 @@ public interface ApiInterface {
   public String createEntityDraft(
       String appUrl, String entityName, String entityName2, String srvpath, String bookID);
 
+  /**
+   * Same as {@link #createEntityDraft(String, String, String, String)} but with a caller-supplied
+   * author name so parallel matrix jobs can use distinct fixture markers and their cleanups won't
+   * clobber each other.
+   */
+  public String createEntityDraftWithAuthor(
+      String appUrl, String entityName, String entityName2, String srvpath, String authorName);
+
+  /** Chapter-in-book variant of {@link #createEntityDraftWithAuthor}. */
+  public String createEntityDraftWithAuthor(
+      String appUrl,
+      String entityName,
+      String entityName2,
+      String srvpath,
+      String bookID,
+      String authorName);
+
   public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID);
 
   public String saveEntityDraft(String appUrl, String entityName, String srvpath, String entityID);

@@ -37,6 +37,9 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static String[] facet = {"attachments", "references", "footnotes"};
+  // Distinct author-name marker for this suite so its cleanup only touches its own books and
+  // doesn't collide with sibling ActiveEntity matrix jobs.
+  private static final String AUTHOR_NAME = "author-active-chapters-multifacet";
   private static ApiInterface api;
   private static ApiInterface apiNoRoles;
 
@@ -171,6 +174,108 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
+
+    // Pre-test cleanup: remove any stale test-fixture books (author == "author") from prior runs.
+    // Failures here are logged but never block the tests so we can still see the real test outcome.
+    cleanupStaleTestData(client);
+  }
+
+  /**
+   * Deletes any leftover {@code Books} rows whose {@code author} field equals the test-fixture
+   * literal {@code "author"} — both active and draft. Deleting a Book cascades to its Chapters, so
+   * this also clears stale chapter fixtures.
+   */
+  private static void cleanupStaleTestData(OkHttpClient client) {
+    String tenancyModel = System.getProperty("tenancyModel");
+    String baseUrl =
+        "multi".equals(tenancyModel)
+            ? "https://" + appUrl + "/api/admin/" + bookEntityName
+            : "https://" + appUrl + "/odata/v4/" + srvpath + "/" + bookEntityName;
+    int activeDeleted =
+        cleanupBookSet(client, baseUrl + "?$filter=author/name eq '" + AUTHOR_NAME + "'", true);
+    int draftDeleted =
+        cleanupBookSet(
+            client,
+            baseUrl
+                + "?$filter=author/name eq '"
+                + AUTHOR_NAME
+                + "' and IsActiveEntity eq false",
+            false);
+    System.out.println(
+        "🧹 Pre-test cleanup: deleted "
+            + activeDeleted
+            + " active and "
+            + draftDeleted
+            + " draft fixture book(s) (author='author')");
+  }
+
+  /** See sibling test file — same best-effort cleanup helper. */
+  private static int cleanupBookSet(OkHttpClient client, String filterUrl, boolean active) {
+    int deleted = 0;
+    try {
+      Request listReq =
+          new Request.Builder()
+              .url(filterUrl)
+              .get()
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response listRes = client.newCall(listReq).execute()) {
+        if (listRes.code() != 200) {
+          System.out.println(
+              "⚠️ Cleanup list ("
+                  + (active ? "active" : "draft")
+                  + ") returned HTTP "
+                  + listRes.code()
+                  + " — skipping");
+          return 0;
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(listRes.body().string());
+        com.fasterxml.jackson.databind.JsonNode values = root.path("value");
+        if (!values.isArray()) {
+          return 0;
+        }
+        for (com.fasterxml.jackson.databind.JsonNode book : values) {
+          String id = book.path("ID").asText("");
+          if (id.isEmpty()) {
+            continue;
+          }
+          try {
+            String resp =
+                active
+                    ? api.deleteEntity(appUrl, bookEntityName, id)
+                    : api.deleteEntityDraft(appUrl, bookEntityName, id);
+            if ("Entity Deleted".equals(resp) || "Deleted".equals(resp)) {
+              deleted++;
+            } else {
+              System.out.println(
+                  "⚠️ Cleanup could not delete "
+                      + (active ? "active" : "draft")
+                      + " book "
+                      + id
+                      + " (response: "
+                      + resp
+                      + ")");
+            }
+          } catch (Exception innerEx) {
+            System.out.println(
+                "⚠️ Cleanup delete failed for "
+                    + (active ? "active" : "draft")
+                    + " book "
+                    + id
+                    + ": "
+                    + innerEx.getMessage());
+          }
+        }
+      }
+    } catch (Exception e) {
+      System.out.println(
+          "⚠️ Cleanup "
+              + (active ? "active" : "draft")
+              + " list-fetch failed (continuing): "
+              + e.getMessage());
+    }
+    return deleted;
   }
 
   /**
@@ -178,7 +283,8 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
    * [bookID, chapterID]} array, or {@code null} if any step fails.
    */
   private static String[] createAndActivateBookWithChapter() {
-    String bookResponse = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    String bookResponse =
+        api.createEntityDraftWithAuthor(appUrl, bookEntityName, entityName2, srvpath, AUTHOR_NAME);
     if (bookResponse.equals("Could not create entity")) {
       return null;
     }
@@ -353,7 +459,8 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
             + " all facets");
     boolean testStatus = false;
     // Create a fresh book+chapter draft (kept in draft mode so we can upload draft attachments)
-    String bookResponse = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
+    String bookResponse =
+        api.createEntityDraftWithAuthor(appUrl, bookEntityName, entityName2, srvpath, AUTHOR_NAME);
     if (!bookResponse.equals("Could not create entity")) {
       bookID3 = bookResponse;
       String chapterResponse =

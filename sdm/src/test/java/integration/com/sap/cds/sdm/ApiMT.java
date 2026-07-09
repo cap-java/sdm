@@ -140,6 +140,62 @@ public class ApiMT implements ApiInterface {
     return ("Could not create entity");
   }
 
+  public String createEntityDraftWithAuthor(
+      String appUrl, String entityName, String entityName2, String srvpath, String authorName) {
+    return createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, null, authorName);
+  }
+
+  public String createEntityDraftWithAuthor(
+      String appUrl,
+      String entityName,
+      String entityName2,
+      String srvpath,
+      String bookID,
+      String authorName) {
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonBody;
+    if (bookID != null && !bookID.isEmpty()) {
+      // Creating a Chapter within a Book — same as the default path
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \"book_ID\": \"" + bookID + "\"\n}";
+    } else {
+      // Creating a Book with a caller-supplied author name so parallel matrix jobs
+      // can use distinct fixture markers and their cleanups won't clobber each other.
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+              + entityName2
+              + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \""
+              + authorName
+              + "\"\n    }\n}";
+    }
+
+    RequestBody body = RequestBody.create(mediaType, jsonBody);
+    Request request =
+        new Request.Builder()
+            .url("https://" + appUrl + "/api/admin/" + entityName)
+            .method("POST", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        if (response.code() == 401) {
+          System.out.println(
+              "Create entity failed due to incorrect token. Please check the credentials");
+        }
+        System.out.println("Create entity failed. Error : " + response.body().string());
+        throw new IOException("Could not create entity");
+      }
+      Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
+      return (String) responseMap.get("ID");
+    } catch (IOException e) {
+      System.out.println("Could not create entity : " + e);
+    }
+    return ("Could not create entity");
+  }
+
   public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     MediaType mediaType = MediaType.parse("application/json");
     Request request =

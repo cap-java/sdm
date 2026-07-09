@@ -35,6 +35,9 @@ class IntegrationTest_ActiveEntity_MultipleFacet {
   private static String entityName2 = "author";
   private static String srvpath = "AdminService";
   private static String[] facet = {"attachments", "references", "footnotes"};
+  // Distinct author-name marker for this suite so its cleanup only touches its own books and
+  // doesn't collide with sibling ActiveEntity matrix jobs.
+  private static final String AUTHOR_NAME = "author-active-multifacet";
   private static ApiInterface api;
   private static ApiInterface apiNoRoles;
 
@@ -166,6 +169,111 @@ class IntegrationTest_ActiveEntity_MultipleFacet {
     } else {
       throw new IllegalArgumentException("Invalid tenancy model specified: " + tenancyModel);
     }
+
+    // Pre-test cleanup: remove any stale test-fixture books (author == "author") from prior runs.
+    // Failures here are logged but never block the tests so we can still see the real test outcome.
+    cleanupStaleTestData(client);
+  }
+
+  /**
+   * Deletes any leftover {@code Books} rows whose {@code author} field equals the test-fixture
+   * literal {@code "author"} — both active and draft. Best-effort: any IO/HTTP failure is logged
+   * with a warning and the method returns so the real tests can still run.
+   */
+  private static void cleanupStaleTestData(OkHttpClient client) {
+    String tenancyModel = System.getProperty("tenancyModel");
+    String baseUrl =
+        "multi".equals(tenancyModel)
+            ? "https://" + appUrl + "/api/admin/" + entityName
+            : "https://" + appUrl + "/odata/v4/" + srvpath + "/" + entityName;
+    int activeDeleted =
+        cleanupBookSet(client, baseUrl + "?$filter=author/name eq '" + AUTHOR_NAME + "'", true);
+    int draftDeleted =
+        cleanupBookSet(
+            client,
+            baseUrl
+                + "?$filter=author/name eq '"
+                + AUTHOR_NAME
+                + "' and IsActiveEntity eq false",
+            false);
+    System.out.println(
+        "🧹 Pre-test cleanup: deleted "
+            + activeDeleted
+            + " active and "
+            + draftDeleted
+            + " draft fixture book(s) (author='author')");
+  }
+
+  /**
+   * Fetches all books matching {@code filterUrl} and deletes each by ID. Returns count successfully
+   * deleted. Never throws — IO failures are swallowed with a warning so cleanup never blocks tests.
+   */
+  private static int cleanupBookSet(OkHttpClient client, String filterUrl, boolean active) {
+    int deleted = 0;
+    try {
+      Request listReq =
+          new Request.Builder()
+              .url(filterUrl)
+              .get()
+              .addHeader("Authorization", "Bearer " + token)
+              .build();
+      try (Response listRes = client.newCall(listReq).execute()) {
+        if (listRes.code() != 200) {
+          System.out.println(
+              "⚠️ Cleanup list ("
+                  + (active ? "active" : "draft")
+                  + ") returned HTTP "
+                  + listRes.code()
+                  + " — skipping");
+          return 0;
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(listRes.body().string());
+        com.fasterxml.jackson.databind.JsonNode values = root.path("value");
+        if (!values.isArray()) {
+          return 0;
+        }
+        for (com.fasterxml.jackson.databind.JsonNode book : values) {
+          String id = book.path("ID").asText("");
+          if (id.isEmpty()) {
+            continue;
+          }
+          try {
+            String resp =
+                active
+                    ? api.deleteEntity(appUrl, entityName, id)
+                    : api.deleteEntityDraft(appUrl, entityName, id);
+            if ("Entity Deleted".equals(resp) || "Deleted".equals(resp)) {
+              deleted++;
+            } else {
+              System.out.println(
+                  "⚠️ Cleanup could not delete "
+                      + (active ? "active" : "draft")
+                      + " book "
+                      + id
+                      + " (response: "
+                      + resp
+                      + ")");
+            }
+          } catch (Exception innerEx) {
+            System.out.println(
+                "⚠️ Cleanup delete failed for "
+                    + (active ? "active" : "draft")
+                    + " book "
+                    + id
+                    + ": "
+                    + innerEx.getMessage());
+          }
+        }
+      }
+    } catch (Exception e) {
+      System.out.println(
+          "⚠️ Cleanup "
+              + (active ? "active" : "draft")
+              + " list-fetch failed (continuing): "
+              + e.getMessage());
+    }
+    return deleted;
   }
 
   @Test
@@ -175,7 +283,8 @@ class IntegrationTest_ActiveEntity_MultipleFacet {
         "Test (1) : Create entity, activate it, and create attachment on all facets via active"
             + " entity flow");
     boolean testStatus = false;
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    String response =
+        api.createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, AUTHOR_NAME);
     if (!response.equals("Could not create entity")) {
       entityID = response;
       response = api.saveEntityDraft(appUrl, entityName, srvpath, entityID);
@@ -275,7 +384,8 @@ class IntegrationTest_ActiveEntity_MultipleFacet {
         "Test (5) : Create attachment via active entity without SDM role on every facet — expect"
             + " 500");
     boolean testStatus = false;
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    String response =
+        api.createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, AUTHOR_NAME);
     if (!response.equals("Could not create entity")) {
       entityID2 = response;
       String saveResponse = api.saveEntityDraft(appUrl, entityName, srvpath, entityID2);
@@ -309,7 +419,8 @@ class IntegrationTest_ActiveEntity_MultipleFacet {
     System.out.println(
         "Test (6) : Active entity flow coexists with draft-uploaded attachments across all facets");
     boolean testStatus = false;
-    String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    String response =
+        api.createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, AUTHOR_NAME);
     if (!response.equals("Could not create entity")) {
       entityID3 = response;
       ClassLoader classLoader = getClass().getClassLoader();
