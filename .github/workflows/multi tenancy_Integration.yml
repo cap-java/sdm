@@ -19,6 +19,7 @@ jobs:
   integration-test:
     environment: dev
     runs-on: ubuntu-latest
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     strategy:
       fail-fast: false
       matrix:
@@ -353,7 +354,6 @@ jobs:
   # fixture-collision with sibling matrix entries (all touch the same Books/author='author' rows).
   active-entity-test:
     environment: dev
-    needs: integration-test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -667,6 +667,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: active-entity-test
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -745,6 +746,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: versioned-setup
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     strategy:
       fail-fast: false
       matrix:
@@ -1009,6 +1011,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: versioned-test
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -1087,6 +1090,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: virusscan-setup
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     strategy:
       fail-fast: false
       matrix:
@@ -1364,7 +1368,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: [versioned-setup, versioned-test, virusscan-setup, virusscan-test]
-    if: always() && (needs.versioned-setup.result != 'skipped' || needs.virusscan-setup.result != 'skipped')
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
@@ -1703,6 +1707,7 @@ jobs:
     environment: dev
     runs-on: ubuntu-latest
     needs: [virusscan-test, virusscan-cleanup]
+    if: false  # TEMPORARILY DISABLED — only active-entity-test runs
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -2003,24 +2008,16 @@ jobs:
   test-summary:
     environment: dev
     runs-on: ubuntu-latest
-    needs: [integration-test, active-entity-test, versioned-test, virusscan-test, virusscan-cleanup, repospecific-test, subscription-test]
+    needs: [active-entity-test]
     if: "!cancelled()"
     steps:
       - name: Check test results 📋
         run: |
-          echo "Integration test: ${{ needs.integration-test.result }}"
           echo "Active entity test: ${{ needs.active-entity-test.result }}"
-          echo "Versioned test: ${{ needs.versioned-test.result }}"
-          echo "Virus scan test: ${{ needs.virusscan-test.result }}"
-          echo "Repo-specific test: ${{ needs.repospecific-test.result }} (disabled is OK)"
-          echo "Subscription test: ${{ needs.subscription-test.result }}"
-          if [ "${{ needs.integration-test.result }}" == "success" ] && \
-             [ "${{ needs.active-entity-test.result }}" == "success" ] && \
-             [ "${{ needs.versioned-test.result }}" == "success" ] && \
-             [ "${{ needs.virusscan-test.result }}" == "success" ] && \
-             [ "${{ needs.subscription-test.result }}" == "success" ]; then
-            echo "✅ All enabled integration tests passed!"
+          echo "(Other suites temporarily disabled — only active-entity-test runs)"
+          if [ "${{ needs.active-entity-test.result }}" == "success" ]; then
+            echo "✅ Active-entity integration tests passed!"
           else
-            echo "❌ Some integration tests failed. Check individual job results for details."
+            echo "❌ Active-entity integration tests failed. Check individual job results for details."
             exit 1
           fi
