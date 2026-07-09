@@ -176,6 +176,8 @@ jobs:
           - IntegrationTest_MultipleFacet
           - IntegrationTest_Chapters_MultipleFacet
           - IntegrationTest_ActiveEntity
+          - IntegrationTest_ActiveEntity_MultipleFacet
+          - IntegrationTest_ActiveEntity_Chapters_MultipleFacet
 
     steps:
       - name: Checkout repository ✅

@@ -24,6 +24,8 @@ jobs:
           - IntegrationTest_MultipleFacet
           - IntegrationTest_Chapters_MultipleFacet
           - IntegrationTest_ActiveEntity
+          - IntegrationTest_ActiveEntity_MultipleFacet
+          - IntegrationTest_ActiveEntity_Chapters_MultipleFacet
     env:
       FILE_URL: ${{ 'http://www.eicar.org/download/eicar.com.txt' }}
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
