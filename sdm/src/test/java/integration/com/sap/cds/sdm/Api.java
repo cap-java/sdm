@@ -141,11 +141,13 @@ public class Api implements ApiInterface {
     return ("Could not create entity");
   }
 
+  @Override
   public String createEntityDraftWithAuthor(
       String appUrl, String entityName, String entityName2, String srvpath, String authorName) {
     return createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, null, authorName);
   }
 
+  @Override
   public String createEntityDraftWithAuthor(
       String appUrl,
       String entityName,
@@ -1352,6 +1354,7 @@ public class Api implements ApiInterface {
     }
   }
 
+  @Override
   public String createAttachmentInActive(
       String appUrl, String entityName, String facetName, String entityID) throws IOException {
     String url =
