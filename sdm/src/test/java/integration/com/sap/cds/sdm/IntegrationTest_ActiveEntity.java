@@ -285,7 +285,7 @@ class IntegrationTest_ActiveEntity {
   void testCreateActiveEntityAndCreateAttachmentInActive() throws IOException {
     System.out.println(
         "Test (1) : Create entity, activate it, and create attachment via active entity flow");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
       entityID = response;
@@ -307,7 +307,7 @@ class IntegrationTest_ActiveEntity {
   void testVerifyAttachmentExistsAfterActiveEntityCreation() throws IOException {
     System.out.println(
         "Test (2) : Verify attachment appears in entity metadata after active entity creation");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     List<Map<String, Object>> attachments =
         api.fetchEntityMetadata(appUrl, entityName, "attachments", entityID);
     if (attachments != null && !attachments.isEmpty()) {
@@ -361,7 +361,7 @@ class IntegrationTest_ActiveEntity {
   void testCreateAttachmentInActiveWithoutSDMRole() throws IOException {
     System.out.println(
         "Test (5) : Create attachment in active entity without SDM role — expect 500");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
       entityID2 = response;
@@ -389,7 +389,7 @@ class IntegrationTest_ActiveEntity {
   void testCreateAttachmentInActiveOnEntityWithExistingDraftAttachments() throws IOException {
     System.out.println(
         "Test (6) : Active entity flow coexists with draft-uploaded attachments on same entity");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
     if (!response.equals("Could not create entity")) {
       entityID3 = response;
@@ -439,7 +439,7 @@ class IntegrationTest_ActiveEntity {
     System.out.println(
         "Test (7) : Create second attachment via active entity flow on same entity — timestamp-based"
             + " filename prevents duplicates");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createAttachmentInActive(appUrl, entityName, "attachments", entityID);
     if (response.equals("Attachment created in active entity")) {
       List<Map<String, Object>> attachments =
@@ -469,7 +469,7 @@ class IntegrationTest_ActiveEntity {
   @Order(8)
   void testCreateAttachmentInActiveOnReferencesFacet() throws IOException {
     System.out.println("Test (8) : Create attachment in active entity on 'references' facet");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createAttachmentInActive(appUrl, entityName, "references", entityID);
     if (response.equals("Attachment created in active entity")) {
       List<Map<String, Object>> attachments =
@@ -497,7 +497,7 @@ class IntegrationTest_ActiveEntity {
   @Order(9)
   void testCreateAttachmentInActiveOnFootnotesFacet() throws IOException {
     System.out.println("Test (9) : Create attachment in active entity on 'footnotes' facet");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.createAttachmentInActive(appUrl, entityName, "footnotes", entityID);
     if (response.equals("Attachment created in active entity")) {
       List<Map<String, Object>> attachments =
@@ -524,7 +524,7 @@ class IntegrationTest_ActiveEntity {
   @Order(10)
   void testDeleteAttachmentCreatedViaActiveEntityFlow() throws IOException {
     System.out.println("Test (10) : Delete attachment that was created via active entity flow");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       response =
@@ -550,7 +550,7 @@ class IntegrationTest_ActiveEntity {
   @Order(11)
   void testRenameAttachmentCreatedViaActiveEntityFlow() throws IOException {
     System.out.println("Test (11) : Rename attachment that was created via active entity flow");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.editEntityDraft(appUrl, entityName, srvpath, entityID);
     if (response == "Entity in draft mode") {
       String newName = "renamed-active-attachment.txt";
@@ -579,7 +579,7 @@ class IntegrationTest_ActiveEntity {
   @Order(12)
   void testDownloadAttachmentCreatedViaActiveEntityFlow() throws IOException {
     System.out.println("Test (12) : Batch download attachment created via active entity flow");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     List<String> ids = new ArrayList<>();
     ids.add(activeAttachmentID2);
     String response =
@@ -597,7 +597,7 @@ class IntegrationTest_ActiveEntity {
   void testCopyActiveEntityAttachmentToAnotherEntity() throws IOException {
     System.out.println(
         "Test (13) : Copy attachment (created via active entity flow) to another entity");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     Map<String, Object> metadata =
         api.fetchMetadata(appUrl, entityName, "attachments", entityID, activeAttachmentID2);
     if (!metadata.containsKey("objectId")) {
@@ -640,7 +640,7 @@ class IntegrationTest_ActiveEntity {
     System.out.println(
         "Test (14) : Create attachment in active entity on nested Chapters entity — exercises"
             + " extractParentId CQN path traversal in AdminServiceHandler");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     // Create a book first
     String bookResponse = api.createEntityDraft(appUrl, bookEntityName, entityName2, srvpath);
     if (!bookResponse.equals("Could not create entity")) {
@@ -692,7 +692,7 @@ class IntegrationTest_ActiveEntity {
   void testDeleteEntityWithActiveEntityAttachments() {
     System.out.println(
         "Test (15) : Delete entity that has attachments created via active entity flow");
-    Boolean testStatus = false;
+    boolean testStatus = false;
     String response = api.deleteEntity(appUrl, entityName, entityID);
     if (response == "Entity Deleted") {
       response = api.checkEntity(appUrl, entityName, entityID);
@@ -709,7 +709,7 @@ class IntegrationTest_ActiveEntity {
   @Order(16)
   void testCleanup() {
     System.out.println("Test (16) : Cleanup remaining test entities");
-    Boolean testStatus = true;
+    boolean testStatus = true;
     if (entityID2 != null && !entityID2.isEmpty()) {
       String response = api.deleteEntity(appUrl, entityName, entityID2);
       if (response != "Entity Deleted") {
