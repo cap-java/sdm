@@ -52,9 +52,15 @@ public class DBQuery {
         upID,
         upIdKey,
         attachmentEntity.getQualifiedName());
+    List<String> columns =
+        new ArrayList<>(
+            java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId", "mimeType"));
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      columns.add("IsActiveEntity");
+    }
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
+            .columns(columns.toArray(new String[0]))
             .where(doc -> doc.get(upIdKey).eq(upID));
     Result result = persistenceService.run(q);
     logger.debug("Found {} attachment(s) for upID: {}", result.rowCount(), upID);
@@ -378,9 +384,14 @@ public class DBQuery {
         upID,
         SDMConstants.REPOSITORY_ID,
         attachmentEntity.getQualifiedName());
+    List<String> columns =
+        new ArrayList<>(java.util.Arrays.asList("fileName", "ID", "folderId", "repositoryId"));
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      columns.add("IsActiveEntity");
+    }
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+            .columns(columns.toArray(new String[0]))
             .where(
                 doc ->
                     doc.get(upIdKey)
@@ -511,16 +522,17 @@ public class DBQuery {
           folderId,
           entity);
       attachmentEntity = context.getModel().findEntity(entity);
+      List<String> activeColumns =
+          new ArrayList<>(
+              java.util.Arrays.asList(
+                  "fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus"));
+      if (attachmentEntity.isPresent()
+          && attachmentEntity.get().findElement("IsActiveEntity").isPresent()) {
+        activeColumns.add(1, "IsActiveEntity");
+      }
       q =
           Select.from(attachmentEntity.get())
-              .columns(
-                  "fileName",
-                  "IsActiveEntity",
-                  "ID",
-                  "folderId",
-                  "repositoryId",
-                  "objectId",
-                  "uploadStatus")
+              .columns(activeColumns.toArray(new String[0]))
               .where(doc -> doc.get("folderId").eq(folderId));
       result = persistenceService.run(q);
       for (Row row : result.list()) {
@@ -568,37 +580,41 @@ public class DBQuery {
       String objectId,
       AttachmentReadEventContext context) {
     logger.debug("Fetching uploadStatus for objectId: {} from entity: {}", objectId, entity);
-    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
-    CqnSelect q =
-        Select.from(attachmentEntity.get())
-            .columns("uploadStatus")
-            .where(doc -> doc.get("objectId").eq(objectId));
-    Result result = persistenceService.run(q);
     CmisDocument cmisDocument = new CmisDocument();
     boolean isAttachmentFound = false;
-    for (Row row : result.list()) {
-      cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null
-              ? row.get("uploadStatus").toString()
-              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      isAttachmentFound = true;
+    Optional<CdsEntity> draftEntityOpt = context.getModel().findEntity(entity + "_drafts");
+    if (draftEntityOpt.isPresent()) {
+      CqnSelect q =
+          Select.from(draftEntityOpt.get())
+              .columns("uploadStatus")
+              .where(doc -> doc.get("objectId").eq(objectId));
+      Result result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+        isAttachmentFound = true;
+      }
     }
     if (!isAttachmentFound) {
       logger.debug(
           "Attachment not found in draft table for objectId: {}, checking active entity: {}",
           objectId,
           entity);
-      attachmentEntity = context.getModel().findEntity(entity);
-      q =
-          Select.from(attachmentEntity.get())
-              .columns("uploadStatus")
-              .where(doc -> doc.get("objectId").eq(objectId));
-      result = persistenceService.run(q);
-      for (Row row : result.list()) {
-        cmisDocument.setUploadStatus(
-            row.get("uploadStatus") != null
-                ? row.get("uploadStatus").toString()
-                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+      Optional<CdsEntity> activeEntityOpt = context.getModel().findEntity(entity);
+      if (activeEntityOpt.isPresent()) {
+        CqnSelect q =
+            Select.from(activeEntityOpt.get())
+                .columns("uploadStatus")
+                .where(doc -> doc.get("objectId").eq(objectId));
+        Result result = persistenceService.run(q);
+        for (Row row : result.list()) {
+          cmisDocument.setUploadStatus(
+              row.get("uploadStatus") != null
+                  ? row.get("uploadStatus").toString()
+                  : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+        }
       }
     }
     logger.debug(

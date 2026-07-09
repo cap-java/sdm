@@ -62,20 +62,30 @@ public class AttachmentsHandlerUtils {
   }
 
   /**
-   * Creates a mapping of attachment entity paths to their corresponding actual paths within the CDS
-   * model.
+   * Creates a mapping of direct attachment entity paths for the given CDS entity.
    *
-   * <p>This method analyzes both direct and nested attachment compositions within the given entity.
-   * It processes direct attachments that are immediate compositions of the entity, and also
-   * traverses nested compositions to find attachments in related entities. The resulting mapping
-   * provides a translation between logical attachment paths and their actual implementation paths.
+   * <p>This method processes only direct attachment compositions (immediate compositions of the
+   * entity that target sap.attachments.Attachments). Nested compositions are not traversed.
    *
-   * @param model the CDS model containing entity definitions and relationships
-   * @param entity the target CDS entity to analyze for attachment path mappings
-   * @param persistenceService the persistence service used for data access operations
-   * @return a map where keys are attachment entity paths and values are the corresponding actual
-   *     paths, or an empty map if no attachments are found or if an error occurs during processing
+   * @param entity the target CDS entity to analyze for direct attachment path mappings
+   * @return a map where keys and values are the direct attachment entity paths, or an empty map if
+   *     no direct attachments are found
    */
+  public static Map<String, String> getDirectAttachmentPathMapping(CdsEntity entity) {
+    logger.debug(
+        "Getting direct attachment path mapping for entity: {}", entity.getQualifiedName());
+    Map<String, String> pathMapping = new HashMap<>();
+    entity
+        .compositions()
+        .forEach(
+            composition -> processDirectAttachmentComposition(entity, pathMapping, composition));
+    logger.debug(
+        "Found {} direct attachment path mappings for entity: {}",
+        pathMapping.size(),
+        entity.getQualifiedName());
+    return pathMapping;
+  }
+
   public static Map<String, String> getAttachmentPathMapping(
       CdsModel model, CdsEntity entity, PersistenceService persistenceService) {
     logger.debug("Getting attachment path mapping for entity: {}", entity.getQualifiedName());

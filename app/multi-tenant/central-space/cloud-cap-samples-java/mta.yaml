@@ -52,6 +52,8 @@ modules:
     parameters:
       memory: 256M
       disk-quota: 1024M
+    properties:
+      DATABASE_ID: __DATABASE_ID__  # Placeholder for DATABASE_ID
     build-parameters:
       builder: custom
       build-result: gen

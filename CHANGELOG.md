@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.10.1
+
+### Fixed
+- User-defined error message not displayed when maximum attachment upload limit is exceeded
+- Fix issue in discarding newly created entities which has multi-level of nested children
+- Fix populateUploadableFlags breaks reads on non-draft services
+
 ## Version 1.10.0
 
 ### Added

@@ -67,6 +67,7 @@ jobs:
             echo "java version:"
             java --version
             sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
+            sed -i 's|__DATABASE_ID__|${{ secrets.DATABASE_ID }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
