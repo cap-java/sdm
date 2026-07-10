@@ -150,6 +150,16 @@
 			<groupId>com.sap.cds</groupId>
 			<artifactId>cds-feature-remote-odata</artifactId>
 			<scope>runtime</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.bouncycastle</groupId>
+					<artifactId>bcprov-jdk18on</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.bouncycastle</groupId>
+					<artifactId>bcpkix-jdk18on</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
