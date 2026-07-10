@@ -45,8 +45,9 @@
         <jackson-core-version>2.22.0</jackson-core-version>
         <mockito-junit-jupiter-version>5.15.2</mockito-junit-jupiter-version>
         <httpclient5-version>5.4.4</httpclient5-version>
-        <httpcore5-version>5.3.3</httpcore5-version>
+        <httpcore5-version>5.4.3</httpcore5-version>
         <httpasyncclient-version>4.1.5</httpasyncclient-version>
+        <httpcore-nio-version>4.4.16</httpcore-nio-version>
         <log4j-api-version>3.0.0-beta2</log4j-api-version>
         <rxjava-version>2.2.21</rxjava-version>
     </properties>
@@ -135,6 +136,11 @@
         <artifactId>httpcore5</artifactId>
         <version>${httpcore5-version}</version>
     </dependency>
+    <dependency>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5-h2</artifactId>
+        <version>${httpcore5-version}</version>
+    </dependency>
 
 <dependency>
     <groupId>org.apache.httpcomponents</groupId>
@@ -146,6 +152,11 @@
             <artifactId>commons-logging</artifactId>
         </exclusion>
     </exclusions>
+</dependency>
+<dependency>
+    <groupId>org.apache.httpcomponents</groupId>
+    <artifactId>httpcore-nio</artifactId>
+    <version>${httpcore-nio-version}</version>
 </dependency>
 <!-- Log4j dependencies -->
 <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
