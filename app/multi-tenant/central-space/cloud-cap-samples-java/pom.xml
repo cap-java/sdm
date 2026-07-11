@@ -114,36 +114,6 @@
 				<version>3.17.0</version>
 			</dependency>
 
-			<!-- Security: fix Apache HTTPComponents Core (MEDIUM) -->
-			<dependency>
-				<groupId>org.apache.httpcomponents.core5</groupId>
-				<artifactId>httpcore5</artifactId>
-				<version>5.4.3</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.core5</groupId>
-				<artifactId>httpcore5-h2</artifactId>
-				<version>5.4.3</version>
-			</dependency>
-
-			<!-- Security: fix Apache Tomcat (CRITICAL) -->
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-core</artifactId>
-				<version>10.1.56</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-el</artifactId>
-				<version>10.1.56</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-websocket</artifactId>
-				<version>10.1.56</version>
-			</dependency>
-
-			<!-- Security: fix Logback (MEDIUM) — excluded in srv/pom.xml -->
 
 		</dependencies>
 	</dependencyManagement>
