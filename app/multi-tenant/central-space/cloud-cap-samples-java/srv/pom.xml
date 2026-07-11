@@ -20,6 +20,16 @@
 		<dependency>
 			<groupId>com.sap.cds</groupId>
 			<artifactId>cds-starter-spring-boot</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>io.opentelemetry</groupId>
+					<artifactId>opentelemetry-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.opentelemetry</groupId>
+					<artifactId>opentelemetry-context</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
@@ -133,8 +143,12 @@
 			<version>${cf-java-logging-support.version}</version>
 			<exclusions>
 				<exclusion>
-					<groupId>org.hdrhistogram</groupId>
-					<artifactId>HdrHistogram</artifactId>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-core</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
