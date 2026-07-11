@@ -157,13 +157,6 @@
 
 			<!-- Security: fix Logback (MEDIUM) — excluded in srv/pom.xml -->
 
-			<!-- Security: fix HdrHistogram (MEDIUM) -->
-			<dependency>
-				<groupId>org.hdrhistogram</groupId>
-				<artifactId>HdrHistogram</artifactId>
-				<version>2.5.0</version>
-			</dependency>
-
 		</dependencies>
 	</dependencyManagement>
 
