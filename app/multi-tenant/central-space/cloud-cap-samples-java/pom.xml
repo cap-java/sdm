@@ -28,6 +28,11 @@
 		<xsuaa.version>3.5.0</xsuaa.version>
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 		<cds.install-cdsdk.version>9.8.0</cds.install-cdsdk.version>
+
+		<!-- Security: fix Spring Boot managed transitive versions -->
+		<tomcat.version>10.1.57</tomcat.version>
+		<logback.version>1.5.37</logback.version>
+		<jackson-bom.version>2.22.1</jackson-bom.version>
 	</properties>
 
 	<modules>
@@ -114,23 +119,6 @@
 				<version>3.17.0</version>
 			</dependency>
 
-			<!-- Security: fix Apache Tomcat (CRITICAL/HIGH/MEDIUM) -->
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-core</artifactId>
-				<version>10.1.57</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-el</artifactId>
-				<version>10.1.57</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-websocket</artifactId>
-				<version>10.1.57</version>
-			</dependency>
-
 			<!-- Security: fix Apache HTTPComponents Core 5 (MEDIUM) -->
 			<dependency>
 				<groupId>org.apache.httpcomponents.core5</groupId>
@@ -141,25 +129,6 @@
 				<groupId>org.apache.httpcomponents.core5</groupId>
 				<artifactId>httpcore5-h2</artifactId>
 				<version>5.4.3</version>
-			</dependency>
-
-			<!-- Security: fix jackson-databind (MEDIUM) -->
-			<dependency>
-				<groupId>com.fasterxml.jackson.core</groupId>
-				<artifactId>jackson-databind</artifactId>
-				<version>2.22.1</version>
-			</dependency>
-
-			<!-- Security: fix Logback (MEDIUM) -->
-			<dependency>
-				<groupId>ch.qos.logback</groupId>
-				<artifactId>logback-core</artifactId>
-				<version>1.5.37</version>
-			</dependency>
-			<dependency>
-				<groupId>ch.qos.logback</groupId>
-				<artifactId>logback-classic</artifactId>
-				<version>1.5.37</version>
 			</dependency>
 
 			<!-- Security: fix OpenTelemetry (HIGH) -->
