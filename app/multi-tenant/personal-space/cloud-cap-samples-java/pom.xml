@@ -28,9 +28,6 @@
 		<xsuaa.version>3.5.0</xsuaa.version>
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 		<cds.install-cdsdk.version>9.3.1</cds.install-cdsdk.version>
-
-		<!-- Security: fix Spring Boot managed transitive versions -->
-		<jackson-bom.version>2.22.1</jackson-bom.version>
 	</properties>
 
 	<modules>
