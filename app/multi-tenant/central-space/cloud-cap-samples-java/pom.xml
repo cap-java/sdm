@@ -29,8 +29,6 @@
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 		<cds.install-cdsdk.version>9.8.0</cds.install-cdsdk.version>
 
-		<!-- Security: fix Spring Boot managed transitive versions -->
-		<jackson-bom.version>2.22.1</jackson-bom.version>
 	</properties>
 
 	<modules>
