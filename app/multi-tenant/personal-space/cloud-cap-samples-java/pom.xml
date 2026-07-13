@@ -93,13 +93,6 @@
 				<version>1.63.0</version>
 			</dependency>
 
-			<!-- Security: fix Nimbus-JOSE-JWT (required by Spring Security 6.5.x DPoP) -->
-			<dependency>
-				<groupId>com.nimbusds</groupId>
-				<artifactId>nimbus-jose-jwt</artifactId>
-				<version>10.9.1</version>
-			</dependency>
-
 		</dependencies>
 	</dependencyManagement>
 
