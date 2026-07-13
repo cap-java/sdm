@@ -26,16 +26,6 @@
 			<groupId>com.sap.cds</groupId>
 			<artifactId>cds-adapter-odata-v4</artifactId>
 			<scope>runtime</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>io.opentelemetry</groupId>
-					<artifactId>opentelemetry-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>io.opentelemetry</groupId>
-					<artifactId>opentelemetry-context</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
     <groupId>org.apache.commons</groupId>
