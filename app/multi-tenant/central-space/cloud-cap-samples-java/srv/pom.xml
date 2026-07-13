@@ -79,6 +79,10 @@
 					<groupId>com.sap.cloud.security.xsuaa</groupId>
 					<artifactId>xsuaa-spring-boot-starter</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>com.nimbusds</groupId>
+					<artifactId>nimbus-jose-jwt</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
