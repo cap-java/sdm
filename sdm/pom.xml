@@ -99,7 +99,6 @@
             </build>
         </profile>
     </profiles>
- 
     <dependencies>
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
