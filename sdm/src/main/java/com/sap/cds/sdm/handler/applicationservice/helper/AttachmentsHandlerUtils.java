@@ -62,6 +62,31 @@ public class AttachmentsHandlerUtils {
   }
 
   /**
+   * Creates a mapping of direct attachment entity paths for the given CDS entity.
+   *
+   * <p>This method processes only direct attachment compositions (immediate compositions of the
+   * entity that target sap.attachments.Attachments). Nested compositions are not traversed.
+   *
+   * @param entity the target CDS entity to analyze for direct attachment path mappings
+   * @return a map where keys and values are the direct attachment entity paths, or an empty map if
+   *     no direct attachments are found
+   */
+  public static Map<String, String> getDirectAttachmentPathMapping(CdsEntity entity) {
+    logger.debug(
+        "Getting direct attachment path mapping for entity: {}", entity.getQualifiedName());
+    Map<String, String> pathMapping = new HashMap<>();
+    entity
+        .compositions()
+        .forEach(
+            composition -> processDirectAttachmentComposition(entity, pathMapping, composition));
+    logger.debug(
+        "Found {} direct attachment path mappings for entity: {}",
+        pathMapping.size(),
+        entity.getQualifiedName());
+    return pathMapping;
+  }
+
+  /**
    * Creates a mapping of attachment entity paths to their corresponding actual paths within the CDS
    * model.
    *

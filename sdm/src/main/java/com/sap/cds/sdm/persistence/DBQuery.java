@@ -21,7 +21,6 @@ import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.*;
-import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -566,37 +565,41 @@ public class DBQuery {
       String objectId,
       AttachmentReadEventContext context) {
     logger.debug("Fetching uploadStatus for objectId: {} from entity: {}", objectId, entity);
-    Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
-    CqnSelect q =
-        Select.from(attachmentEntity.get())
-            .columns("uploadStatus")
-            .where(doc -> doc.get("objectId").eq(objectId));
-    Result result = persistenceService.run(q);
     CmisDocument cmisDocument = new CmisDocument();
     boolean isAttachmentFound = false;
-    for (Row row : result.list()) {
-      cmisDocument.setUploadStatus(
-          row.get("uploadStatus") != null
-              ? row.get("uploadStatus").toString()
-              : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      isAttachmentFound = true;
+    Optional<CdsEntity> draftEntityOpt = context.getModel().findEntity(entity + "_drafts");
+    if (draftEntityOpt.isPresent()) {
+      CqnSelect q =
+          Select.from(draftEntityOpt.get())
+              .columns("uploadStatus")
+              .where(doc -> doc.get("objectId").eq(objectId));
+      Result result = persistenceService.run(q);
+      for (Row row : result.list()) {
+        cmisDocument.setUploadStatus(
+            row.get("uploadStatus") != null
+                ? row.get("uploadStatus").toString()
+                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+        isAttachmentFound = true;
+      }
     }
     if (!isAttachmentFound) {
       logger.debug(
           "Attachment not found in draft table for objectId: {}, checking active entity: {}",
           objectId,
           entity);
-      attachmentEntity = context.getModel().findEntity(entity);
-      q =
-          Select.from(attachmentEntity.get())
-              .columns("uploadStatus")
-              .where(doc -> doc.get("objectId").eq(objectId));
-      result = persistenceService.run(q);
-      for (Row row : result.list()) {
-        cmisDocument.setUploadStatus(
-            row.get("uploadStatus") != null
-                ? row.get("uploadStatus").toString()
-                : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+      Optional<CdsEntity> activeEntityOpt = context.getModel().findEntity(entity);
+      if (activeEntityOpt.isPresent()) {
+        CqnSelect q =
+            Select.from(activeEntityOpt.get())
+                .columns("uploadStatus")
+                .where(doc -> doc.get("objectId").eq(objectId));
+        Result result = persistenceService.run(q);
+        for (Row row : result.list()) {
+          cmisDocument.setUploadStatus(
+              row.get("uploadStatus") != null
+                  ? row.get("uploadStatus").toString()
+                  : SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+        }
       }
     }
     logger.debug(
