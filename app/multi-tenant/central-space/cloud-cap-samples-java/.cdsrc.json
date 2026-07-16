@@ -1,0 +1,20 @@
+{
+    "requires": {
+        "multitenancy": true,
+        "extensibility": true,
+        "toggles": true
+    },
+    "odata": {
+        "version": "v4"
+    },
+    "fiori": {
+      "draft_messages": false
+    },
+    "profile": "with-mtx-sidecar",
+    "cdsc": {
+        "newParser": true
+    },
+    "sql": {
+        "native_hana_associations": false
+    }
+}

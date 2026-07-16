@@ -11,12 +11,11 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        java-version: [ 17 ]
+        java-version: [ 21 ]
 
     steps:
       - name: Checkout
