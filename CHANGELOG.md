@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.1
+
+### Fixed
+- Fix issue in discarding newly created entities which has multi-level of nested children
+
 ## Version 1.9.0
 
 ### Added
