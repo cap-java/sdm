@@ -1513,6 +1513,26 @@ public class SDMServiceImplTest {
   }
 
   @Test
+  public void testGetObject_403_ThrowsServiceExceptionViaUtils() throws IOException {
+    String objectId = "objectId403";
+    SDMServiceImpl sdmServiceImpl = new SDMServiceImpl(binding, connectionPool, tokenHandler);
+    SDMCredentials sdmCredentials = new SDMCredentials();
+    sdmCredentials.setUrl("http://example.com/");
+
+    when(tokenHandler.getHttpClient(any(), any(), any(), any())).thenReturn(httpClient);
+    when(httpClient.execute(any(HttpGet.class))).thenReturn(response);
+    when(response.getStatusLine()).thenReturn(statusLine);
+    when(statusLine.getStatusCode()).thenReturn(403);
+
+    ServiceException exception =
+        assertThrows(
+            ServiceException.class,
+            () -> sdmServiceImpl.getObject(objectId, sdmCredentials, false));
+
+    assertEquals(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"), exception.getMessage());
+  }
+
+  @Test
   public void testGetObjectThrowsServiceExceptionOnIOException() throws IOException {
     SDMCredentials mockSdmCredentials = mock(SDMCredentials.class);
     CloseableHttpClient mockHttpClient = mock(CloseableHttpClient.class);
