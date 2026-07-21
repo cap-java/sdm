@@ -89,7 +89,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [verify-snapshot, build]
     if: needs.verify-snapshot.outputs.is_snapshot == 'true'
+    environment: maven-central
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Download artifact
         uses: actions/download-artifact@v7
         with:
