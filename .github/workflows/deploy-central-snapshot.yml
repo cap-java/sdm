@@ -76,14 +76,6 @@ jobs:
           mvn clean install -P unit-tests -DskipIntegrationTests
           echo "✅ Build completed successfully!"
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: snapshot-build
-          path: .
-          include-hidden-files: true
-          retention-days: 1
-
   deploy:
     name: Deploy Snapshot to Central Portal
     runs-on: ubuntu-latest
@@ -93,11 +85,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Download artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: snapshot-build
 
       - name: Deploy Snapshot (with GPG signing)
         if: github.event.inputs.sign_artifacts != 'false'
