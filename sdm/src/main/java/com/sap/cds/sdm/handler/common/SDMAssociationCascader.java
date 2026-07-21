@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The class {@link SDMAssociationCascader} is used to find entity paths to all media resource
@@ -18,7 +20,10 @@ import java.util.stream.Collectors;
  */
 public class SDMAssociationCascader {
 
+  private static final Logger logger = LoggerFactory.getLogger(SDMAssociationCascader.class);
+
   public SDMNodeTree findEntityPath(CdsModel model, CdsEntity entity) {
+    logger.debug("Finding entity path for: {}", entity.getQualifiedName());
     var firstList = new LinkedList<SDMAssociationIdentifier>();
     var internalResultList =
         getAttachmentAssociationPath(
@@ -26,6 +31,8 @@ public class SDMAssociationCascader {
 
     var rootTree = new SDMNodeTree(new SDMAssociationIdentifier("", entity.getQualifiedName()));
     internalResultList.forEach(rootTree::addPath);
+    logger.debug(
+        "Found {} paths for entity: {}", internalResultList.size(), entity.getQualifiedName());
     return rootTree;
   }
 
@@ -42,6 +49,7 @@ public class SDMAssociationCascader {
 
     var isMediaEntity = SDMApplicationHandlerHelper.isMediaEntity(entity);
     if (isMediaEntity) {
+      logger.debug("Found media entity: {}", entity.getQualifiedName());
       var identifier = new SDMAssociationIdentifier(associationName, entity.getQualifiedName());
       firstList.addLast(identifier);
     }
@@ -64,8 +72,14 @@ public class SDMAssociationCascader {
                     element -> element.getType().as(CdsAssociationType.class).getTarget()));
 
     if (associations.isEmpty()) {
+      logger.debug("No composition associations found for entity: {}", entity.getQualifiedName());
       return internalResultList;
     }
+
+    logger.debug(
+        "Processing {} composition associations for entity: {}",
+        associations.size(),
+        entity.getQualifiedName());
 
     var newListNeeded = false;
     for (var associatedElement : associations.entrySet()) {

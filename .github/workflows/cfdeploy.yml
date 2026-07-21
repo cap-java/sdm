@@ -26,11 +26,13 @@ on:
         default: ''
 
 permissions:
+  contents: read
   pull-requests: read
   packages: read  # Added permission to read packages
 
 jobs:
   Deploy:
+    environment: dev
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.workflow_choice == 'Deploy' }}
 
@@ -40,10 +42,10 @@ jobs:
         with:
           ref: ${{ github.event.inputs.deploy_branch }}
 
-      - name: Set up Java 17 ☕
+      - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
         with:
-          java-version: 17
+          java-version: 21
           distribution: 'temurin'
 
       - name: Build and package 🔨
@@ -51,18 +53,6 @@ jobs:
           echo "🚀 Building and packaging..."
           mvn clean install -P unit-tests -DskipIntegrationTests
           echo "✅ Build and packaging completed successfully!"
-
-      - name: Verify and Checkout Deploy Branch 🔄
-        run: |
-          git fetch origin
-          echo "📂 Verifying 'local_deploy' branch..."
-          if git rev-parse --verify origin/local_deploy; then
-            git checkout local_deploy
-            echo "✅ Branch checked out successfully!"
-          else
-            echo "❌ Branch 'local_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
 
       - name: Set REPOSITORY_ID 🔍
         id: set_repository_id
@@ -83,11 +73,15 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
-          git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp/app
+          cd /home/runner/work/sdm/sdm/app/single-tenant/personal-space/demoapp/app
           echo "Changed to app directory 📂"
           pwd
 
@@ -114,19 +108,25 @@ jobs:
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt update
-          sudo apt install cf-cli
+          sudo apt install cf8-cli
 
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 
           echo "🚀 Running cf deploy..."
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
           echo "✅ Deployment complete!"
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
 
   SnapshotDeploy:
+    environment: dev
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.workflow_choice == 'Snapshot Deploy' }}
 
@@ -136,23 +136,11 @@ jobs:
         with:
           ref: develop
 
-      - name: Set up Java 17 ☕
+      - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
         with:
-          java-version: 17
+          java-version: 21
           distribution: 'temurin'
-
-      - name: Verify and Checkout Deploy Branch 🔄
-        run: |
-          git fetch origin
-          echo "📂 Verifying 'develop_deploy' branch..."
-          if git rev-parse --verify origin/develop_deploy; then
-            git checkout develop_deploy
-            echo "✅ Branch checked out successfully!"
-          else
-            echo "❌ Branch 'develop_deploy' not found. Please verify the branch name."
-            exit 1
-          fi
 
       - name: Override cds.services.version (runtime only)
         if: ${{ github.event.inputs.cds_services_version != '' }}
@@ -160,7 +148,7 @@ jobs:
           TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
         run: |
           echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/single-tenant/central-space/demoapp | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -218,11 +206,15 @@ jobs:
 
       - name: Prepare and Deploy to Cloud Foundry ☁️
         run: |
+          set +x
+          echo "::add-mask::$CF_API"
+          echo "::add-mask::$CF_USER"
+          echo "::add-mask::$CF_PASSWORD"
+          echo "::add-mask::$CF_ORG"
           echo "🔄 Preparing to deploy..."
           echo "Current Branch: 📂"
-          git branch
           pwd
-          cd /home/runner/work/sdm/sdm/cap-notebook/demoapp
+          cd /home/runner/work/sdm/sdm/app/single-tenant/central-space/demoapp
 
           cd app
           echo "🔄 Removing node_modules for fresh install..."
@@ -249,14 +241,19 @@ jobs:
           wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt update
-          sudo apt install cf-cli
+          sudo apt install cf8-cli
 
           cf install-plugin multiapps -f
 
           echo "🔑 Logging into Cloud Foundry..."
-          cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+          cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
           echo "✅ Logged in successfully!"
 
           echo "🚀 Running cf deploy..."
           cf deploy mta_archives/demoappjava_1.0.0.mtar -f
           echo "✅ Deployment complete!"
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}

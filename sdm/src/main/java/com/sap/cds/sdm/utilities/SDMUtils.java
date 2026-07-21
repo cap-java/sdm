@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SDMUtils {
-  private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
+  private static final Logger logger = LoggerFactory.getLogger(SDMUtils.class);
 
   private SDMUtils() {
     // Doesn't do anything
@@ -49,6 +49,7 @@ public class SDMUtils {
 
   public static Set<String> FileNameContainsWhitespace(
       List<CdsData> data, String composition, String targetEntity) {
+    logger.debug("START: FileNameContainsWhitespace for composition: {}", composition);
     Set<String> filenamesWithWhitespace = new HashSet<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments =
@@ -64,11 +65,14 @@ public class SDMUtils {
         }
       }
     }
+    logger.debug(
+        "END: FileNameContainsWhitespace - found {} issues", filenamesWithWhitespace.size());
     return filenamesWithWhitespace;
   }
 
   public static Set<String> FileNameDuplicateInDrafts(
       List<CdsData> data, String composition, String targetEntity, String upIdKey) {
+    logger.debug("START: FileNameDuplicateInDrafts for composition: {}", composition);
     Set<String> uniqueFilenames = new HashSet<>();
     Set<String> duplicateFilenames = new HashSet<>();
     for (Map<String, Object> entity : data) {
@@ -92,11 +96,13 @@ public class SDMUtils {
         }
       }
     }
+    logger.debug("END: FileNameDuplicateInDrafts - found {} duplicates", duplicateFilenames.size());
     return duplicateFilenames;
   }
 
   public static List<String> FileNameContainsRestrictedCharaters(
       List<CdsData> data, String composition, String targetEntity) {
+    logger.debug("START: FileNameContainsRestrictedCharaters for composition: {}", composition);
     List<String> restrictedFilenames = new ArrayList<>();
     for (Map<String, Object> entity : data) {
       List<Map<String, Object>> attachments =
@@ -112,6 +118,9 @@ public class SDMUtils {
         }
       }
     }
+    logger.debug(
+        "END: FileNameContainsRestrictedCharaters - found {} restricted",
+        restrictedFilenames.size());
     return restrictedFilenames;
   }
 
@@ -123,6 +132,42 @@ public class SDMUtils {
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(cmisName);
     return matcher.find();
+  }
+
+  /**
+   * Extracts the file extension from a filename (lowercase, including the dot).
+   *
+   * @param fileName the filename to extract the extension from
+   * @return the file extension (e.g. ".pdf"), or empty string if no valid extension exists
+   */
+  public static String getFileExtension(String fileName) {
+    if (fileName == null || fileName.isEmpty()) {
+      return "";
+    }
+    int lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex <= 0 || lastDotIndex == fileName.length() - 1) {
+      return "";
+    }
+    return fileName.substring(lastDotIndex).toLowerCase();
+  }
+
+  /**
+   * Checks whether the file extension has changed between the original and new filename.
+   *
+   * @param originalFileName the original filename
+   * @param newFileName the new filename
+   * @return true if the extension has changed, false otherwise
+   */
+  public static boolean hasFileExtensionChanged(String originalFileName, String newFileName) {
+    if (originalFileName == null || newFileName == null) {
+      return false;
+    }
+    String originalExtension = getFileExtension(originalFileName);
+    String newExtension = getFileExtension(newFileName);
+    if (originalExtension.isEmpty() || newExtension.isEmpty()) {
+      return false;
+    }
+    return !originalExtension.equals(newExtension);
   }
 
   public static void prepareSecondaryProperties(
@@ -150,6 +195,7 @@ public class SDMUtils {
 
   public static Boolean checkMCM(HttpEntity responseEntity, List<String> secondaryPropertyIds)
       throws IOException {
+    logger.debug("START: checkMCM");
     Boolean flag = false;
     String responseString = EntityUtils.toString(responseEntity, "UTF-8");
 
@@ -180,13 +226,20 @@ public class SDMUtils {
         flag = true;
       }
     }
+    logger.debug("END: checkMCM - found MCM properties: {}", flag);
     return flag;
   }
 
   public static void assembleRequestBodySecondaryTypes(
       MultipartEntityBuilder builder, Map<String, String> requestBody, String objectId) {
     for (Map.Entry<String, String> entry : requestBody.entrySet()) {
-      builder.addTextBody(entry.getKey(), entry.getValue(), ContentType.TEXT_PLAIN);
+      String value = entry.getValue();
+      // If value is null, omit it (no update)
+      // If value is empty string, send it (clear the property in CMIS)
+      // For typed properties (int, date), CMIS will clear them if empty is sent
+      if (value != null) {
+        builder.addTextBody(entry.getKey(), value, ContentType.TEXT_PLAIN);
+      }
     }
 
     builder.addTextBody("objectId", objectId, ContentType.TEXT_PLAIN);
@@ -332,9 +385,9 @@ public class SDMUtils {
               title = titleAnnotation.get().getValue().toString();
             } else {
               title = element.getName(); /*
-                               * This is in case the user has not specified a title for the column in the cds
-                               * file (which is optional)
-                               */
+                                          * This is in case the user has not specified a title for the column in the cds
+                                          * file (which is optional)
+                                          */
             }
             invalidProperties.put(key, title);
           }
@@ -424,6 +477,8 @@ public class SDMUtils {
 
   public static Long getAttachmentCountAndMessage(
       List<CdsEntity> entities, CdsEntity attachmentEntity) {
+    logger.debug(
+        "START: getAttachmentCountAndMessage for entity: {}", attachmentEntity.getQualifiedName());
     Long maxCount =
         CacheConfig.getMaxAllowedAttachmentsCache().get(attachmentEntity.getQualifiedName());
 
@@ -434,6 +489,7 @@ public class SDMUtils {
       CacheConfig.getMaxAllowedAttachmentsCache()
           .put(attachmentEntity.getQualifiedName(), maxCount);
     }
+    logger.debug("END: getAttachmentCountAndMessage - maxCount: {}", maxCount);
     return maxCount;
   }
 
@@ -454,6 +510,7 @@ public class SDMUtils {
   }
 
   public static String getUpIdKey(CdsEntity attachmentDraftEntity) {
+    logger.debug("START: getUpIdKey for entity: {}", attachmentDraftEntity.getQualifiedName());
     String upIdKey = "";
     Optional<CdsElement> upAssociation = attachmentDraftEntity.findAssociation("up_");
     if (upAssociation.isPresent()) {
@@ -474,6 +531,7 @@ public class SDMUtils {
         upIdKey = upElement.get().getName();
       }
     }
+    logger.debug("END: getUpIdKey - key: {}", upIdKey);
     return upIdKey;
   }
 
@@ -510,6 +568,7 @@ public class SDMUtils {
    * @throws com.sap.cds.services.ServiceException if UP ID cannot be extracted
    */
   public static String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
+    logger.debug("START: fetchUPIDFromCQN");
     try {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
@@ -524,7 +583,8 @@ public class SDMUtils {
         whereArray = refArray;
       }
 
-      // If where condition is not present or empty, return null (valid scenario for select without
+      // If where condition is not present or empty, return null (valid scenario for
+      // select without
       // filter)
       if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
         return null;
@@ -547,6 +607,7 @@ public class SDMUtils {
         }
       }
       // Return null if UP ID is not found (valid scenario)
+      logger.debug("END: fetchUPIDFromCQN - upID: {}", upID);
       return upID;
     } catch (Exception e) {
       logger.error(SDMConstants.ENTITY_PROCESSING_ERROR_LINK, e);

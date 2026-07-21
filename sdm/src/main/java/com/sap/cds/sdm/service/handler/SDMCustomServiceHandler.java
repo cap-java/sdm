@@ -84,8 +84,13 @@ public class SDMCustomServiceHandler {
 
   @On(event = RegisterService.EVENT_COPY_ATTACHMENT)
   public void copyAttachments(AttachmentCopyEventContext context) throws IOException {
+    logger.debug("START: Copy attachments event");
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
+    logger.debug(
+        "Copy attachments request - parentEntity: {}, compositionName: {}",
+        parentEntity,
+        compositionName);
     Optional<CdsEntity> entity =
         context.getModel().findEntity(parentEntity + "." + compositionName);
 
@@ -122,13 +127,41 @@ public class SDMCustomServiceHandler {
     Boolean isSystemUser = context.getSystemUser();
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    List<String> objectIds = context.getObjectIds();
+
+    if (!customPropertiesInSDM.isEmpty()) {
+      List<Map<String, String>> copyFailures =
+          findAttachmentsWithInvalidSecondaryProperties(
+              objectIds, customPropertiesInSDM, repositoryId, sdmCredentials, isSystemUser);
+      if (!copyFailures.isEmpty()) {
+        buildAndWarnCopyFailures(copyFailures, context);
+        // Remove invalid objectIds and proceed with valid ones
+        Set<String> invalidObjectIds =
+            copyFailures.stream()
+                .map(failure -> failure.get(OBJECT_ID_KEY))
+                .collect(Collectors.toSet());
+        objectIds =
+            objectIds.stream()
+                .filter(id -> !invalidObjectIds.contains(id))
+                .collect(Collectors.toList());
+        if (objectIds.isEmpty()) {
+          context.setCompleted();
+          logger.debug("END: Copy attachments event - all attachments have invalid properties");
+          return;
+        }
+        logger.info(
+            "Proceeding with {} valid attachments after filtering out {} invalid ones",
+            objectIds.size(),
+            invalidObjectIds.size());
+      }
+    }
+
     // Check if folder exists before trying to create it
     boolean folderExists =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser)
             != null;
     String folderId = ensureFolderExists(folderName, repositoryId, sdmCredentials, isSystemUser);
-
-    List<String> objectIds = context.getObjectIds();
 
     CopyAttachmentsRequest request =
         CopyAttachmentsRequest.builder()
@@ -165,7 +198,103 @@ public class SDMCustomServiceHandler {
     CdsEntity targetEntity = entity.isPresent() ? entity.get() : null;
     createDraftEntries(draftRequest, customPropertyDefinitions, targetEntity);
 
+    logger.info(
+        "Copy attachments completed - {} attachments copied for upID: {}",
+        attachmentsMetadata.size(),
+        upID);
     context.setCompleted();
+    logger.debug("END: Copy attachments event");
+  }
+
+  /**
+   * Checks source attachments for invalid secondary properties before copy. Returns a list of
+   * failures if any attachment has invalid properties; returns empty list if all are valid
+   */
+  private List<Map<String, String>> findAttachmentsWithInvalidSecondaryProperties(
+      List<String> objectIds,
+      Set<String> customPropertiesInSDM,
+      String repositoryId,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser)
+      throws IOException {
+    List<String> secondaryTypes =
+        sdmService.getSecondaryTypes(repositoryId, sdmCredentials, isSystemUser);
+    List<String> validSecondaryProperties =
+        sdmService.getValidSecondaryProperties(
+            secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+
+    List<Map<String, String>> failures = new ArrayList<>();
+    for (String objectId : objectIds) {
+      List<String> invalidProperties =
+          getInvalidPropertiesForObject(
+              objectId,
+              customPropertiesInSDM,
+              validSecondaryProperties,
+              sdmCredentials,
+              isSystemUser);
+      if (!invalidProperties.isEmpty()) {
+        Map<String, String> failure = new HashMap<>();
+        failure.put(OBJECT_ID_KEY, objectId);
+        failure.put(
+            FAILURE_REASON_KEY,
+            SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX")
+                + String.join(", ", invalidProperties)
+                + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
+        failures.add(failure);
+      }
+    }
+    return failures;
+  }
+
+  /**
+   * Gets the list of invalid secondary properties for a single object from SDM. Returns empty list
+   * if all properties are valid or if metadata cannot be fetched
+   */
+  private List<String> getInvalidPropertiesForObject(
+      String objectId,
+      Set<String> customPropertiesInSDM,
+      List<String> validSecondaryProperties,
+      SDMCredentials sdmCredentials,
+      Boolean isSystemUser) {
+    try {
+      JSONObject sdmMetadata = sdmService.getObject(objectId, sdmCredentials, isSystemUser);
+      if (sdmMetadata == null || !sdmMetadata.has("succinctProperties")) {
+        return Collections.emptyList();
+      }
+      JSONObject succinctProperties = sdmMetadata.getJSONObject("succinctProperties");
+      Set<String> sdmResponseProperties = new HashSet<>(succinctProperties.keySet());
+
+      List<String> invalidProperties = new ArrayList<>();
+      for (String targetSdmProperty : customPropertiesInSDM) {
+        if (sdmResponseProperties.contains(targetSdmProperty)
+            && !validSecondaryProperties.contains(targetSdmProperty)) {
+          invalidProperties.add(targetSdmProperty);
+        }
+      }
+      return invalidProperties;
+    } catch (IOException e) {
+      logger.error(
+          "Copy validation - Failed to fetch metadata for attachment {}: {}",
+          objectId,
+          e.getMessage());
+      return Collections.emptyList();
+    }
+  }
+
+  /** Builds and emits a warning message for copy failures */
+  private void buildAndWarnCopyFailures(
+      List<Map<String, String>> copyFailures, AttachmentCopyEventContext context) {
+    StringBuilder warningMessage =
+        new StringBuilder(SDMUtils.getErrorMessage("FAILED_TO_COPY_ATTACHMENTS_PREFIX"));
+    for (Map<String, String> failure : copyFailures) {
+      warningMessage
+          .append("- ObjectId: ")
+          .append(failure.get(OBJECT_ID_KEY))
+          .append(", Reason: ")
+          .append(failure.get(FAILURE_REASON_KEY))
+          .append("\n");
+    }
+    context.getMessages().warn(warningMessage.toString());
   }
 
   /**
@@ -178,6 +307,7 @@ public class SDMCustomServiceHandler {
    */
   @On(event = RegisterService.EVENT_MOVE_ATTACHMENT)
   public void moveAttachments(AttachmentMoveEventContext context) throws IOException {
+    logger.debug("START: Move attachments event");
     String parentEntity = context.getParentEntity();
     String compositionName = context.getCompositionName();
     String upID = context.getUpId();
@@ -186,6 +316,14 @@ public class SDMCustomServiceHandler {
     String repositoryId = SDMConstants.REPOSITORY_ID;
     Boolean isSystemUser = context.getSystemUser();
     List<String> objectIds = context.getObjectIds();
+    logger.debug(
+        "Move request - parentEntity: {}, compositionName: {}, upID: {}, sourceFolderId: {},"
+            + " objectIds count: {}",
+        parentEntity,
+        compositionName,
+        upID,
+        sourceFolderId,
+        objectIds.size());
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
@@ -276,6 +414,7 @@ public class SDMCustomServiceHandler {
       }
     }
 
+    logger.debug("END: Move attachments event");
     context.setCompleted();
   }
 
@@ -527,25 +666,32 @@ public class SDMCustomServiceHandler {
   private String ensureFolderExists(
       String folderName, String repositoryId, SDMCredentials sdmCredentials, Boolean isSystemUser)
       throws IOException {
+    logger.debug("Ensuring folder exists: {}", folderName);
     String folderId =
         sdmService.getFolderIdByPath(folderName, repositoryId, sdmCredentials, isSystemUser);
     if (folderId == null) {
+      logger.debug("Folder {} not found, creating new folder", folderName);
       folderId =
           sdmService.createFolder(
               folderName, SDMConstants.REPOSITORY_ID, sdmCredentials, isSystemUser);
       JSONObject jsonObject = new JSONObject(folderId);
       JSONObject succinctProperties = jsonObject.getJSONObject("succinctProperties");
       folderId = succinctProperties.getString("cmis:objectId");
+      logger.debug("Created folder {} with folderId: {}", folderName, folderId);
+    } else {
+      logger.debug("Folder {} already exists with folderId: {}", folderName, folderId);
     }
     return folderId;
   }
 
   private CopyAttachmentsResult copyAttachmentsToSDM(
       CopyAttachmentsRequest request, Set<String> customPropertiesInSDM) throws IOException {
+    logger.debug("START: Copy {} attachments to SDM", request.getObjectIds().size());
     List<Map<String, String>> attachmentsMetadata = new ArrayList<>();
     List<CmisDocument> populatedDocuments = new ArrayList<>();
 
     for (String objectId : request.getObjectIds()) {
+      logger.debug("Processing copy for objectId: {}", objectId);
       CmisDocument cmisDocument =
           dbQuery.getAttachmentForObjectID(persistenceService, objectId, request.getContext());
       cmisDocument.setObjectId(objectId);
@@ -568,7 +714,9 @@ public class SDMCustomServiceHandler {
                 customPropertiesInSDM);
 
         attachmentsMetadata.add(attachmentData);
+        logger.debug("Successfully copied attachment: {}", objectId);
       } catch (ServiceException e) {
+        logger.error("Failed to copy attachment {}: {}", objectId, e.getMessage());
         handleCopyFailure(
             request.getContext(),
             request.getFolderId(),
@@ -578,6 +726,7 @@ public class SDMCustomServiceHandler {
       }
     }
 
+    logger.debug("END: Copy attachments to SDM - {} successful", attachmentsMetadata.size());
     return new CopyAttachmentsResult(attachmentsMetadata, populatedDocuments);
   }
 
@@ -1492,27 +1641,44 @@ public class SDMCustomServiceHandler {
       List<Map<String, String>> attachmentsMetadata,
       ServiceException e)
       throws IOException {
+    logger.error("Copy failure detected, initiating cleanup. Error: {}", e.getMessage());
     if (!folderExists) {
-      sdmService.deleteDocument("deleteTree", folderId, context.getUserInfo().getName());
+      logger.debug("Deleting newly created folder: {}", folderId);
+      sdmService.deleteDocument(
+          "deleteTree",
+          folderId,
+          context.getUserInfo().getName(),
+          context.getUserInfo().isSystemUser());
     } else {
+      logger.debug(
+          "Deleting {} copied attachments from existing folder", attachmentsMetadata.size());
       for (Map<String, String> attachmentMetadata : attachmentsMetadata) {
         sdmService.deleteDocument(
-            "delete", attachmentMetadata.get("cmis:objectId"), context.getUserInfo().getName());
+            "delete",
+            attachmentMetadata.get("cmis:objectId"),
+            context.getUserInfo().getName(),
+            context.getUserInfo().isSystemUser());
       }
     }
     throw new ServiceException(e.getMessage());
   }
 
   private String resolveUpIdKey(EventContext context, String parentEntity, String compositionName) {
+    logger.debug(
+        "Resolving upIdKey for parentEntity: {}, compositionName: {}",
+        parentEntity,
+        compositionName);
     CdsModel model = context.getModel();
     Optional<CdsEntity> optionalParentEntity = model.findEntity(parentEntity);
     if (optionalParentEntity.isEmpty()) {
+      logger.error("Parent entity not found: {}", parentEntity);
       throw new ServiceException("Unable to find parent entity: " + parentEntity);
     }
 
     Optional<CdsElement> compositionElement =
         optionalParentEntity.get().findElement(compositionName);
     if (compositionElement.isEmpty() || !compositionElement.get().getType().isAssociation()) {
+      logger.error("Composition '{}' not found in entity: {}", compositionName, parentEntity);
       throw new ServiceException(
           "Unable to find composition '" + compositionName + "' in entity: " + parentEntity);
     }
@@ -1528,9 +1694,11 @@ public class SDMCustomServiceHandler {
         CdsAssociationType upAssocType = association.getType();
         List<String> fkElements = upAssocType.refs().map(ref -> "up__" + ref.path()).toList();
         String upIdKey = fkElements.get(0);
+        logger.debug("Resolved upIdKey: {}", upIdKey);
         return upIdKey;
       }
     }
+    logger.warn("Could not resolve upIdKey for parentEntity: {}", parentEntity);
     return null;
   }
 
@@ -1542,6 +1710,9 @@ public class SDMCustomServiceHandler {
    * @param data encapsulated draft entry creation data
    */
   private void createDraftEntriesForMove(DraftEntryMoveData data) {
+    logger.debug(
+        "Creating {} draft entries for moved attachments",
+        data.getMovedAttachmentsMetadata().size());
     for (int i = 0; i < data.getMovedAttachmentsMetadata().size(); i++) {
       List<String> attachmentMetadata = data.getMovedAttachmentsMetadata().get(i);
       CmisDocument cmisDocument = data.getPopulatedDocuments().get(i);
@@ -1551,6 +1722,7 @@ public class SDMCustomServiceHandler {
 
       performDraftInsertWithRetry(updatedFields, data);
     }
+    logger.debug("Completed creating draft entries for moved attachments");
   }
 
   /**
@@ -1608,6 +1780,7 @@ public class SDMCustomServiceHandler {
     fields.put("repositoryId", data.getRepositoryId());
     fields.put("folderId", data.getFolderId());
     fields.put("status", "Clean");
+    fields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
     fields.put("mimeType", mimeType);
     fields.put("type", cmisDocument.getType());
     fields.put("fileName", fileName);
@@ -1742,6 +1915,9 @@ public class SDMCustomServiceHandler {
       CreateDraftEntriesRequest request,
       Map<String, String> customPropertyDefinitions,
       CdsEntity targetEntity) {
+    logger.debug(
+        "Creating {} draft entries for copied attachments",
+        request.getAttachmentsMetadata().size());
 
     for (int i = 0; i < request.getAttachmentsMetadata().size(); i++) {
       Map<String, String> attachmentMetadata = request.getAttachmentsMetadata().get(i);
@@ -1752,11 +1928,13 @@ public class SDMCustomServiceHandler {
       String mimeType = attachmentMetadata.get("cmis:contentStreamMimeType");
       String description = attachmentMetadata.get("cmis:description");
       String newObjectId = attachmentMetadata.get("cmis:objectId");
+      logger.debug("Processing draft entry for objectId: {}, fileName: {}", newObjectId, fileName);
 
       updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
       updatedFields.put("status", "Clean");
+      updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
       updatedFields.put("fileName", fileName);
@@ -1823,10 +2001,12 @@ public class SDMCustomServiceHandler {
               "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
         }
       } else {
+        logger.error("No suitable service found for entity: {}", request.getParentEntity());
         throw new ServiceException(
             "No suitable service found for entity: " + request.getParentEntity());
       }
     }
+    logger.debug("Completed creating draft entries for copied attachments");
   }
 
   /**

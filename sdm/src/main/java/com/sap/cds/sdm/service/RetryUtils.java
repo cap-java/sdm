@@ -24,6 +24,7 @@ public class RetryUtils {
   private static final Logger logger = LoggerFactory.getLogger(RetryUtils.class);
 
   public static Predicate<Throwable> shouldRetry() {
+    logger.debug("START: shouldRetry predicate created");
     return throwable -> {
       logger.info("Evaluating shouldRetry for: {}", throwable.toString());
 
@@ -42,11 +43,13 @@ public class RetryUtils {
         }
         cause = cause.getCause();
       }
+      logger.debug("No retryable exception found, returning false");
       return false;
     };
   }
 
   public static Function<Flowable<Throwable>, Publisher<?>> retryLogic(int maxAttempts) {
+    logger.debug("START: retryLogic with maxAttempts: {}", maxAttempts);
     return errors ->
         errors
             .zipWith(

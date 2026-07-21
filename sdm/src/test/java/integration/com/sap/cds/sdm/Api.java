@@ -13,8 +13,9 @@ public class Api implements ApiInterface {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private final String token;
   private final String serviceName;
-  private static final int MAX_RETRIES = 3;
+  private static final int MAX_RETRIES = 5;
   private static final int RETRY_DELAY_MS = 1000;
+  private static final int UPDATE_CONFLICT_RETRY_DELAY_MS = 5000;
 
   public Api(Map<String, String> config) {
     this.config = new HashMap<>(config);
@@ -43,6 +44,24 @@ public class Api implements ApiInterface {
           response.close();
           Thread.sleep(RETRY_DELAY_MS);
           continue;
+        }
+        // Retry on updateConflict (repository lock) — HTTP 500 or 409
+        if ((response.code() == 500 || response.code() == 409) && attempt < MAX_RETRIES) {
+          ResponseBody body = response.peekBody(8192);
+          String bodyStr = body.string();
+          if (bodyStr.contains("updateConflict") || bodyStr.contains("is currently blocked")) {
+            System.out.println(
+                "Repository lock detected (updateConflict), retrying after "
+                    + UPDATE_CONFLICT_RETRY_DELAY_MS
+                    + "ms... (attempt "
+                    + attempt
+                    + "/"
+                    + MAX_RETRIES
+                    + ")");
+            response.close();
+            Thread.sleep(UPDATE_CONFLICT_RETRY_DELAY_MS);
+            continue;
+          }
         }
         return response;
       } catch (java.net.SocketTimeoutException e) {
@@ -1110,6 +1129,112 @@ public class Api implements ApiInterface {
                 new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
         return result;
       }
+    }
+  }
+
+  @Override
+  public String downloadSelectedAttachmentsDraft(
+      String appUrl, String entityName, String facetName, String entityID, List<String> ids)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)"
+            + "/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ids.get(0)
+            + ",IsActiveEntity=false)"
+            + "/"
+            + serviceName
+            + ".downloadSelectedAttachments";
+
+    String idsParam = String.join(",", ids);
+    String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
+
+    RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not download attachments: "
+                + response.code()
+                + " - "
+                + response.body().string());
+      }
+      String responseBody = response.body().string();
+      Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
+      if (responseMap.containsKey("value")) {
+        return responseMap.get("value").toString();
+      }
+      return responseBody;
+    } catch (IOException e) {
+      System.out.println("Error while downloading attachments: " + e.getMessage());
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public String downloadSelectedAttachments(
+      String appUrl, String entityName, String facetName, String entityID, List<String> ids)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)"
+            + "/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ids.get(0)
+            + ",IsActiveEntity=true)"
+            + "/"
+            + serviceName
+            + ".downloadSelectedAttachments";
+
+    String idsParam = String.join(",", ids);
+    String jsonPayload = "{\"ids\": \"" + idsParam + "\"}";
+
+    RequestBody body = RequestBody.create(MediaType.parse("application/json"), jsonPayload);
+
+    Request request =
+        new Request.Builder().url(url).post(body).addHeader("Authorization", token).build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        throw new IOException(
+            "Could not download attachments: "
+                + response.code()
+                + " - "
+                + response.body().string());
+      }
+      String responseBody = response.body().string();
+      Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
+      if (responseMap.containsKey("value")) {
+        return responseMap.get("value").toString();
+      }
+      return responseBody;
+    } catch (IOException e) {
+      System.out.println("Error while downloading attachments: " + e.getMessage());
+      throw new IOException(e);
     }
   }
 

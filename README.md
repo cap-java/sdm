@@ -14,7 +14,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Draft functionality : Provides the capability of working with draft attachments.
 - Display attachments specific to repository: Lists attachments contained in the repository that is configured with the CAP application.
 - Custom properties : Provides the capability to define custom properties for attachments.
-- Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user.
+- Maximum allowed uploads: Provides the capability to define the maximum number of uploads allowed for the user. Automatically disables the upload button in the UI when the limit is reached.
 - Maximum file size: Provides the capability to specify the maximum file size for attachments.
 - Multiple attachment facets: Provides the capability to define multiple attachment facets/sections in the CAP Entity.
 - Technical user support: Provides the capability to consume the plugin using technical user.
@@ -25,6 +25,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - Attachment changelog: Provides the capability to view complete audit trail of attachments.
 - Localization of error messages and UI fields: Provides the capability to have the UI fields and error messages translated to the local language of the leading application.
 - Attachment Upload Status: Upload Status is the new field which displays the upload status of attachment when being uploaded.
+- Active entity attachment creation: Provides the capability to create attachments directly on active (non-draft) entities.
+- Download attachments: Provides the capability to download multiple selected file attachments at once with smart button enablement.
 
 ## Table of Contents
 
@@ -35,6 +37,7 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Multitenancy](#support-for-multitenancy)
 - [Support for Custom Properties](#support-for-custom-properties)
 - [Support for Maximum allowed uploads](#support-for-maximum-allowed-uploads)
+- [Upload Button Auto-Disable in the UI](#upload-button-auto-disable-in-the-ui)
 - [Support for Maximum File Size](#support-for-maximum-file-size)
 - [Support for Multiple attachment facets](#support-for-multiple-attachment-facets)
 - [Support for Technical user](#support-for-technical-user)
@@ -45,6 +48,8 @@ This plugin can be consumed by the CAP application deployed on BTP to store thei
 - [Support for Edit of Link type attachments](#support-for-edit-of-link-type-attachments)
 - [Support for Localization](#support-for-localization)
 - [Support for Attachment Upload Status](#support-for-attachment-upload-status)
+- [Support for Attachment creation in Active Entities](#support-for-attachment-creation-in-active-entities)
+- [Support for Download Attachments](#support-for-download-attachments)
 - [Known Restrictions](#known-restrictions)
 - [Support, Feedback, Contributing](#support-feedback-contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -490,9 +495,90 @@ Example for German language in `messages_de.properties`:
 SDM.maxCountErrorMessage = Maximale Anzahl von Anhängen erreicht
 ```
 
-> **Note**
->
-> Once the maxCount is configured, it is recommended not to alter it. If the maxCount is altered, the previously uploaded documents will still be visible.
+#### Upload Button Auto-Disable in the UI
+
+When `maxCount` is configured, the plugin automatically computes a virtual boolean field (e.g. `isAttachmentsUploadable`) on the parent entity at read time and sets it to `false` when the limit is reached. To wire this up in your Fiori UI so the **Upload button is automatically disabled**, follow the steps below.
+
+**1. Declare the virtual field on the parent entity**
+
+Add a `virtual` boolean field for each `maxCount` annotated composition directly on the parent entity in your CDS schema. The field name must follow the pattern `is` + capitalised composition name + `Uploadable`:
+
+```cds
+entity Books : managed, cuid {
+  // ... other fields ...
+  virtual isAttachmentsUploadable : Boolean;
+  virtual isReferencesUploadable  : Boolean;
+
+  attachments : Composition of many Attachments @SDM.Attachments:{maxCount: 4};
+  references  : Composition of many Attachments @SDM.Attachments:{maxCount: 2};
+}
+```
+
+- For a composition named `attachments` declare `virtual isAttachmentsUploadable : Boolean`.
+- For `references` declare `virtual isReferencesUploadable : Boolean`, and so on.
+- Virtual fields are never stored in the database; the plugin populates them at read time.
+
+**2. Disable the Upload button via `InsertRestrictions`**
+
+Annotate each attachment entity in your service to bind its insertability to the virtual field on the parent:
+
+```cds
+annotate MyService.Books.attachments with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
+);
+```
+
+- Replace `MyService.Books.attachments` with your service and entity path.
+- Repeat for every composition facet that has a `maxCount`.
+
+**3. Refresh the parent after attachment changes via `SideEffects`**
+
+After an upload or deletion, Fiori must re-read the parent entity to pick up the updated virtual field and reflect the new button state. Add a named `Common.SideEffects` annotation on the parent entity:
+
+```cds
+annotate MyService.Books with @(
+  Common.SideEffects #attachmentsUploadable: {
+    SourceEntities: ['attachments'],
+    TargetProperties: ['']
+  }
+);
+```
+
+- `SourceEntities: ['attachments']` — triggers the refresh when the `attachments` list changes.
+- `TargetEntities: ['']` — re-fetches the parent entity (`Books`) so the updated `isAttachmentsUploadable` value is returned to the UI.
+- The qualifier (e.g. `#attachmentsUploadable`) can be any unique name; it is only needed to distinguish multiple `SideEffects` annotations on the same entity.
+
+**Example with multiple facets**
+
+If an entity has several `maxCount`-annotated compositions, add one `virtual field` declaration, one `InsertRestrictions`, and one `SideEffects` per facet:
+
+
+```cds
+annotate MyService.Books.attachments with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
+);
+
+annotate MyService.Books.references with @(
+  Capabilities: {InsertRestrictions: {Insertable: up_.isReferencesUploadable}}
+);
+
+annotate MyService.Books with @(
+  Common.SideEffects #attachmentsUploadable: {
+    SourceEntities: ['attachments'],
+    TargetProperties: ['isAttachmentsUploadable']
+  },
+  Common.SideEffects #referencesUploadable: {
+    SourceEntities: ['references'],
+    TargetProperties: ['isAttachmentsUploadable']
+  }
+);
+```
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/db/schema.cds#L19) of `virtual field` declaration from a sample Bookshop app.
+
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/srv/admin-service.cds#L46) of `InsertRestriction` annotation from a sample Bookshop app.
+
+See this [example](https://github.com/cap-java/sdm/blob/cc537c5c855ad59fa14100a397536ab22f4b1aa7/cap-notebook/demoapp/srv/admin-service.cds#L279) of `SideEffects` annotation from a sample Bookshop app.
+
 
 ## Support for Maximum File Size
 
@@ -1296,12 +1382,17 @@ Filename=File Name
 linkUrl=Link Url
 type=Type
 ```
+**Note**: For localizing the CAP managed fields use the below keys
+CreatedAt,CreatedBy,ChangedAt,ChangedBy and attachmentID for ID.
 
 ### Error Messages Localization
 
-The plugin provides error message keys in the `SDMErrorKeys` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorKeys.java). You can override these messages by adding translations to `messages_[languagecode].properties` files in your leading application under `srv/src/main/resources`.
+The plugin provides two classes for error keys:
 
-Default messages are present in `SDMErrorMessages` [class](https://github.com/cap-java/sdm/blob/develop/sdm/src/main/java/com/sap/cds/sdm/constants/SDMErrorMessages.java). If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
+- `SDMUIErrorKeys` - UI-facing messages that should be translated
+- `SDMErrorKeys` - Backend/internal messages (no translation needed)
+
+To translate UI messages, add entries to `messages_[languagecode].properties` in `srv/src/main/resources/`. If the leading application does not provide translations in their language-specific properties files, these default English language messages are shown to the user.
 
 Example `messages_de.properties` for German language:
 ```properties
@@ -1311,12 +1402,11 @@ SDM.mimetypeInvalidError=Der Dateityp ist nicht zulässig
 SDM.maxCountErrorMessage=Maximale Anzahl von Anhängen erreicht
 ```
 
-
 ## Support for Attachment Upload Status
 
 The attachment upload process displays a status indicator for each file being uploaded.
 
-**For repositories without virus scanning:**
+**For repositories without malware scanning:**
 The upload status transitions from "Uploading" to "Success".
 
 **For repositories with malware scanning:**
@@ -1329,6 +1419,164 @@ uploading;Uploading;5
 Success;Success;3
 Failed;Scan Failed;2
  ```
+
+### Support for Attachment Creation in Active Entities
+
+By default, the SDM CAP plugin handles attachment creation through the **draft flow** — attachments are first created on a draft entity and later activated. This feature adds support for creating attachments **directly on active entities**, which is useful in scenarios where the parent entity bypasses the draft lifecycle (e.g., programmatic entity creation, background jobs, or APIs that operate on active records).
+
+### How It Works
+
+When an attachment is created, the plugin automatically determines whether the parent entity is in a **draft** or **active** context:
+
+1. **Draft detection:** The plugin queries the parent entity's draft table to check if the parent record exists there. If it does, the standard draft flow is used.
+2. **Active entity flow:** If the parent record is **not** found in the draft table, the plugin treats it as an active entity context. In this case:
+   - The attachment content is uploaded to the SAP Document Management repository.
+   - The SDM metadata (`objectId`, `folderId`, `repositoryId`, etc.) is temporarily stored in-memory.
+   - After the framework completes the database INSERT, an `@After` handler updates the active entity record with the SDM metadata.
+3. **Backwards compatibility:** If the context cannot be determined (e.g., the model has no draft table), the plugin defaults to the draft flow to ensure existing applications continue to work without changes.
+
+### Key Behavior
+
+- **Automatic detection:** No configuration is required. The plugin automatically detects whether to use the draft or active entity flow based on the parent entity's presence in the draft table.
+- **Duplicate handling:** If an attachment with the same filename already exists on the active entity, the plugin gracefully handles the duplicate by reusing the existing attachment record.
+
+### Usage in Leading Applications
+
+To create attachments on active entities, the leading application needs to trigger an `INSERT` on the attachment entity through the `ApplicationService` (or `DraftService`, which extends it). The plugin intercepts the content automatically and routes it through the active entity flow.
+
+#### Steps
+
+1. **Build the attachment data** with the required fields:
+
+   | Field      | Type          | Description                                      |
+   |------------|---------------|--------------------------------------------------|
+   | `ID`       | `String`      | Unique identifier (e.g., `UUID.randomUUID()`)    |
+   | `up__ID`   | `String`      | The parent entity's ID                           |
+   | `fileName` | `String`      | The attachment filename                          |
+   | `mimeType` | `String`      | The MIME type of the content                     |
+   | `content`  | `InputStream` | An `InputStream` containing the file content     |
+
+2. **Execute the INSERT** using the `ApplicationService`. See this [example](https://github.com/cap-java/sdm/blob/e89c3c4f9fee6a18b20dfec2650b1d05ff244bc3/cap-notebook/demoapp/srv/src/main/java/customer/demoapp/handlers/AdminServiceHandler.java#L142)
+
+   ```java
+   import com.sap.cds.ql.Insert;
+   import java.io.InputStream;
+   import java.util.HashMap;
+   import java.util.Map;
+   import java.util.UUID;
+
+   // Build attachment data
+   Map<String, Object> attachmentData = new HashMap<>();
+   attachmentData.put("ID", UUID.randomUUID().toString());
+   attachmentData.put("up__ID", parentEntityId);
+   attachmentData.put("fileName", "report.pdf");
+   attachmentData.put("mimeType", "application/pdf");
+   attachmentData.put("content", inputStream);
+
+   // Insert into the attachment entity via ApplicationService
+   applicationService.run(
+       Insert.into("MyService.MyEntity.attachments").entry(attachmentData)
+   );
+
+## Support for Download Attachments
+
+This plugin provides the capability to download multiple selected file attachments at once. The Download button is automatically disabled when any link-type attachment is selected, since links are meant to be opened in the browser and not downloaded as files.
+
+### Steps to Enable Download Attachments Feature
+
+1. **Add the `downloadSelectedAttachments` action to application's service definition**
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/srv/admin-service.cds) from a sample Bookshop app.
+
+   Add this action inside the `actions { }` block of each attachment entity:
+
+   ```cds
+   action downloadSelectedAttachments(ids: String) returns String;
+   ```
+
+2. **Add a custom controller extension**
+
+   In `webapp/controller/custom.controller.js`, add the `isDownloadEnabled` and `onDownloadPress` functions.
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/controller/custom.controller.js) from a sample Bookshop app.
+
+   ```js
+   isDownloadEnabled: function(oBindingContext, aSelectedContexts) {
+       if (!aSelectedContexts || aSelectedContexts.length === 0) {
+           return false;
+       }
+       return !aSelectedContexts.some(function(oContext) {
+           return oContext.getProperty("mimeType") === "application/internet-shortcut";
+       });
+   },
+   onDownloadPress: function(oContext, aSelectedContexts) {
+       var sIds = aSelectedContexts.map(function(oCtx) {
+           return oCtx.getObject().ID;
+       }).join(",");
+       this.base.editFlow
+       .invokeAction("AdminService.downloadSelectedAttachments", {
+           contexts: aSelectedContexts[0],
+           parameterValues: [{ name: "ids", value: sIds }],
+           skipParameterDialog: true
+       })
+       .then(function(res) {
+           var sJsonResponse = res.getObject().value;
+           var aEntries = JSON.parse(sJsonResponse);
+           aEntries.forEach(function(oEntry) {
+               if (oEntry.status === "success" && oEntry.content) {
+                   var byteString = atob(oEntry.content);
+                   var aBytes = new Uint8Array(byteString.length);
+                   for (var i = 0; i < byteString.length; i++) {
+                       aBytes[i] = byteString.charCodeAt(i);
+                   }
+                   var oBlob = new Blob([aBytes], { type: oEntry.mimeType || "application/octet-stream" });
+                   var sUrl = URL.createObjectURL(oBlob);
+                   var oLink = document.createElement("a");
+                   oLink.href = sUrl;
+                   oLink.download = oEntry.fileName || "download";
+                   document.body.appendChild(oLink);
+                   oLink.click();
+                   document.body.removeChild(oLink);
+                   URL.revokeObjectURL(sUrl);
+               }
+           });
+       });
+   }
+   ```
+
+   - Replace `AdminService` in `invokeAction("AdminService.downloadSelectedAttachments")` with the name of your service.
+
+3. **Add `controlConfiguration` for Download Button**
+
+   In your `sap.ui5.routing.targets` section, under the relevant Object Page, update the `controlConfiguration` for each facet by changing the `selectionMode` to `"Multi"` and adding the download action.
+
+   See this [example](https://github.com/cap-java/sdm/blob/develop_deploy/cap-notebook/demoapp/app/admin-books/webapp/manifest.json) from a sample Bookshop app.
+
+   ```json
+   "controlConfiguration": {
+       "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+           "tableSettings": {
+               "type": "ResponsiveTable",
+               "selectionMode": "Multi",
+               "rowPress": ".extension.books.controller.custom.onRowPress"
+           },
+           "actions": {
+               "download": {
+                   "text": "Download",
+                   "requiresSelection": true,
+                   "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                   "press": ".extension.books.controller.custom.onDownloadPress",
+                   "position": {
+                       "anchor": "StandardAction::Create",
+                       "placement": "After"
+                   }
+               }
+           }
+       }
+   }
+   ```
+
+   - Replace `attachments` with your entity's facet name as needed.
 
 ## Known Restrictions
 

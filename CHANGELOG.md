@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.10.1
+
+### Fixed
+- User-defined error message not displayed when maximum attachment upload limit is exceeded
+- Fix issue in discarding newly created entities which has multi-level of nested children
+- Fix populateUploadableFlags breaks reads on non-draft services
+
+## Version 1.10.0
+
+### Added
+- Support download multiple attachments
+- Support disabling of upload button when maximum allowed attachments count is reached
+
+### Fixed
+- Localization for attachment reference fields
+- Service binding lookup to correctly resolve SDM bindings by tags
+- Technical user detection in the delete API to align with other API implementations
+- File extension change during attachment rename
+- Copying of invalid secondary properties during copy operation
+
+## Version 1.9.0
+
+### Added
+- Support attachment creation in active entities
+
+### Fixed
+- Separate UI and backend error keys for localization
+- Fix upload status when attachments are copied
+
+## Version 1.8.1
+
+### Fixed
+- Enhanced logging across all plugin code for improved debugging and traceability
+
 ## Version 1.8.0
 
 ### Added

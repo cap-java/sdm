@@ -20,9 +20,11 @@ on:
 permissions:
   pull-requests: read
   packages: read  # Added permission to read packages
+  contents: read # allows workflow to checkout private repository
 
 jobs:
   deploy:
+    environment: dev
     runs-on: ubuntu-latest
 
     steps:
@@ -48,7 +50,7 @@ jobs:
       - name: Setup Node.js 🟢
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # Ensure to use at least version 18
+          node-version: '20' # Ensure to use at least version 18
 
       - name: Install MBT ⚙️
         run: |
@@ -56,19 +58,13 @@ jobs:
             npm install -g mbt
             echo "✅ MBT installation complete!"
 
-      - name: Clone the cloud-cap-samples-java repo 🌐
-        run: |
-            echo "🔄 Cloning repository..."
-            git clone --depth 1 --branch local_mtTests https://github.com/vibhutikumar07/cloud-cap-samples-java.git
-            echo "✅ Repository cloned!"
-      
       - name: Override cds.services.version (runtime only)
         if: ${{ github.event.inputs.cds_services_version != '' }}
         env:
           TARGET_CDS_SERVICES_VERSION: ${{ github.event.inputs.cds_services_version }}
         run: |
           echo "Override requested: cds.services.version -> ${TARGET_CDS_SERVICES_VERSION}"
-          FILES=$(grep -Rl "<cds.services.version>" . | grep pom.xml || true)
+          FILES=$(grep -Rl "<cds.services.version>" app/multi-tenant/personal-space/cloud-cap-samples-java | grep pom.xml || true)
           if [ -z "$FILES" ]; then
             echo "No pom.xml files with <cds.services.version> found" >&2; exit 1;
           fi
@@ -81,23 +77,35 @@ jobs:
         shell: bash
 
       - name: Change directory to cloud-cap-samples-java 📂
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
         run: |
             pwd
             echo "✔️ Directory changed!"
 
+      - name: Set REPOSITORY_ID 🔍
+        id: set_repository_id
+        run: |
+          echo "repository_id=${{ secrets.MULTITENANT_REPOSITORY_ID }}" >> $GITHUB_OUTPUT
+
       - name: Run mbt build 🔨
-        working-directory: cloud-cap-samples-java
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
         run: |
             echo "🚀 Running MBT build..."
             echo "java version:"
             java --version
+            sed -i 's|__REPOSITORY_ID__|${{ steps.set_repository_id.outputs.repository_id }}|g' mta.yaml
+            sed -i 's|__DATABASE_ID__|${{ secrets.DATABASE_ID }}|g' mta.yaml
             mbt build
             echo "✅ MBT build completed!"
 
       - name: Deploy to Cloud Foundry ☁️
-        working-directory: cloud-cap-samples-java
-        run: | 
+        working-directory: app/multi-tenant/personal-space/cloud-cap-samples-java
+        env:
+          CF_API: ${{ secrets.CF_API }}
+          CF_USER: ${{ secrets.CF_USER }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_ORG: ${{ secrets.CF_ORG }}
+        run: |
             echo "🚀 Deploying to -s ${{ steps.determine_space.outputs.space }}..."
             echo "🔧 Installing Cloud Foundry CLI and plugins..."
 
@@ -105,14 +113,19 @@ jobs:
             wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc
             echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
             sudo apt update
-            sudo apt install cf-cli
-            
+            sudo apt install cf8-cli
+
             cf install-plugin multiapps -f
             echo "✅ Cloud Foundry CLI setup complete!"
 
             # Login to Cloud Foundry again to ensure session is active
             echo "🔑 Logging in to Cloud Foundry..."
-            cf login -a ${{ secrets.CF_API }} -u ${{ secrets.CF_USER }} -p ${{ secrets.CF_PASSWORD }} -o ${{ secrets.CF_ORG }} -s ${{ github.event.inputs.cf_space }}
+            set +x
+            echo "::add-mask::$CF_API"
+            echo "::add-mask::$CF_USER"
+            echo "::add-mask::$CF_PASSWORD"
+            echo "::add-mask::$CF_ORG"
+            cf login -a "$CF_API" -u "$CF_USER" -p "$CF_PASSWORD" -o "$CF_ORG" -s ${{ github.event.inputs.cf_space }} > /dev/null
             echo "✅ Logged in successfully!"
 
             # Deploy the application

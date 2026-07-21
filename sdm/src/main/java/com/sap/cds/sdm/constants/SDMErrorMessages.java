@@ -19,9 +19,8 @@ public class SDMErrorMessages {
 
   public static final String COULD_NOT_UPDATE_THE_ATTACHMENT = "Could not update the attachment";
   public static final String ATTACHMENT_NOT_FOUND = "Attachment not found";
-  public static final String GENERIC_ERROR = "Could not %s the document.";
-  public static final String EVENT_UPLOAD = "upload";
-  public static final String EVENT_DELETE = "delete";
+  public static final String COULD_NOT_UPLOAD_DOCUMENT = "Could not upload the document.";
+  public static final String COULD_NOT_DELETE_DOCUMENT = "Could not delete the document.";
   public static final String VERSIONED_REPO_ERROR =
       "Upload not supported for versioned repositories.";
   public static final String VIRUS_REPO_ERROR_MORE_THAN_400MB =
@@ -144,10 +143,18 @@ public class SDMErrorMessages {
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_SUFFIX =
       ". Attachment rolled back to source.";
   public static final String SDM_MOVE_OPERATION_FAILED = "SDM move operation failed";
+  public static final String FAILED_TO_COPY_ATTACHMENTS_PREFIX =
+      "Failed to copy the following attachments:\n";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_PREFIX =
+      "Invalid secondary properties detected: ";
+  public static final String INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX =
+      ". Attachment not copied.";
   public static final String FAILED_TO_ACCESS_ERROR_KEY_FIELDS =
       "Failed to access SDM error key fields";
   public static final String FAILED_TO_ACCESS_ERROR_MESSAGES_FIELDS =
       "Failed to access SDM error messages fields";
+  public static final String FILE_EXTENSION_CHANGE_NOT_ALLOWED =
+      "Changing the file extension is not allowed. The file \"%s\" must retain its original extension \"%s\".";
 
   // Helper Methods to create error/warning messages
   public static String buildErrorMessage(
@@ -263,8 +270,12 @@ public class SDMErrorMessages {
     return duplicateFilenameFormat(filenames);
   }
 
-  public static String getGenericError(String event) {
-    return String.format(SDMUtils.getErrorMessage("GENERIC_ERROR"), event);
+  public static String getCouldNotUploadDocument() {
+    return SDMUtils.getErrorMessage("COULD_NOT_UPLOAD_DOCUMENT");
+  }
+
+  public static String getCouldNotDeleteDocument() {
+    return SDMUtils.getErrorMessage("COULD_NOT_DELETE_DOCUMENT");
   }
 
   public static String getVirusFilesError(String filename) {

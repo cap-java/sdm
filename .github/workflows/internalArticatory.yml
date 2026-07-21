@@ -1,7 +1,7 @@
 name: Internal Artifactory snapshot deploy
 
 env:
-  JAVA_VERSION: '17'
+  JAVA_VERSION: '21'
   MAVEN_VERSION: '3.6.3'
   ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
 
@@ -13,6 +13,7 @@ on:
           required: true
 jobs:
   build-and-deploy-artifactory:
+    environment: maven-central
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -86,11 +87,17 @@ jobs:
 
       - name: Verify artifact in Artifactory
         if: ${{ endsWith(steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version, '-SNAPSHOT') }}
+        env:
+          CAP_DEPLOYMENT_USER: ${{ secrets.CAP_DEPLOYMENT_USER }}
+          CAP_DEPLOYMENT_PASS: ${{ secrets.CAP_DEPLOYMENT_PASS }}
         run: |
+          set +x
+          echo "::add-mask::$CAP_DEPLOYMENT_USER"
+          echo "::add-mask::$CAP_DEPLOYMENT_PASS"
           group_path="com/sap/cds/sdm"
           version="${{ steps.bump-version.outputs.updated_version || steps.read-revision.outputs.updated_version }}"
           echo "Checking metadata for $version"
-          curl -u "${{ secrets.CAP_DEPLOYMENT_USER }}:${{ secrets.CAP_DEPLOYMENT_PASS }}" -f -I \
+          curl -u "$CAP_DEPLOYMENT_USER:$CAP_DEPLOYMENT_PASS" -f -I \
             "$ARTIFACTORY_URL/$group_path/$version/maven-metadata.xml" || { echo "Metadata not found"; exit 1; }
           echo "Artifact metadata accessible for $version"
       - name: Summary

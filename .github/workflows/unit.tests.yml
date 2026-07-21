@@ -8,6 +8,7 @@ on:
     types: [opened, synchronize, reopened, auto_merge_enabled]
   workflow_dispatch: 
 permissions:
+  contents: read # allows workflow to checkout private repository
   pull-requests: read
 
 jobs:
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java-version: [17]
+        java-version: [21]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
