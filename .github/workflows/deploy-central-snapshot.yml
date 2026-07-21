@@ -1,10 +1,10 @@
 name: Deploy Snapshot to Central Portal
 
 env:
-  JAVA_VERSION: '17'
+  JAVA_VERSION: '21'
 
 on:
-  # Manual trigger
+  # Manual trigger - select any branch from GitHub UI
   workflow_dispatch:
     inputs:
       sign_artifacts:
@@ -15,15 +15,11 @@ on:
         options:
           - 'true'
           - 'false'
-  
-  # Auto-deploy snapshot on push to develop
-  # push:
-  #   branches:
-  #     - feature/ossrh-snapshot-deployment
-    # paths:
-    #   - 'sdm/src/**'
-    #   - 'pom.xml'
-    #   - 'sdm/pom.xml'
+
+  # Auto-trigger on push to this feature branch
+  push:
+    branches:
+      - feature/ossrh-snapshot-deployment
 
 permissions:
   contents: read
@@ -100,7 +96,7 @@ jobs:
           name: snapshot-build
 
       - name: Deploy Snapshot (with GPG signing)
-        if: github.event.inputs.sign_artifacts != 'false' && github.event_name == 'workflow_dispatch'
+        if: github.event.inputs.sign_artifacts != 'false'
         uses: ./.github/actions/deploy-central-snapshot
         with:
           user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
@@ -110,7 +106,7 @@ jobs:
           pgp-passphrase: ${{ secrets.PGP_PASSPHRASE }}
 
       - name: Deploy Snapshot (without GPG signing)
-        if: github.event.inputs.sign_artifacts == 'false' || github.event_name != 'workflow_dispatch'
+        if: github.event.inputs.sign_artifacts == 'false'
         uses: ./.github/actions/deploy-central-snapshot
         with:
           user: ${{ secrets.CENTRAL_REPOSITORY_USER }}
