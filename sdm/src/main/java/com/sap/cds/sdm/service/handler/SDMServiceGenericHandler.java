@@ -277,8 +277,15 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     CdsModel model = context.getModel();
     String draftEntityName = attachmentCompositionDefinition + "_drafts";
-    CdsEntity draftEntity = model.findEntity(draftEntityName).get();
-    CdsEntity activeEntity = model.findEntity(attachmentCompositionDefinition).get();
+    Optional<CdsEntity> draftEntityOpt = model.findEntity(draftEntityName);
+    Optional<CdsEntity> activeEntityOpt = model.findEntity(attachmentCompositionDefinition);
+    if (!draftEntityOpt.isPresent() || !activeEntityOpt.isPresent()) {
+      logger.debug(
+          "Entity not found in model, skipping revert for: {}", attachmentCompositionDefinition);
+      return;
+    }
+    CdsEntity draftEntity = draftEntityOpt.get();
+    CdsEntity activeEntity = activeEntityOpt.get();
 
     final String upIdKey = SDMUtils.getUpIdKey(draftEntity);
     if (upIdKey == null || upIdKey.isEmpty()) {
@@ -299,6 +306,9 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     Result draftLinks = persistenceService.run(selectDraftLinks);
     logger.debug("Found {} draft links to process", draftLinks.rowCount());
+    if (draftLinks.rowCount() == 0) {
+      return;
+    }
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
     Boolean isSystemUser = context.getUserInfo().isSystemUser();
 
