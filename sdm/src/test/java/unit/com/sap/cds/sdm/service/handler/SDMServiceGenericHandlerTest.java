@@ -2149,6 +2149,7 @@ public class SDMServiceGenericHandlerTest {
 
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
+    when(draftLinksResult.rowCount()).thenReturn(1L);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
     when(persistenceService.run(any(CqnSelect.class))).thenReturn(draftLinksResult);
 
@@ -2244,8 +2245,8 @@ public class SDMServiceGenericHandlerTest {
         });
 
     verify(persistenceService, times(1)).run(any(CqnSelect.class));
-    verify(tokenHandler, times(1)).getSDMCredentials();
-    verify(context, times(1)).getUserInfo();
+    verify(tokenHandler, never()).getSDMCredentials();
+    verify(context, never()).getUserInfo();
   }
 
   @Test
@@ -2266,6 +2267,7 @@ public class SDMServiceGenericHandlerTest {
 
     Result draftLinksResult = mock(Result.class);
     Row draftLinkRow = mock(Row.class);
+    when(draftLinksResult.rowCount()).thenReturn(1L);
     when(draftLinksResult.iterator()).thenReturn(Arrays.asList(draftLinkRow).iterator());
 
     when(draftLinkRow.get("ID")).thenReturn("attachment123");
