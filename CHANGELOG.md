@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.2
+
+### Fixed
+- Fix `NoSuchElementException` in `revertLinksForComposition` by safely unwrapping `Optional` when looking up draft and active entities in the CDS model
+- Skip credential fetch and SDM revert call when no draft links are found, avoiding unnecessary processing
+
 ## Version 1.9.1
 
 ### Fixed
