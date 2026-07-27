@@ -39,7 +39,7 @@ class IntegrationTest_ActiveEntity_Chapters_MultipleFacet {
   private static String[] facet = {"attachments", "references", "footnotes"};
   // Distinct author-name marker for this suite so its cleanup only touches its own books and
   // doesn't collide with sibling ActiveEntity matrix jobs.
-  private static final String AUTHOR_NAME = "author-active-chapters-multifacet";
+  private static final String AUTHOR_NAME = "Author-active-chapters-multifacet";
   private static ApiInterface api;
   private static ApiInterface apiNoRoles;
 
