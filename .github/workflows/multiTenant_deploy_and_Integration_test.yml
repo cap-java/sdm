@@ -441,7 +441,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         tokenFlow: [namedUser, technicalUser]
         tenant: [TENANT1, TENANT2]
