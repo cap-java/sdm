@@ -19,7 +19,7 @@ on:
   # Auto-trigger on push to this feature branch
   push:
     branches:
-      - snapshot_maven
+      - feature/deploy-central-snapshot
 
 permissions:
   contents: read
