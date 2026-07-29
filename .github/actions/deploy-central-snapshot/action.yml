@@ -32,11 +32,15 @@ runs:
         server-password: CENTRAL_PASSWORD
 
     - name: "Import GPG Key (if provided)"
-      if: inputs.pgp-private-key != ''
+      if: ${{ inputs.pgp-private-key != '' }}
       run: |
-        echo "${{ inputs.pgp-private-key }}" | gpg --batch --passphrase "$PASSPHRASE" --import
-      shell: bash  
+        set +x
+        echo "::add-mask::$PGP_PRIVATE_KEY"
+        echo "::add-mask::$PASSPHRASE"
+        echo "$PGP_PRIVATE_KEY" | gpg --batch --passphrase "$PASSPHRASE" --import
+      shell: bash
       env:
+        PGP_PRIVATE_KEY: ${{ inputs.pgp-private-key }}
         PASSPHRASE: ${{ inputs.pgp-passphrase }}
 
     - name: "Verify SNAPSHOT version"
@@ -53,6 +57,11 @@ runs:
 
     - name: "Deploy Snapshot to Central Portal"
       run: |
+        set +x
+        echo "::add-mask::$CENTRAL_USER"
+        echo "::add-mask::$CENTRAL_PASSWORD"
+        [ -n "$GPG_PASSPHRASE" ] && echo "::add-mask::$GPG_PASSPHRASE"
+        [ -n "$GPG_PUB_KEY" ] && echo "::add-mask::$GPG_PUB_KEY"
         echo "🚀 Deploying SNAPSHOT to Sonatype Central Portal..."
         if [ -n "$GPG_PASSPHRASE" ] && [ -n "$GPG_PUB_KEY" ]; then
           mvn -B -ntp --show-version \

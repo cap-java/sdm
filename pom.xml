@@ -367,9 +367,7 @@
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
                         <configuration>
-                            <publishingServerId>central</publishingServerId>
-                            <deploymentType>USER_MANAGED</deploymentType>
-                            <skipExistingDeployments>true</skipExistingDeployments>
+                            <skipPublishing>true</skipPublishing>
                         </configuration>
                     </plugin>
                 </plugins>
