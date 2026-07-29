@@ -16,6 +16,11 @@ on:
           - 'true'
           - 'false'
 
+  # Auto-trigger on push to testing branch
+  push:
+    branches:
+      - RBSDMS-NoCqnFix-Feature
+
 
 permissions:
   contents: read
