@@ -674,6 +674,26 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         logger.debug("No attachments found for composition: {}", attachmentCompositionName);
       }
     }
+    // Fallback: recursively remove SDM_READONLY_CONTEXT from any nested structure
+    // that fetchAttachments failed to resolve (e.g. deeply nested compositions)
+    removeReadonlyContextRecursively(entityData);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void removeReadonlyContextRecursively(Map<String, Object> data) {
+    if (data == null) {
+      return;
+    }
+    data.remove(SDM_READONLY_CONTEXT);
+    for (Object value : data.values()) {
+      if (value instanceof List) {
+        for (Object item : (List<?>) value) {
+          if (item instanceof Map) {
+            removeReadonlyContextRecursively((Map<String, Object>) item);
+          }
+        }
+      }
+    }
   }
 
   private static class SDMAttachmentData {
