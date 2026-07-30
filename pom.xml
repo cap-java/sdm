@@ -23,7 +23,7 @@
     </developers>
 
     <properties>
-        <revision>1.10.1-SNAPSHOT</revision>
+        <revision>1.9.1-SNAPSHOT</revision>
         <java.version>21</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -280,7 +280,7 @@
                 <plugin>
                     <groupId>org.sonatype.central</groupId>
                     <artifactId>central-publishing-maven-plugin</artifactId>
-                    <version>0.7.0</version>
+                    <version>0.10.0</version>
                     <extensions>true</extensions>
                 </plugin>
                 <plugin>
@@ -342,6 +342,45 @@
                         <configuration>
                             <publishingServerId>central</publishingServerId>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>deploy-central-snapshot</id>
+            <!-- Override distributionManagement to use Central Portal snapshots -->
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>central</id>
+                    <name>Sonatype Central Portal Snapshots</name>
+                    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+                </snapshotRepository>
+                <!-- Intentionally empty to prevent accidental release deployment -->
+                <repository>
+                    <id>disabled-release</id>
+                    <url>file:///dev/null</url>
+                </repository>
+            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <configuration>
+                            <skipPublishing>true</skipPublishing>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-deploy</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
