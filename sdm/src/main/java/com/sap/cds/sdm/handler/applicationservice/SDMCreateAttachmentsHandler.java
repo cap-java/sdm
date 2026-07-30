@@ -109,7 +109,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     logger.info(
         "START: Process attachments before persistence for entity: {}",
         context.getTarget().getQualifiedName());
-    logger.debug("Number of entities to process: {}", data.size());
+    logger.info("Number of entities to process: {}", data.size());
 
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
@@ -119,7 +119,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               persistenceService,
               context.getTarget().getQualifiedName(),
               entityData);
-      logger.debug("Attachment compositions present: {}", attachmentCompositionDetails.keySet());
+      logger.info("Attachment compositions found: {}", attachmentCompositionDetails.keySet());
       updateName(context, data, attachmentCompositionDetails);
       // Remove uploadStatus from attachment data to prevent validation errors
       cleanupReadonlyContextsForAttachments(context, entityData, attachmentCompositionDetails);
@@ -151,32 +151,45 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
 
-        if (attachmentEntity.isPresent()) {
-          String targetEntity = context.getTarget().getQualifiedName();
-          List<Map<String, Object>> attachments =
-              AttachmentsHandlerUtils.fetchAttachments(
-                  targetEntity, entityData, attachmentCompositionName);
+        if (!attachmentEntity.isPresent()) {
+          logger.warn(
+              "[SDM] CREATE: Attachment entity '{}' not found in CDS model — skipping uploadStatus persistence for composition '{}'",
+              attachmentCompositionDefinition,
+              attachmentCompositionName);
+          continue;
+        }
 
-          if (attachments != null) {
-            logger.debug(
-                "Processing {} attachments for composition: {}",
-                attachments.size(),
-                attachmentCompositionName);
-            for (Map<String, Object> attachment : attachments) {
-              String id = (String) attachment.get("ID");
-              String uploadStatus = (String) attachment.get("uploadStatus");
-              if (id != null) {
-                CmisDocument cmisDocument = new CmisDocument();
-                cmisDocument.setAttachmentId(id);
-                cmisDocument.setUploadStatus(uploadStatus);
-                logger.debug("Saving uploadStatus: {} for attachment ID: {}", uploadStatus, id);
-                // Update uploadStatus to Success in database if it was InProgress
-                dbQuery.saveUploadStatusToAttachment(
-                    attachmentEntity.get(), persistenceService, cmisDocument);
-                totalProcessed++;
-              }
+        String targetEntity = context.getTarget().getQualifiedName();
+        List<Map<String, Object>> attachments =
+            AttachmentsHandlerUtils.fetchAttachments(
+                targetEntity, entityData, attachmentCompositionName);
+
+        if (attachments != null && !attachments.isEmpty()) {
+          logger.info(
+              "[SDM] CREATE: Persisting uploadStatus for {} attachment(s) in composition '{}'",
+              attachments.size(),
+              attachmentCompositionName);
+          for (Map<String, Object> attachment : attachments) {
+            String id = (String) attachment.get("ID");
+            String uploadStatus = (String) attachment.get("uploadStatus");
+            if (id != null) {
+              logger.debug("Saving uploadStatus '{}' for attachment ID: {}", uploadStatus, id);
+              CmisDocument cmisDocument = new CmisDocument();
+              cmisDocument.setAttachmentId(id);
+              cmisDocument.setUploadStatus(uploadStatus);
+              dbQuery.saveUploadStatusToAttachment(
+                  attachmentEntity.get(), persistenceService, cmisDocument);
+              totalProcessed++;
+            } else {
+              logger.warn(
+                  "[SDM] CREATE: Attachment in composition '{}' has no ID — skipping uploadStatus persistence",
+                  attachmentCompositionName);
             }
           }
+        } else {
+          logger.debug(
+              "No attachments in payload for composition '{}' during post-processing",
+              attachmentCompositionName);
         }
       }
     }
@@ -657,11 +670,20 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           }
         }
       } else {
-        logger.debug("No attachments found for composition: {}", attachmentCompositionName);
+        logger.warn(
+            "[SDM] CREATE: fetchAttachments returned no results for composition '{}' on entity '{}'. "
+                + "This may indicate a deeply nested composition whose property name does not match the entity name. "
+                + "Fallback recursive cleanup will handle SDM_READONLY_CONTEXT removal.",
+            attachmentCompositionName,
+            targetEntity);
       }
     }
     // Fallback: recursively remove SDM_READONLY_CONTEXT from any nested structure
     // that fetchAttachments failed to resolve (e.g. deeply nested compositions)
+    logger.info(
+        "[SDM] CREATE: Running recursive fallback to remove SDM_READONLY_CONTEXT from entity '{}'. "
+            + "Any WARN entries above indicate compositions where fetchAttachments could not resolve attachments.",
+        targetEntity);
     removeReadonlyContextRecursively(entityData);
   }
 
@@ -670,7 +692,14 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     if (data == null) {
       return;
     }
-    data.remove(SDM_READONLY_CONTEXT);
+    if (data.containsKey(SDM_READONLY_CONTEXT)) {
+      logger.warn(
+          "[SDM] CREATE: Fallback removed SDM_READONLY_CONTEXT from map with keys: {}. "
+              + "This entry was not cleaned up by the composition-based path — "
+              + "likely a deeply nested or mismatched composition name.",
+          data.keySet());
+      data.remove(SDM_READONLY_CONTEXT);
+    }
     for (Object value : data.values()) {
       if (value instanceof List) {
         for (Object item : (List<?>) value) {
