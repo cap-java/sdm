@@ -19,7 +19,7 @@ on:
   # Auto-trigger on push to testing branch
   push:
     branches:
-      - fix_snapshot_deploy_maven
+      - RBSDMS-NoCqnFix-Feature
 
 
 permissions:
