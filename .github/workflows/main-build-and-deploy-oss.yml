@@ -14,7 +14,7 @@ permissions:
 jobs:
 
   update-version:
-    environment: maven-central
+    #environment: maven-central
     runs-on: ubuntu-latest
     #needs: blackduck
     steps:
@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update version
         uses: ./.github/actions/newrelease
