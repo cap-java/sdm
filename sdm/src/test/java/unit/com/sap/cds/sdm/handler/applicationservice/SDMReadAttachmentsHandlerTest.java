@@ -1,11 +1,15 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.sap.cds.ql.Select;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.reflect.*;
+import com.sap.cds.sdm.caching.CacheConfig;
+import com.sap.cds.sdm.caching.ErrorMessageKey;
 import com.sap.cds.sdm.constants.SDMConstants;
+import com.sap.cds.sdm.constants.SDMErrorMessages;
 import com.sap.cds.sdm.handler.TokenHandler;
 import com.sap.cds.sdm.handler.applicationservice.SDMReadAttachmentsHandler;
 import com.sap.cds.sdm.model.RepoValue;
@@ -14,9 +18,13 @@ import com.sap.cds.sdm.service.SDMService;
 import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.cds.CdsReadEventContext;
 import com.sap.cds.services.persistence.PersistenceService;
+import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
+import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.*;
+import org.ehcache.Cache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -290,5 +298,46 @@ public class SDMReadAttachmentsHandlerTest {
           .updateInProgressUploadStatusToSuccess(any(), any(), eq("mockUpID"), eq("mockUpIdKey"));
       verify(context).setCqn(any(CqnSelect.class));
     }
+  }
+
+  @Test
+  void testSetErrorMessagesInCache_StoresLocalizedString() throws Exception {
+    CdsRuntime cdsRuntime = Mockito.mock(CdsRuntime.class);
+    ParameterInfo paramInfo = Mockito.mock(ParameterInfo.class);
+    when(context.getCdsRuntime()).thenReturn(cdsRuntime);
+    when(context.getParameterInfo()).thenReturn(paramInfo);
+    when(paramInfo.getLocale()).thenReturn(Locale.GERMAN);
+
+    // Return a German translation only for the userNotAuthorisedError key;
+    // all other keys return themselves (no translation found), triggering the English fallback.
+    String germanTranslation =
+        "Sie verfügen nicht über die erforderlichen Berechtigungen"
+            + " zum Hochladen von Anhängen. Bitte wenden Sie sich an Ihren Administrator.";
+    when(cdsRuntime.getLocalizedMessage(
+            eq("SDM.userNotAuthorisedError"), isNull(), eq(Locale.GERMAN)))
+        .thenReturn(germanTranslation);
+    when(cdsRuntime.getLocalizedMessage(
+            argThat(k -> k != null && !k.equals("SDM.userNotAuthorisedError")), isNull(), any()))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    CacheConfig.initializeCache();
+
+    // Clear any previously cached flag so the method actually runs
+    Cache<ErrorMessageKey, String> errorMessageCache = CacheConfig.getErrorMessageCache();
+    errorMessageCache.remove(new ErrorMessageKey("localizedErrorMessagesSetInCache"));
+
+    // Invoke the private method via reflection
+    Method method =
+        SDMReadAttachmentsHandler.class.getDeclaredMethod(
+            "setErrorMessagesInCache", CdsReadEventContext.class);
+    method.setAccessible(true);
+    method.invoke(sdmReadAttachmentsHandler, context);
+
+    // The cache should now hold the German translation, not the English constant
+    String cached = SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR");
+    assertEquals(germanTranslation, cached);
+
+    // Verify the English fallback is NOT stored for this key
+    assertNotEquals(SDMErrorMessages.USER_NOT_AUTHORISED_ERROR, cached);
   }
 }

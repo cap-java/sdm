@@ -354,7 +354,7 @@ public class SDMServiceImpl implements SDMService {
     try (var response = (CloseableHttpResponse) httpClient.execute(getObjectRequest)) {
       if (response.getStatusLine().getStatusCode() != 200) {
         if (response.getStatusLine().getStatusCode() == 403) {
-          throw new ServiceException(SDMConstants.USER_NOT_AUTHORISED_ERROR);
+          throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
         }
         return null;
       }
