@@ -181,9 +181,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       if (context.getModel() != null) {
         attachmentEntity = context.getModel().findEntity(attachmentCompositionDefinition);
       }
+      logger.debug(
+          "[UPDATE] updateName: processing composition={} entityFound={}",
+          attachmentCompositionName,
+          attachmentEntity.isPresent());
       isError =
           AttachmentsHandlerUtils.validateFileNames(
               context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+      if (isError) {
+        logger.debug(
+            "[UPDATE] updateName: filename validation failed for composition={}, skipping rename",
+            attachmentCompositionName);
+      }
       if (!isError) {
         renameDocument(
             attachmentEntity,
@@ -494,6 +503,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     AttachmentsHandlerUtils.updateDescriptionProperty(
         null, descriptionInRequest, descriptionInDB, updatedSecondaryProperties, true);
 
+    logger.debug(
+        "[UPDATE] prepareUpdatedProperties: secondaryTypeProperties={} propertiesInDB={} updatedSecondaryProperties={}",
+        secondaryTypeProperties.keySet(),
+        propertiesInDB.keySet(),
+        updatedSecondaryProperties);
     return updatedSecondaryProperties;
   }
 
