@@ -678,12 +678,11 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
             targetEntity);
       }
     }
-    // Fallback: recursively remove SDM_READONLY_CONTEXT from any nested structure
-    // that fetchAttachments failed to resolve (e.g. deeply nested compositions)
-    logger.info(
-        "[SDM] CREATE: Running recursive fallback to remove SDM_READONLY_CONTEXT from entity '{}'. "
-            + "Any WARN entries above indicate compositions where fetchAttachments could not resolve attachments.",
-        targetEntity);
+    // Use CdsDataProcessor to mirror the exact traversal path used by preserveReadonlyFields.
+    // This handles cases where CdsData stores composition data internally (e.g. during
+    // draftActivate) in a way that plain Map.values() iteration cannot reach.
+    SDMUtils.removeReadonlyFields(context.getTarget(), List.of(CdsData.create(entityData)));
+    // Plain-map recursive fallback as secondary safety net for any remaining entries.
     removeReadonlyContextRecursively(entityData);
   }
 
