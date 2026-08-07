@@ -140,6 +140,64 @@ public class ApiMT implements ApiInterface {
     return ("Could not create entity");
   }
 
+  @Override
+  public String createEntityDraftWithAuthor(
+      String appUrl, String entityName, String entityName2, String srvpath, String authorName) {
+    return createEntityDraftWithAuthor(appUrl, entityName, entityName2, srvpath, null, authorName);
+  }
+
+  @Override
+  public String createEntityDraftWithAuthor(
+      String appUrl,
+      String entityName,
+      String entityName2,
+      String srvpath,
+      String bookID,
+      String authorName) {
+    MediaType mediaType = MediaType.parse("application/json");
+
+    String jsonBody;
+    if (bookID != null && !bookID.isEmpty()) {
+      // Creating a Chapter within a Book — same as the default path
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \"book_ID\": \"" + bookID + "\"\n}";
+    } else {
+      // Creating a Book with a caller-supplied author name so parallel matrix jobs
+      // can use distinct fixture markers and their cleanups won't clobber each other.
+      jsonBody =
+          "{\n    \"title\": \"IntegrationTestEntity\",\n    \""
+              + entityName2
+              + "\": {\n        \"ID\": \"41cf82fb-94bf-4d62-9e45-fa25f959b5b0\",\n        \"name\": \""
+              + authorName
+              + "\"\n    }\n}";
+    }
+
+    RequestBody body = RequestBody.create(mediaType, jsonBody);
+    Request request =
+        new Request.Builder()
+            .url("https://" + appUrl + "/api/admin/" + entityName)
+            .method("POST", body)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", token)
+            .build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        if (response.code() == 401) {
+          System.out.println(
+              "Create entity failed due to incorrect token. Please check the credentials");
+        }
+        System.out.println("Create entity failed. Error : " + response.body().string());
+        throw new IOException("Could not create entity");
+      }
+      Map<String, Object> responseMap = objectMapper.readValue(response.body().string(), Map.class);
+      return (String) responseMap.get("ID");
+    } catch (IOException e) {
+      System.out.println("Could not create entity : " + e);
+    }
+    return ("Could not create entity");
+  }
+
   public String editEntityDraft(String appUrl, String entityName, String srvpath, String entityID) {
     MediaType mediaType = MediaType.parse("application/json");
     Request request =
@@ -1219,6 +1277,50 @@ public class ApiMT implements ApiInterface {
       }
     } catch (IOException e) {
       throw new IOException("Error fetching changelog: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public String createAttachmentInActive(
+      String appUrl, String entityName, String facetName, String entityID) throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/api/admin/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=true)/"
+            + facetName
+            + "/"
+            + "AdminService.createAttachmentInActive";
+
+    RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+
+    Request request =
+        new Request.Builder()
+            .url(url)
+            .post(body)
+            .addHeader("Authorization", token)
+            .addHeader("Content-Type", "application/json")
+            .build();
+
+    try (Response response = executeWithRetry(request)) {
+      if (!response.isSuccessful()) {
+        String errorBody = response.body() != null ? response.body().string() : "";
+        System.out.println(
+            "createAttachmentInActive failed for "
+                + entityName
+                + "."
+                + facetName
+                + ". Error: "
+                + errorBody);
+        return errorBody;
+      }
+      return "Attachment created in active entity";
+    } catch (IOException e) {
+      System.out.println("createAttachmentInActive failed: " + e.getMessage());
+      return "Could not create attachment in active entity";
     }
   }
 }
