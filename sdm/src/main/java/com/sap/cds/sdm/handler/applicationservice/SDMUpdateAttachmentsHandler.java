@@ -689,7 +689,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           }
         }
       } else {
-        logger.warn(
+        logger.debug(
             "[SDM] UPDATE: fetchAttachments returned no results for composition '{}' on entity '{}'. "
                 + "This may indicate a deeply nested composition whose property name does not match the entity name. "
                 + "Fallback recursive cleanup will handle SDM_READONLY_CONTEXT removal.",
