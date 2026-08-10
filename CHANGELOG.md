@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.3
+
+### Fixed
+- Fix `Invalid CQN: Element 'SDM_READONLY_CONTEXT.uploadStatus' does not exist` error during `draftActivate` on deeply nested entities (5+ levels deep or entities with many compositions). The internal `SDM_READONLY_CONTEXT` wrapper key used to preserve `uploadStatus` across handler phases was being removed using plain `Map.values()` traversal, which cannot traverse all composition data in deeply nested CDS structures. The removal now uses `CdsDataProcessor` (the same model-driven traversal used when setting the key), ensuring the wrapper is correctly cleaned up regardless of entity depth or breadth.
+
 ## Version 1.9.2
 
 ### Fixed
