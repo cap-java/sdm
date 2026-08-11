@@ -85,32 +85,45 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
 
-        if (attachmentEntity.isPresent()) {
-          String targetEntity = context.getTarget().getQualifiedName();
-          List<Map<String, Object>> attachments =
-              AttachmentsHandlerUtils.fetchAttachments(
-                  targetEntity, entityData, attachmentCompositionName);
+        if (!attachmentEntity.isPresent()) {
+          logger.warn(
+              "[SDM] UPDATE: Attachment entity '{}' not found in CDS model — skipping uploadStatus persistence for composition '{}'",
+              attachmentCompositionDefinition,
+              attachmentCompositionName);
+          continue;
+        }
 
-          if (attachments != null) {
-            logger.debug(
-                "Processing {} attachments for composition: {}",
-                attachments.size(),
-                attachmentCompositionName);
-            for (Map<String, Object> attachment : attachments) {
-              String id = (String) attachment.get("ID");
-              String uploadStatus = (String) attachment.get("uploadStatus");
-              if (id != null) {
-                CmisDocument cmisDocument = new CmisDocument();
-                cmisDocument.setAttachmentId(id);
-                cmisDocument.setUploadStatus(uploadStatus);
-                // Update uploadStatus to Success in database if it was InProgress
-                logger.debug("Saving uploadStatus: {} for attachment ID: {}", uploadStatus, id);
-                dbQuery.saveUploadStatusToAttachment(
-                    attachmentEntity.get(), persistenceService, cmisDocument);
-                totalProcessed++;
-              }
+        String targetEntity = context.getTarget().getQualifiedName();
+        List<Map<String, Object>> attachments =
+            AttachmentsHandlerUtils.fetchAttachments(
+                targetEntity, entityData, attachmentCompositionName);
+
+        if (attachments != null && !attachments.isEmpty()) {
+          logger.info(
+              "[SDM] UPDATE: Persisting uploadStatus for {} attachment(s) in composition '{}'",
+              attachments.size(),
+              attachmentCompositionName);
+          for (Map<String, Object> attachment : attachments) {
+            String id = (String) attachment.get("ID");
+            String uploadStatus = (String) attachment.get("uploadStatus");
+            if (id != null) {
+              logger.debug("Saving uploadStatus '{}' for attachment ID: {}", uploadStatus, id);
+              CmisDocument cmisDocument = new CmisDocument();
+              cmisDocument.setAttachmentId(id);
+              cmisDocument.setUploadStatus(uploadStatus);
+              dbQuery.saveUploadStatusToAttachment(
+                  attachmentEntity.get(), persistenceService, cmisDocument);
+              totalProcessed++;
+            } else {
+              logger.warn(
+                  "[SDM] UPDATE: Attachment in composition '{}' has no ID — skipping uploadStatus persistence",
+                  attachmentCompositionName);
             }
           }
+        } else {
+          logger.debug(
+              "No attachments in payload for composition '{}' during post-processing",
+              attachmentCompositionName);
         }
       }
     }
@@ -123,7 +136,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     logger.info(
         "START: Process attachments before persistence for entity: {}",
         context.getTarget().getQualifiedName());
-    logger.debug("Number of entities to update: {}", data.size());
+    logger.info("Number of entities to update: {}", data.size());
 
     // Get comprehensive attachment composition details for each entity
     for (CdsData entityData : data) {
@@ -134,7 +147,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               persistenceService,
               context.getTarget().getQualifiedName(),
               entityData);
-      logger.debug("Attachment compositions present: {}", attachmentCompositionDetails.keySet());
+      logger.info("Attachment compositions found: {}", attachmentCompositionDetails.keySet());
 
       updateName(context, data, attachmentCompositionDetails);
 
@@ -168,9 +181,18 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       if (context.getModel() != null) {
         attachmentEntity = context.getModel().findEntity(attachmentCompositionDefinition);
       }
+      logger.debug(
+          "[UPDATE] updateName: processing composition={} entityFound={}",
+          attachmentCompositionName,
+          attachmentEntity.isPresent());
       isError =
           AttachmentsHandlerUtils.validateFileNames(
               context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+      if (isError) {
+        logger.debug(
+            "[UPDATE] updateName: filename validation failed for composition={}, skipping rename",
+            attachmentCompositionName);
+      }
       if (!isError) {
         renameDocument(
             attachmentEntity,
@@ -208,6 +230,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
       if (attachments != null && !attachments.isEmpty()) {
         propertyTitles = SDMUtils.getPropertyTitles(attachmentEntity, attachments.get(0));
       } else {
+        logger.info(
+            "[SDM] UPDATE: No attachments in payload for composition '{}' on entity '{}' — skipping rename",
+            attachmentCompositionName,
+            targetEntity);
         propertyTitles = null;
       }
       if (attachments != null && !attachments.isEmpty()) {
@@ -366,7 +392,10 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
             propertiesInDB);
 
     if (updatedSecondaryProperties.isEmpty()) {
-      logger.debug("No changes detected for attachment ID: {}, skipping SDM update", id);
+      logger.info(
+          "[SDM] UPDATE: No property changes detected for attachment ID: {} (fileName: '{}') — skipping SDM call",
+          id,
+          filenameInRequest);
       return;
     }
 
@@ -474,6 +503,11 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
     AttachmentsHandlerUtils.updateDescriptionProperty(
         null, descriptionInRequest, descriptionInDB, updatedSecondaryProperties, true);
 
+    logger.debug(
+        "[UPDATE] prepareUpdatedProperties: secondaryTypeProperties={} propertiesInDB={} updatedSecondaryProperties={}",
+        secondaryTypeProperties.keySet(),
+        propertiesInDB.keySet(),
+        updatedSecondaryProperties);
     return updatedSecondaryProperties;
   }
 
@@ -513,7 +547,7 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
               secondaryPropertiesWithInvalidDefinitions,
               context.getUserInfo().isSystemUser());
 
-      logger.debug("SDM update response code: {} for attachment ID: {}", responseCode, id);
+      logger.info("SDM update response code: {} for attachment ID: {}", responseCode, id);
 
       AttachmentsHandlerUtils.handleSDMUpdateResponse(
           responseCode,
@@ -655,7 +689,42 @@ public class SDMUpdateAttachmentsHandler implements EventHandler {
           }
         }
       } else {
-        logger.debug("No attachments found for composition: {}", attachmentCompositionName);
+        logger.debug(
+            "[SDM] UPDATE: fetchAttachments returned no results for composition '{}' on entity '{}'. "
+                + "This may indicate a deeply nested composition whose property name does not match the entity name. "
+                + "Fallback recursive cleanup will handle SDM_READONLY_CONTEXT removal.",
+            attachmentCompositionName,
+            targetEntity);
+      }
+    }
+    // Use CdsDataProcessor to mirror the exact traversal path used by preserveReadonlyFields.
+    // This handles cases where CdsData stores composition data internally (e.g. during
+    // draftActivate) in a way that plain Map.values() iteration cannot reach.
+    SDMUtils.removeReadonlyFields(context.getTarget(), List.of(CdsData.create(entityData)));
+    // Plain-map recursive fallback as secondary safety net for any remaining entries.
+    removeReadonlyContextRecursively(entityData);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void removeReadonlyContextRecursively(Map<String, Object> data) {
+    if (data == null) {
+      return;
+    }
+    if (data.containsKey(SDM_READONLY_CONTEXT)) {
+      logger.warn(
+          "[SDM] UPDATE: Fallback removed SDM_READONLY_CONTEXT from map with keys: {}. "
+              + "This entry was not cleaned up by the composition-based path — "
+              + "likely a deeply nested or mismatched composition name.",
+          data.keySet());
+      data.remove(SDM_READONLY_CONTEXT);
+    }
+    for (Object value : data.values()) {
+      if (value instanceof List) {
+        for (Object item : (List<?>) value) {
+          if (item instanceof Map) {
+            removeReadonlyContextRecursively((Map<String, Object>) item);
+          }
+        }
       }
     }
   }

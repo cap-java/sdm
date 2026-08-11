@@ -73,24 +73,41 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   }
 
   private void handleUpdateActiveEntitySdmMetadata() {
+    logger.debug(
+        "[CREATE] handleUpdateActiveEntitySdmMetadata: checking ThreadLocal for SDM metadata");
     Map<String, Object> metadata = SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.get();
     if (metadata == null) {
+      logger.debug(
+          "[CREATE] handleUpdateActiveEntitySdmMetadata: no ThreadLocal metadata found, skipping");
       return;
     }
     try {
       SDMAttachmentsServiceHandler.SDM_METADATA_THREADLOCAL.remove();
+      logger.debug(
+          "[CREATE] handleUpdateActiveEntitySdmMetadata: ThreadLocal metadata keys: {}",
+          metadata.keySet());
       com.sap.cds.reflect.CdsEntity attachmentEntity =
           (com.sap.cds.reflect.CdsEntity) metadata.get("attachmentEntity");
       if (attachmentEntity == null) {
         logger.warn("No attachmentEntity in ThreadLocal metadata, skipping post-INSERT update");
         return;
       }
+      logger.debug(
+          "[CREATE] handleUpdateActiveEntitySdmMetadata: attachmentEntity={}",
+          attachmentEntity.getQualifiedName());
       CmisDocument cmisDocument = new CmisDocument();
       cmisDocument.setAttachmentId((String) metadata.get("attachmentId"));
       cmisDocument.setObjectId((String) metadata.get("objectId"));
       cmisDocument.setFolderId((String) metadata.get("folderId"));
       cmisDocument.setMimeType((String) metadata.get("mimeType"));
       cmisDocument.setUploadStatus((String) metadata.get("uploadStatus"));
+      logger.debug(
+          "[CREATE] handleUpdateActiveEntitySdmMetadata: cmisDocument attachmentId={} objectId={} folderId={} mimeType={} uploadStatus={}",
+          cmisDocument.getAttachmentId(),
+          cmisDocument.getObjectId(),
+          cmisDocument.getFolderId(),
+          cmisDocument.getMimeType(),
+          cmisDocument.getUploadStatus());
       logger.info(
           "Post-INSERT: Updating active entity attachment {} with objectId {}",
           cmisDocument.getAttachmentId(),
@@ -109,7 +126,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     logger.info(
         "START: Process attachments before persistence for entity: {}",
         context.getTarget().getQualifiedName());
-    logger.debug("Number of entities to process: {}", data.size());
+    logger.info("Number of entities to process: {}", data.size());
 
     for (CdsData entityData : data) {
       Map<String, Map<String, String>> attachmentCompositionDetails =
@@ -119,7 +136,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
               persistenceService,
               context.getTarget().getQualifiedName(),
               entityData);
-      logger.debug("Attachment compositions present: {}", attachmentCompositionDetails.keySet());
+      logger.info("Attachment compositions found: {}", attachmentCompositionDetails.keySet());
       updateName(context, data, attachmentCompositionDetails);
       // Remove uploadStatus from attachment data to prevent validation errors
       cleanupReadonlyContextsForAttachments(context, entityData, attachmentCompositionDetails);
@@ -151,32 +168,45 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         Optional<CdsEntity> attachmentEntity =
             context.getModel().findEntity(attachmentCompositionDefinition);
 
-        if (attachmentEntity.isPresent()) {
-          String targetEntity = context.getTarget().getQualifiedName();
-          List<Map<String, Object>> attachments =
-              AttachmentsHandlerUtils.fetchAttachments(
-                  targetEntity, entityData, attachmentCompositionName);
+        if (!attachmentEntity.isPresent()) {
+          logger.warn(
+              "[SDM] CREATE: Attachment entity '{}' not found in CDS model — skipping uploadStatus persistence for composition '{}'",
+              attachmentCompositionDefinition,
+              attachmentCompositionName);
+          continue;
+        }
 
-          if (attachments != null) {
-            logger.debug(
-                "Processing {} attachments for composition: {}",
-                attachments.size(),
-                attachmentCompositionName);
-            for (Map<String, Object> attachment : attachments) {
-              String id = (String) attachment.get("ID");
-              String uploadStatus = (String) attachment.get("uploadStatus");
-              if (id != null) {
-                CmisDocument cmisDocument = new CmisDocument();
-                cmisDocument.setAttachmentId(id);
-                cmisDocument.setUploadStatus(uploadStatus);
-                logger.debug("Saving uploadStatus: {} for attachment ID: {}", uploadStatus, id);
-                // Update uploadStatus to Success in database if it was InProgress
-                dbQuery.saveUploadStatusToAttachment(
-                    attachmentEntity.get(), persistenceService, cmisDocument);
-                totalProcessed++;
-              }
+        String targetEntity = context.getTarget().getQualifiedName();
+        List<Map<String, Object>> attachments =
+            AttachmentsHandlerUtils.fetchAttachments(
+                targetEntity, entityData, attachmentCompositionName);
+
+        if (attachments != null && !attachments.isEmpty()) {
+          logger.info(
+              "[SDM] CREATE: Persisting uploadStatus for {} attachment(s) in composition '{}'",
+              attachments.size(),
+              attachmentCompositionName);
+          for (Map<String, Object> attachment : attachments) {
+            String id = (String) attachment.get("ID");
+            String uploadStatus = (String) attachment.get("uploadStatus");
+            if (id != null) {
+              logger.debug("Saving uploadStatus '{}' for attachment ID: {}", uploadStatus, id);
+              CmisDocument cmisDocument = new CmisDocument();
+              cmisDocument.setAttachmentId(id);
+              cmisDocument.setUploadStatus(uploadStatus);
+              dbQuery.saveUploadStatusToAttachment(
+                  attachmentEntity.get(), persistenceService, cmisDocument);
+              totalProcessed++;
+            } else {
+              logger.warn(
+                  "[SDM] CREATE: Attachment in composition '{}' has no ID — skipping uploadStatus persistence",
+                  attachmentCompositionName);
             }
           }
+        } else {
+          logger.debug(
+              "No attachments in payload for composition '{}' during post-processing",
+              attachmentCompositionName);
         }
       }
     }
@@ -188,9 +218,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   public void preserveUploadStatus(CdsCreateEventContext context, List<CdsData> data) {
     // Preserve uploadStatus before CDS removes readonly fields
     logger.debug(
-        "Preserving readonly fields (uploadStatus) for entity: {} before CDS capability check",
-        context.getTarget().getQualifiedName());
+        "[CREATE] preserveUploadStatus: entity={} dataSize={}",
+        context.getTarget().getQualifiedName(),
+        data.size());
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
+    logger.debug(
+        "[CREATE] preserveUploadStatus: SDM_READONLY_CONTEXT set on attachment maps via CdsDataProcessor");
   }
 
   public void updateName(
@@ -218,9 +251,18 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
       Optional<CdsEntity> attachmentEntity =
           context.getModel().findEntity(attachmentCompositionDefinition);
+      logger.debug(
+          "[CREATE] updateName: processing composition={} entityFound={}",
+          attachmentCompositionName,
+          attachmentEntity.isPresent());
       isError =
           AttachmentsHandlerUtils.validateFileNames(
               context, data, attachmentCompositionName, contextInfo, attachmentEntity);
+      if (isError) {
+        logger.debug(
+            "[CREATE] updateName: filename validation failed for composition={}, skipping SDM update",
+            attachmentCompositionName);
+      }
       if (!isError) {
         List<String> fileNameWithRestrictedCharacters = new ArrayList<>();
         List<String> duplicateFileNameList = new ArrayList<>();
@@ -292,6 +334,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     List<String> uploadInProgressFiles = new ArrayList<>();
 
     if (attachments != null) {
+      logger.debug(
+          "[CREATE] processEntity: composition={} attachmentCount={}",
+          attachmentCompositionName,
+          attachments.size());
       for (Map<String, Object> attachment : attachments) {
         processAttachment(
             context,
@@ -312,6 +358,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       // Throw exception if any files failed scan or upload in progress
       String errorMessage = buildErrorMessage(scanFailedFiles, uploadInProgressFiles);
       if (!errorMessage.isEmpty()) {
+        logger.debug(
+            "[CREATE] processEntity: blocking — scanFailed={} uploadInProgress={}",
+            scanFailedFiles,
+            uploadInProgressFiles);
         throw new ServiceException(errorMessage);
       }
 
@@ -469,7 +519,12 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         dbQuery.getPropertiesForID(
             attachmentEntity.get(), persistenceService, id, secondaryTypeProperties);
 
-    logger.debug("Processing attachment creation - ID: {}, objectId: {}", id, objectId);
+    logger.debug(
+        "[CREATE] updateAndSendToSDM: ID={} objectId={} secondaryTypeProperties={} propertiesInDB={}",
+        id,
+        objectId,
+        secondaryTypeProperties.keySet(),
+        propertiesInDB.keySet());
 
     Map<String, String> updatedSecondaryProperties =
         SDMUtils.getUpdatedSecondaryProperties(
@@ -491,6 +546,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         updatedSecondaryProperties,
         false);
 
+    logger.debug(
+        "[CREATE] updateAndSendToSDM: updatedSecondaryProperties={}", updatedSecondaryProperties);
     logger.debug(
         "Creating attachment in SDM - ID: {}, fileName: {}, properties count: {}",
         id,
@@ -657,7 +714,42 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
           }
         }
       } else {
-        logger.debug("No attachments found for composition: {}", attachmentCompositionName);
+        logger.debug(
+            "[SDM] CREATE: fetchAttachments returned no results for composition '{}' on entity '{}'. "
+                + "This may indicate a deeply nested composition whose property name does not match the entity name. "
+                + "Fallback recursive cleanup will handle SDM_READONLY_CONTEXT removal.",
+            attachmentCompositionName,
+            targetEntity);
+      }
+    }
+    // Use CdsDataProcessor to mirror the exact traversal path used by preserveReadonlyFields.
+    // This handles cases where CdsData stores composition data internally (e.g. during
+    // draftActivate) in a way that plain Map.values() iteration cannot reach.
+    SDMUtils.removeReadonlyFields(context.getTarget(), List.of(CdsData.create(entityData)));
+    // Plain-map recursive fallback as secondary safety net for any remaining entries.
+    removeReadonlyContextRecursively(entityData);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void removeReadonlyContextRecursively(Map<String, Object> data) {
+    if (data == null) {
+      return;
+    }
+    if (data.containsKey(SDM_READONLY_CONTEXT)) {
+      logger.warn(
+          "[SDM] CREATE: Fallback removed SDM_READONLY_CONTEXT from map with keys: {}. "
+              + "This entry was not cleaned up by the composition-based path — "
+              + "likely a deeply nested or mismatched composition name.",
+          data.keySet());
+      data.remove(SDM_READONLY_CONTEXT);
+    }
+    for (Object value : data.values()) {
+      if (value instanceof List) {
+        for (Object item : (List<?>) value) {
+          if (item instanceof Map) {
+            removeReadonlyContextRecursively((Map<String, Object>) item);
+          }
+        }
       }
     }
   }
