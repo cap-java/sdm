@@ -52,7 +52,7 @@ public class DBQuery {
         attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
+            .columns("fileName", "ID", "folderId", "repositoryId", "mimeType")
             .where(doc -> doc.get(upIdKey).eq(upID));
     Result result = persistenceService.run(q);
     logger.debug("Found {} attachment(s) for upID: {}", result.rowCount(), upID);
