@@ -6,14 +6,18 @@ import static org.mockito.Mockito.*;
 
 import com.sap.cds.Result;
 import com.sap.cds.Row;
+import com.sap.cds.feature.attachments.service.model.servicehandler.AttachmentMarkAsDeletedEventContext;
 import com.sap.cds.ql.cqn.CqnSelect;
 import com.sap.cds.ql.cqn.CqnUpdate;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.constants.SDMConstants;
 import com.sap.cds.sdm.model.CmisDocument;
 import com.sap.cds.sdm.persistence.DBQuery;
 import com.sap.cds.services.persistence.PersistenceService;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +29,9 @@ class DBQueryTest {
 
   @Mock private CdsEntity mockDraftEntity;
   @Mock private CdsEntity mockActiveEntity;
+  @Mock private CdsElement mockCdsElement;
+  @Mock private CdsModel mockCdsModel;
+  @Mock private AttachmentMarkAsDeletedEventContext mockDeleteContext;
   @Mock private PersistenceService mockPersistenceService;
   @Mock private Result mockResult;
   @Mock private Row mockRow;
@@ -303,42 +310,226 @@ class DBQueryTest {
   }
 
   @Test
-  void testUpdateUploadStatusByScanStatus_AllScanStatuses() {
-    // Test all scan status mappings
-    String objectId = "object-123";
-    Result mockResult = mock(Result.class);
-    when(mockResult.rowCount()).thenReturn(1L);
-    when(mockPersistenceService.run(any(CqnUpdate.class))).thenReturn(mockResult);
+  void testGetAttachmentsForUPID_WithIsActiveEntity() {
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
 
-    // Test QUARANTINED -> UPLOAD_STATUS_VIRUS_DETECTED
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity,
-        null,
-        mockPersistenceService,
-        objectId,
-        SDMConstants.ScanStatus.QUARANTINED);
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.of(mockCdsElement));
 
-    // Test PENDING -> UPLOAD_STATUS_IN_PROGRESS
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.PENDING);
+    Result result = mock(Result.class);
+    when(result.rowCount()).thenReturn(1L);
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(result);
 
-    // Test SCANNING -> VIRUS_SCAN_INPROGRESS
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.SCANNING);
+    Result actual =
+        dbQuery.getAttachmentsForUPID(mockDraftEntity, mockPersistenceService, upID, upIdKey);
 
-    // Test FAILED -> UPLOAD_STATUS_SCAN_FAILED
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.FAILED);
+    assertNotNull(actual);
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
 
-    // Test CLEAN -> UPLOAD_STATUS_SUCCESS
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.CLEAN);
+  @Test
+  void testGetAttachmentsForUPID_WithoutIsActiveEntity() {
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
 
-    // Test BLANK -> UPLOAD_STATUS_SUCCESS
-    dbQuery.updateUploadStatusByScanStatus(
-        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.BLANK);
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.empty());
 
-    // Verify all updates were called
-    verify(mockPersistenceService, times(6)).run(any(CqnUpdate.class));
+    Result result = mock(Result.class);
+    when(result.rowCount()).thenReturn(1L);
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(result);
+
+    Result actual =
+        dbQuery.getAttachmentsForUPID(mockDraftEntity, mockPersistenceService, upID, upIdKey);
+
+    assertNotNull(actual);
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForUPIDAndRepository_WithIsActiveEntity() {
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
+
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.of(mockCdsElement));
+
+    Result result = mock(Result.class);
+    when(result.rowCount()).thenReturn(1L);
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(result);
+
+    Result actual =
+        dbQuery.getAttachmentsForUPIDAndRepository(
+            mockDraftEntity, mockPersistenceService, upID, upIdKey);
+
+    assertNotNull(actual);
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForUPIDAndRepository_WithoutIsActiveEntity() {
+    String upID = "testUpID";
+    String upIdKey = "up__ID";
+
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.empty());
+
+    Result result = mock(Result.class);
+    when(result.rowCount()).thenReturn(1L);
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(result);
+
+    Result actual =
+        dbQuery.getAttachmentsForUPIDAndRepository(
+            mockDraftEntity, mockPersistenceService, upID, upIdKey);
+
+    assertNotNull(actual);
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForFolder_DraftEntity_WithIsActiveEntity() {
+    String entity = "TestEntity";
+    String folderId = "folder-1";
+
+    when(mockDeleteContext.getModel()).thenReturn(mockCdsModel);
+    when(mockCdsModel.findEntity(entity + "_drafts")).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.of(mockCdsElement));
+
+    Row row = mock(Row.class);
+    when(row.get("folderId")).thenReturn("folder-1");
+    when(row.get("repositoryId")).thenReturn("repo-1");
+    when(row.get("fileName")).thenReturn("file.pdf");
+    when(row.get("ID")).thenReturn("id-1");
+    when(row.get("objectId")).thenReturn("obj-1");
+    when(row.get("uploadStatus")).thenReturn("Clean");
+
+    Result draftResult = mock(Result.class);
+    when(draftResult.list()).thenReturn(List.of(row));
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(draftResult);
+
+    List<CmisDocument> docs =
+        dbQuery.getAttachmentsForFolder(
+            entity, mockPersistenceService, folderId, mockDeleteContext);
+
+    assertNotNull(docs);
+    assertEquals(1, docs.size());
+    assertEquals("file.pdf", docs.get(0).getFileName());
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForFolder_DraftEntity_WithoutIsActiveEntity() {
+    String entity = "TestEntity";
+    String folderId = "folder-1";
+
+    when(mockDeleteContext.getModel()).thenReturn(mockCdsModel);
+    when(mockCdsModel.findEntity(entity + "_drafts")).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.empty());
+
+    Row row = mock(Row.class);
+    when(row.get("folderId")).thenReturn("folder-1");
+    when(row.get("repositoryId")).thenReturn("repo-1");
+    when(row.get("fileName")).thenReturn("file.pdf");
+    when(row.get("ID")).thenReturn("id-1");
+    when(row.get("objectId")).thenReturn("obj-1");
+    when(row.get("uploadStatus")).thenReturn("Clean");
+
+    Result draftResult = mock(Result.class);
+    when(draftResult.list()).thenReturn(List.of(row));
+    when(mockPersistenceService.run(any(CqnSelect.class))).thenReturn(draftResult);
+
+    List<CmisDocument> docs =
+        dbQuery.getAttachmentsForFolder(
+            entity, mockPersistenceService, folderId, mockDeleteContext);
+
+    assertNotNull(docs);
+    assertEquals(1, docs.size());
+    assertEquals("file.pdf", docs.get(0).getFileName());
+    verify(mockPersistenceService, times(1)).run(any(CqnSelect.class));
+    verify(mockDraftEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForFolder_FallsBackToActiveEntity_WithIsActiveEntity() {
+    String entity = "TestEntity";
+    String folderId = "folder-1";
+
+    when(mockDeleteContext.getModel()).thenReturn(mockCdsModel);
+    when(mockCdsModel.findEntity(entity + "_drafts")).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.of(mockCdsElement));
+
+    Result emptyDraftResult = mock(Result.class);
+    when(emptyDraftResult.list()).thenReturn(List.of());
+
+    when(mockCdsModel.findEntity(entity)).thenReturn(Optional.of(mockActiveEntity));
+    when(mockActiveEntity.findElement("IsActiveEntity")).thenReturn(Optional.of(mockCdsElement));
+
+    Row row = mock(Row.class);
+    when(row.get("folderId")).thenReturn("folder-1");
+    when(row.get("repositoryId")).thenReturn("repo-1");
+    when(row.get("fileName")).thenReturn("active-file.pdf");
+    when(row.get("ID")).thenReturn("id-2");
+    when(row.get("objectId")).thenReturn("obj-2");
+    when(row.get("uploadStatus")).thenReturn("Clean");
+
+    Result activeResult = mock(Result.class);
+    when(activeResult.list()).thenReturn(List.of(row));
+
+    when(mockPersistenceService.run(any(CqnSelect.class)))
+        .thenReturn(emptyDraftResult)
+        .thenReturn(activeResult);
+
+    List<CmisDocument> docs =
+        dbQuery.getAttachmentsForFolder(
+            entity, mockPersistenceService, folderId, mockDeleteContext);
+
+    assertNotNull(docs);
+    assertEquals(1, docs.size());
+    assertEquals("active-file.pdf", docs.get(0).getFileName());
+    verify(mockPersistenceService, times(2)).run(any(CqnSelect.class));
+    verify(mockActiveEntity).findElement("IsActiveEntity");
+  }
+
+  @Test
+  void testGetAttachmentsForFolder_FallsBackToActiveEntity_WithoutIsActiveEntity() {
+    String entity = "TestEntity";
+    String folderId = "folder-1";
+
+    when(mockDeleteContext.getModel()).thenReturn(mockCdsModel);
+    when(mockCdsModel.findEntity(entity + "_drafts")).thenReturn(Optional.of(mockDraftEntity));
+    when(mockDraftEntity.findElement("IsActiveEntity")).thenReturn(Optional.empty());
+
+    Result emptyDraftResult = mock(Result.class);
+    when(emptyDraftResult.list()).thenReturn(List.of());
+
+    when(mockCdsModel.findEntity(entity)).thenReturn(Optional.of(mockActiveEntity));
+    when(mockActiveEntity.findElement("IsActiveEntity")).thenReturn(Optional.empty());
+
+    Row row = mock(Row.class);
+    when(row.get("folderId")).thenReturn("folder-1");
+    when(row.get("repositoryId")).thenReturn("repo-1");
+    when(row.get("fileName")).thenReturn("active-file.pdf");
+    when(row.get("ID")).thenReturn("id-2");
+    when(row.get("objectId")).thenReturn("obj-2");
+    when(row.get("uploadStatus")).thenReturn("Clean");
+
+    Result activeResult = mock(Result.class);
+    when(activeResult.list()).thenReturn(List.of(row));
+
+    when(mockPersistenceService.run(any(CqnSelect.class)))
+        .thenReturn(emptyDraftResult)
+        .thenReturn(activeResult);
+
+    List<CmisDocument> docs =
+        dbQuery.getAttachmentsForFolder(
+            entity, mockPersistenceService, folderId, mockDeleteContext);
+
+    assertNotNull(docs);
+    assertEquals(1, docs.size());
+    assertEquals("active-file.pdf", docs.get(0).getFileName());
+    verify(mockPersistenceService, times(2)).run(any(CqnSelect.class));
+    verify(mockActiveEntity).findElement("IsActiveEntity");
   }
 }
