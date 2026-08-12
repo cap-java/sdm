@@ -50,10 +50,18 @@ public class DBQuery {
         upID,
         upIdKey,
         attachmentEntity.getQualifiedName());
-    CqnSelect q =
-        Select.from(attachmentEntity)
-            .columns("fileName", "ID", "folderId", "repositoryId", "mimeType")
-            .where(doc -> doc.get(upIdKey).eq(upID));
+    CqnSelect q;
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      q =
+          Select.from(attachmentEntity)
+              .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId", "mimeType")
+              .where(doc -> doc.get(upIdKey).eq(upID));
+    } else {
+      q =
+          Select.from(attachmentEntity)
+              .columns("fileName", "ID", "folderId", "repositoryId", "mimeType")
+              .where(doc -> doc.get(upIdKey).eq(upID));
+    }
     Result result = persistenceService.run(q);
     logger.debug("Found {} attachment(s) for upID: {}", result.rowCount(), upID);
     return result;
@@ -376,14 +384,26 @@ public class DBQuery {
         upID,
         SDMConstants.REPOSITORY_ID,
         attachmentEntity.getQualifiedName());
-    CqnSelect q =
-        Select.from(attachmentEntity)
-            .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
-            .where(
-                doc ->
-                    doc.get(upIdKey)
-                        .eq(upID)
-                        .and(doc.get("repositoryId").eq(SDMConstants.REPOSITORY_ID)));
+    CqnSelect q;
+    if (attachmentEntity.findElement("IsActiveEntity").isPresent()) {
+      q =
+          Select.from(attachmentEntity)
+              .columns("fileName", "ID", "IsActiveEntity", "folderId", "repositoryId")
+              .where(
+                  doc ->
+                      doc.get(upIdKey)
+                          .eq(upID)
+                          .and(doc.get("repositoryId").eq(SDMConstants.REPOSITORY_ID)));
+    } else {
+      q =
+          Select.from(attachmentEntity)
+              .columns("fileName", "ID", "folderId", "repositoryId")
+              .where(
+                  doc ->
+                      doc.get(upIdKey)
+                          .eq(upID)
+                          .and(doc.get("repositoryId").eq(SDMConstants.REPOSITORY_ID)));
+    }
     Result result = persistenceService.run(q);
     logger.debug(
         "Found {} attachment(s) for upID: {} with repositoryId: {}",
@@ -477,17 +497,28 @@ public class DBQuery {
     logger.debug("Fetching attachments for folderId: {} from entity: {}", folderId, entity);
     Optional<CdsEntity> attachmentEntity = context.getModel().findEntity(entity + "_drafts");
     List<CmisDocument> cmisDocuments = new ArrayList<>();
-    CqnSelect q =
-        Select.from(attachmentEntity.get())
-            .columns(
-                "fileName",
-                "IsActiveEntity",
-                "ID",
-                "folderId",
-                "repositoryId",
-                "objectId",
-                "uploadStatus")
-            .where(doc -> doc.get("folderId").eq(folderId));
+    boolean draftHasIsActiveEntity =
+        attachmentEntity.isPresent()
+            && attachmentEntity.get().findElement("IsActiveEntity").isPresent();
+    CqnSelect q;
+    if (draftHasIsActiveEntity) {
+      q =
+          Select.from(attachmentEntity.get())
+              .columns(
+                  "fileName",
+                  "IsActiveEntity",
+                  "ID",
+                  "folderId",
+                  "repositoryId",
+                  "objectId",
+                  "uploadStatus")
+              .where(doc -> doc.get("folderId").eq(folderId));
+    } else {
+      q =
+          Select.from(attachmentEntity.get())
+              .columns("fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus")
+              .where(doc -> doc.get("folderId").eq(folderId));
+    }
     Result result = persistenceService.run(q);
     for (Row row : result.list()) {
       CmisDocument cmisDocument = new CmisDocument();
@@ -508,17 +539,27 @@ public class DBQuery {
           folderId,
           entity);
       attachmentEntity = context.getModel().findEntity(entity);
-      q =
-          Select.from(attachmentEntity.get())
-              .columns(
-                  "fileName",
-                  "IsActiveEntity",
-                  "ID",
-                  "folderId",
-                  "repositoryId",
-                  "objectId",
-                  "uploadStatus")
-              .where(doc -> doc.get("folderId").eq(folderId));
+      boolean activeHasIsActiveEntity =
+          attachmentEntity.isPresent()
+              && attachmentEntity.get().findElement("IsActiveEntity").isPresent();
+      if (activeHasIsActiveEntity) {
+        q =
+            Select.from(attachmentEntity.get())
+                .columns(
+                    "fileName",
+                    "IsActiveEntity",
+                    "ID",
+                    "folderId",
+                    "repositoryId",
+                    "objectId",
+                    "uploadStatus")
+                .where(doc -> doc.get("folderId").eq(folderId));
+      } else {
+        q =
+            Select.from(attachmentEntity.get())
+                .columns("fileName", "ID", "folderId", "repositoryId", "objectId", "uploadStatus")
+                .where(doc -> doc.get("folderId").eq(folderId));
+      }
       result = persistenceService.run(q);
       for (Row row : result.list()) {
         CmisDocument cmisDocument = new CmisDocument();
