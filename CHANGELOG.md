@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.9.4
+
+### Fixed
+- Fix `element does not exist` error when querying attachments on non-draft entities. Queries in `getAttachmentsForUPID`, `getAttachmentsForUPIDAndRepository`, and `getAttachmentsForFolder` now conditionally include the `IsActiveEntity` column only when the field is present on the attachment entity.
+
 ## Version 1.9.3
 
 ### Fixed
