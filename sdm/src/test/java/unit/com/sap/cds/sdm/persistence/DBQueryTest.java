@@ -310,6 +310,46 @@ class DBQueryTest {
   }
 
   @Test
+  void testUpdateUploadStatusByScanStatus_AllScanStatuses() {
+    // Test all scan status mappings
+    String objectId = "object-123";
+    Result mockResult = mock(Result.class);
+    when(mockResult.rowCount()).thenReturn(1L);
+    when(mockPersistenceService.run(any(CqnUpdate.class))).thenReturn(mockResult);
+
+    // Test QUARANTINED -> UPLOAD_STATUS_VIRUS_DETECTED
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity,
+        null,
+        mockPersistenceService,
+        objectId,
+        SDMConstants.ScanStatus.QUARANTINED);
+
+    // Test PENDING -> UPLOAD_STATUS_IN_PROGRESS
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.PENDING);
+
+    // Test SCANNING -> VIRUS_SCAN_INPROGRESS
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.SCANNING);
+
+    // Test FAILED -> UPLOAD_STATUS_SCAN_FAILED
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.FAILED);
+
+    // Test CLEAN -> UPLOAD_STATUS_SUCCESS
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.CLEAN);
+
+    // Test BLANK -> UPLOAD_STATUS_SUCCESS
+    dbQuery.updateUploadStatusByScanStatus(
+        mockDraftEntity, null, mockPersistenceService, objectId, SDMConstants.ScanStatus.BLANK);
+
+    // Verify all updates were called
+    verify(mockPersistenceService, times(6)).run(any(CqnUpdate.class));
+  }
+
+  @Test
   void testGetAttachmentsForUPID_WithIsActiveEntity() {
     String upID = "testUpID";
     String upIdKey = "up__ID";
