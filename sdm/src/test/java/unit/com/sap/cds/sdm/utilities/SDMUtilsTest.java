@@ -1738,4 +1738,52 @@ public class SDMUtilsTest {
     assertEquals("value1", result.get("Property 1"));
     assertEquals("value2", result.get("Property 2"));
   }
+
+  // --- Tests for removeReadonlyFields ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void testRemoveReadonlyFields_removesSDMReadonlyContextWhenPresent() {
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "att1");
+    attachment.put("uploadStatus", "InProgress");
+    attachment.put("content", new byte[0]);
+    attachment.put(SDMConstants.SDM_READONLY_CONTEXT, Map.of("uploadStatus", "InProgress"));
+
+    CdsData data = CdsData.create(attachment);
+
+    CdsElement contentElement = mock(CdsElement.class);
+    CdsAnnotation<Object> mediaTypeAnnotation = mock(CdsAnnotation.class);
+    when(contentElement.getName()).thenReturn("content");
+    when(contentElement.findAnnotation("Core.MediaType"))
+        .thenReturn(Optional.of(mediaTypeAnnotation));
+    when(mockEntity.elements()).thenReturn(Stream.of(contentElement));
+
+    SDMUtils.removeReadonlyFields(mockEntity, List.of(data));
+
+    assertFalse(
+        data.containsKey(SDMConstants.SDM_READONLY_CONTEXT),
+        "removeReadonlyFields should remove SDM_READONLY_CONTEXT from attachment");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void testRemoveReadonlyFields_noopWhenSDMReadonlyContextAbsent() {
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "att2");
+    attachment.put("uploadStatus", "Success");
+
+    CdsData data = CdsData.create(attachment);
+
+    CdsElement contentElement = mock(CdsElement.class);
+    CdsAnnotation<Object> mediaTypeAnnotation = mock(CdsAnnotation.class);
+    when(contentElement.getName()).thenReturn("content");
+    when(contentElement.findAnnotation("Core.MediaType"))
+        .thenReturn(Optional.of(mediaTypeAnnotation));
+    when(mockEntity.elements()).thenReturn(Stream.of(contentElement));
+
+    SDMUtils.removeReadonlyFields(mockEntity, List.of(data));
+
+    assertFalse(data.containsKey(SDMConstants.SDM_READONLY_CONTEXT));
+  }
 }

@@ -314,6 +314,19 @@ public class SDMUtils {
     CdsDataProcessor.create().addValidator(mediaContentFilter, validator).process(data, target);
   }
 
+  public static void removeReadonlyFields(CdsEntity target, List<CdsData> data) {
+    CdsDataProcessor.Filter mediaContentFilter =
+        (path, element, type) -> element.findAnnotation("Core.MediaType").isPresent();
+
+    CdsDataProcessor.Validator validator =
+        (path, element, value) -> {
+          Map<String, Object> values = path.target().values();
+          values.remove(SDM_READONLY_CONTEXT);
+        };
+
+    CdsDataProcessor.create().addValidator(mediaContentFilter, validator).process(data, target);
+  }
+
   public static String getErrorMessage(String errorKey) {
     ErrorMessageKey errorMessageKey = new ErrorMessageKey();
     errorMessageKey.setKey(errorKey);
