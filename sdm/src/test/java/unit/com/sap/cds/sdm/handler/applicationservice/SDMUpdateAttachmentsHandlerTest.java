@@ -1,5 +1,6 @@
 package unit.com.sap.cds.sdm.handler.applicationservice;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -944,6 +945,119 @@ public class SDMUpdateAttachmentsHandlerTest {
   // assertTrue(duplicateFileNameList.isEmpty());
   // }
   // }
+
+  // --- Tests for removeReadonlyContextRecursively fallback ---
+
+  @Test
+  public void testCleanupReadonlyContexts_DirectAttachment_RemovesSDMReadonlyContext()
+      throws Exception {
+    CdsUpdateEventContext ctx = mock(CdsUpdateEventContext.class);
+    CdsEntity entity = mock(CdsEntity.class);
+    when(ctx.getTarget()).thenReturn(entity);
+    when(entity.getQualifiedName()).thenReturn("AdminService.Books");
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "att1");
+    attachment.put(SDMConstants.SDM_READONLY_CONTEXT, Map.of("uploadStatus", "Success"));
+
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    attachments.add(attachment);
+
+    Map<String, Object> entityData = new HashMap<>();
+    entityData.put("attachments", attachments);
+
+    Map<String, Map<String, String>> compositionDetails = new HashMap<>();
+    Map<String, String> info = new HashMap<>();
+    info.put("name", "AdminService.Books.attachments");
+    compositionDetails.put("AdminService.Books.attachments", info);
+
+    java.lang.reflect.Method method =
+        SDMUpdateAttachmentsHandler.class.getDeclaredMethod(
+            "cleanupReadonlyContextsForAttachments",
+            CdsUpdateEventContext.class,
+            Map.class,
+            Map.class);
+    method.setAccessible(true);
+    method.invoke(handler, ctx, entityData, compositionDetails);
+
+    assertFalse(
+        attachment.containsKey(SDMConstants.SDM_READONLY_CONTEXT),
+        "SDM_READONLY_CONTEXT should be removed from flat attachment");
+  }
+
+  @Test
+  public void testCleanupReadonlyContexts_DeeplyNestedAttachment_FallbackRemovesSDMReadonlyContext()
+      throws Exception {
+    CdsUpdateEventContext ctx = mock(CdsUpdateEventContext.class);
+    CdsEntity entity = mock(CdsEntity.class);
+    when(ctx.getTarget()).thenReturn(entity);
+    when(entity.getQualifiedName()).thenReturn("AdminService.Books");
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "att-nested");
+    attachment.put(SDMConstants.SDM_READONLY_CONTEXT, Map.of("uploadStatus", "Success"));
+
+    List<Map<String, Object>> attachments = new ArrayList<>();
+    attachments.add(attachment);
+
+    Map<String, Object> section = new HashMap<>();
+    section.put("ID", "sec1");
+    section.put("attachments", attachments);
+
+    Map<String, Object> chapter = new HashMap<>();
+    chapter.put("ID", "chap1");
+    chapter.put("sections", List.of(section));
+
+    Map<String, Object> entityData = new HashMap<>();
+    entityData.put("cHapters", List.of(chapter));
+
+    Map<String, Map<String, String>> compositionDetails = new HashMap<>();
+    Map<String, String> info = new HashMap<>();
+    info.put("name", "AdminService.Sections.attachments");
+    compositionDetails.put("AdminService.Sections.attachments", info);
+
+    java.lang.reflect.Method method =
+        SDMUpdateAttachmentsHandler.class.getDeclaredMethod(
+            "cleanupReadonlyContextsForAttachments",
+            CdsUpdateEventContext.class,
+            Map.class,
+            Map.class);
+    method.setAccessible(true);
+    method.invoke(handler, ctx, entityData, compositionDetails);
+
+    assertFalse(
+        attachment.containsKey(SDMConstants.SDM_READONLY_CONTEXT),
+        "SDM_READONLY_CONTEXT should be removed from deeply nested attachment by fallback");
+  }
+
+  @Test
+  public void testCleanupReadonlyContexts_EmptyCompositionDetails_FallbackStillCleansUp()
+      throws Exception {
+    CdsUpdateEventContext ctx = mock(CdsUpdateEventContext.class);
+    CdsEntity entity = mock(CdsEntity.class);
+    when(ctx.getTarget()).thenReturn(entity);
+    when(entity.getQualifiedName()).thenReturn("AdminService.Books");
+
+    Map<String, Object> attachment = new HashMap<>();
+    attachment.put("ID", "att1");
+    attachment.put(SDMConstants.SDM_READONLY_CONTEXT, Map.of("uploadStatus", "InProgress"));
+
+    Map<String, Object> entityData = new HashMap<>();
+    entityData.put("attachments", List.of(attachment));
+
+    java.lang.reflect.Method method =
+        SDMUpdateAttachmentsHandler.class.getDeclaredMethod(
+            "cleanupReadonlyContextsForAttachments",
+            CdsUpdateEventContext.class,
+            Map.class,
+            Map.class);
+    method.setAccessible(true);
+    method.invoke(handler, ctx, entityData, new HashMap<>());
+
+    assertFalse(
+        attachment.containsKey(SDMConstants.SDM_READONLY_CONTEXT),
+        "SDM_READONLY_CONTEXT should be removed even when compositionDetails is empty");
+  }
 
   private List<CdsData> prepareMockAttachmentData(String... fileNames) {
     List<CdsData> data = new ArrayList<>();
