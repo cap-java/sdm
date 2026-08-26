@@ -57,8 +57,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private static final Logger logger = LoggerFactory.getLogger(SDMCreateAttachmentsHandler.class);
 
   // compositionEntityPath → list of (attachmentId, uploadStatus) captured from draft rows
-  private static final ThreadLocal<Map<String, List<CmisDocument>>> DRAFT_UPLOAD_STATUS_THREADLOCAL =
-      new ThreadLocal<>();
+  private static final ThreadLocal<Map<String, List<CmisDocument>>>
+      DRAFT_UPLOAD_STATUS_THREADLOCAL = new ThreadLocal<>();
 
   // Safety bound for the recursive draft composition-tree walk.
   private static final int MAX_DRAFT_TREE_DEPTH = 10;
@@ -255,7 +255,9 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CdsEntity draftEntity = context.getTarget();
       String draftName = draftEntity.getQualifiedName();
       String activeName =
-          draftName.endsWith("_drafts") ? draftName.substring(0, draftName.length() - 7) : draftName;
+          draftName.endsWith("_drafts")
+              ? draftName.substring(0, draftName.length() - 7)
+              : draftName;
 
       CdsModel model = context.getModel();
       Optional<CdsEntity> activeRootOpt = model.findEntity(activeName);
@@ -274,10 +276,14 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
 
       if (!statusMap.isEmpty()) {
         DRAFT_UPLOAD_STATUS_THREADLOCAL.set(statusMap);
-        logger.debug("[DRAFT_SAVE] Captured upload statuses for {} composition(s)", statusMap.size());
+        logger.debug(
+            "[DRAFT_SAVE] Captured upload statuses for {} composition(s)", statusMap.size());
       }
     } catch (Exception e) {
-      logger.error("[DRAFT_SAVE] Failed to capture upload statuses before draft save: {}", e.getMessage(), e);
+      logger.error(
+          "[DRAFT_SAVE] Failed to capture upload statuses before draft save: {}",
+          e.getMessage(),
+          e);
     }
   }
 
@@ -309,7 +315,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
         }
       }
     } catch (Exception e) {
-      logger.error("[DRAFT_SAVE] Failed to apply upload statuses after draft save: {}", e.getMessage(), e);
+      logger.error(
+          "[DRAFT_SAVE] Failed to apply upload statuses after draft save: {}", e.getMessage(), e);
     } finally {
       DRAFT_UPLOAD_STATUS_THREADLOCAL.remove();
     }
@@ -320,7 +327,8 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       CqnSelect cqn = context.getCqn();
       if (cqn == null) return null;
       Map<String, Object> keys = CqnAnalyzer.create(context.getModel()).analyze(cqn).rootKeys();
-      return draftEntity.elements()
+      return draftEntity
+          .elements()
           .filter(el -> el.isKey() && !"IsActiveEntity".equals(el.getName()))
           .map(el -> keys.get(el.getName()))
           .filter(v -> v != null)
@@ -367,7 +375,10 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
       // Merge, not overwrite: the same attachment entity (e.g. Root.Chapters.attachments) can be
       // reached via multiple parent rows (multiple chapters), each contributing its own docs.
       statusMap.computeIfAbsent(compositionPath, k -> new ArrayList<>()).addAll(docs);
-      logger.debug("[DRAFT_SAVE] Found {} attachment(s) to sync in composition '{}'", docs.size(), compositionPath);
+      logger.debug(
+          "[DRAFT_SAVE] Found {} attachment(s) to sync in composition '{}'",
+          docs.size(),
+          compositionPath);
     }
   }
 
@@ -397,8 +408,7 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     for (CdsElement comp : activeEntity.compositions().toList()) {
       if (!comp.getType().isAssociation()) continue;
       CdsAssociationType assocType = (CdsAssociationType) comp.getType();
-      String childActiveName =
-          assocType.getTarget().getQualifiedName().replaceAll("_drafts$", "");
+      String childActiveName = assocType.getTarget().getQualifiedName().replaceAll("_drafts$", "");
       String childPath = activeEntity.getQualifiedName() + "." + comp.getName();
 
       if (attachmentCompositionPaths.contains(childPath)) {
