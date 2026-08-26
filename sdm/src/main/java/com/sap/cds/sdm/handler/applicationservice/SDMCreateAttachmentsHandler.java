@@ -3,7 +3,15 @@ package com.sap.cds.sdm.handler.applicationservice;
 import static com.sap.cds.sdm.constants.SDMConstants.SDM_READONLY_CONTEXT;
 
 import com.sap.cds.CdsData;
+import com.sap.cds.Result;
+import com.sap.cds.Row;
+import com.sap.cds.ql.Select;
+import com.sap.cds.ql.cqn.CqnAnalyzer;
+import com.sap.cds.ql.cqn.CqnSelect;
+import com.sap.cds.reflect.CdsAssociationType;
+import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
+import com.sap.cds.reflect.CdsModel;
 import com.sap.cds.sdm.caching.CacheConfig;
 import com.sap.cds.sdm.caching.SecondaryPropertiesKey;
 import com.sap.cds.sdm.constants.SDMConstants;
@@ -19,6 +27,8 @@ import com.sap.cds.sdm.utilities.SDMUtils;
 import com.sap.cds.services.ServiceException;
 import com.sap.cds.services.cds.ApplicationService;
 import com.sap.cds.services.cds.CdsCreateEventContext;
+import com.sap.cds.services.draft.DraftSaveEventContext;
+import com.sap.cds.services.draft.DraftService;
 import com.sap.cds.services.handler.EventHandler;
 import com.sap.cds.services.handler.annotations.After;
 import com.sap.cds.services.handler.annotations.Before;
@@ -45,6 +55,13 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
   private final TokenHandler tokenHandler;
   private final DBQuery dbQuery;
   private static final Logger logger = LoggerFactory.getLogger(SDMCreateAttachmentsHandler.class);
+
+  // compositionEntityPath → list of (attachmentId, uploadStatus) captured from draft rows
+  private static final ThreadLocal<Map<String, List<CmisDocument>>> DRAFT_UPLOAD_STATUS_THREADLOCAL =
+      new ThreadLocal<>();
+
+  // Safety bound for the recursive draft composition-tree walk.
+  private static final int MAX_DRAFT_TREE_DEPTH = 10;
 
   public SDMCreateAttachmentsHandler(
       PersistenceService persistenceService,
@@ -224,6 +241,239 @@ public class SDMCreateAttachmentsHandler implements EventHandler {
     SDMUtils.preserveReadonlyFields(context.getTarget(), data);
     logger.debug(
         "[CREATE] preserveUploadStatus: SDM_READONLY_CONTEXT set on attachment maps via CdsDataProcessor");
+  }
+
+  /**
+   * Captures uploadStatus from draft attachment rows into a ThreadLocal before CAP activates the
+   * draft. CAP strips @readonly fields (including uploadStatus) when writing active rows, so we
+   * must read the correct values while the draft rows still exist and re-apply them in @After.
+   */
+  @Before(event = DraftService.EVENT_DRAFT_SAVE)
+  @HandlerOrder(HandlerOrder.EARLY + 500)
+  public void captureUploadStatusBeforeDraftSave(DraftSaveEventContext context) {
+    try {
+      CdsEntity draftEntity = context.getTarget();
+      String draftName = draftEntity.getQualifiedName();
+      String activeName =
+          draftName.endsWith("_drafts") ? draftName.substring(0, draftName.length() - 7) : draftName;
+
+      CdsModel model = context.getModel();
+      Optional<CdsEntity> activeRootOpt = model.findEntity(activeName);
+      if (activeRootOpt.isEmpty()) return;
+
+      Object parentId = extractParentId(context, draftEntity);
+      if (parentId == null) {
+        logger.warn("[DRAFT_SAVE] Could not extract parent ID for entity: {}", draftName);
+        return;
+      }
+
+      // Walk the whole composition tree so attachments at any nesting depth (e.g.
+      // Root -> Chapters -> attachments) are captured, not just direct compositions of the root.
+      Map<String, List<CmisDocument>> statusMap = new HashMap<>();
+      walkCompositionsForAttachments(model, activeRootOpt.get(), parentId, statusMap, 0);
+
+      if (!statusMap.isEmpty()) {
+        DRAFT_UPLOAD_STATUS_THREADLOCAL.set(statusMap);
+        logger.debug("[DRAFT_SAVE] Captured upload statuses for {} composition(s)", statusMap.size());
+      }
+    } catch (Exception e) {
+      logger.error("[DRAFT_SAVE] Failed to capture upload statuses before draft save: {}", e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Restores uploadStatus values (captured in @Before) onto the newly written active attachment
+   * rows. Without this, CAP applies the CDS default 'uploading' to all activated attachments.
+   */
+  @After(event = DraftService.EVENT_DRAFT_SAVE)
+  @HandlerOrder(HandlerOrder.LATE)
+  public void applyUploadStatusAfterDraftSave(DraftSaveEventContext context) {
+    Map<String, List<CmisDocument>> statusMap = DRAFT_UPLOAD_STATUS_THREADLOCAL.get();
+    if (statusMap == null || statusMap.isEmpty()) return;
+    try {
+      DRAFT_UPLOAD_STATUS_THREADLOCAL.remove();
+      CdsModel model = context.getModel();
+      for (Map.Entry<String, List<CmisDocument>> entry : statusMap.entrySet()) {
+        Optional<CdsEntity> activeEntityOpt = model.findEntity(entry.getKey());
+        if (activeEntityOpt.isEmpty()) {
+          logger.warn("[DRAFT_SAVE] Active entity not found for composition: {}", entry.getKey());
+          continue;
+        }
+        CdsEntity activeEntity = activeEntityOpt.get();
+        for (CmisDocument doc : entry.getValue()) {
+          dbQuery.saveUploadStatusToAttachment(activeEntity, persistenceService, doc);
+          logger.info(
+              "[DRAFT_SAVE] Restored uploadStatus='{}' for attachment ID={}",
+              doc.getUploadStatus(),
+              doc.getAttachmentId());
+        }
+      }
+    } catch (Exception e) {
+      logger.error("[DRAFT_SAVE] Failed to apply upload statuses after draft save: {}", e.getMessage(), e);
+    } finally {
+      DRAFT_UPLOAD_STATUS_THREADLOCAL.remove();
+    }
+  }
+
+  private Object extractParentId(DraftSaveEventContext context, CdsEntity draftEntity) {
+    try {
+      CqnSelect cqn = context.getCqn();
+      if (cqn == null) return null;
+      Map<String, Object> keys = CqnAnalyzer.create(context.getModel()).analyze(cqn).rootKeys();
+      return draftEntity.elements()
+          .filter(el -> el.isKey() && !"IsActiveEntity".equals(el.getName()))
+          .map(el -> keys.get(el.getName()))
+          .filter(v -> v != null)
+          .findFirst()
+          .orElse(null);
+    } catch (Exception e) {
+      logger.warn("[DRAFT_SAVE] Could not extract parent ID from CQN: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private void collectDraftUploadStatuses(
+      CdsModel model,
+      String compositionPath,
+      Object parentId,
+      Map<String, List<CmisDocument>> statusMap) {
+    Optional<CdsEntity> draftEntityOpt = model.findEntity(compositionPath + "_drafts");
+    if (draftEntityOpt.isEmpty()) return;
+
+    CdsEntity draftEntity = draftEntityOpt.get();
+    String upIdKey = SDMUtils.getUpIdKey(draftEntity);
+    if (upIdKey == null || upIdKey.isEmpty()) return;
+
+    Result rows =
+        persistenceService.run(
+            Select.from(draftEntity)
+                .columns("ID", "uploadStatus")
+                .where(a -> a.get(upIdKey).eq(parentId).and(a.get("IsActiveEntity").eq(false))));
+
+    List<CmisDocument> docs = new ArrayList<>();
+    for (Row row : rows) {
+      String id = row.get("ID") != null ? row.get("ID").toString() : null;
+      Object statusObj = row.get("uploadStatus");
+      String uploadStatus = statusObj != null ? statusObj.toString() : null;
+      if (id != null && uploadStatus != null) {
+        CmisDocument doc = new CmisDocument();
+        doc.setAttachmentId(id);
+        doc.setUploadStatus(uploadStatus);
+        docs.add(doc);
+      }
+    }
+
+    if (!docs.isEmpty()) {
+      // Merge, not overwrite: the same attachment entity (e.g. Root.Chapters.attachments) can be
+      // reached via multiple parent rows (multiple chapters), each contributing its own docs.
+      statusMap.computeIfAbsent(compositionPath, k -> new ArrayList<>()).addAll(docs);
+      logger.debug("[DRAFT_SAVE] Found {} attachment(s) to sync in composition '{}'", docs.size(), compositionPath);
+    }
+  }
+
+  /**
+   * Recursively walks the composition tree of {@code activeEntity}. For each composition that is an
+   * attachment facet, captures the draft upload statuses keyed by the immediate parent's id. For
+   * every other (intermediate) composition, resolves the child draft rows belonging to this parent
+   * and recurses into each, so attachments at any depth are covered.
+   */
+  private void walkCompositionsForAttachments(
+      CdsModel model,
+      CdsEntity activeEntity,
+      Object parentId,
+      Map<String, List<CmisDocument>> statusMap,
+      int depth) {
+    if (depth > MAX_DRAFT_TREE_DEPTH) {
+      logger.warn(
+          "[DRAFT_SAVE] Max composition depth {} reached at entity: {}",
+          MAX_DRAFT_TREE_DEPTH,
+          activeEntity.getQualifiedName());
+      return;
+    }
+
+    Set<String> attachmentCompositionPaths =
+        AttachmentsHandlerUtils.getDirectAttachmentPathMapping(activeEntity).keySet();
+
+    for (CdsElement comp : activeEntity.compositions().toList()) {
+      if (!comp.getType().isAssociation()) continue;
+      CdsAssociationType assocType = (CdsAssociationType) comp.getType();
+      String childActiveName =
+          assocType.getTarget().getQualifiedName().replaceAll("_drafts$", "");
+      String childPath = activeEntity.getQualifiedName() + "." + comp.getName();
+
+      if (attachmentCompositionPaths.contains(childPath)) {
+        // Leaf: this composition holds attachments. up__ points at this entity instance (parentId).
+        collectDraftUploadStatuses(model, childActiveName, parentId, statusMap);
+      } else {
+        recurseIntoChildComposition(
+            model, activeEntity, childActiveName, parentId, statusMap, depth);
+      }
+    }
+  }
+
+  private void recurseIntoChildComposition(
+      CdsModel model,
+      CdsEntity parentActive,
+      String childActiveName,
+      Object parentId,
+      Map<String, List<CmisDocument>> statusMap,
+      int depth) {
+    Optional<CdsEntity> childActiveOpt = model.findEntity(childActiveName);
+    Optional<CdsEntity> childDraftOpt = model.findEntity(childActiveName + "_drafts");
+    if (childActiveOpt.isEmpty() || childDraftOpt.isEmpty()) return;
+
+    CdsEntity childDraft = childDraftOpt.get();
+    CdsEntity childActive = childActiveOpt.get();
+
+    String fkColumn = resolveParentFkColumn(childDraft, parentActive.getQualifiedName());
+    if (fkColumn == null) {
+      logger.debug(
+          "[DRAFT_SAVE] No parent FK from {} back to {}, skipping recursion",
+          childActiveName,
+          parentActive.getQualifiedName());
+      return;
+    }
+    String childKey = firstKeyName(childActive);
+
+    Result rows =
+        persistenceService.run(
+            Select.from(childDraft)
+                .columns(childKey)
+                .where(c -> c.get(fkColumn).eq(parentId).and(c.get("IsActiveEntity").eq(false))));
+
+    for (Row row : rows) {
+      Object childId = row.get(childKey);
+      if (childId != null) {
+        walkCompositionsForAttachments(model, childActive, childId, statusMap, depth + 1);
+      }
+    }
+  }
+
+  /**
+   * Resolves the foreign-key column on {@code childDraft} that references {@code parentActiveName}.
+   * Prefers an explicit association whose target is the parent; falls back to the {@code up_}
+   * convention.
+   */
+  private String resolveParentFkColumn(CdsEntity childDraft, String parentActiveName) {
+    for (CdsElement assoc : childDraft.associations().toList()) {
+      CdsAssociationType at = (CdsAssociationType) assoc.getType();
+      String target = at.getTarget().getQualifiedName().replaceAll("_drafts$", "");
+      if (target.equals(parentActiveName)) {
+        List<String> fks = at.refs().map(ref -> assoc.getName() + "_" + ref.path()).toList();
+        if (!fks.isEmpty()) return fks.get(0);
+      }
+    }
+    String up = SDMUtils.getUpIdKey(childDraft);
+    return (up != null && !up.isEmpty()) ? up : null;
+  }
+
+  private String firstKeyName(CdsEntity entity) {
+    return entity
+        .elements()
+        .filter(el -> el.isKey() && !"IsActiveEntity".equals(el.getName()))
+        .map(CdsElement::getName)
+        .findFirst()
+        .orElse("ID");
   }
 
   public void updateName(
