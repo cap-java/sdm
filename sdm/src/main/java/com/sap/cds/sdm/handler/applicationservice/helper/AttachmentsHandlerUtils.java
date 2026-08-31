@@ -194,7 +194,7 @@ public class AttachmentsHandlerUtils {
       List<String> attachmentPaths) {
     for (String attachmentPath : attachmentPaths) {
       String entityPath = buildEntityPath(entity, targetEntity, attachmentPath);
-      String actualPath = buildActualPath(entity, compositionName, attachmentPath);
+      String actualPath = buildActualPath(entity, compositionName, targetEntity, attachmentPath);
 
       // Only add the mapping if both paths are non-null and the key doesn't already exist
       // This preserves direct attachment mappings from being overwritten by nested ones
@@ -272,8 +272,9 @@ public class AttachmentsHandlerUtils {
           // Direct attachment: use parent entity path
           entityPath = parentEntity.getQualifiedName() + "." + attachmentPart;
         } else {
-          // Nested attachment: use target entity path to ensure uniqueness
-          entityPath = targetEntity.getQualifiedName() + "." + attachmentPart;
+          // Nested attachment: use attachmentPath as-is — it already encodes the owning entity
+          // (e.g. "AdminService.Sections.attachments"), ensuring uniqueness at any depth.
+          entityPath = attachmentPath;
         }
         return entityPath;
       }
@@ -284,22 +285,58 @@ public class AttachmentsHandlerUtils {
   }
 
   private static String buildActualPath(
-      CdsEntity parentEntity, String compositionPropertyName, String attachmentPath) {
+      CdsEntity parentEntity,
+      String compositionPropertyName,
+      CdsEntity targetEntity,
+      String attachmentPath) {
     try {
       String[] pathParts = attachmentPath.split("\\.");
       if (pathParts.length >= 3) {
-        // Get the attachment part (last part)
         String attachmentPart = pathParts[pathParts.length - 1];
+        String ownerEntityQN = attachmentPath.substring(0, attachmentPath.lastIndexOf('.'));
 
-        // Build the new path using parent entity qualified name + composition property name
-        return parentEntity.getQualifiedName()
-            + "."
-            + compositionPropertyName
-            + "."
-            + attachmentPart;
+        if (ownerEntityQN.equals(targetEntity.getQualifiedName())) {
+          return parentEntity.getQualifiedName()
+              + "."
+              + compositionPropertyName
+              + "."
+              + attachmentPart;
+        } else {
+          String intermediatePath = findPathToEntity(targetEntity, ownerEntityQN, new HashSet<>());
+          if (intermediatePath != null) {
+            return parentEntity.getQualifiedName()
+                + "."
+                + compositionPropertyName
+                + "."
+                + intermediatePath
+                + "."
+                + attachmentPart;
+          }
+        }
       }
     } catch (Exception e) {
       logger.warn(SDMUtils.getErrorMessage("FETCH_ATTACHMENT_COMPOSITION_ERROR"), e.getMessage());
+    }
+    return null;
+  }
+
+  private static String findPathToEntity(
+      CdsEntity fromEntity, String toEntityQN, Set<String> visited) {
+    if (visited.contains(fromEntity.getQualifiedName())) return null;
+    visited.add(fromEntity.getQualifiedName());
+    List<?> comps = fromEntity.compositions().collect(java.util.stream.Collectors.toList());
+    for (Object comp : comps) {
+      com.sap.cds.reflect.CdsElement element = (com.sap.cds.reflect.CdsElement) comp;
+      if (!element.getType().isAssociation()) continue;
+      CdsAssociationType assocType = (CdsAssociationType) element.getType();
+      CdsEntity target = assocType.getTarget();
+      if (toEntityQN.equals(target.getQualifiedName())) {
+        return element.getName();
+      }
+      String subPath = findPathToEntity(target, toEntityQN, visited);
+      if (subPath != null) {
+        return element.getName() + "." + subPath;
+      }
     }
     return null;
   }
