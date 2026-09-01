@@ -217,11 +217,18 @@ public class SDMCustomServiceHandler {
       SDMCredentials sdmCredentials,
       Boolean isSystemUser)
       throws IOException {
+    logger.debug(
+        "START: findAttachmentsWithInvalidSecondaryProperties - checking {} objectIds against {} custom properties: {}",
+        objectIds.size(),
+        customPropertiesInSDM.size(),
+        customPropertiesInSDM);
     List<String> secondaryTypes =
         sdmService.getSecondaryTypes(repositoryId, sdmCredentials, isSystemUser);
+    logger.debug("Fetched {} secondary types from SDM for validation", secondaryTypes.size());
     List<String> validSecondaryProperties =
         sdmService.getValidSecondaryProperties(
             secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+    logger.debug("Fetched {} valid secondary properties for validation", validSecondaryProperties.size());
 
     List<Map<String, String>> failures = new ArrayList<>();
     for (String objectId : objectIds) {
@@ -233,6 +240,8 @@ public class SDMCustomServiceHandler {
               sdmCredentials,
               isSystemUser);
       if (!invalidProperties.isEmpty()) {
+        logger.warn("Copy pre-validation: objectId {} has {} invalid properties: {}",
+            objectId, invalidProperties.size(), invalidProperties);
         Map<String, String> failure = new HashMap<>();
         failure.put(OBJECT_ID_KEY, objectId);
         failure.put(
@@ -241,8 +250,12 @@ public class SDMCustomServiceHandler {
                 + String.join(", ", invalidProperties)
                 + SDMUtils.getErrorMessage("INVALID_SECONDARY_PROPERTIES_FOR_COPY_SUFFIX"));
         failures.add(failure);
+      } else {
+        logger.debug("Copy pre-validation: objectId {} passed property validation", objectId);
       }
     }
+    logger.debug("END: findAttachmentsWithInvalidSecondaryProperties - {} failures out of {} checked",
+        failures.size(), objectIds.size());
     return failures;
   }
 
@@ -256,21 +269,31 @@ public class SDMCustomServiceHandler {
       List<String> validSecondaryProperties,
       SDMCredentials sdmCredentials,
       Boolean isSystemUser) {
+    logger.debug("getInvalidPropertiesForObject - objectId: {}, checking {} custom properties: {}",
+        objectId, customPropertiesInSDM.size(), customPropertiesInSDM);
     try {
       JSONObject sdmMetadata = sdmService.getObject(objectId, sdmCredentials, isSystemUser);
       if (sdmMetadata == null || !sdmMetadata.has("succinctProperties")) {
+        logger.debug("getInvalidPropertiesForObject - no succinctProperties in SDM response for objectId: {}", objectId);
         return Collections.emptyList();
       }
       JSONObject succinctProperties = sdmMetadata.getJSONObject("succinctProperties");
       Set<String> sdmResponseProperties = new HashSet<>(succinctProperties.keySet());
+      logger.debug("getInvalidPropertiesForObject - SDM response has {} properties for objectId: {}",
+          sdmResponseProperties.size(), objectId);
 
       List<String> invalidProperties = new ArrayList<>();
       for (String targetSdmProperty : customPropertiesInSDM) {
-        if (sdmResponseProperties.contains(targetSdmProperty)
-            && !validSecondaryProperties.contains(targetSdmProperty)) {
+        boolean inResponse = sdmResponseProperties.contains(targetSdmProperty);
+        boolean isValid = validSecondaryProperties.contains(targetSdmProperty);
+        logger.debug("getInvalidPropertiesForObject - property '{}': inSDMResponse={}, isValid={}",
+            targetSdmProperty, inResponse, isValid);
+        if (inResponse && !isValid) {
           invalidProperties.add(targetSdmProperty);
         }
       }
+      logger.debug("getInvalidPropertiesForObject - objectId: {} has {} invalid properties",
+          objectId, invalidProperties.size());
       return invalidProperties;
     } catch (IOException e) {
       logger.error(
@@ -1626,12 +1649,15 @@ public class SDMCustomServiceHandler {
       SDMCredentials sdmCredentials,
       Boolean isSystemUser)
       throws IOException {
+    logger.debug("START: rollbackSingleAttachment - objectId: {}, from targetFolder: {} back to sourceFolder: {}",
+        objectId, targetFolderId, sourceFolderId);
     CmisDocument rollbackDoc = new CmisDocument();
     rollbackDoc.setObjectId(objectId);
     rollbackDoc.setRepositoryId(repositoryId);
     rollbackDoc.setSourceFolderId(targetFolderId); // Move back from target
     rollbackDoc.setFolderId(sourceFolderId); // To source
     sdmService.moveAttachment(rollbackDoc, sdmCredentials, isSystemUser);
+    logger.debug("END: rollbackSingleAttachment - objectId: {} successfully moved back to source folder", objectId);
   }
 
   private void handleCopyFailure(

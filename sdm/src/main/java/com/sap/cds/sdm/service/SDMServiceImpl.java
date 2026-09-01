@@ -58,9 +58,15 @@ public class SDMServiceImpl implements SDMService {
   public JSONObject createDocument(
       CmisDocument cmisDocument, SDMCredentials sdmCredentials, String jwtToken) {
     logger.debug("START: createDocument for file: {}", cmisDocument.getFileName());
+    logger.debug(
+        "createDocument - repositoryId: {}, folderId: {}, mimeType: {}",
+        cmisDocument.getRepositoryId(),
+        cmisDocument.getFolderId(),
+        cmisDocument.getMimeType());
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, NAMED_USER_FLOW);
     Map<String, String> finalResponse = new HashMap<>();
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+    logger.debug("createDocument - POST URL: {}", sdmUrl);
 
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
@@ -79,6 +85,7 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
+    logger.debug("createDocument - sending multipart POST to SDM");
     executeHttpPost(httpClient, uploadFile, cmisDocument, finalResponse);
     logger.debug("END: createDocument - status: {}", finalResponse.get("status"));
     return new JSONObject(finalResponse);
@@ -132,9 +139,17 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
+    logger.debug(
+        "START: executeHttpPost - URL: {}, file: {}",
+        uploadFile.getURI(),
+        cmisDocument.getFileName());
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      int statusCode = response.getStatusLine().getStatusCode();
+      logger.debug("executeHttpPost - response status: {} for file: {}", statusCode, cmisDocument.getFileName());
       formResponse(cmisDocument, finalResponse, response);
+      logger.debug("END: executeHttpPost - final status in map: {}", finalResponse.get("status"));
     } catch (IOException e) {
+      logger.error("executeHttpPost - IOException for file: {}: {}", cmisDocument.getFileName(), e.getMessage(), e);
       throw new ServiceException(
           SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e.getMessage());
     }
@@ -152,12 +167,16 @@ public class SDMServiceImpl implements SDMService {
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("formResponse - responseCode: {} for file: {}", responseCode, name);
+      logger.debug("formResponse - raw response body: {}", responseString);
       if (responseCode == 201 || responseCode == 200) {
         status = "success";
         JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         objectId = succinctProperties.getString("cmis:objectId");
+        logger.debug("formResponse - document created/updated, objectId: {}", objectId);
       } else {
+        logger.debug("formResponse - non-success responseCode: {}, body: {}", responseCode, responseString);
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
@@ -165,17 +184,21 @@ public class SDMServiceImpl implements SDMService {
           objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
+            logger.warn("formResponse - virus detected in file: {}", name);
           } else {
             status = "duplicate";
+            logger.warn("formResponse - duplicate file detected: {}", name);
           }
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
+          logger.warn("formResponse - unauthorized (missing scope) for file: {}", name);
         } else {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
+          logger.error("formResponse - upload failed with code {}: {}", responseCode, error);
         }
       }
       // Construct the final response
@@ -186,7 +209,9 @@ public class SDMServiceImpl implements SDMService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
+      logger.debug("formResponse - END: status={}, objectId={}", status, objectId);
     } catch (Exception e) {
+      logger.error("formResponse - exception parsing SDM response for file {}: {}", name, e.getMessage(), e);
       throw new ServiceException(e.getMessage());
     }
   }
@@ -200,6 +225,8 @@ public class SDMServiceImpl implements SDMService {
       boolean isSystemUser)
       throws ServiceException {
     logger.debug("START: updateAttachments for objectId: {}", cmisDocument.getObjectId());
+    logger.debug(
+        "updateAttachments - secondaryProperties to process: {}", secondaryProperties.keySet());
     String repositoryId = SDMConstants.REPOSITORY_ID;
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
     logger.info("This is a :" + grantType + " flow");
@@ -207,13 +234,16 @@ public class SDMServiceImpl implements SDMService {
     String objectId = cmisDocument.getObjectId();
     List<String> secondaryTypes;
     try {
+      logger.debug("updateAttachments - fetching secondary types for repositoryId: {}", repositoryId);
       secondaryTypes =
           getSecondaryTypes(
               repositoryId,
               sdmCredentials,
               isSystemUser); // Fetching the secondary types from the SDM repository
+      logger.debug("updateAttachments - found {} secondary types: {}", secondaryTypes.size(), secondaryTypes);
     } catch (Exception e) {
       String errorMessage = e.getMessage();
+      logger.error("updateAttachments - failed to get secondary types: {}", errorMessage);
       if (errorMessage != null && errorMessage.length() >= 3) {
         return (Integer.parseInt(errorMessage.substring(0, 3)));
       } else {
@@ -222,10 +252,13 @@ public class SDMServiceImpl implements SDMService {
     }
     List<String> validSecondaryProperties;
     try {
+      logger.debug("updateAttachments - fetching valid secondary properties");
       validSecondaryProperties =
           getValidSecondaryProperties(secondaryTypes, sdmCredentials, repositoryId, isSystemUser);
+      logger.debug("updateAttachments - valid secondary properties count: {}", validSecondaryProperties.size());
     } catch (Exception e) {
       String errorMessage = e.getMessage();
+      logger.error("updateAttachments - failed to get valid secondary properties: {}", errorMessage);
       if (errorMessage != null && errorMessage.length() >= 3) {
         return (Integer.parseInt(errorMessage.substring(0, 3)));
       } else {
@@ -271,6 +304,7 @@ public class SDMServiceImpl implements SDMService {
       }
     }
     if (!keysToRemove.isEmpty()) {
+      logger.warn("updateAttachments - unsupported/invalid properties detected: {}", keysToRemove);
       String errorMessage = String.join(", ", keysToRemove);
       throw new ServiceException(
           SDMUtils.getErrorMessage("UNSUPPORTED_PROPERTIES")
@@ -282,6 +316,7 @@ public class SDMServiceImpl implements SDMService {
 
     String sdmUrl =
         sdmCredentials.getUrl() + "browser/" + repositoryId + "/root?objectId=" + objectId;
+    logger.debug("updateAttachments - PATCH URL: {}", sdmUrl);
     HttpPost updateRequest = new HttpPost(sdmUrl);
 
     // Prepare the request body parts
@@ -291,6 +326,11 @@ public class SDMServiceImpl implements SDMService {
     boolean isDescriptionUpdated = secondaryProperties.containsKey("description");
     boolean isSecondaryPropertiesUpdated =
         secondaryProperties.size() > ((isFilenameUpdated ? 1 : 0) + (isDescriptionUpdated ? 1 : 0));
+    logger.debug(
+        "updateAttachments - isFilenameUpdated: {}, isDescriptionUpdated: {}, isSecondaryPropertiesUpdated: {}",
+        isFilenameUpdated,
+        isDescriptionUpdated,
+        isSecondaryPropertiesUpdated);
     if (isSecondaryPropertiesUpdated) {
       updateRequestBody.put(
           "propertyId[0]",
@@ -308,26 +348,31 @@ public class SDMServiceImpl implements SDMService {
 
     // Only proceed with the update if there are properties to update
     if (updateRequestBody.isEmpty()) {
-      logger.debug("END: updateAttachments - no updates needed");
+      logger.debug("END: updateAttachments - no updates needed, returning 200");
       return 200; // No updates needed, return success
     }
 
+    logger.debug("updateAttachments - request body keys: {}", updateRequestBody.keySet());
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
 
     // Set the multipart entity to the request
     updateRequest.setEntity(builder.build());
+    logger.debug("updateAttachments - sending multipart POST to SDM for objectId: {}", objectId);
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
-      if (response.getStatusLine().getStatusCode() == 400) {
+      int statusCode = response.getStatusLine().getStatusCode();
+      logger.debug("updateAttachments - SDM response code: {}", statusCode);
+      if (statusCode == 400) {
         String responseString = EntityUtils.toString(response.getEntity());
+        logger.warn("updateAttachments - 400 Bad Request response body: {}", responseString);
         JSONObject jsonResponse = new JSONObject(responseString);
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
-      logger.debug("END: updateAttachments - status: {}", response.getStatusLine().getStatusCode());
-      return response.getStatusLine().getStatusCode();
+      logger.debug("END: updateAttachments - status: {}", statusCode);
+      return statusCode;
     } catch (IOException e) {
       logger.error("Error updating attachments: {}", e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("COULD_NOT_UPDATE_THE_ATTACHMENT"), e);
@@ -536,9 +581,11 @@ public class SDMServiceImpl implements SDMService {
             + "/root/"
             + parentId
             + "?cmisselector=object";
+    logger.debug("getFolderIdByPath - GET URL: {}", sdmUrl);
     HttpGet getFolderRequest = new HttpGet(sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("getFolderIdByPath - response code: {}", responseCode);
       if (responseCode == 200) {
         JSONObject jsonObject = new JSONObject(EntityUtils.toString(response.getEntity()));
         folderId =
@@ -546,12 +593,17 @@ public class SDMServiceImpl implements SDMService {
                 .getJSONObject("properties")
                 .getJSONObject("cmis:objectId")
                 .getString("value");
+        logger.debug("getFolderIdByPath - found folderId: {}", folderId);
       } else if (responseCode == 403) {
+        logger.warn("getFolderIdByPath - unauthorized (403) for parentId: {}", parentId);
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
+      } else {
+        logger.debug("getFolderIdByPath - folder not found (code: {}), folderId will be null", responseCode);
       }
       logger.debug("END: getFolderIdByPath - folderId: {}", folderId);
       return folderId;
     } catch (IOException e) {
+      logger.error("getFolderIdByPath - IOException for parentId {}: {}", parentId, e.getMessage(), e);
       throw new ServiceException(SDMErrorMessages.getCouldNotUploadDocument());
     }
   }
@@ -564,6 +616,7 @@ public class SDMServiceImpl implements SDMService {
     logger.info("This is a :" + grantType + " flow");
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + repositoryId + "/root";
+    logger.debug("createFolder - POST URL: {}", sdmUrl);
     HttpPost createFolderRequest = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     // Add additional form fields
@@ -575,19 +628,24 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
     HttpEntity multipart = builder.build();
     createFolderRequest.setEntity(multipart);
+    logger.debug("createFolder - sending request to create folder: {}", parentId);
     try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseBody = EntityUtils.toString(response.getEntity());
+      logger.debug("createFolder - response code: {}", responseCode);
       if (responseCode == 201) {
         logger.debug("END: createFolder - folder created successfully");
         return responseBody;
       } else if (responseCode == 403) {
+        logger.warn("createFolder - unauthorized (403) for folder: {}", parentId);
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else {
+        logger.error("createFolder - failed with code {}: {}", responseCode, responseBody);
         throw new ServiceException(
             SDMUtils.getErrorMessage("FAILED_TO_CREATE_FOLDER") + ". " + responseBody);
       }
     } catch (IOException e) {
+      logger.error("createFolder - IOException for folder {}: {}", parentId, e.getMessage(), e);
       throw new ServiceException(
           SDMUtils.getErrorMessage("FAILED_TO_CREATE_FOLDER") + " " + e.getMessage());
     }
@@ -825,11 +883,17 @@ public class SDMServiceImpl implements SDMService {
       Set<String> customPropertiesInSDM)
       throws IOException {
     logger.debug("START: copyAttachment for objectId: {}", cmisDocument.getObjectId());
+    logger.debug(
+        "copyAttachment - sourceObjectId: {}, targetFolderId: {}, repositoryId: {}",
+        cmisDocument.getObjectId(),
+        cmisDocument.getFolderId(),
+        cmisDocument.getRepositoryId());
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
 
     logger.info("This is a :{} flow", grantType);
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
     String sdmUrl = sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
+    logger.debug("copyAttachment - POST URL: {}", sdmUrl);
     HttpPost uploadFile = new HttpPost(sdmUrl);
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 
@@ -840,24 +904,29 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true");
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
+    logger.debug("copyAttachment - sending createDocumentFromSource request");
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
 
       // Handle response entity
       HttpEntity entity = response.getEntity();
       String responseBody =
           entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
+      int statusCode = response.getStatusLine().getStatusCode();
+      logger.debug("copyAttachment - response code: {}", statusCode);
 
-      if (response.getStatusLine().getStatusCode() == 201) {
+      if (statusCode == 201) {
         logger.debug("END: copyAttachment - copy successful");
         return processCopyAttachmentResponse(responseBody, customPropertiesInSDM);
       }
 
       // On error, throw exception with error information
+      logger.error("copyAttachment - failed with code {}: {}", statusCode, responseBody);
       JSONObject errorJson = new JSONObject(responseBody);
       String exceptionType = errorJson.optString("exception");
       String errorMessage = errorJson.optString("message");
       throw new ServiceException(exceptionType + " : " + errorMessage);
     } catch (IOException e) {
+      logger.error("copyAttachment - IOException for objectId {}: {}", cmisDocument.getObjectId(), e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("FAILED_TO_COPY_ATTACHMENT"), e);
     }
   }

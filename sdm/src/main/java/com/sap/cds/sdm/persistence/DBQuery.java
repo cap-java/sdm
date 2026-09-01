@@ -558,6 +558,11 @@ public class DBQuery {
       PersistenceService persistenceService,
       String id,
       Map<String, String> properties) {
+    logger.debug(
+        "Fetching properties {} for attachment ID: {} from entity: {}",
+        properties.keySet(),
+        id,
+        attachmentEntity.getQualifiedName());
     CqnSelect q =
         Select.from(attachmentEntity)
             .columns(properties.keySet().toArray(new String[0]))
@@ -571,6 +576,11 @@ public class DBQuery {
       Object value = result.rowCount() > 0 ? result.list().get(0).get(property) : null;
       propertyValueMap.put(mapKey, value != null ? value.toString() : null);
     }
+    logger.debug(
+        "getPropertiesForID - resolved {} properties for attachment ID: {}: {}",
+        propertyValueMap.size(),
+        id,
+        propertyValueMap);
     return propertyValueMap;
   }
 
