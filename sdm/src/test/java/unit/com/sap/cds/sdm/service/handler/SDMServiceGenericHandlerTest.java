@@ -430,7 +430,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
     when(mockContext.getEvent()).thenReturn("createLink");
     CqnSelect cqnSelect = mock(CqnSelect.class);
@@ -539,7 +539,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -611,7 +611,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -679,7 +679,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -751,7 +751,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -827,7 +827,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -910,7 +910,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -994,7 +994,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
@@ -1076,7 +1076,7 @@ public class SDMServiceGenericHandlerTest {
     CdsElement mockKeyElement = mock(CdsElement.class);
     when(mockKeyElement.isKey()).thenReturn(true);
     when(mockKeyElement.getName()).thenReturn("ID");
-    when(mockParentEntity.elements()).thenReturn(Stream.of(mockKeyElement));
+    when(mockParentEntity.elements()).thenAnswer(inv -> Stream.of(mockKeyElement));
     when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     when(mockContext.getEvent()).thenReturn("createLink");
