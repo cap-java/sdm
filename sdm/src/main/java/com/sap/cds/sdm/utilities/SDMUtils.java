@@ -588,6 +588,33 @@ public class SDMUtils {
       JsonNode root = mapper.readTree(select.toString());
       JsonNode refArray = root.path("SELECT").path("from").path("ref");
 
+      if (refArray.isMissingNode() || refArray.size() == 0) {
+        logger.debug("END: fetchUPIDFromCQN - upID: null");
+        return null;
+      }
+
+      // Check last ref element for explicit upIdKey (handles deep navigation where
+      // the attachment key is on the terminal segment, e.g. cus_attachments(up__id=x,ID=y))
+      String upIdKey = getUpIdKey(parentEntity);
+      if (!upIdKey.isEmpty()) {
+        JsonNode lastWhere = refArray.get(refArray.size() - 1).path("where");
+        if (!lastWhere.isMissingNode() && lastWhere.size() > 0) {
+          for (int i = 0; i < lastWhere.size(); i++) {
+            JsonNode node = lastWhere.get(i);
+            if (node.has("ref") && node.get("ref").isArray()) {
+              String fieldName = node.get("ref").get(0).asText();
+              if (fieldName.equals(upIdKey)) {
+                upID = lastWhere.get(i + 2).path("val").asText(null);
+                logger.debug("END: fetchUPIDFromCQN - upID: {} (last ref element)", upID);
+                return upID;
+              }
+            }
+          }
+        }
+      }
+
+      // Fallback: check secondLast element for any non-IsActiveEntity key
+      // (handles simple navigation like /items(ID=x)/cus_attachments)
       JsonNode secondLast = refArray.get(refArray.size() - 2);
       JsonNode whereArray;
       if (secondLast != null) {
@@ -597,9 +624,9 @@ public class SDMUtils {
       }
 
       // If where condition is not present or empty, return null (valid scenario for
-      // select without
-      // filter)
+      // select without filter)
       if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
+        logger.debug("END: fetchUPIDFromCQN - upID: null");
         return null;
       }
 
@@ -614,7 +641,7 @@ public class SDMUtils {
 
           if (keyElementNames.contains(fieldName) && !fieldName.equals("IsActiveEntity")) {
             JsonNode valNode = whereArray.get(i + 2);
-            upID = valNode.path("val").asText();
+            upID = valNode.path("val").asText(null);
             break;
           }
         }
