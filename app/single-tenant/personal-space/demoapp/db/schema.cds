@@ -16,8 +16,6 @@ stock : Integer;
 price : Decimal;
 currency : Currency;
 image : LargeBinary @Core.MediaType: 'image/png';
-virtual isAttachmentsUploadable : Boolean;
-virtual isReferencesUploadable  : Boolean;
 
 // top-level chapters composition (root of the nested hierarchy)
 cHapters : Composition of many Chapters on cHapters.book = $self;
@@ -59,11 +57,46 @@ on children.parent = $self;
 // }
 
 entity Chapters : cuid, managed {
-  book       : Association to Books;
-  title          : String @title: 'Chapter Title';
-  description    : String;
-  url            : String;
-  chapterType  : String @title: 'Chapter Type';
+  book        : Association to Books;
+  title       : String @title: 'Chapter Title';
+  description : String;
+  url         : String;
+  chapterType : String @title: 'Chapter Type';
+  sections    : Composition of many Sections on sections.chapter = $self;
+}
+
+entity Sections : cuid, managed {
+  chapter     : Association to Chapters;
+  title       : String @title: 'Section Title';
+  content     : String;
+  subSections : Composition of many SubSections on subSections.section = $self;
+}
+
+entity SubSections : cuid, managed {
+  section    : Association to Sections;
+  title      : String @title: 'SubSection Title';
+  content    : String;
+  paragraphs : Composition of many Paragraphs on paragraphs.subSection = $self;
+}
+
+entity Paragraphs : cuid, managed {
+  subSection : Association to SubSections;
+  title      : String @title: 'Paragraph Title';
+  content    : String;
+  lines      : Composition of many Lines on lines.paragraph = $self;
+}
+
+entity Lines : cuid, managed {
+  paragraph  : Association to Paragraphs;
+  title      : String @title: 'Line Title';
+  content    : String;
+  subLines   : Composition of many SubLines on subLines.line = $self;
+}
+
+entity SubLines : cuid, managed {
+  line    : Association to Lines;
+  title   : String @title: 'SubLine Title';
+  content : String;
 }
 
 /** Adding {Notebooks,Writers} for user service */
@@ -75,7 +108,6 @@ entity Notebooks : managed, cuid {
   price             : Decimal;
   currency          : Currency;
   image             : LargeBinary @Core.MediaType: 'image/png';
-  virtual isAttachmentsUploadable : Boolean;
 }
 
 entity Pages : cuid, managed {

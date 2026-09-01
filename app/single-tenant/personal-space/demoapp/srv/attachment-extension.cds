@@ -1,4 +1,4 @@
-using {sap.capire.bookshop.Books, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages, sap.capire.bookshop.Notebooks} from '../db/schema';
+using {sap.capire.bookshop.Books, sap.capire.bookshop.Chapters, sap.capire.bookshop.Pages, sap.capire.bookshop.Notebooks, sap.capire.bookshop.Sections, sap.capire.bookshop.SubSections, sap.capire.bookshop.Paragraphs, sap.capire.bookshop.Lines, sap.capire.bookshop.SubLines} from '../db/schema';
 using {sap.attachments.Attachments, sap.attachments.StatusCode} from 'com.sap.cds/sdm';
 using {sap,managed,sap.common.CodeList} from '@sap/cds/common';
 
@@ -19,10 +19,30 @@ extend entity Chapters with {
   footnotes: Composition of many Attachments;
 }
 
-extend entity Pages with { 
+extend entity Pages with {
   attachments: Composition of many Attachments;
   references: Composition of many Attachments;
   footnotes: Composition of many Attachments;
+}
+
+extend entity Sections with {
+  attachments: Composition of many Attachments;
+}
+
+extend entity SubSections with {
+  attachments: Composition of many Attachments;
+}
+
+extend entity Paragraphs with {
+  attachments: Composition of many Attachments;
+}
+
+extend entity Lines with {
+  attachments: Composition of many Attachments;
+}
+
+extend entity SubLines with {
+  attachments: Composition of many Attachments;
 }
 
 
@@ -117,6 +137,61 @@ annotate Chapters.footnotes with {
 }
 
 annotate Pages.footnotes with {
+  status @(
+    Common.Text: {
+      $value: ![statusText.text],
+      ![@UI.TextArrangement]: #TextOnly
+    },
+    ValueList: { entity: 'Statuses' },
+    sap.value.list: 'fixed-values'
+  );
+}
+
+annotate Sections.attachments with {
+  status @(
+    Common.Text: {
+      $value: ![statusText.text],
+      ![@UI.TextArrangement]: #TextOnly
+    },
+    ValueList: { entity: 'Statuses' },
+    sap.value.list: 'fixed-values'
+  );
+}
+
+annotate SubSections.attachments with {
+  status @(
+    Common.Text: {
+      $value: ![statusText.text],
+      ![@UI.TextArrangement]: #TextOnly
+    },
+    ValueList: { entity: 'Statuses' },
+    sap.value.list: 'fixed-values'
+  );
+}
+
+annotate Paragraphs.attachments with {
+  status @(
+    Common.Text: {
+      $value: ![statusText.text],
+      ![@UI.TextArrangement]: #TextOnly
+    },
+    ValueList: { entity: 'Statuses' },
+    sap.value.list: 'fixed-values'
+  );
+}
+
+annotate Lines.attachments with {
+  status @(
+    Common.Text: {
+      $value: ![statusText.text],
+      ![@UI.TextArrangement]: #TextOnly
+    },
+    ValueList: { entity: 'Statuses' },
+    sap.value.list: 'fixed-values'
+  );
+}
+
+annotate SubLines.attachments with {
   status @(
     Common.Text: {
       $value: ![statusText.text],

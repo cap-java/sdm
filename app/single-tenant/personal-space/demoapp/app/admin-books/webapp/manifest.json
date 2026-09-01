@@ -93,6 +93,31 @@
           "pattern": "Books({key})/pages({key2}):?query:",
           "name": "pagesObjectPage",
           "target": "PagesObjectPage"
+        },
+        {
+          "pattern": "Books({key})/cHapters({key2})/sections({key3}):?query:",
+          "name": "sectionsObjectPage",
+          "target": "SectionsObjectPage"
+        },
+        {
+          "pattern": "Books({key})/cHapters({key2})/sections({key3})/subSections({key4}):?query:",
+          "name": "subSectionsObjectPage",
+          "target": "SubSectionsObjectPage"
+        },
+        {
+          "pattern": "Books({key})/cHapters({key2})/sections({key3})/subSections({key4})/paragraphs({key5}):?query:",
+          "name": "paragraphsObjectPage",
+          "target": "ParagraphsObjectPage"
+        },
+        {
+          "pattern": "Books({key})/cHapters({key2})/sections({key3})/subSections({key4})/paragraphs({key5})/lines({key6}):?query:",
+          "name": "linesObjectPage",
+          "target": "LinesObjectPage"
+        },
+        {
+          "pattern": "Books({key})/cHapters({key2})/sections({key3})/subSections({key4})/paragraphs({key5})/lines({key6})/subLines({key7}):?query:",
+          "name": "subLinesObjectPage",
+          "target": "SubLinesObjectPage"
         }
       ],
       "targets": {
@@ -233,6 +258,13 @@
               "settings": {
                   "editableHeaderContent": false,
                   "entitySet": "Chapters",
+                  "navigation": {
+                    "sections": {
+                      "detail": {
+                        "route": "sectionsObjectPage"
+                      }
+                    }
+                  },
                   "controlConfiguration": {
                     "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
                       "tableSettings": {
@@ -434,7 +466,234 @@
               "settings": {
                   "editableHeaderContent": false,
                   "entitySet": "Sections",
-                  "navigation": {}
+                  "navigation": {
+                    "subSections": {
+                      "detail": {
+                        "route": "subSectionsObjectPage"
+                      }
+                    }
+                  },
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Multi",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        }
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "SubSectionsObjectPage": {
+          "type": "Component",
+          "id": "SubSectionsObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "SubSections",
+                  "navigation": {
+                    "paragraphs": {
+                      "detail": {
+                        "route": "paragraphsObjectPage"
+                      }
+                    }
+                  },
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Multi",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        }
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "ParagraphsObjectPage": {
+          "type": "Component",
+          "id": "ParagraphsObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Paragraphs",
+                  "navigation": {
+                    "lines": {
+                      "detail": {
+                        "route": "linesObjectPage"
+                      }
+                    }
+                  },
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Multi",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        }
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "LinesObjectPage": {
+          "type": "Component",
+          "id": "LinesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "Lines",
+                  "navigation": {
+                    "subLines": {
+                      "detail": {
+                        "route": "subLinesObjectPage"
+                      }
+                    }
+                  },
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Multi",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        }
+                      }
+                    }
+                  }
+              }
+          }
+        },
+        "SubLinesObjectPage": {
+          "type": "Component",
+          "id": "SubLinesObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+              "settings": {
+                  "editableHeaderContent": false,
+                  "entitySet": "SubLines",
+                  "navigation": {},
+                  "controlConfiguration": {
+                    "attachments/@com.sap.vocabularies.UI.v1.LineItem": {
+                      "tableSettings": {
+                        "type": "ResponsiveTable",
+                        "selectionMode": "Multi",
+                        "rowPress": ".extension.books.controller.custom.onRowPress"
+                      },
+                      "actions": {
+                        "changelog": {
+                          "enableOnSelect": "single",
+                          "text": "Change Log",
+                          "requiresSelection": true,
+                          "press": ".extension.books.controller.custom.onChangelogPress",
+                          "command": "COMMON", "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        },
+                        "download": {
+                          "text": "Download",
+                          "requiresSelection": true,
+                          "enabled": ".extension.books.controller.custom.isDownloadEnabled",
+                          "press": ".extension.books.controller.custom.onDownloadPress",
+                          "position": {
+                          "anchor": "StandardAction::Create",
+                          "placement": "After"
+                          }
+                        }
+                      }
+                    }
+                  }
               }
           }
         },
@@ -460,6 +719,21 @@
               "controllerName": "books.controller.custom"
           },
           "sap.fe.templates.ObjectPage.ObjectPageController#books::PagesObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::SectionsObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::SubSectionsObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::ParagraphsObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::LinesObjectPage": {
+              "controllerName": "books.controller.custom"
+          },
+          "sap.fe.templates.ObjectPage.ObjectPageController#books::SubLinesObjectPage": {
               "controllerName": "books.controller.custom"
           }
         }

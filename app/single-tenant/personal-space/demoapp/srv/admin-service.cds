@@ -5,6 +5,7 @@ service AdminService @(requires: ['admin','system-user']) {
   entity Authors as projection on my.Authors;
   entity Chapters as projection on my.Chapters;
   entity Pages as projection on my.Pages;
+  entity Sections as projection on my.Sections;
 
   // Define a return type for the action result
   type MoveAttachmentsResult {
@@ -42,9 +43,6 @@ service AdminService @(requires: ['admin','system-user']) {
     action changelog() returns String;
     action downloadSelectedAttachments(ids: String) returns String;
   };
-  annotate AdminService.Books.attachments with @(
-    Capabilities: {InsertRestrictions: {Insertable: up_.isAttachmentsUploadable}}
-  );
 
   entity Books.references as projection on my.Books.references
     actions {
@@ -77,9 +75,6 @@ service AdminService @(requires: ['admin','system-user']) {
     action changelog() returns String;
     action downloadSelectedAttachments(ids: String) returns String;
   };
-  annotate AdminService.Books.references with @(
-    Capabilities: {InsertRestrictions: {Insertable: up_.isReferencesUploadable}}
-  );
 
   entity Books.footnotes as projection on my.Books.footnotes
     actions {
@@ -273,18 +268,115 @@ service AdminService @(requires: ['admin','system-user']) {
     action downloadSelectedAttachments(ids: String) returns String;
   };
 
-  // Side effects on parent entities: structural changes (add/delete) on attachment
-  // navigation collections trigger a re-read of the uploadable flag on the parent.
-  annotate AdminService.Books with @(
-    Common.SideEffects #sdmAttachmentsUploadable: {
-      SourceEntities: ['attachments'],
-      TargetProperties: ['isAttachmentsUploadable']
-    },
-    Common.SideEffects #sdmReferencesUploadable: {
-      SourceEntities: ['references'],
-      TargetProperties: ['isReferencesUploadable']
-    }
-  );
+  entity SubSections as projection on my.SubSections;
+  entity Paragraphs as projection on my.Paragraphs;
+  entity Lines as projection on my.Lines;
+  entity SubLines as projection on my.SubLines;
+
+  // Sections attachments: Books -> cHapters -> sections -> attachments (4-level deep path)
+  entity Sections.attachments as projection on my.Sections.attachments
+    actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createAttachmentInActive(in:many $self);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
+    action createLink(
+      in:many $self,
+      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action editLink(
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action openAttachment() returns String;
+    action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
+  };
+
+  // SubSections attachments: Books -> cHapters -> sections -> subSections -> attachments (5-level)
+  entity SubSections.attachments as projection on my.SubSections.attachments
+    actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createAttachmentInActive(in:many $self);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
+    action createLink(
+      in:many $self,
+      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action editLink(
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action openAttachment() returns String;
+    action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
+  };
+
+  // Paragraphs attachments: Books -> cHapters -> sections -> subSections -> paragraphs -> attachments (6-level)
+  entity Paragraphs.attachments as projection on my.Paragraphs.attachments
+    actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createAttachmentInActive(in:many $self);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
+    action createLink(
+      in:many $self,
+      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action editLink(
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action openAttachment() returns String;
+    action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
+  };
+
+  // Lines attachments: Books -> cHapters -> sections -> subSections -> paragraphs -> lines -> attachments (7-level)
+  entity Lines.attachments as projection on my.Lines.attachments
+    actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createAttachmentInActive(in:many $self);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
+    action createLink(
+      in:many $self,
+      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action editLink(
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action openAttachment() returns String;
+    action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
+  };
+
+  // SubLines attachments: Books -> cHapters -> sections -> subSections -> paragraphs -> lines -> subLines -> attachments (8-level)
+  entity SubLines.attachments as projection on my.SubLines.attachments
+    actions {
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action createAttachmentInActive(in:many $self);
+    @(Common.SideEffects : {TargetEntities: ['']},)
+    action copyAttachments(in:many $self, up__ID:String, objectIds:String);
+    @(Common.SideEffects : {TargetEntities: ['up_']},)
+    action createLink(
+      in:many $self,
+      @mandatory @Common.Label:'Name' name: String @UI.Placeholder: 'Enter a name for the link',
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action editLink(
+      @mandatory @assert.format:'^(https?:\/\/)(([a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}|localhost)(:\d{2,5})?(\/[^\s]*)?$' @Common.Label:'URL' url: String @UI.Placeholder: 'Example: https://www.example.com'
+    );
+    action openAttachment() returns String;
+    action changelog() returns String;
+    action downloadSelectedAttachments(ids: String) returns String;
+  };
 
   // Pages footnotes projection
   entity Pages.footnotes as projection on my.Pages.footnotes

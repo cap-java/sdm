@@ -190,8 +190,433 @@ annotate AdminService.Chapters with @(
       ID : 'FootnotesFacet',
       Label : '{i18n>Footnotes}',
       Target : 'footnotes/@UI.LineItem'
+    },
+    {
+      $Type : 'UI.ReferenceFacet',
+      ID : 'SectionsFacet',
+      Label : 'Sections',
+      Target : 'sections/@UI.LineItem#Sections',
     }
   ]
+);
+
+//////////
+
+// Sections annotations
+annotate AdminService.Sections with @title : 'Section';
+
+annotate AdminService.Sections with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Section Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ],
+    UI.LineItem #Sections : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Section Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ]
+);
+
+annotate AdminService.Sections with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : 'Section',
+        TypeNamePlural : 'Sections',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : content,
+        },
+    }
+);
+
+annotate AdminService.Sections with @(
+    UI.FieldGroup #SectionGeneral : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : 'Section Title',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : content,
+                Label : 'Content',
+            },
+        ],
+    },
+    UI.Facets : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SectionGeneralFacet',
+            Label : 'General Information',
+            Target : '@UI.FieldGroup#SectionGeneral',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SectionAttachmentsFacet',
+            Label : 'Attachments',
+            Target : 'attachments/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubSectionsFacet',
+            Label : 'SubSections',
+            Target : 'subSections/@UI.LineItem#SubSections',
+        }
+    ]
+);
+
+//////////
+
+// SubSections annotations
+annotate AdminService.SubSections with @title : 'SubSection';
+
+annotate AdminService.SubSections with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'SubSection Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ],
+    UI.LineItem #SubSections : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'SubSection Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ]
+);
+
+annotate AdminService.SubSections with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : 'SubSection',
+        TypeNamePlural : 'SubSections',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : content,
+        },
+    }
+);
+
+annotate AdminService.SubSections with @(
+    UI.FieldGroup #SubSectionGeneral : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : 'SubSection Title',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : content,
+                Label : 'Content',
+            },
+        ],
+    },
+    UI.Facets : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubSectionGeneralFacet',
+            Label : 'General Information',
+            Target : '@UI.FieldGroup#SubSectionGeneral',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubSectionAttachmentsFacet',
+            Label : 'Attachments',
+            Target : 'attachments/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'ParagraphsFacet',
+            Label : 'Paragraphs',
+            Target : 'paragraphs/@UI.LineItem#Paragraphs',
+        }
+    ]
+);
+
+//////////
+
+// Paragraphs annotations
+annotate AdminService.Paragraphs with @title : 'Paragraph';
+
+annotate AdminService.Paragraphs with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Paragraph Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ],
+    UI.LineItem #Paragraphs : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Paragraph Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ]
+);
+
+annotate AdminService.Paragraphs with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : 'Paragraph',
+        TypeNamePlural : 'Paragraphs',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : content,
+        },
+    }
+);
+
+annotate AdminService.Paragraphs with @(
+    UI.FieldGroup #ParagraphGeneral : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : 'Paragraph Title',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : content,
+                Label : 'Content',
+            },
+        ],
+    },
+    UI.Facets : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'ParagraphGeneralFacet',
+            Label : 'General Information',
+            Target : '@UI.FieldGroup#ParagraphGeneral',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'ParagraphAttachmentsFacet',
+            Label : 'Attachments',
+            Target : 'attachments/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'LinesFacet',
+            Label : 'Lines',
+            Target : 'lines/@UI.LineItem#Lines',
+        }
+    ]
+);
+
+//////////
+
+// Lines annotations
+annotate AdminService.Lines with @title : 'Line';
+
+annotate AdminService.Lines with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Line Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ],
+    UI.LineItem #Lines : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'Line Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ]
+);
+
+annotate AdminService.Lines with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : 'Line',
+        TypeNamePlural : 'Lines',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : content,
+        },
+    }
+);
+
+annotate AdminService.Lines with @(
+    UI.FieldGroup #LineGeneral : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : 'Line Title',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : content,
+                Label : 'Content',
+            },
+        ],
+    },
+    UI.Facets : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'LineGeneralFacet',
+            Label : 'General Information',
+            Target : '@UI.FieldGroup#LineGeneral',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'LineAttachmentsFacet',
+            Label : 'Attachments',
+            Target : 'attachments/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubLinesFacet',
+            Label : 'SubLines',
+            Target : 'subLines/@UI.LineItem#SubLines',
+        }
+    ]
+);
+
+//////////
+
+// SubLines annotations
+annotate AdminService.SubLines with @title : 'SubLine';
+
+annotate AdminService.SubLines with @(
+    UI.LineItem : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'SubLine Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ],
+    UI.LineItem #SubLines : [
+        {
+            $Type : 'UI.DataField',
+            Value : title,
+            Label : 'SubLine Title',
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : content,
+            Label : 'Content',
+        },
+    ]
+);
+
+annotate AdminService.SubLines with @(
+    UI.HeaderInfo : {
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        TypeName : 'SubLine',
+        TypeNamePlural : 'SubLines',
+        Description : {
+            $Type : 'UI.DataField',
+            Value : content,
+        },
+    }
+);
+
+annotate AdminService.SubLines with @(
+    UI.FieldGroup #SubLineGeneral : {
+        $Type : 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type : 'UI.DataField',
+                Value : title,
+                Label : 'SubLine Title',
+            },
+            {
+                $Type : 'UI.DataField',
+                Value : content,
+                Label : 'Content',
+            },
+        ],
+    },
+    UI.Facets : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubLineGeneralFacet',
+            Label : 'General Information',
+            Target : '@UI.FieldGroup#SubLineGeneral',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'SubLineAttachmentsFacet',
+            Label : 'Attachments',
+            Target : 'attachments/@UI.LineItem',
+        }
+    ]
 );
 
 //////////
