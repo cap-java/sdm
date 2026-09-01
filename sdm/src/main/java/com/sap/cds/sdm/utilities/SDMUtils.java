@@ -582,6 +582,7 @@ public class SDMUtils {
    */
   public static String fetchUPIDFromCQN(CqnSelect select, CdsEntity parentEntity) {
     logger.debug("START: fetchUPIDFromCQN");
+    logger.debug("CQN JSON: {}", select.toString());
     try {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
