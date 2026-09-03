@@ -31,12 +31,52 @@ jobs:
           distribution: 'temurin'
           cache: maven
           
-      - name: Install dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Maven dependencies
         run: |
           mvn clean install -P unit-tests -DskipIntegrationTests
           mvn clean install -f app/single-tenant/central-space/demoapp/pom.xml -DskipTests
           mvn clean install -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -DskipTests
-        
+
+      - name: Setup npm registries and install SAP packages
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          SAP_CDS_MTXS_TARBALL: ${{ secrets.SAP_CDS_MTXS_TARBALL }}
+          SAP_CDS_DK_TARBALL: ${{ secrets.SAP_CDS_DK_TARBALL }}
+        run: |
+          set +x
+          echo "::add-mask::$NPM_AUTH_TOKEN"
+          echo "::add-mask::$SAP_CDS_MTXS_TARBALL"
+          echo "::add-mask::$SAP_CDS_DK_TARBALL"
+
+          MTXS="$SAP_CDS_MTXS_TARBALL"
+          DK="$SAP_CDS_DK_TARBALL"
+          TARBALL_HOST=$(printf '%s' "$MTXS" | sed -E 's#^https?://([^/]+)/.*#\1#')
+
+          for dir in \
+            "app/multi-tenant/central-space/cloud-cap-samples-java" \
+            "app/multi-tenant/central-space/cloud-cap-samples-java/mtx/sidecar" \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java" \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java/mtx/sidecar"; do
+
+            printf '@sap:registry=https://registry.npmjs.org/\n//%s/:_authToken=%s\nlegacy-peer-deps=true\n' \
+              "$TARBALL_HOST" "$NPM_AUTH_TOKEN" > "$dir/.npmrc"
+
+            tmp=$(mktemp)
+            jq --arg mtxs "$MTXS" --arg dk "$DK" '
+              (if .dependencies["@sap/cds-mtxs"] then .dependencies["@sap/cds-mtxs"] = $mtxs else . end)
+              | (if .dependencies["@sap/cds-dk"]   then .dependencies["@sap/cds-dk"]   = $dk   else . end)
+            ' "$dir/package.json" > "$tmp" && mv "$tmp" "$dir/package.json"
+
+            npm install --prefix "$dir"
+
+            git checkout "$dir/package.json"
+          done
+
       # - name: Download Synopsys Detect Script
       #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
       - name: Download Black Duck Detect Script
