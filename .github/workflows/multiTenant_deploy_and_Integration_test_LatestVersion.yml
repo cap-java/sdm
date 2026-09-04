@@ -220,7 +220,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -543,7 +543,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -834,7 +834,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -919,7 +919,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1151,7 +1151,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1236,7 +1236,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1482,7 +1482,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1563,7 +1563,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1810,7 +1810,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
