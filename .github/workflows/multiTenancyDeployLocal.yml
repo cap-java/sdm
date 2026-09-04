@@ -52,6 +52,36 @@ jobs:
         with:
           node-version: '20' # Ensure to use at least version 18
 
+      - name: Setup npm registry and pin SAP tarballs 📦
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          SAP_CDS_MTXS_TARBALL: ${{ secrets.SAP_CDS_MTXS_TARBALL }}
+          SAP_CDS_DK_TARBALL: ${{ secrets.SAP_CDS_DK_TARBALL }}
+        run: |
+          set +x
+          echo "::add-mask::$NPM_AUTH_TOKEN"
+          echo "::add-mask::$SAP_CDS_MTXS_TARBALL"
+          echo "::add-mask::$SAP_CDS_DK_TARBALL"
+
+          MTXS="$SAP_CDS_MTXS_TARBALL"
+          DK="$SAP_CDS_DK_TARBALL"
+          TARBALL_HOST=$(printf '%s' "$MTXS" | sed -E 's#^https?://([^/]+)/.*#\1#')
+
+          for dir in \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java" \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java/mtx/sidecar"; do
+
+            printf '@sap:registry=https://registry.npmjs.org/\n//%s/:_authToken=%s\nlegacy-peer-deps=true\n' \
+              "$TARBALL_HOST" "$NPM_AUTH_TOKEN" > "$dir/.npmrc"
+
+            tmp=$(mktemp)
+            jq --arg mtxs "$MTXS" --arg dk "$DK" '
+              (if .dependencies["@sap/cds-mtxs"] then .dependencies["@sap/cds-mtxs"] = $mtxs else . end)
+              | (if .dependencies["@sap/cds-dk"]   then .dependencies["@sap/cds-dk"]   = $dk   else . end)
+              | .overrides["@sap/cds-mtxs"] = $mtxs
+            ' "$dir/package.json" > "$tmp" && mv "$tmp" "$dir/package.json"
+          done
+
       - name: Install MBT ⚙️
         run: |
             echo "🔧 Installing MBT..."
