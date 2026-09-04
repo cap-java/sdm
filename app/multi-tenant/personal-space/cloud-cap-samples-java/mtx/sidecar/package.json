@@ -2,7 +2,7 @@
   "dependencies": {
     "@cap-js/hana": "^2.1.1",
     "@sap/cds": ">=9.8.0",
-    "@sap/cds-mtxs": "https://common.repositories.cloud.sap/artifactory/deploy.releases.npm/@sap/cds-mtxs/-/@sap/cds-mtxs-3.9.7.tgz",
+    "@sap/cds-mtxs": "^3",
     "@sap/xssec": "^4.2.7",
     "express": "^4"
   },
