@@ -18,7 +18,7 @@
 		<!-- DEPENDENCIES VERSION -->
 		<jdk.version>21</jdk.version>
 		<cds.services.version>4.1.1</cds.services.version>
-		<spring.boot.version>3.3.1</spring.boot.version>
+		<spring.boot.version>3.5.16</spring.boot.version>
 		<cds.install-cdsdk.version>8.0.2</cds.install-cdsdk.version>
 
 		<cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
@@ -48,6 +48,28 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+
+			<!-- Security: fix Netty CVEs (BlackDuck) -->
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>4.2.15.Final</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<!-- Security: fix OpenTelemetry (HIGH) -->
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-api</artifactId>
+				<version>1.63.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-context</artifactId>
+				<version>1.63.0</version>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 

@@ -41,6 +41,20 @@
     <groupId>com.sap.cds</groupId>
     <artifactId>sdm</artifactId>
     <version>1.0.0-RC1</version>
+    <exclusions>
+        <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk7</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
 		<dependency>
 			<groupId>com.sap.cds</groupId>
@@ -84,6 +98,16 @@
 			<groupId>com.sap.cds</groupId>
 			<artifactId>cds-feature-remote-odata</artifactId>
 			<scope>runtime</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.bouncycastle</groupId>
+					<artifactId>bcprov-jdk18on</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.bouncycastle</groupId>
+					<artifactId>bcpkix-jdk18on</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
@@ -141,6 +165,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hdrhistogram</groupId>
+					<artifactId>HdrHistogram</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
@@ -166,6 +196,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
 			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.nimbusds</groupId>
+			<artifactId>nimbus-jose-jwt</artifactId>
+			<version>10.9.1</version>
 		</dependency>
 	</dependencies>
 
