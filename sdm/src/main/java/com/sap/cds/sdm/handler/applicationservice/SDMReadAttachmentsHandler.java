@@ -133,7 +133,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       return;
     }
     setErrorMessagesInCache(context);
-    if (context.getTarget().getAnnotationValue(SDMConstants.ANNOTATION_IS_MEDIA_DATA, false)) {
+    if (SDMApplicationHandlerHelper.isMediaEntity(context.getTarget())) {
       try {
         // update the uploadStatus of all blank attachments with success this is for existing
         // attachments
