@@ -49,6 +49,7 @@ public class ReadAheadInputStream extends InputStream {
     executor.submit(
         () -> {
           try {
+            int chunkCount = 0;
             while (totalBytesRead.get() < totalSize) {
               AtomicReference<byte[]> bufferRef = new AtomicReference<>(new byte[CHUNK_SIZE]);
               AtomicLong bytesReadAtomic = new AtomicLong(0);
@@ -58,21 +59,40 @@ public class ReadAheadInputStream extends InputStream {
               long bytesRead = bytesReadAtomic.get();
               if (bytesRead > 0) {
                 totalBytesRead.addAndGet(bytesRead);
+                chunkCount++;
 
                 // Trim buffer if last chunk is smaller
                 if (bytesRead < CHUNK_SIZE) {
                   byte[] trimmedBuffer = new byte[(int) bytesRead];
                   System.arraycopy(bufferRef.get(), 0, trimmedBuffer, 0, (int) bytesRead);
                   bufferRef.set(trimmedBuffer);
+                  logger.debug(
+                      "preloadChunks - chunk {} trimmed to {} bytes (last chunk)",
+                      chunkCount,
+                      bytesRead);
+                } else {
+                  logger.debug(
+                      "preloadChunks - chunk {} loaded: {} bytes, totalBytesRead: {}",
+                      chunkCount,
+                      bytesRead,
+                      totalBytesRead.get());
                 }
 
                 // Ensure last chunk is enqueued
                 chunkQueue.put(bufferRef.get());
+                logger.debug(
+                    "preloadChunks - chunk {} enqueued, queueSize: {}",
+                    chunkCount,
+                    chunkQueue.size());
 
                 // Only mark as last chunk after enqueuing the last chunk
                 if (totalBytesRead.get() >= totalSize) {
                   lastChunkLoaded.set(true);
-                  logger.info("Last chunk successfully queued and marked.");
+                  logger.info(
+                      "Last chunk successfully queued and marked. Total chunks: {},"
+                          + " totalBytesRead: {}",
+                      chunkCount,
+                      totalBytesRead.get());
                   break;
                 }
               } else {
@@ -203,7 +223,7 @@ public class ReadAheadInputStream extends InputStream {
 
   @Override
   public synchronized int read() throws IOException {
-    logger.info(
+    logger.debug(
         "ReadAheadInputStream.read() called by " + Thread.currentThread().getStackTrace()[2]);
     if (position.get() >= currentBufferSize) {
       if (lastChunkLoaded.get()) return -1; // EOF
