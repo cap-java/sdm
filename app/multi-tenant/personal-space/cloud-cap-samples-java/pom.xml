@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.6</version>
+		<version>3.5.16</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
@@ -70,6 +70,27 @@
 				<groupId>com.sap.cloud.servicesdk.xbem</groupId>
 				<artifactId>emjapi-extension-sap-cp-jms</artifactId>
 				<version>4.0.0</version>
+			</dependency>
+
+			<!-- Security: fix Netty CVEs (BlackDuck) -->
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>4.2.15.Final</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<!-- Security: fix OpenTelemetry (HIGH) -->
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-api</artifactId>
+				<version>1.63.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-context</artifactId>
+				<version>1.63.0</version>
 			</dependency>
 
 		</dependencies>
