@@ -133,93 +133,107 @@ public class SDMReadAttachmentsHandler implements EventHandler {
       return;
     }
     setErrorMessagesInCache(context);
-    if (SDMApplicationHandlerHelper.isMediaEntity(context.getTarget())) {
-      try {
-        // update the uploadStatus of all blank attachments with success this is for existing
-        // attachments
-        logger.debug("Target is a media entity, processing attachment logic");
-        RepoValue repoValue = checkRepositoryTypeWithFallback(repositoryId, context);
-
-        // Only process virus scan logic if repository info is available
-        if (repoValue != null) {
-          logger.debug(
-              "Repository value found. Async virus scan enabled: {}",
-              repoValue.getIsAsyncVirusScanEnabled());
-          Optional<CdsEntity> attachmentDraftEntity =
-              context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
-          String upIdKey = "", upID = "";
-          if (attachmentDraftEntity.isPresent()) {
-            upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
-            CqnSelect select = (CqnSelect) context.get("cqn");
-            upID = SDMUtils.fetchUPIDFromCQN(select, attachmentDraftEntity.get());
-            logger.debug("Processing attachments for upID: {}", upID);
-
-            if (!repoValue.getIsAsyncVirusScanEnabled()) {
-              logger.debug("Sync virus scan mode: updating in-progress upload status to success");
-              dbQuery.updateInProgressUploadStatusToSuccess(
-                  attachmentDraftEntity.get(), persistenceService, upID, upIdKey);
-            }
-            if (repoValue.getIsAsyncVirusScanEnabled()) {
-              logger.debug("Async virus scan mode: processing virus scan in-progress attachments");
-              processVirusScanInProgressAttachments(context, upID, upIdKey);
-            }
-          }
-
-          // Get attachment associations to handle deep reads with expand
-          CdsModel cdsModel = context.getModel();
-          List<String> fieldNames =
-              getAttachmentAssociations(cdsModel, context.getTarget(), "", new ArrayList<>());
-          logger.debug("Found {} attachment associations", fieldNames.size());
-
-          // Create a combined modifier that handles both expand scenarios and repositoryId filter
-          final SDMBeforeReadItemsModifier itemsModifier =
-              new SDMBeforeReadItemsModifier(fieldNames);
-          final Predicate repositoryFilter =
-              CQL.or(CQL.get("repositoryId").eq(repositoryId), CQL.get("repositoryId").isNull());
-          logger.debug(
-              "Creating CQN modifier with {} field names and repository filter", fieldNames.size());
-
-          CqnSelect modifiedCqn =
-              CQL.copy(
-                  context.getCqn(),
-                  new Modifier() {
-                    @SuppressWarnings({"rawtypes", "unchecked"})
-                    @Override
-                    public List items(List items) {
-                      // Always handle items for expand scenarios
-                      return itemsModifier.items(items);
-                    }
-
-                    @Override
-                    public Predicate where(Predicate where) {
-                      // Always apply repositoryId filter for all reads
-                      if (where == null) {
-                        return repositoryFilter;
-                      }
-                      return CQL.and(where, repositoryFilter);
-                    }
-                  });
-          context.setCqn(modifiedCqn);
-          logger.debug("CQN query modified with repository filter and required fields");
-        } else {
-          logger.warn(
-              "Repository value is null for repository ID: {}. Proceeding with limited functionality",
-              repositoryId);
-          context.setCqn(context.getCqn());
-        }
-      } catch (Exception e) {
-        logger.error("Error in SDMReadAttachmentsHandler.processBefore: {}", e.getMessage(), e);
-        // Re-throw to maintain error handling behavior
-        throw e;
-      }
-
-    } else {
+    if (!SDMApplicationHandlerHelper.isMediaEntity(context.getTarget())) {
       logger.debug(
           "Target entity {} is not a media entity, skipping attachment processing",
           context.getTarget().getQualifiedName());
-      context.setCqn(context.getCqn());
+      return;
+    }
+    try {
+      logger.debug("Target is a media entity, processing attachment logic");
+      RepoValue repoValue = checkRepositoryTypeWithFallback(repositoryId, context);
+      if (repoValue != null) {
+        processMediaEntityRead(context, repositoryId, repoValue);
+      } else {
+        logger.warn(
+            "Repository value is null for repository ID: {}. Proceeding with limited functionality",
+            repositoryId);
+      }
+    } catch (Exception e) {
+      logger.error("Error in SDMReadAttachmentsHandler.processBefore: {}", e.getMessage(), e);
+      throw e;
     }
     logger.debug("END: Read attachments processing completed");
+  }
+
+  private void processMediaEntityRead(
+      CdsReadEventContext context, String repositoryId, RepoValue repoValue) {
+    logger.debug(
+        "Repository value found. Async virus scan enabled: {}",
+        repoValue.getIsAsyncVirusScanEnabled());
+    Optional<CdsEntity> attachmentActiveEntity =
+        context.getModel().findEntity(context.getTarget().getQualifiedName());
+    logger.debug(
+        "Active entity: {}",
+        attachmentActiveEntity.isPresent()
+            ? attachmentActiveEntity.get().getQualifiedName()
+            : "No active entity");
+    Optional<CdsEntity> attachmentDraftEntity =
+        context
+            .getModel()
+            .findEntity(context.getTarget().getQualifiedName() + "_drafts")
+            .or(() -> attachmentActiveEntity);
+    logger.debug(
+        "Draft entity: {}",
+        attachmentDraftEntity.isPresent()
+            ? attachmentDraftEntity.get().getQualifiedName()
+            : "No draft entity");
+
+    if (attachmentDraftEntity.isPresent()) {
+      processUploadStatus(context, repoValue, attachmentDraftEntity.get());
+    }
+
+    List<String> fieldNames =
+        getAttachmentAssociations(
+            context.getModel(), context.getTarget(), "", new ArrayList<>());
+    logger.debug("Found {} attachment associations", fieldNames.size());
+
+    CqnSelect modifiedCqn = buildModifiedCqn(context, repositoryId, fieldNames);
+    context.setCqn(modifiedCqn);
+    logger.debug("CQN query modified with repository filter and required fields");
+  }
+
+  private void processUploadStatus(
+      CdsReadEventContext context, RepoValue repoValue, CdsEntity attachmentEntity) {
+    String upIdKey = SDMUtils.getUpIdKey(attachmentEntity);
+    CqnSelect select = (CqnSelect) context.get("cqn");
+    String upID = SDMUtils.fetchUPIDFromCQN(select, attachmentEntity);
+    logger.debug("Processing attachments for upID: {}", upID);
+
+    if (!repoValue.getIsAsyncVirusScanEnabled()) {
+      logger.debug("Sync virus scan mode: updating in-progress upload status to success");
+      dbQuery.updateInProgressUploadStatusToSuccess(
+          attachmentEntity, persistenceService, upID, upIdKey);
+    } else {
+      logger.debug("Async virus scan mode: processing virus scan in-progress attachments");
+      processVirusScanInProgressAttachments(context, upID, upIdKey);
+    }
+  }
+
+  private CqnSelect buildModifiedCqn(
+      CdsReadEventContext context, String repositoryId, List<String> fieldNames) {
+    final SDMBeforeReadItemsModifier itemsModifier = new SDMBeforeReadItemsModifier(fieldNames);
+    final Predicate repositoryFilter =
+        CQL.or(CQL.get("repositoryId").eq(repositoryId), CQL.get("repositoryId").isNull());
+    logger.debug(
+        "Creating CQN modifier with {} field names and repository filter", fieldNames.size());
+    return CQL.copy(
+        context.getCqn(),
+        new Modifier() {
+          @SuppressWarnings({"rawtypes", "unchecked"})
+          @Override
+          public List items(List items) {
+            return itemsModifier.items(items);
+          }
+
+          @Override
+          public Predicate where(Predicate where) {
+            if (where == null) {
+              return repositoryFilter;
+            }
+            return CQL.and(where, repositoryFilter);
+          }
+        });
   }
 
   /**
