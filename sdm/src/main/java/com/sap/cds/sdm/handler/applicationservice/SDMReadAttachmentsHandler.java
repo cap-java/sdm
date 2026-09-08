@@ -184,8 +184,7 @@ public class SDMReadAttachmentsHandler implements EventHandler {
     }
 
     List<String> fieldNames =
-        getAttachmentAssociations(
-            context.getModel(), context.getTarget(), "", new ArrayList<>());
+        getAttachmentAssociations(context.getModel(), context.getTarget(), "", new ArrayList<>());
     logger.debug("Found {} attachment associations", fieldNames.size());
 
     CqnSelect modifiedCqn = buildModifiedCqn(context, repositoryId, fieldNames);
