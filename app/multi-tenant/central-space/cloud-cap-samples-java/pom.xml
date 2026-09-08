@@ -31,7 +31,7 @@
 
 		<!-- SECURITY OVERRIDES (Black Duck) -->
 		<netty.version>4.1.121.Final</netty.version>
-		<bouncycastle.version>1.80</bouncycastle.version>
+		<bouncycastle.version>1.85</bouncycastle.version>
 		<nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
 	</properties>
 
