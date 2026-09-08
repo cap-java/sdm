@@ -147,6 +147,21 @@ public class SDMReadAttachmentsHandler implements EventHandler {
               repoValue.getIsAsyncVirusScanEnabled());
           Optional<CdsEntity> attachmentDraftEntity =
               context.getModel().findEntity(context.getTarget().getQualifiedName() + "_drafts");
+          logger.debug(
+              "Draft entity: {}",
+              attachmentDraftEntity.isPresent()
+                  ? attachmentDraftEntity.get().getQualifiedName()
+                  : "No draft entity");
+          Optional<CdsEntity> attachmentActiveEntity =
+              context.getModel().findEntity(context.getTarget().getQualifiedName());
+          logger.debug(
+              "Active entity: {}",
+              attachmentActiveEntity.isPresent()
+                  ? attachmentActiveEntity.get().getQualifiedName()
+                  : "No active entity");
+          if (attachmentDraftEntity.isEmpty() && attachmentActiveEntity.isPresent()) {
+            attachmentDraftEntity = attachmentActiveEntity;
+          }
           String upIdKey = "", upID = "";
           if (attachmentDraftEntity.isPresent()) {
             upIdKey = SDMUtils.getUpIdKey(attachmentDraftEntity.get());
