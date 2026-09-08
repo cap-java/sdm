@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.6</version>
+		<version>3.5.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
@@ -28,6 +28,11 @@
 		<xsuaa.version>3.5.0</xsuaa.version>
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 		<cds.install-cdsdk.version>9.8.0</cds.install-cdsdk.version>
+
+		<!-- SECURITY OVERRIDES (Black Duck) -->
+		<netty.version>4.1.121.Final</netty.version>
+		<bouncycastle.version>1.80</bouncycastle.version>
+		<nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
 	</properties>
 
 	<modules>
@@ -37,6 +42,30 @@
 
 	<dependencyManagement>
 		<dependencies>
+			<!-- SECURITY OVERRIDES (Black Duck): declared first so these versions win -->
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcpkix-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.nimbusds</groupId>
+				<artifactId>nimbus-jose-jwt</artifactId>
+				<version>${nimbus-jose-jwt.version}</version>
+			</dependency>
+
 			<!-- CDS SERVICES -->
 			<dependency>
 				<groupId>com.sap.cds</groupId>

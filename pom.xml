@@ -39,6 +39,11 @@
         <mockito-bom-version>5.15.2</mockito-bom-version>
         <assertj-core-version>3.27.7</assertj-core-version>
         <mockito-core-version>5.15.2</mockito-core-version>
+
+        <!-- SECURITY OVERRIDES (Black Duck): pin clean transitive versions -->
+        <netty.version>4.1.121.Final</netty.version>
+        <bouncycastle.version>1.80</bouncycastle.version>
+        <nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
     </properties>
 
     <groupId>com.sap.cds</groupId>
@@ -56,6 +61,31 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- SECURITY OVERRIDES (Black Duck): pin clean transitive versions.
+                 Imported/declared before other BOMs so these versions win. -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${nimbus-jose-jwt.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.sap.cds</groupId>
                 <artifactId>cds-services-bom</artifactId>
