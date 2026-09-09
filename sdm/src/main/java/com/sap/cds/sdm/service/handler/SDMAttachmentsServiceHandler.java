@@ -522,6 +522,33 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
               cmisDocument.setObjectId(existing.getObjectId());
               cmisDocument.setFolderId(existing.getFolderId());
               cmisDocument.setMimeType(existing.getMimeType());
+
+              // Resolve the correct uploadStatus. The CAP INSERT during draftActivate strips
+              // @readonly fields and applies the default "uploading", so we correct it here.
+              // The file is confirmed in SDM, so "uploading" or null means the default was applied.
+              String resolvedStatus = existing.getUploadStatus();
+              if (resolvedStatus == null
+                  || resolvedStatus.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+                resolvedStatus = SDMConstants.UPLOAD_STATUS_SUCCESS;
+              }
+              cmisDocument.setUploadStatus(resolvedStatus);
+
+              // Store in ThreadLocal so updateActiveEntitySdmMetadata writes the correct
+              // uploadStatus to the active entity (same mechanism as the normal active-entity
+              // path).
+              Map<String, Object> duplicateMetadata = new HashMap<>();
+              duplicateMetadata.put("attachmentId", attachmentId);
+              duplicateMetadata.put("objectId", existing.getObjectId());
+              duplicateMetadata.put("folderId", existing.getFolderId());
+              duplicateMetadata.put("mimeType", existing.getMimeType());
+              duplicateMetadata.put("uploadStatus", resolvedStatus);
+              duplicateMetadata.put("attachmentEntity", activeEntity.get());
+              SDM_METADATA_THREADLOCAL.set(duplicateMetadata);
+              logger.info(
+                  "Stored duplicate-path metadata in ThreadLocal for attachment {} with uploadStatus {}",
+                  cmisDocument.getFileName(),
+                  resolvedStatus);
+
               eventContext.setContentId(
                   existing.getObjectId() + ":" + existing.getFolderId() + ":" + activeEntityName);
               eventContext.getData().setStatus("Clean");
