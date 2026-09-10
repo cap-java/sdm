@@ -32,7 +32,7 @@
 		<tomcat.version>10.1.59</tomcat.version>
 		<httpclient5.version>5.6.4</httpclient5.version>
 		<httpcore5.version>5.4.3</httpcore5.version>
-		<kotlin.version>2.4.10</kotlin.version>
+		<kotlin.version>2.4.20</kotlin.version>
 
 		<cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
