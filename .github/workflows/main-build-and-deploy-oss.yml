@@ -9,7 +9,7 @@ on:
     types: [ "released" ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
 
