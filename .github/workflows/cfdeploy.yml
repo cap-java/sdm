@@ -48,6 +48,11 @@ jobs:
           java-version: 21
           distribution: 'temurin'
 
+      - name: Set up Node.js 🟢
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Build and package 🔨
         run: |
           echo "🚀 Building and packaging..."
@@ -141,6 +146,11 @@ jobs:
         with:
           java-version: 21
           distribution: 'temurin'
+
+      - name: Set up Node.js 🟢
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Override cds.services.version (runtime only)
         if: ${{ github.event.inputs.cds_services_version != '' }}

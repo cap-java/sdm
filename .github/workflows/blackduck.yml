@@ -31,12 +31,27 @@ jobs:
           distribution: 'temurin'
           cache: maven
           
-      - name: Install dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Maven dependencies
         run: |
           mvn clean install -P unit-tests -DskipIntegrationTests
           mvn clean install -f app/single-tenant/central-space/demoapp/pom.xml -DskipTests
           mvn clean install -f app/multi-tenant/central-space/cloud-cap-samples-java/pom.xml -DskipTests
-        
+
+      - name: Install npm dependencies
+        run: |
+          for dir in \
+            "app/multi-tenant/central-space/cloud-cap-samples-java" \
+            "app/multi-tenant/central-space/cloud-cap-samples-java/mtx/sidecar" \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java" \
+            "app/multi-tenant/personal-space/cloud-cap-samples-java/mtx/sidecar"; do
+            npm install --prefix "$dir" --legacy-peer-deps
+          done
+
       # - name: Download Synopsys Detect Script
       #   run: curl --silent -O https://detect.synopsys.com/detect9.sh
       - name: Download Black Duck Detect Script
