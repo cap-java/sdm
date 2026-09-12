@@ -1,0 +1,29 @@
+name: Release Drafter
+
+# Keeps a draft GitHub Release up-to-date whenever:
+#   - A PR is opened/updated/merged against develop
+#   - A direct push lands on develop
+#
+# The draft is promoted to a real release manually by a maintainer, which then
+# triggers the build + deploy workflows (prereleased / released).
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write      # create/update draft release
+  pull-requests: write # label PRs with auto-detected version bump label
+
+jobs:
+  update-release-draft:
+    name: Update Draft Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        with:
+          config-name: release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
