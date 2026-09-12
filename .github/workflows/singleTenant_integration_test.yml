@@ -28,7 +28,7 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
@@ -292,7 +292,7 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
@@ -618,7 +618,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
@@ -915,7 +915,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
@@ -1222,7 +1222,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
