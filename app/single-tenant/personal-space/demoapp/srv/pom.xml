@@ -140,10 +140,11 @@
 					<execution>
 						<id>cds.install-cdsdk</id>
 						<goals>
-							<goal>install-cdsdk</goal>
+							<goal>npm</goal>
 						</goals>
 						<configuration>
 							<skip>${cdsdk-global}</skip>
+							<arguments>install @sap/cds-dk@${cds.install-cdsdk.version} --no-save</arguments>
 						</configuration>
 					</execution>
 
