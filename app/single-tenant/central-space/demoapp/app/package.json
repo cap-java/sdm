@@ -3,6 +3,10 @@
 	"dependencies": {
 		"@sap/approuter": "23.0.0"
 	},
+	"overrides": {
+		"fast-uri": "3.1.8",
+		"decode-uri-component": "0.5.0"
+	},
 	"scripts": {
 		"start": "node node_modules/@sap/approuter/approuter.js"
 	}
