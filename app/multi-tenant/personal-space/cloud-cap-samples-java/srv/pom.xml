@@ -26,6 +26,21 @@
 			<groupId>com.sap.cds</groupId>
 			<artifactId>cds-adapter-odata-v4</artifactId>
 			<scope>runtime</scope>
+			<exclusions>
+				<!-- SECURITY: opentelemetry brought in transitively via cds-services-utils -->
+				<exclusion>
+					<groupId>io.opentelemetry</groupId>
+					<artifactId>opentelemetry-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.opentelemetry</groupId>
+					<artifactId>opentelemetry-context</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.opentelemetry</groupId>
+					<artifactId>opentelemetry-common</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
     <groupId>org.apache.commons</groupId>
@@ -41,6 +56,22 @@
     <groupId>com.sap.cds</groupId>
     <artifactId>sdm</artifactId>
     <version>1.0.0-RC1</version>
+    <exclusions>
+      <!-- SECURITY: httpcore5 5.4.3 has CVEs with no standard upgrade path -->
+      <exclusion>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5</artifactId>
+      </exclusion>
+      <exclusion>
+        <groupId>org.apache.httpcomponents.core5</groupId>
+        <artifactId>httpcore5-h2</artifactId>
+      </exclusion>
+      <!-- SECURITY: kotlin-stdlib pulled in transitively via okhttp; not needed by app code -->
+      <exclusion>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib</artifactId>
+      </exclusion>
+    </exclusions>
 </dependency>
 		<dependency>
 			<groupId>com.sap.cds</groupId>
