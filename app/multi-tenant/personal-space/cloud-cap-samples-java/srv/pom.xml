@@ -172,6 +172,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+			<exclusions>
+				<!-- SECURITY: HdrHistogram 2.2.2 has LOW CVEs; no newer release on Maven Central.
+				     Percentile histograms are not used in this app, so micrometer-core works without it. -->
+				<exclusion>
+					<groupId>org.hdrhistogram</groupId>
+					<artifactId>HdrHistogram</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
