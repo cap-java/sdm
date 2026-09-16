@@ -30,16 +30,12 @@
 		
 		<!-- SECURITY OVERRIDES (Black Duck) -->
 		<jackson-bom.version>2.22.2</jackson-bom.version>
-		<micrometer.version>1.17.1</micrometer.version>
 		<opentelemetry.version>1.65.0</opentelemetry.version>
 		<logback.version>1.6.3</logback.version>
-		<tomcat.version>10.1.59</tomcat.version>
-		<httpclient5.version>5.6.4</httpclient5.version>
 		<httpcore5.version>5.4.3</httpcore5.version>
 		<netty.version>4.2.18.Final</netty.version>
 		<nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
 		<reactor-core.version>3.8.7</reactor-core.version>
-		<kotlin.version>2.4.20</kotlin.version>
 		<okhttp.version>5.5.0</okhttp.version>
 		<guava.version>33.7.1-jre</guava.version>
 		<ngdbc.version>2.29.7</ngdbc.version>
@@ -63,23 +59,9 @@
 				<scope>import</scope>
 			</dependency>
 			<dependency>
-				<groupId>io.micrometer</groupId>
-				<artifactId>micrometer-bom</artifactId>
-				<version>${micrometer.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
 				<groupId>io.opentelemetry</groupId>
 				<artifactId>opentelemetry-bom</artifactId>
 				<version>${opentelemetry.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.jetbrains.kotlin</groupId>
-				<artifactId>kotlin-bom</artifactId>
-				<version>${kotlin.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -92,26 +74,6 @@
 				<groupId>ch.qos.logback</groupId>
 				<artifactId>logback-core</artifactId>
 				<version>${logback.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-core</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-el</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-websocket</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.client5</groupId>
-				<artifactId>httpclient5</artifactId>
-				<version>${httpclient5.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.httpcomponents.core5</groupId>

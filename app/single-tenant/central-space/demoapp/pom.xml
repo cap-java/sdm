@@ -22,10 +22,7 @@
 		<cds.install-cdsdk.version>^9</cds.install-cdsdk.version>
 
 		<!-- SECURITY OVERRIDES (Black Duck) -->
-		<micrometer.version>1.17.1</micrometer.version>
 		<logback.version>1.6.3</logback.version>
-		<tomcat.version>11.0.25</tomcat.version>
-		<httpclient5.version>5.6.4</httpclient5.version>
 		<jackson-databind.version>2.22.2</jackson-databind.version>
 		<jackson3.version>3.2.2</jackson3.version>
 		<okhttp.version>5.5.0</okhttp.version>
@@ -43,13 +40,6 @@
 		<dependencies>
 			<!-- SECURITY OVERRIDES (Black Duck): declared FIRST so these versions win over the Spring Boot / CDS BOMs -->
 			<dependency>
-				<groupId>io.micrometer</groupId>
-				<artifactId>micrometer-bom</artifactId>
-				<version>${micrometer.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
 				<groupId>ch.qos.logback</groupId>
 				<artifactId>logback-classic</artifactId>
 				<version>${logback.version}</version>
@@ -58,26 +48,6 @@
 				<groupId>ch.qos.logback</groupId>
 				<artifactId>logback-core</artifactId>
 				<version>${logback.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-core</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-el</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.tomcat.embed</groupId>
-				<artifactId>tomcat-embed-websocket</artifactId>
-				<version>${tomcat.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.client5</groupId>
-				<artifactId>httpclient5</artifactId>
-				<version>${httpclient5.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.squareup.okhttp3</groupId>
