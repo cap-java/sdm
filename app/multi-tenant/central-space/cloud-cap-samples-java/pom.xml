@@ -40,6 +40,9 @@
 		<guava.version>33.7.1-jre</guava.version>
 		<ngdbc.version>2.29.7</ngdbc.version>
 		<h2.version>2.4.240</h2.version>
+		<micrometer.version>1.17.1</micrometer.version>
+		<httpclient5.version>5.6.4</httpclient5.version>
+		<tomcat.version>10.1.59</tomcat.version>
 		<cds.install-cdsdk.version>^9</cds.install-cdsdk.version>
 	</properties>
 
@@ -86,6 +89,11 @@
 				<version>${httpcore5.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>org.apache.httpcomponents.client5</groupId>
+				<artifactId>httpclient5</artifactId>
+				<version>${httpclient5.version}</version>
+			</dependency>
+			<dependency>
 				<groupId>com.squareup.okhttp3</groupId>
 				<artifactId>okhttp</artifactId>
 				<version>${okhttp.version}</version>
@@ -104,6 +112,28 @@
 				<groupId>io.projectreactor</groupId>
 				<artifactId>reactor-core</artifactId>
 				<version>${reactor-core.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-core</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-el</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-websocket</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.micrometer</groupId>
+				<artifactId>micrometer-bom</artifactId>
+				<version>${micrometer.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 
 			<!-- CDS SERVICES -->

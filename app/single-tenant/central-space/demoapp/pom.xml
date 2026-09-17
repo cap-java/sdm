@@ -27,6 +27,7 @@
 		<jackson3.version>3.2.2</jackson3.version>
 		<okhttp.version>5.5.0</okhttp.version>
 		<guava.version>33.7.1-jre</guava.version>
+		<tomcat.version>11.0.26</tomcat.version>
 
 		<cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -84,6 +85,21 @@
 				<groupId>tools.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
 				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-core</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-el</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-websocket</artifactId>
+				<version>${tomcat.version}</version>
 			</dependency>
 
 			<!-- CDS SERVICES -->
