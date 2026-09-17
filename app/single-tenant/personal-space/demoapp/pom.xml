@@ -17,9 +17,18 @@
 
 		<!-- DEPENDENCIES VERSION -->
 		<jdk.version>21</jdk.version>
-		<cds.services.version>4.3.0</cds.services.version>
-		<spring.boot.version>3.3.1</spring.boot.version>
+		<cds.services.version>5.0.2</cds.services.version>
+		<spring.boot.version>4.1.1</spring.boot.version>
 		<cds.install-cdsdk.version>^9</cds.install-cdsdk.version>
+
+		<!-- SECURITY OVERRIDES (Black Duck) -->
+		<logback.version>1.6.3</logback.version>
+		<jackson-databind.version>2.22.2</jackson-databind.version>
+		<jackson3.version>3.2.2</jackson3.version>
+		<okhttp.version>5.5.0</okhttp.version>
+		<guava.version>33.7.1-jre</guava.version>
+		<micrometer.version>1.17.1</micrometer.version>
+		<tomcat.version>11.0.26</tomcat.version>
 
 		<cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -31,6 +40,76 @@
 
 	<dependencyManagement>
 		<dependencies>
+			<!-- SECURITY OVERRIDES (Black Duck): declared FIRST so these versions win over the Spring Boot / CDS BOMs -->
+			<dependency>
+				<groupId>io.micrometer</groupId>
+				<artifactId>micrometer-bom</artifactId>
+				<version>${micrometer.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>${logback.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>${logback.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.squareup.okhttp3</groupId>
+				<artifactId>okhttp</artifactId>
+				<version>${okhttp.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.guava</groupId>
+				<artifactId>guava</artifactId>
+				<version>${guava.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jackson-databind.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson-databind.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>tools.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>tools.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>tools.jackson.core</groupId>
+				<artifactId>jackson-annotations</artifactId>
+				<version>${jackson3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-core</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-el</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-websocket</artifactId>
+				<version>${tomcat.version}</version>
+			</dependency>
+
 			<!-- CDS SERVICES -->
 			<dependency>
 				<groupId>com.sap.cds</groupId>
