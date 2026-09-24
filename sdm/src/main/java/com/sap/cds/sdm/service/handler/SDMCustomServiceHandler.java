@@ -1934,7 +1934,8 @@ public class SDMCustomServiceHandler {
       String newObjectId = attachmentMetadata.get("cmis:objectId");
       logger.debug("Processing draft entry for objectId: {}, fileName: {}", newObjectId, fileName);
 
-      // Read status and scannedAt from the source attachment so copies preserve the original values.
+      // Read status and scannedAt from the source attachment so copies preserve the original
+      // values.
       String resolvedStatus = "Clean";
       Instant resolvedScannedAt = Instant.now();
       List<String> sourceObjectIds = request.getSourceObjectIds();
@@ -1956,7 +1957,10 @@ public class SDMCustomServiceHandler {
         }
       }
       logger.debug(
-          "Resolved status={}, scannedAt={} for source attachment at index {}", resolvedStatus, resolvedScannedAt, i);
+          "Resolved status={}, scannedAt={} for source attachment at index {}",
+          resolvedStatus,
+          resolvedScannedAt,
+          i);
 
       updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
@@ -2042,7 +2046,9 @@ public class SDMCustomServiceHandler {
           persistenceService.run(scanUpdate);
           logger.debug(
               "Set status={}, scannedAt={} for copied draft attachment: {}",
-              resolvedStatus, resolvedScannedAt, newObjectId);
+              resolvedStatus,
+              resolvedScannedAt,
+              newObjectId);
         }
       } else {
         logger.error("No suitable service found for entity: {}", request.getParentEntity());
