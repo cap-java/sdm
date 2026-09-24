@@ -1934,28 +1934,10 @@ public class SDMCustomServiceHandler {
       String newObjectId = attachmentMetadata.get("cmis:objectId");
       logger.debug("Processing draft entry for objectId: {}, fileName: {}", newObjectId, fileName);
 
-      // Read status and scannedAt from the source attachment so copies preserve the original
-      // values.
-      String resolvedStatus = "Clean";
-      Instant resolvedScannedAt = Instant.now();
-      List<String> sourceObjectIds = request.getSourceObjectIds();
-      if (targetEntity != null && sourceObjectIds != null && i < sourceObjectIds.size()) {
-        String sourceObjectId = sourceObjectIds.get(i);
-        Optional<Row> sourceRow =
-            persistenceService
-                .run(
-                    Select.from(targetEntity)
-                        .columns("status", "scannedAt")
-                        .where(doc -> doc.get("objectId").eq(sourceObjectId))
-                        .limit(1))
-                .first();
-        if (sourceRow.isPresent()) {
-          Object statusVal = sourceRow.get().get("status");
-          Object scannedAtVal = sourceRow.get().get("scannedAt");
-          if (statusVal != null) resolvedStatus = statusVal.toString();
-          if (scannedAtVal instanceof Instant) resolvedScannedAt = (Instant) scannedAtVal;
-        }
-      }
+      SourceScanState scanState =
+          resolveSourceScanState(targetEntity, request.getSourceObjectIds(), i);
+      String resolvedStatus = scanState.status;
+      Instant resolvedScannedAt = scanState.scannedAt;
       logger.debug(
           "Resolved status={}, scannedAt={} for source attachment at index {}",
           resolvedStatus,
@@ -2057,6 +2039,40 @@ public class SDMCustomServiceHandler {
       }
     }
     logger.debug("Completed creating draft entries for copied attachments");
+  }
+
+  private SourceScanState resolveSourceScanState(
+      CdsEntity targetEntity, List<String> sourceObjectIds, int index) {
+    if (targetEntity == null || sourceObjectIds == null || index >= sourceObjectIds.size()) {
+      return new SourceScanState("Clean", Instant.now());
+    }
+    String sourceObjectId = sourceObjectIds.get(index);
+    Optional<Row> sourceRow =
+        persistenceService
+            .run(
+                Select.from(targetEntity)
+                    .columns("status", "scannedAt")
+                    .where(doc -> doc.get("objectId").eq(sourceObjectId))
+                    .limit(1))
+            .first();
+    if (sourceRow.isEmpty()) {
+      return new SourceScanState("Clean", Instant.now());
+    }
+    Object statusVal = sourceRow.get().get("status");
+    Object scannedAtVal = sourceRow.get().get("scannedAt");
+    String status = statusVal != null ? statusVal.toString() : "Clean";
+    Instant scannedAt = scannedAtVal instanceof Instant inst ? inst : Instant.now();
+    return new SourceScanState(status, scannedAt);
+  }
+
+  private static final class SourceScanState {
+    final String status;
+    final Instant scannedAt;
+
+    SourceScanState(String status, Instant scannedAt) {
+      this.status = status;
+      this.scannedAt = scannedAt;
+    }
   }
 
   /**
