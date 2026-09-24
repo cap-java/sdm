@@ -416,6 +416,12 @@ public class SDMCustomServiceHandlerTest {
     when(sdmService.copyAttachment(any(), any(SDMCredentials.class), anyBoolean(), any()))
         .thenReturn(attachmentData);
 
+    // Mock persistenceService.run for the source-status query in createDraftEntries
+    com.sap.cds.Result mockSelectResult = mock(com.sap.cds.Result.class);
+    when(mockSelectResult.first()).thenReturn(Optional.empty());
+    when(persistenceService.run(any(com.sap.cds.ql.cqn.CqnSelect.class)))
+        .thenReturn(mockSelectResult);
+
     // Act
     sdmCustomServiceHandler.copyAttachments(context);
 
