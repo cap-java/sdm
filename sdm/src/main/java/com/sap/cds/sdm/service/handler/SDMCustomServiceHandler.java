@@ -1,7 +1,10 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
+import com.sap.cds.Row;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Select;
+import com.sap.cds.ql.Update;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
@@ -192,6 +195,7 @@ public class SDMCustomServiceHandler {
             .repositoryId(repositoryId)
             .folderId(folderId)
             .customPropertyValues(null)
+            .sourceObjectIds(objectIds)
             .build();
 
     // Pass the entity for type conversion
@@ -1930,10 +1934,34 @@ public class SDMCustomServiceHandler {
       String newObjectId = attachmentMetadata.get("cmis:objectId");
       logger.debug("Processing draft entry for objectId: {}, fileName: {}", newObjectId, fileName);
 
+      // Read status and scannedAt from the source attachment so copies preserve the original values.
+      String resolvedStatus = "Clean";
+      Instant resolvedScannedAt = Instant.now();
+      List<String> sourceObjectIds = request.getSourceObjectIds();
+      if (targetEntity != null && sourceObjectIds != null && i < sourceObjectIds.size()) {
+        String sourceObjectId = sourceObjectIds.get(i);
+        Optional<Row> sourceRow =
+            persistenceService
+                .run(
+                    Select.from(targetEntity)
+                        .columns("status", "scannedAt")
+                        .where(doc -> doc.get("objectId").eq(sourceObjectId))
+                        .limit(1))
+                .first();
+        if (sourceRow.isPresent()) {
+          Object statusVal = sourceRow.get().get("status");
+          Object scannedAtVal = sourceRow.get().get("scannedAt");
+          if (statusVal != null) resolvedStatus = statusVal.toString();
+          if (scannedAtVal instanceof Instant) resolvedScannedAt = (Instant) scannedAtVal;
+        }
+      }
+      logger.debug(
+          "Resolved status={}, scannedAt={} for source attachment at index {}", resolvedStatus, resolvedScannedAt, i);
+
       updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
-      updatedFields.put("status", "Clean");
+      updatedFields.put("status", resolvedStatus);
       updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
@@ -1999,6 +2027,22 @@ public class SDMCustomServiceHandler {
         } catch (Exception e) {
           throw new ServiceException(
               "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
+        }
+        // newDraft strips @readonly fields; DB DEFAULT 'Unscanned' applies for status.
+        // Bypass handler chain via persistenceService to persist status=Clean and scannedAt.
+        if (targetEntity != null) {
+          Map<String, Object> scanFields = new HashMap<>();
+          scanFields.put("status", resolvedStatus);
+          scanFields.put("scannedAt", resolvedScannedAt);
+          String draftEntityName = targetEntity.getQualifiedName() + "_drafts";
+          var scanUpdate =
+              Update.entity(draftEntityName)
+                  .data(scanFields)
+                  .where(doc -> doc.get("objectId").eq(newObjectId));
+          persistenceService.run(scanUpdate);
+          logger.debug(
+              "Set status={}, scannedAt={} for copied draft attachment: {}",
+              resolvedStatus, resolvedScannedAt, newObjectId);
         }
       } else {
         logger.error("No suitable service found for entity: {}", request.getParentEntity());
