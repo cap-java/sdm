@@ -2051,7 +2051,7 @@ public class SDMCustomServiceHandler {
         persistenceService
             .run(
                 Select.from(targetEntity)
-                    .columns("status", "scannedAt")
+                    .columns("status")
                     .where(doc -> doc.get("objectId").eq(sourceObjectId))
                     .limit(1))
             .first();
@@ -2059,10 +2059,8 @@ public class SDMCustomServiceHandler {
       return new SourceScanState("Clean", Instant.now());
     }
     Object statusVal = sourceRow.get().get("status");
-    Object scannedAtVal = sourceRow.get().get("scannedAt");
     String status = statusVal != null ? statusVal.toString() : "Clean";
-    Instant scannedAt = scannedAtVal instanceof Instant inst ? inst : Instant.now();
-    return new SourceScanState(status, scannedAt);
+    return new SourceScanState(status, Instant.now());
   }
 
   private static final class SourceScanState {
