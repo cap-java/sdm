@@ -17,7 +17,6 @@ public class CreateDraftEntriesRequest {
   private final String repositoryId;
   private final String folderId;
   private final Map<String, String> customPropertyValues;
-  private final List<String> sourceObjectIds;
 
   private CreateDraftEntriesRequest(Builder builder) {
     this.attachmentsMetadata = builder.attachmentsMetadata;
@@ -29,7 +28,6 @@ public class CreateDraftEntriesRequest {
     this.repositoryId = builder.repositoryId;
     this.folderId = builder.folderId;
     this.customPropertyValues = builder.customPropertyValues;
-    this.sourceObjectIds = builder.sourceObjectIds;
   }
 
   // Getters
@@ -69,10 +67,6 @@ public class CreateDraftEntriesRequest {
     return customPropertyValues;
   }
 
-  public List<String> getSourceObjectIds() {
-    return sourceObjectIds;
-  }
-
   public static Builder builder() {
     return new Builder();
   }
@@ -87,7 +81,6 @@ public class CreateDraftEntriesRequest {
     private String repositoryId;
     private String folderId;
     private Map<String, String> customPropertyValues;
-    private List<String> sourceObjectIds;
 
     public Builder attachmentsMetadata(List<Map<String, String>> attachmentsMetadata) {
       this.attachmentsMetadata = attachmentsMetadata;
@@ -131,11 +124,6 @@ public class CreateDraftEntriesRequest {
 
     public Builder customPropertyValues(Map<String, String> customPropertyValues) {
       this.customPropertyValues = customPropertyValues;
-      return this;
-    }
-
-    public Builder sourceObjectIds(List<String> sourceObjectIds) {
-      this.sourceObjectIds = sourceObjectIds;
       return this;
     }
 
