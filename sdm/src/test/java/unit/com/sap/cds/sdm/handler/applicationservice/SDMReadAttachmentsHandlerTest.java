@@ -22,9 +22,11 @@ import com.sap.cds.services.request.ParameterInfo;
 import com.sap.cds.services.request.UserInfo;
 import com.sap.cds.services.runtime.CdsRuntime;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import org.ehcache.Cache;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -339,5 +341,17 @@ public class SDMReadAttachmentsHandlerTest {
 
     // Verify the English fallback is NOT stored for this key
     assertNotEquals(SDMErrorMessages.USER_NOT_AUTHORISED_ERROR, cached);
+  }
+
+  @AfterEach
+  void tearDown() throws Exception {
+    Field field = CacheConfig.class.getDeclaredField("errorMessageCache");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Cache<Object, Object> cache = (Cache<Object, Object>) field.get(null);
+    if (cache != null) {
+      cache.clear();
+    }
+    field.set(null, null);
   }
 }
