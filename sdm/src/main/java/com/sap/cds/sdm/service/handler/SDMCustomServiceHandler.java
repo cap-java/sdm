@@ -1,9 +1,7 @@
 package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
-import com.sap.cds.Row;
 import com.sap.cds.ql.Insert;
-import com.sap.cds.ql.Select;
 import com.sap.cds.ql.Update;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
@@ -195,7 +193,6 @@ public class SDMCustomServiceHandler {
             .repositoryId(repositoryId)
             .folderId(folderId)
             .customPropertyValues(null)
-            .sourceObjectIds(objectIds)
             .build();
 
     // Pass the entity for type conversion
@@ -1934,20 +1931,10 @@ public class SDMCustomServiceHandler {
       String newObjectId = attachmentMetadata.get("cmis:objectId");
       logger.debug("Processing draft entry for objectId: {}, fileName: {}", newObjectId, fileName);
 
-      SourceScanState scanState =
-          resolveSourceScanState(targetEntity, request.getSourceObjectIds(), i);
-      String resolvedStatus = scanState.status;
-      Instant resolvedScannedAt = scanState.scannedAt;
-      logger.debug(
-          "Resolved status={}, scannedAt={} for source attachment at index {}",
-          resolvedStatus,
-          resolvedScannedAt,
-          i);
-
       updatedFields.put(OBJECT_ID_KEY, newObjectId);
       updatedFields.put("repositoryId", request.getRepositoryId());
       updatedFields.put("folderId", request.getFolderId());
-      updatedFields.put("status", resolvedStatus);
+      updatedFields.put("status", "Clean");
       updatedFields.put("uploadStatus", SDMConstants.UPLOAD_STATUS_SUCCESS);
       updatedFields.put("mimeType", mimeType);
       updatedFields.put("type", cmisDocument.getType()); // Individual type for each attachment
@@ -2018,8 +2005,8 @@ public class SDMCustomServiceHandler {
         // Bypass handler chain via persistenceService to persist status=Clean and scannedAt.
         if (targetEntity != null) {
           Map<String, Object> scanFields = new HashMap<>();
-          scanFields.put("status", resolvedStatus);
-          scanFields.put("scannedAt", resolvedScannedAt);
+          scanFields.put("status", "Clean");
+          scanFields.put("scannedAt", Instant.now());
           String draftEntityName = targetEntity.getQualifiedName() + "_drafts";
           var scanUpdate =
               Update.entity(draftEntityName)
@@ -2027,10 +2014,7 @@ public class SDMCustomServiceHandler {
                   .where(doc -> doc.get("objectId").eq(newObjectId));
           persistenceService.run(scanUpdate);
           logger.debug(
-              "Set status={}, scannedAt={} for copied draft attachment: {}",
-              resolvedStatus,
-              resolvedScannedAt,
-              newObjectId);
+              "Set status=Clean, scannedAt=now for copied draft attachment: {}", newObjectId);
         }
       } else {
         logger.error("No suitable service found for entity: {}", request.getParentEntity());
@@ -2039,38 +2023,6 @@ public class SDMCustomServiceHandler {
       }
     }
     logger.debug("Completed creating draft entries for copied attachments");
-  }
-
-  private SourceScanState resolveSourceScanState(
-      CdsEntity targetEntity, List<String> sourceObjectIds, int index) {
-    if (targetEntity == null || sourceObjectIds == null || index >= sourceObjectIds.size()) {
-      return new SourceScanState("Clean", Instant.now());
-    }
-    String sourceObjectId = sourceObjectIds.get(index);
-    Optional<Row> sourceRow =
-        persistenceService
-            .run(
-                Select.from(targetEntity)
-                    .columns("status")
-                    .where(doc -> doc.get("objectId").eq(sourceObjectId))
-                    .limit(1))
-            .first();
-    if (sourceRow.isEmpty()) {
-      return new SourceScanState("Clean", Instant.now());
-    }
-    Object statusVal = sourceRow.get().get("status");
-    String status = statusVal != null ? statusVal.toString() : "Clean";
-    return new SourceScanState(status, Instant.now());
-  }
-
-  private static final class SourceScanState {
-    final String status;
-    final Instant scannedAt;
-
-    SourceScanState(String status, Instant scannedAt) {
-      this.status = status;
-      this.scannedAt = scannedAt;
-    }
   }
 
   /**
