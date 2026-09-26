@@ -24,7 +24,7 @@ jobs:
           echo "⏳ Waiting for snapshot deployment... Initiating deployment in 5 minutes."
 
       - name: Checkout this repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up JDK 21 ☕
         uses: actions/setup-java@v3
@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Checkout repository ✅
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
@@ -451,7 +451,7 @@ jobs:
 
     steps:
       - name: Checkout repository ✅
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
@@ -827,7 +827,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -1144,7 +1144,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -1471,7 +1471,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -1718,7 +1718,7 @@ jobs:
         tenant: [TENANT1, TENANT2]
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3

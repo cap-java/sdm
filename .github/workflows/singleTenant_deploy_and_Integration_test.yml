@@ -22,7 +22,7 @@ jobs:
         run: sleep 300
         
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: develop
 
@@ -133,7 +133,7 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
@@ -384,7 +384,7 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 21 ☕
         uses: actions/setup-java@v3
@@ -684,7 +684,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -956,7 +956,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
@@ -1238,7 +1238,7 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Java 17 ☕
         uses: actions/setup-java@v3
