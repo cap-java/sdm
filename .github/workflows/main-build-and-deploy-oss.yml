@@ -50,7 +50,7 @@ jobs:
     needs: update-version
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: root-new-version
 
@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: root-build
 
