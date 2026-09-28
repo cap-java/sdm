@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.*;
 import org.ehcache.Cache;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -47,6 +48,13 @@ public class SDMReadAttachmentsHandlerTest {
   @InjectMocks private SDMReadAttachmentsHandler sdmReadAttachmentsHandler;
 
   private static final String REPOSITORY_ID_KEY = "testRepoId";
+
+  @AfterEach
+  void tearDown() throws Exception {
+    java.lang.reflect.Field field = CacheConfig.class.getDeclaredField("errorMessageCache");
+    field.setAccessible(true);
+    field.set(null, null);
+  }
 
   @Test
   void testModifyCqnForAttachmentsEntity_Success() throws IOException {
