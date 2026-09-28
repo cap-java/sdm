@@ -2,6 +2,7 @@ package com.sap.cds.sdm.service.handler;
 
 import com.sap.cds.Result;
 import com.sap.cds.ql.Insert;
+import com.sap.cds.ql.Update;
 import com.sap.cds.reflect.CdsAssociationType;
 import com.sap.cds.reflect.CdsElement;
 import com.sap.cds.reflect.CdsEntity;
@@ -1999,6 +2000,21 @@ public class SDMCustomServiceHandler {
         } catch (Exception e) {
           throw new ServiceException(
               "Failed to insert attachment entry in DB after retries: " + e.getMessage(), e);
+        }
+        // newDraft strips @readonly fields; DB DEFAULT 'Unscanned' applies for status.
+        // Bypass handler chain via persistenceService to persist status=Clean and scannedAt.
+        if (targetEntity != null) {
+          Map<String, Object> scanFields = new HashMap<>();
+          scanFields.put("status", "Clean");
+          scanFields.put("scannedAt", Instant.now());
+          String draftEntityName = targetEntity.getQualifiedName() + "_drafts";
+          var scanUpdate =
+              Update.entity(draftEntityName)
+                  .data(scanFields)
+                  .where(doc -> doc.get("objectId").eq(newObjectId));
+          persistenceService.run(scanUpdate);
+          logger.debug(
+              "Set status=Clean, scannedAt=now for copied draft attachment: {}", newObjectId);
         }
       } else {
         logger.error("No suitable service found for entity: {}", request.getParentEntity());
