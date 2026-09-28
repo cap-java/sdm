@@ -132,9 +132,19 @@ public class SDMServiceImpl implements SDMService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
+    logger.debug(
+        "executeHttpPost - POST URL: {}, file: {}",
+        uploadFile.getURI(),
+        cmisDocument.getFileName());
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
+      logger.debug(
+          "executeHttpPost - response status: {}", response.getStatusLine().getStatusCode());
       formResponse(cmisDocument, finalResponse, response);
     } catch (IOException e) {
+      logger.error(
+          "executeHttpPost - IOException for file {}: {}",
+          cmisDocument.getFileName(),
+          e.getMessage());
       throw new ServiceException(
           SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e.getMessage());
     }
@@ -152,11 +162,14 @@ public class SDMServiceImpl implements SDMService {
     try {
       String responseString = EntityUtils.toString(response.getEntity());
       int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("formResponse - responseCode: {}, file: {}", responseCode, name);
+      logger.debug("formResponse - raw response body: {}", responseString);
       if (responseCode == 201 || responseCode == 200) {
         status = "success";
         JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         objectId = succinctProperties.getString("cmis:objectId");
+        logger.debug("formResponse - upload success, objectId: {}", objectId);
       } else {
         if (responseCode == 409) {
           JSONObject jsonResponse = new JSONObject(responseString);
@@ -165,17 +178,22 @@ public class SDMServiceImpl implements SDMService {
           objectId = succinctProperties.getString("cmis:objectId");
           if ("Malware Service Exception: Virus found in the file!".equals(message)) {
             status = "virus";
+            logger.debug("formResponse - virus detected for file: {}", name);
           } else {
             status = "duplicate";
+            logger.debug("formResponse - duplicate file detected: {}", name);
           }
         } else if ((responseCode == 403)
             && (responseString.equals("User does not have required scope"))) {
           status = "unauthorized";
+          logger.warn("formResponse - unauthorized (403) for file: {}", name);
         } else {
           JSONObject jsonResponse = new JSONObject(responseString);
           String message = jsonResponse.getString("message");
           status = "fail";
           error = message;
+          logger.warn(
+              "formResponse - upload failed, responseCode: {}, message: {}", responseCode, message);
         }
       }
       // Construct the final response
@@ -186,6 +204,7 @@ public class SDMServiceImpl implements SDMService {
       if (!objectId.isEmpty()) {
         finalResponse.put("objectId", objectId);
       }
+      logger.debug("formResponse - END status: {}, objectId: {}", status, objectId);
     } catch (Exception e) {
       throw new ServiceException(e.getMessage());
     }
@@ -312,6 +331,11 @@ public class SDMServiceImpl implements SDMService {
       return 200; // No updates needed, return success
     }
 
+    logger.debug(
+        "updateAttachments - PATCH URL: {}, request body keys: {}",
+        sdmUrl,
+        updateRequestBody.keySet());
+
     MultipartEntityBuilder builder = MultipartEntityBuilder.create();
     SDMUtils.assembleRequestBodySecondaryTypes(
         builder, updateRequestBody, objectId); // Adding Secondary Properties to the request body
@@ -320,14 +344,17 @@ public class SDMServiceImpl implements SDMService {
     updateRequest.setEntity(builder.build());
 
     try (var response = (CloseableHttpResponse) httpClient.execute(updateRequest)) {
-      if (response.getStatusLine().getStatusCode() == 400) {
+      int statusCode = response.getStatusLine().getStatusCode();
+      logger.debug("updateAttachments - response status: {}", statusCode);
+      if (statusCode == 400) {
         String responseString = EntityUtils.toString(response.getEntity());
+        logger.warn("updateAttachments - 400 Bad Request body: {}", responseString);
         JSONObject jsonResponse = new JSONObject(responseString);
         String message = jsonResponse.getString("message");
         throw new ServiceException(message);
       }
-      logger.debug("END: updateAttachments - status: {}", response.getStatusLine().getStatusCode());
-      return response.getStatusLine().getStatusCode();
+      logger.debug("END: updateAttachments - status: {}", statusCode);
+      return statusCode;
     } catch (IOException e) {
       logger.error("Error updating attachments: {}", e.getMessage(), e);
       throw new ServiceException(SDMUtils.getErrorMessage("COULD_NOT_UPDATE_THE_ATTACHMENT"), e);
@@ -537,8 +564,10 @@ public class SDMServiceImpl implements SDMService {
             + parentId
             + "?cmisselector=object";
     HttpGet getFolderRequest = new HttpGet(sdmUrl);
+    logger.debug("getFolderIdByPath - GET URL: {}", sdmUrl);
     try (var response = (CloseableHttpResponse) httpClient.execute(getFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("getFolderIdByPath - response code: {}", responseCode);
       if (responseCode == 200) {
         JSONObject jsonObject = new JSONObject(EntityUtils.toString(response.getEntity()));
         folderId =
@@ -546,6 +575,8 @@ public class SDMServiceImpl implements SDMService {
                 .getJSONObject("properties")
                 .getJSONObject("cmis:objectId")
                 .getString("value");
+      } else if (responseCode == 404) {
+        logger.debug("getFolderIdByPath - folder not found for path: {}", parentId);
       } else if (responseCode == 403) {
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       }
@@ -575,15 +606,18 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true", ContentType.TEXT_PLAIN);
     HttpEntity multipart = builder.build();
     createFolderRequest.setEntity(multipart);
+    logger.debug("createFolder - POST URL: {}, folder name: {}", sdmUrl, parentId);
     try (var response = (CloseableHttpResponse) httpClient.execute(createFolderRequest)) {
       int responseCode = response.getStatusLine().getStatusCode();
       String responseBody = EntityUtils.toString(response.getEntity());
+      logger.debug("createFolder - response code: {}", responseCode);
       if (responseCode == 201) {
         logger.debug("END: createFolder - folder created successfully");
         return responseBody;
       } else if (responseCode == 403) {
         throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
       } else {
+        logger.error("createFolder - error response body: {}", responseBody);
         throw new ServiceException(
             SDMUtils.getErrorMessage("FAILED_TO_CREATE_FOLDER") + ". " + responseBody);
       }
@@ -840,6 +874,11 @@ public class SDMServiceImpl implements SDMService {
     builder.addTextBody("succinct", "true");
     HttpEntity multipart = builder.build();
     uploadFile.setEntity(multipart);
+    logger.debug(
+        "copyAttachment - POST URL: {}, sourceId: {}, targetFolderId: {}",
+        sdmUrl,
+        cmisDocument.getObjectId(),
+        cmisDocument.getFolderId());
     try (var response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
 
       // Handle response entity
@@ -847,12 +886,15 @@ public class SDMServiceImpl implements SDMService {
       String responseBody =
           entity != null ? EntityUtils.toString(entity, StandardCharsets.UTF_8) : "";
 
-      if (response.getStatusLine().getStatusCode() == 201) {
+      int responseCode = response.getStatusLine().getStatusCode();
+      logger.debug("copyAttachment - response code: {}", responseCode);
+      if (responseCode == 201) {
         logger.debug("END: copyAttachment - copy successful");
         return processCopyAttachmentResponse(responseBody, customPropertiesInSDM);
       }
 
       // On error, throw exception with error information
+      logger.error("copyAttachment - error response body: {}", responseBody);
       JSONObject errorJson = new JSONObject(responseBody);
       String exceptionType = errorJson.optString("exception");
       String errorMessage = errorJson.optString("message");
