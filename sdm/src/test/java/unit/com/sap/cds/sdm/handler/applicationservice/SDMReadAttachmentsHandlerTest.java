@@ -51,9 +51,14 @@ public class SDMReadAttachmentsHandlerTest {
 
   @AfterEach
   void tearDown() throws Exception {
-    java.lang.reflect.Field field = CacheConfig.class.getDeclaredField("errorMessageCache");
-    field.setAccessible(true);
-    field.set(null, null);
+    java.lang.reflect.Field cacheField = CacheConfig.class.getDeclaredField("errorMessageCache");
+    cacheField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Cache<Object, Object> cache = (Cache<Object, Object>) cacheField.get(null);
+    if (cache != null) {
+      cache.clear();
+    }
+    cacheField.set(null, null);
   }
 
   @Test
