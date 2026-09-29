@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Version 1.10.4
+
+### Fixed
+- Fix copied attachments throwing `not_scanned` error when opened. After `newDraft` inserts copied records via the draft service, a follow-up persistence update now writes `status = 'Clean'` and `scannedAt` directly to the draft table, bypassing `@readonly` enforcement that was stripping these fields and causing HANA to apply the default `Unscanned` status.
+
 ## Version 1.10.3
 
 ### Fixed
