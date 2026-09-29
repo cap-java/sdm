@@ -25,8 +25,8 @@
 		<jdk.version>21</jdk.version>
 		<cds.services.version>4.9.4</cds.services.version>
 		<cloud.sdk.version>5.34.0</cloud.sdk.version>
-		<xsuaa.version>4.0.8</xsuaa.version>
-		<sap.security.version>4.0.8</sap.security.version>
+		<xsuaa.version>4.1.2</xsuaa.version>
+		<sap.security.version>4.1.2</sap.security.version>
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 
 		<!-- SECURITY OVERRIDES (Black Duck) -->

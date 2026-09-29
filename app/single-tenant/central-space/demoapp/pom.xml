@@ -28,7 +28,7 @@
 		<okhttp.version>5.5.0</okhttp.version>
 		<guava.version>33.7.1-jre</guava.version>
 		<tomcat.version>11.0.26</tomcat.version>
-		<sap.security.version>4.0.8</sap.security.version>
+		<sap.security.version>4.1.2</sap.security.version>
 
 		<cds.install-node.downloadUrl>https://nodejs.org/dist/</cds.install-node.downloadUrl>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
