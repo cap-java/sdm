@@ -54,6 +54,11 @@
 				<version>${sap.security.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>com.sap.cloud.security.xsuaa</groupId>
+				<artifactId>token-client</artifactId>
+				<version>${sap.security.version}</version>
+			</dependency>
+			<dependency>
 				<groupId>ch.qos.logback</groupId>
 				<artifactId>logback-classic</artifactId>
 				<version>${logback.version}</version>
