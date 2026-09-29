@@ -26,6 +26,7 @@
 		<cds.services.version>4.9.4</cds.services.version>
 		<cloud.sdk.version>5.34.0</cloud.sdk.version>
 		<xsuaa.version>3.5.0</xsuaa.version>
+		<sap.security.version>4.0.8</sap.security.version>
 		<cf-java-logging-support.version>3.8.3</cf-java-logging-support.version>
 
 		<!-- SECURITY OVERRIDES (Black Duck) -->
@@ -54,6 +55,23 @@
 	<dependencyManagement>
 		<dependencies>
 			<!-- SECURITY OVERRIDES (Black Duck): declared first so these versions win -->
+			<!-- SAP security pin — Cloud SDK 5.34.0's HttpClient5OAuth2TokenService needs
+			     DefaultTokenClientConfiguration from java-security:4.x; xsuaa BOM 3.5.0 would pin it to 3.5.0 -->
+			<dependency>
+				<groupId>com.sap.cloud.security</groupId>
+				<artifactId>java-api</artifactId>
+				<version>${sap.security.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.sap.cloud.security</groupId>
+				<artifactId>java-security</artifactId>
+				<version>${sap.security.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.sap.cloud.security.xsuaa</groupId>
+				<artifactId>token-client</artifactId>
+				<version>${sap.security.version}</version>
+			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
 				<artifactId>jackson-bom</artifactId>
