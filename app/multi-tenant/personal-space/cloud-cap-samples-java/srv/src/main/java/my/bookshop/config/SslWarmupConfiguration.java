@@ -1,8 +1,12 @@
 package my.bookshop.config;
 
 import jakarta.annotation.PostConstruct;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URI;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,19 +15,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Pre-initializes the JVM TLS/JSSE stack during Spring context startup, before the
- * embedded Tomcat server begins accepting connections.
+ * Pre-initializes the CF Container Security Provider (CF CSP) and TLS handshake
+ * classes before Tomcat accepts connections, preventing the Cloud SDK 5.34.0
+ * OAuth2 TimeLimiter (10 s) from firing on the first sidecar token request.
  *
- * On a fresh CF container (1 CPU), the first TLS handshake loads hundreds of JSSE
- * classes from JARs and initializes the CF Container Security Provider TrustManager
- * (which reads the system CA bundle). This cold-start overhead consistently takes
- * 10-15 s. Cloud SDK 5.34.0's OAuth2 TimeLimiter fires at 10 s, opening the
- * CircuitBreaker and blocking all subsequent sidecar model-load requests with HTTP 500.
+ * Root cause: Cloud SDK's httpclient5 creates SSLContext.getInstance("TLS") and
+ * calls init(null, null, null), which triggers CF CSP TrustManagerFactory to read
+ * the system CA bundle. On a 1-CPU CF container this takes 10-15 s cold. JDK's
+ * HttpURLConnection uses SSLContext.getDefault() (algorithm "Default") which does
+ * NOT trigger CF CSP, so it cannot serve as a warmup. A direct SSLSocket with
+ * an explicit SSLContext.getInstance("TLS").init(null,null,null) + startHandshake()
+ * warms both the CF CSP cert cache and all JSSE handshake classes.
  *
  * @PostConstruct runs inside finishBeanFactoryInitialization(), which Spring calls
- * BEFORE finishRefresh() re-attaches Tomcat's connectors. The health-check therefore
- * does not pass until the warmup completes, so no integration-test request can arrive
- * before TLS is warm.
+ * BEFORE finishRefresh() re-attaches Tomcat's connectors, so no test request can
+ * arrive before the warmup completes.
  */
 @Configuration
 @Profile("cloud")
@@ -31,30 +37,56 @@ class SslWarmupConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(SslWarmupConfiguration.class);
 
-    /** XSUAA base URL, injected from CF VCAP_SERVICES by Spring Boot's environment post-processor. */
     @Value("${vcap.services.bookshop-mt-uaa.credentials.url:}")
     private String xsuaaBaseUrl;
 
     @PostConstruct
     void warmUpJsseSslStack() {
+        long start = System.currentTimeMillis();
+        log.info("SslWarmup: starting CF CSP and JSSE pre-initialization");
+
+        // Step 1: init a new TLS SSLContext with null params — same code path as httpclient5.
+        // This triggers CloudFoundryContainerTrustManagerFactory to read and cache the CA bundle.
+        try {
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, null, null);
+            log.info("SslWarmup: SSLContext.getInstance(TLS).init() done in {}ms",
+                System.currentTimeMillis() - start);
+        } catch (Exception e) {
+            log.warn("SslWarmup: SSLContext init failed after {}ms: {}",
+                System.currentTimeMillis() - start, e.getMessage());
+        }
+
+        // Step 2: perform a real TLS handshake to load all sun.security.ssl.* handshake classes.
+        // Skipped only if the XSUAA URL is absent (should never happen in a cloud deployment).
         if (xsuaaBaseUrl.isEmpty()) {
-            log.warn("SslWarmup: vcap.services.bookshop-mt-uaa.credentials.url not found — skipping TLS warmup");
+            log.warn("SslWarmup: vcap.services.bookshop-mt-uaa.credentials.url is empty — "
+                + "CF CSP init done but TLS handshake classes not pre-loaded");
             return;
         }
-        // OIDC discovery endpoint is publicly accessible (no credentials needed)
-        String warmupUrl = xsuaaBaseUrl + "/.well-known/openid-configuration";
-        log.info("SslWarmup: pre-initializing JVM TLS stack via {}", warmupUrl);
-        long start = System.currentTimeMillis();
+
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(warmupUrl).openConnection();
-            conn.setConnectTimeout(30_000);
-            conn.setReadTimeout(30_000);
-            int status = conn.getResponseCode();
-            conn.disconnect();
-            log.info("SslWarmup: TLS stack warmed in {}ms (HTTP {})",
-                System.currentTimeMillis() - start, status);
+            URI uri = URI.create(xsuaaBaseUrl);
+            String host = uri.getHost();
+            int port = uri.getPort() > 0 ? uri.getPort() : 443;
+
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, null, null);
+            SSLSocketFactory sf = ctx.getSocketFactory();
+
+            long handshakeStart = System.currentTimeMillis();
+            try (Socket plain = new Socket()) {
+                plain.connect(new InetSocketAddress(host, port), 30_000);
+                try (SSLSocket ssl = (SSLSocket) sf.createSocket(plain, host, port, true)) {
+                    ssl.setSoTimeout(30_000);
+                    ssl.startHandshake();
+                }
+            }
+            log.info("SslWarmup: TLS handshake to {}:{} done in {}ms — total warmup {}ms",
+                host, port, System.currentTimeMillis() - handshakeStart,
+                System.currentTimeMillis() - start);
         } catch (Exception e) {
-            log.warn("SslWarmup: warmup failed after {}ms — startup continues without warmup: {}",
+            log.warn("SslWarmup: TLS handshake failed after {}ms — continuing without full warmup: {}",
                 System.currentTimeMillis() - start, e.getMessage());
         }
     }
