@@ -8,6 +8,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import com.sap.cloud.sdk.cloudplatform.resilience.NoResilienceDecorationStrategy;
+import com.sap.cloud.sdk.cloudplatform.resilience.ResilienceDecorator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,13 @@ import org.springframework.context.annotation.Profile;
  * an explicit SSLContext.getInstance("TLS").init(null,null,null) + startHandshake()
  * warms both the CF CSP cert cache and all JSSE handshake classes.
  *
+ * Additionally, the Cloud SDK's 10 s TimeLimiter is replaced with
+ * NoResilienceDecorationStrategy because on heavily CPU-throttled CF containers
+ * (< 10 % entitlement) even a warm SSL connection can exceed 10 s, causing
+ * 5 consecutive TimeoutExceptions that permanently open the CircuitBreaker.
+ * The underlying Apache HttpClient5 still applies its own socket/connect timeouts,
+ * so removing the SDK-level TimeLimiter does not risk indefinite hangs.
+ *
  * @PostConstruct runs inside finishBeanFactoryInitialization(), which Spring calls
  * BEFORE finishRefresh() re-attaches Tomcat's connectors, so no test request can
  * arrive before the warmup completes.
@@ -43,6 +52,14 @@ class SslWarmupConfiguration {
     @PostConstruct
     void warmUpJsseSslStack() {
         long start = System.currentTimeMillis();
+
+        // Disable the Cloud SDK's 10 s TimeLimiter + CircuitBreaker.
+        // On throttled CF containers the timer fires before the XSUAA token response
+        // arrives, opening the CB and blocking all subsequent requests permanently.
+        // The Apache HttpClient5 underneath still enforces its own socket timeouts.
+        ResilienceDecorator.setDecorationStrategy(new NoResilienceDecorationStrategy());
+        log.info("SslWarmup: disabled Cloud SDK resilience decorators (TimeLimiter/CircuitBreaker)");
+
         log.info("SslWarmup: starting CF CSP and JSSE pre-initialization");
 
         // Step 1: init a new TLS SSLContext with null params — same code path as httpclient5.

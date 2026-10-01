@@ -46,15 +46,6 @@ management:
 spring:
   config.activate.on-profile: cloud
   sql.init.schema-locations: "classpath:schema-nomocks.sql"
-resilience4j:
-  timelimiter:
-    configs:
-      default:
-        timeoutDuration: 60s
-  circuitbreaker:
-    configs:
-      default:
-        waitDurationInOpenState: 10s
 cds:
   sql.hana:
     optimizationMode: hex
