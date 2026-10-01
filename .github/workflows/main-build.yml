@@ -2,7 +2,7 @@ name: Main build and snapshot deploy
 
 env:
   JAVA_VERSION: '21'
-  MAVEN_VERSION: '3.6.3'
+  MAVEN_VERSION: '3.9.16'
 
 on:
   push:

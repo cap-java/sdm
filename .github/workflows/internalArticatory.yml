@@ -2,7 +2,7 @@ name: Internal Artifactory snapshot deploy
 
 env:
   JAVA_VERSION: '21'
-  MAVEN_VERSION: '3.6.3'
+  MAVEN_VERSION: '3.9.16'
   ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
 
 on:
