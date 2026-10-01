@@ -398,9 +398,9 @@ public class SDMUtils {
               title = titleAnnotation.get().getValue().toString();
             } else {
               title = element.getName(); /*
-                                          * This is in case the user has not specified a title for the column in the cds
-                                          * file (which is optional)
-                                          */
+               * This is in case the user has not specified a title for the column in the cds
+               * file (which is optional)
+               */
             }
             invalidProperties.put(key, title);
           }
@@ -570,7 +570,19 @@ public class SDMUtils {
   }
 
   private static List<String> getKeyElementNames(CdsEntity entity) {
-    return entity.elements().filter(CdsElement::isKey).map(CdsElement::getName).toList();
+    return entity
+        .elements()
+        .filter(CdsElement::isKey)
+        .map(
+            e -> {
+              String name = e.getName();
+              // _drafts entity key columns have an "up__" prefix (e.g. up__bidUUID,
+              // up__bookItem_ID).
+              // The CQN where clause uses the bare field names (bidUUID, bookItem_ID).
+              // Strip the prefix so the contains-check in fetchUPIDFromCQN matches correctly.
+              return name.startsWith("up__") ? name.substring(4) : name;
+            })
+        .toList();
   }
 
   /**
@@ -586,25 +598,36 @@ public class SDMUtils {
       String upID = null;
       ObjectMapper mapper = new ObjectMapper();
       JsonNode root = mapper.readTree(select.toString());
+      logger.debug(
+          "fetchUPIDFromCQN - CQN from.ref: {}", root.path("SELECT").path("from").path("ref"));
       JsonNode refArray = root.path("SELECT").path("from").path("ref");
-
-      JsonNode secondLast = refArray.get(refArray.size() - 2);
-      JsonNode whereArray;
-      if (secondLast != null) {
-        whereArray = secondLast.path("where");
-      } else {
-        whereArray = refArray;
-      }
-
-      // If where condition is not present or empty, return null (valid scenario for
-      // select without
-      // filter)
-      if (whereArray == null || whereArray.isMissingNode() || whereArray.size() == 0) {
-        return null;
-      }
 
       // Get the actual key field names from the parent entity
       List<String> keyElementNames = getKeyElementNames(parentEntity);
+
+      // Scan ref nodes from right to left (excluding the last, which is the attachment entity
+      // itself) to find the first node that has a where clause containing a matching key.
+      // This handles deep navigation paths like:
+      //   SourcingEvents(id=...) / items(id=...) / terms(id=...) / initialSlice / itemValue /
+      // attachments
+      // where intermediate nodes (initialSlice, itemValue) have no where clause.
+      JsonNode whereArray = null;
+      for (int r = refArray.size() - 2; r >= 0; r--) {
+        JsonNode refNode = refArray.get(r);
+        if (refNode == null) continue;
+        JsonNode candidate = refNode.path("where");
+        if (candidate != null && !candidate.isMissingNode() && candidate.size() > 0) {
+          whereArray = candidate;
+          break;
+        }
+      }
+
+      // If no ref node with a where clause was found, return null (valid scenario for
+      // select without filter)
+      if (whereArray == null) {
+        logger.debug("END: fetchUPIDFromCQN - upID: null (no where clause found in ref chain)");
+        return null;
+      }
 
       for (int i = 0; i < whereArray.size(); i++) {
         JsonNode node = whereArray.get(i);
