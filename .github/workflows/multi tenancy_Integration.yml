@@ -1366,11 +1366,10 @@ jobs:
   # Revert repository to default after virus scan tests
   # Runs if either setup job actually switched the repo (i.e. didn't get skipped)
   virusscan-cleanup:
-    if: false
     environment: dev
     runs-on: ubuntu-latest
     needs: [versioned-setup, versioned-test, virusscan-setup, virusscan-test]
-    if: always() && (needs.versioned-setup.result != 'skipped' || needs.virusscan-setup.result != 'skipped')
+    if: false
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
