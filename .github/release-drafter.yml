@@ -1,0 +1,85 @@
+# Release Drafter configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# Automatically drafts the GitHub Release body when PRs are merged to develop.
+# Uses PR labels to categorize changes. Works alongside the AI Changelog
+# Generator (changelog.yml) — release-drafter populates the GitHub Release UI,
+# while the changelog script writes the CHANGELOG.md file.
+#
+# Labels to apply on PRs:
+#   enhancement / feature  → 🚀 New Features
+#   bug / fix              → 🐛 Bug Fixes
+#   security               → 🔒 Security
+#   documentation / docs   → 📖 Documentation
+#   performance            → ⚡ Performance
+#   dependencies           → 📦 Dependency Updates
+#   breaking-change        → 💥 Breaking Changes
+
+name-template: '$RESOLVED_VERSION'
+tag-template:  '$RESOLVED_VERSION'
+
+# Match existing tag format: plain semver e.g. 1.8.1  (no "v" prefix)
+version-template: '$MAJOR.$MINOR.$PATCH'
+
+categories:
+  - title: '💥 Breaking Changes'
+    labels:
+      - 'breaking-change'
+  - title: '🚀 New Features'
+    labels:
+      - 'enhancement'
+      - 'feature'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+      - 'fix'
+  - title: '🔒 Security'
+    labels:
+      - 'security'
+  - title: '⚡ Performance'
+    labels:
+      - 'performance'
+  - title: '📖 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: '📦 Dependency Updates'
+    labels:
+      - 'dependencies'
+
+# How to format each change line
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-title-escapes: '\<*_&'
+
+# Which labels determine the next semantic version bump
+version-resolver:
+  major:
+    labels:
+      - 'breaking-change'
+      - 'major'
+  minor:
+    labels:
+      - 'enhancement'
+      - 'feature'
+      - 'minor'
+  patch:
+    labels:
+      - 'bug'
+      - 'fix'
+      - 'patch'
+      - 'security'
+      - 'performance'
+      - 'documentation'
+      - 'docs'
+      - 'dependencies'
+  default: patch
+
+# Template for the GitHub Release body
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ---
+  📦 **Artifact:** `com.sap.cds:sdm:$RESOLVED_VERSION`
+  📖 **Full Changelog:** https://github.com/$OWNER/$REPOSITORY/blob/develop/CHANGELOG.md
+  🔗 **Compare:** https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_VERSION
