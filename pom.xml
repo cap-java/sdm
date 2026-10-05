@@ -44,6 +44,7 @@
         <netty.version>4.1.121.Final</netty.version>
         <bouncycastle.version>1.85</bouncycastle.version>
         <nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
+        <jackson-databind.version>2.22.3</jackson-databind.version>
     </properties>
 
     <groupId>com.sap.cds</groupId>
@@ -63,6 +64,16 @@
         <dependencies>
             <!-- SECURITY OVERRIDES (Black Duck): pin clean transitive versions.
                  Imported/declared before other BOMs so these versions win. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson-databind.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson-databind.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-bom</artifactId>
