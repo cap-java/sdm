@@ -22,6 +22,9 @@
 		<cds.install-cdsdk.version>^9</cds.install-cdsdk.version>
 
 		<!-- SECURITY OVERRIDES (Black Duck) -->
+		<bouncycastle.version>1.85</bouncycastle.version>
+		<kotlin.version>2.4.20</kotlin.version>
+		<nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
 		<logback.version>1.6.3</logback.version>
 		<jackson-databind.version>2.22.2</jackson-databind.version>
 		<jackson3.version>3.2.2</jackson3.version>
@@ -57,6 +60,35 @@
 				<groupId>com.sap.cloud.security.xsuaa</groupId>
 				<artifactId>token-client</artifactId>
 				<version>${sap.security.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.micrometer</groupId>
+				<artifactId>micrometer-bom</artifactId>
+				<version>${micrometer.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.jetbrains.kotlin</groupId>
+				<artifactId>kotlin-bom</artifactId>
+				<version>${kotlin.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcpkix-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.nimbusds</groupId>
+				<artifactId>nimbus-jose-jwt</artifactId>
+				<version>${nimbus-jose-jwt.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>ch.qos.logback</groupId>

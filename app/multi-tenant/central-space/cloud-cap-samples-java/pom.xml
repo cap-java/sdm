@@ -35,6 +35,8 @@
 		<httpcore5.version>5.4.3</httpcore5.version>
 		<netty.version>4.2.18.Final</netty.version>
 		<nimbus-jose-jwt.version>9.48</nimbus-jose-jwt.version>
+		<bouncycastle.version>1.85</bouncycastle.version>
+		<kotlin.version>2.4.20</kotlin.version>
 		<reactor-core.version>3.8.7</reactor-core.version>
 		<okhttp.version>5.5.0</okhttp.version>
 		<guava.version>33.7.1-jre</guava.version>
@@ -55,6 +57,13 @@
 		<dependencies>
 			<!-- SECURITY OVERRIDES (Black Duck): declared first so these versions win -->
 			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
 				<artifactId>jackson-bom</artifactId>
 				<version>${jackson-bom.version}</version>
@@ -65,6 +74,13 @@
 				<groupId>io.opentelemetry</groupId>
 				<artifactId>opentelemetry-bom</artifactId>
 				<version>${opentelemetry.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.jetbrains.kotlin</groupId>
+				<artifactId>kotlin-bom</artifactId>
+				<version>${kotlin.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -107,6 +123,16 @@
 				<groupId>com.nimbusds</groupId>
 				<artifactId>nimbus-jose-jwt</artifactId>
 				<version>${nimbus-jose-jwt.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcpkix-jdk18on</artifactId>
+				<version>${bouncycastle.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>io.projectreactor</groupId>
