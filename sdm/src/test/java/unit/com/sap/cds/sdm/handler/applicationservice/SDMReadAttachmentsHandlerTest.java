@@ -340,4 +340,16 @@ public class SDMReadAttachmentsHandlerTest {
     // Verify the English fallback is NOT stored for this key
     assertNotEquals(SDMErrorMessages.USER_NOT_AUTHORISED_ERROR, cached);
   }
+
+  @org.junit.jupiter.api.AfterEach
+  void tearDown() throws Exception {
+    java.lang.reflect.Field cacheField = CacheConfig.class.getDeclaredField("errorMessageCache");
+    cacheField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Cache<Object, Object> cache = (Cache<Object, Object>) cacheField.get(null);
+    if (cache != null) {
+      cache.clear();
+    }
+    cacheField.set(null, null);
+  }
 }
