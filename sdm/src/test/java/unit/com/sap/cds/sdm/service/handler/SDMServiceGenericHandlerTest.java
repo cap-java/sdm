@@ -216,7 +216,8 @@ public class SDMServiceGenericHandlerTest {
     CdsEntity mockParentEntity = mock(CdsEntity.class);
     when(cdsModel.findEntity("SystemService.SystemEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
-    when(cdsModel.findEntity("SystemService.SystemEntity")).thenReturn(Optional.of(mockParentEntity));
+    when(cdsModel.findEntity("SystemService.SystemEntity"))
+        .thenReturn(Optional.of(mockParentEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
@@ -3349,7 +3350,10 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition",
+              DraftCancelEventContext.class,
+              CdsElement.class,
+              Map.class);
       method.setAccessible(true);
 
       // Execute the test
@@ -3394,7 +3398,10 @@ public class SDMServiceGenericHandlerTest {
     // Use reflection to invoke the private method
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+            "processNestedEntityComposition",
+            DraftCancelEventContext.class,
+            CdsElement.class,
+            Map.class);
     method.setAccessible(true);
 
     // Execute the test
@@ -3449,7 +3456,10 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition",
+              DraftCancelEventContext.class,
+              CdsElement.class,
+              Map.class);
       method.setAccessible(true);
 
       // Execute the test
@@ -3518,7 +3528,10 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition",
+              DraftCancelEventContext.class,
+              CdsElement.class,
+              Map.class);
       method.setAccessible(true);
 
       // Execute the test
@@ -3565,7 +3578,10 @@ public class SDMServiceGenericHandlerTest {
     // Use reflection to invoke the private method
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+            "processNestedEntityComposition",
+            DraftCancelEventContext.class,
+            CdsElement.class,
+            Map.class);
     method.setAccessible(true);
 
     // Execute the test and expect exception
@@ -3715,7 +3731,10 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition",
+              DraftCancelEventContext.class,
+              CdsElement.class,
+              Map.class);
       method.setAccessible(true);
 
       // Execute the test

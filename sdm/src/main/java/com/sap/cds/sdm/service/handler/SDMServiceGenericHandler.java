@@ -280,7 +280,8 @@ public class SDMServiceGenericHandler implements EventHandler {
 
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
+              Select.from(nestedDraftEntity.get())
+                  .where(e -> e.get(upIdKey).eq(parentId).and(e.get("IsActiveEntity").eq(false))));
       logger.debug("Found {} nested records to process", nestedRecords.rowCount());
 
       for (Row nestedRecord : nestedRecords) {
