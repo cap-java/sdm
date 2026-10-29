@@ -79,26 +79,49 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
 
-    Optional<CdsEntity> attachmentEntity =
+    Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
 
-    // get the objectId against the Id
     String id = targetKeys.get("ID").toString();
     logger.debug("Fetching changelog for attachment ID: {}", id);
 
-    CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    // Derive parent entity name and upIdKey to scope the DB lookup by parent record
+    String targetQualifiedName = context.getTarget().getQualifiedName();
+    int lastDot = targetQualifiedName.lastIndexOf('.');
+    String parentEntityName = lastDot > 0 ? targetQualifiedName.substring(0, lastDot) : null;
+    Optional<CdsEntity> parentEntityOpt =
+        parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+    String upIdKey =
+        attachmentDraftEntity.isPresent()
+            ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+            : "up__ID";
+
+    // fetchUPIDFromCQN extracts the parent record key from the navigation path in the CQN
+    String upId =
+        parentEntityOpt.isPresent()
+            ? SDMUtils.fetchUPIDFromCQN((CqnSelect) context.get("cqn"), parentEntityOpt.get())
+            : null;
+
+    if (upId == null || upId.isEmpty()) {
+      logger.warn("Cannot determine parent scope for changelog request on attachment ID: {}", id);
+      throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
+    }
+
+    CmisDocument cmisDocument = lookupAttachmentScoped(attachmentDraftEntity, id, upIdKey, upId);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
-      // open attachment is triggered on non-draft entity
       logger.debug("Draft entity returned empty fileName, fetching from active entity");
-      attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
+      Optional<CdsEntity> attachmentActiveEntity =
+          cdsModel.findEntity(context.getTarget().getQualifiedName());
+      cmisDocument = lookupAttachmentScoped(attachmentActiveEntity, id, upIdKey, upId);
+    }
 
-      cmisDocument =
-          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    if (cmisDocument.getObjectId() == null || cmisDocument.getObjectId().isEmpty()) {
+      logger.warn("Attachment ID {} not found within authorized parent scope (upId: {})", id, upId);
+      throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
     }
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
@@ -112,6 +135,15 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     context.setResult(jsonObject);
     logger.debug("END: Changelog event");
+  }
+
+  private CmisDocument lookupAttachmentScoped(
+      Optional<CdsEntity> entityOpt, String id, String upIdKey, String upId) {
+    if (entityOpt.isEmpty()) {
+      return new CmisDocument();
+    }
+    return dbQuery.getObjectIdForAttachmentID(
+        entityOpt.get(), persistenceService, id, upIdKey, upId);
   }
 
   @On(event = "copyAttachments")
