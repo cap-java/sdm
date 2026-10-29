@@ -195,11 +195,12 @@ public class SDMServiceGenericHandler implements EventHandler {
         revertLinksForComposition(context, parentKeys, entry.getKey());
       }
     }
-    revertNestedEntityLinks(context);
+    revertNestedEntityLinks(context, parentKeys);
     logger.debug("END: Handle draft discard for links");
   }
 
-  private void revertNestedEntityLinks(DraftCancelEventContext context) throws IOException {
+  private void revertNestedEntityLinks(
+      DraftCancelEventContext context, Map<String, Object> parentKeys) throws IOException {
     logger.debug("START: Revert nested entity links");
 
     CdsEntity parentDraftEntity = context.getTarget();
@@ -214,7 +215,7 @@ public class SDMServiceGenericHandler implements EventHandler {
           .forEach(
               composition -> {
                 try {
-                  processNestedEntityComposition(context, composition);
+                  processNestedEntityComposition(context, composition, parentKeys);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
@@ -224,7 +225,8 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void processNestedEntityComposition(
-      DraftCancelEventContext context, CdsElement composition) throws IOException {
+      DraftCancelEventContext context, CdsElement composition, Map<String, Object> parentKeys)
+      throws IOException {
     logger.debug("Processing nested entity composition: {}", composition.getName());
 
     CdsAssociationType associationType = (CdsAssociationType) composition.getType();
@@ -243,12 +245,25 @@ public class SDMServiceGenericHandler implements EventHandler {
         return;
       }
 
+      final String upIdKey = SDMUtils.getUpIdKey(nestedDraftEntity.get());
+      if (upIdKey == null || upIdKey.isEmpty()) {
+        logger.debug("No upIdKey found for nested entity: {}, skipping", targetEntityName);
+        return;
+      }
+      String parentKeyName = upIdKey.replaceFirst("^up__", "");
+      Object parentId = parentKeys.get(parentKeyName);
+
       // Get the actual key field names from the entity instead of hardcoding "ID"
       List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
 
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
+              Select.from(nestedDraftEntity.get())
+                  .where(
+                      e ->
+                          e.get(upIdKey)
+                              .eq(parentId)
+                              .and(e.get("IsActiveEntity").eq(false))));
       logger.debug("Found {} nested records to process", nestedRecords.rowCount());
 
       for (Row nestedRecord : nestedRecords) {

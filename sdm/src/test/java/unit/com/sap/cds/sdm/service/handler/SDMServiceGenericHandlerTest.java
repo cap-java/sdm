@@ -2375,13 +2375,13 @@ public class SDMServiceGenericHandlerTest {
 
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "revertNestedEntityLinks", DraftCancelEventContext.class);
+              "revertNestedEntityLinks", DraftCancelEventContext.class, Map.class);
       method.setAccessible(true);
 
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context);
+              method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -2419,13 +2419,13 @@ public class SDMServiceGenericHandlerTest {
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "revertNestedEntityLinks", DraftCancelEventContext.class);
+            "revertNestedEntityLinks", DraftCancelEventContext.class, Map.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
         () -> {
           try {
-            method.invoke(sdmServiceGenericHandler, context);
+            method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
           } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException) {
               throw (RuntimeException) e.getCause();
@@ -2453,13 +2453,13 @@ public class SDMServiceGenericHandlerTest {
 
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "revertNestedEntityLinks", DraftCancelEventContext.class);
+            "revertNestedEntityLinks", DraftCancelEventContext.class, Map.class);
     method.setAccessible(true);
 
     assertDoesNotThrow(
         () -> {
           try {
-            method.invoke(sdmServiceGenericHandler, context);
+            method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
           } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException) {
               throw (RuntimeException) e.getCause();
@@ -2536,6 +2536,7 @@ public class SDMServiceGenericHandlerTest {
 
     // Mock SDMUtils.getUpIdKey to return non-null value
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(attachmentDraftEntity)).thenReturn("up__ID");
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(eq(nestedDraftEntity))).thenReturn("up__ID");
 
     try (var attachmentUtilsMock =
         mockStatic(
@@ -2554,13 +2555,13 @@ public class SDMServiceGenericHandlerTest {
 
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "revertNestedEntityLinks", DraftCancelEventContext.class);
+              "revertNestedEntityLinks", DraftCancelEventContext.class, Map.class);
       method.setAccessible(true);
 
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context);
+              method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -2603,7 +2604,7 @@ public class SDMServiceGenericHandlerTest {
     // Use reflection to invoke the private method
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "revertNestedEntityLinks", DraftCancelEventContext.class);
+            "revertNestedEntityLinks", DraftCancelEventContext.class, Map.class);
     method.setAccessible(true);
 
     // Execute the test and expect RuntimeException to be thrown
@@ -3284,6 +3285,9 @@ public class SDMServiceGenericHandlerTest {
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
+    // Mock SDMUtils.getUpIdKey for nestedDraftEntity to enable parent-filtered query
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(eq(nestedDraftEntity))).thenReturn("up__ID");
+
     // Mock the static method call
     try (var attachmentUtilsMock =
         mockStatic(
@@ -3316,14 +3320,14 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition);
+              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3361,14 +3365,14 @@ public class SDMServiceGenericHandlerTest {
     // Use reflection to invoke the private method
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
     method.setAccessible(true);
 
     // Execute the test
     assertDoesNotThrow(
         () -> {
           try {
-            method.invoke(sdmServiceGenericHandler, context, composition);
+            method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
           } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException) {
               throw (RuntimeException) e.getCause();
@@ -3416,14 +3420,14 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition);
+              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3469,6 +3473,9 @@ public class SDMServiceGenericHandlerTest {
     Map<String, String> attachmentMapping = new HashMap<>();
     attachmentMapping.put("AdminService.Attachments", "path1");
 
+    // Mock SDMUtils.getUpIdKey for nestedDraftEntity to enable parent-filtered query
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(eq(nestedDraftEntity))).thenReturn("up__ID");
+
     // Mock the static method call
     try (var attachmentUtilsMock =
         mockStatic(
@@ -3485,14 +3492,14 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition);
+              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3532,7 +3539,7 @@ public class SDMServiceGenericHandlerTest {
     // Use reflection to invoke the private method
     Method method =
         SDMServiceGenericHandler.class.getDeclaredMethod(
-            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+            "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
     method.setAccessible(true);
 
     // Execute the test and expect exception
@@ -3682,14 +3689,14 @@ public class SDMServiceGenericHandlerTest {
       // Use reflection to invoke the private method
       Method method =
           SDMServiceGenericHandler.class.getDeclaredMethod(
-              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class);
+              "processNestedEntityComposition", DraftCancelEventContext.class, CdsElement.class, Map.class);
       method.setAccessible(true);
 
       // Execute the test
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition);
+              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
