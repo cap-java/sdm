@@ -395,9 +395,10 @@ public class SDMServiceGenericHandlerTest {
 
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-    // getObject throws — user does not have required scope in SDM
+    // getObject throws USER_NOT_AUTHORISED_ERROR — same as SDMServiceImpl does on HTTP 403
+    String unauthorisedMsg = SDMErrorMessages.USER_NOT_AUTHORISED_ERROR;
     when(sdmService.getObject("denied-object-001", sdmCredentials, false))
-        .thenThrow(new ServiceException("User does not have required scope"));
+        .thenThrow(new ServiceException(unauthorisedMsg));
 
     ServiceException ex =
         assertThrows(

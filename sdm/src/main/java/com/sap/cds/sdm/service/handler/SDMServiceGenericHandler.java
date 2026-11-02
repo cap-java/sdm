@@ -135,7 +135,8 @@ public class SDMServiceGenericHandler implements EventHandler {
         throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
       }
     } catch (ServiceException e) {
-      if (e.getMessage() != null && e.getMessage().contains("User does not have required scope")) {
+      if (e.getMessage() != null
+          && e.getMessage().equals(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"))) {
         logger.warn(
             "User not authorized to view changelog for objectId: {}", cmisDocument.getObjectId());
         throw new ServiceException(SDMUtils.getErrorMessage("CHANGELOG_NOT_AUTHORISED_ERROR"));
