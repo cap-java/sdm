@@ -126,6 +126,23 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
 
+    try {
+      JSONObject objectResponse =
+          sdmService.getObject(
+              cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+      if (objectResponse == null) {
+        logger.warn("File not found in SDM for objectId: {}", cmisDocument.getObjectId());
+        throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
+      }
+    } catch (ServiceException e) {
+      if (e.getMessage() != null && e.getMessage().contains("User does not have required scope")) {
+        logger.warn(
+            "User not authorized to view changelog for objectId: {}", cmisDocument.getObjectId());
+        throw new ServiceException(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"));
+      }
+      throw e;
+    }
+
     JSONObject jsonObject =
         sdmService.getChangeLog(
             cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
@@ -227,11 +244,12 @@ public class SDMServiceGenericHandler implements EventHandler {
         revertLinksForComposition(context, parentKeys, entry.getKey());
       }
     }
-    revertNestedEntityLinks(context);
+    revertNestedEntityLinks(context, parentKeys);
     logger.debug("END: Handle draft discard for links");
   }
 
-  private void revertNestedEntityLinks(DraftCancelEventContext context) throws IOException {
+  private void revertNestedEntityLinks(
+      DraftCancelEventContext context, Map<String, Object> parentKeys) throws IOException {
     logger.debug("START: Revert nested entity links");
 
     CdsEntity parentDraftEntity = context.getTarget();
@@ -246,7 +264,7 @@ public class SDMServiceGenericHandler implements EventHandler {
           .forEach(
               composition -> {
                 try {
-                  processNestedEntityComposition(context, composition);
+                  processNestedEntityComposition(context, composition, parentKeys);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
@@ -256,7 +274,8 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void processNestedEntityComposition(
-      DraftCancelEventContext context, CdsElement composition) throws IOException {
+      DraftCancelEventContext context, CdsElement composition, Map<String, Object> parentKeys)
+      throws IOException {
     logger.debug("Processing nested entity composition: {}", composition.getName());
 
     CdsAssociationType associationType = (CdsAssociationType) composition.getType();
@@ -274,6 +293,14 @@ public class SDMServiceGenericHandler implements EventHandler {
         logger.debug("No attachment mapping found for nested entity: {}", targetEntityName);
         return;
       }
+
+      String upIdKey = SDMUtils.getUpIdKey(nestedDraftEntity.get());
+      if (upIdKey == null || upIdKey.isEmpty()) {
+        logger.debug("No upIdKey found for nested entity: {}, skipping", targetEntityName);
+        return;
+      }
+      String parentKeyName = upIdKey.replaceFirst("^up__", "");
+      Object parentId = parentKeys.get(parentKeyName);
 
       // Get the actual key field names from the entity instead of hardcoding "ID"
       List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
