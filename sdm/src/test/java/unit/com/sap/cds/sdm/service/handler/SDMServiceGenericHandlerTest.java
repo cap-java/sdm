@@ -242,7 +242,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM ACL pre-check
-    when(sdmService.getObject("system-object-456", sdmCredentials, true)).thenReturn(new JSONObject());
+    when(sdmService.getObject("system-object-456", sdmCredentials, true))
+        .thenReturn(new JSONObject());
 
     // Mock SDM service
     when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
@@ -335,7 +336,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM ACL pre-check
-    when(sdmService.getObject("error-object-789", sdmCredentials, false)).thenReturn(new JSONObject());
+    when(sdmService.getObject("error-object-789", sdmCredentials, false))
+        .thenReturn(new JSONObject());
 
     // Mock SDM service to throw ServiceException (runtime exception)
     when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
@@ -399,12 +401,12 @@ public class SDMServiceGenericHandlerTest {
 
     ServiceException ex =
         assertThrows(
-            ServiceException.class,
-            () -> sdmServiceGenericHandler.changelog(mockLogContext));
+            ServiceException.class, () -> sdmServiceGenericHandler.changelog(mockLogContext));
 
-    assertTrue(ex.getMessage().contains("USER_NOT_AUTHORISED_ERROR") ||
-        ex.getMessage().contains("not authorized") ||
-        ex.getClass().getSimpleName().equals("ServiceException"));
+    assertTrue(
+        ex.getMessage().contains("USER_NOT_AUTHORISED_ERROR")
+            || ex.getMessage().contains("not authorized")
+            || ex.getClass().getSimpleName().equals("ServiceException"));
     verify(sdmService).getObject("denied-object-001", sdmCredentials, false);
     verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
   }
@@ -454,9 +456,7 @@ public class SDMServiceGenericHandlerTest {
     // getObject returns null — object does not exist in SDM
     when(sdmService.getObject("missing-object-002", sdmCredentials, false)).thenReturn(null);
 
-    assertThrows(
-        ServiceException.class,
-        () -> sdmServiceGenericHandler.changelog(mockLogContext));
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.changelog(mockLogContext));
 
     verify(sdmService).getObject("missing-object-002", sdmCredentials, false);
     verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
