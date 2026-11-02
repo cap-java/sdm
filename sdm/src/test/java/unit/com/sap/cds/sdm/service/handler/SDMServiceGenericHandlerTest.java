@@ -403,10 +403,7 @@ public class SDMServiceGenericHandlerTest {
         assertThrows(
             ServiceException.class, () -> sdmServiceGenericHandler.changelog(mockLogContext));
 
-    assertTrue(
-        ex.getMessage().contains("USER_NOT_AUTHORISED_ERROR")
-            || ex.getMessage().contains("not authorized")
-            || ex.getClass().getSimpleName().equals("ServiceException"));
+    assertTrue(ex.getMessage().contains("view the changelog"));
     verify(sdmService).getObject("denied-object-001", sdmCredentials, false);
     verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
   }
