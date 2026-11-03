@@ -8736,7 +8736,13 @@ class IntegrationTest_SingleFacet {
     String raw =
         apiNoRoles.fetchChangelogRaw(appUrl, entityName, facetName, entityId, attachmentId);
     String[] parts = raw.split("\\|", 2);
-    int statusCode = Integer.parseInt(parts[0]);
+    int statusCode;
+    try {
+      statusCode = Integer.parseInt(parts[0]);
+    } catch (NumberFormatException e) {
+      fail("fetchChangelogRaw returned unexpected format (expected '<code>|<body>'): " + raw);
+      return;
+    }
     String body = parts.length > 1 ? parts[1] : "";
 
     assertTrue(
@@ -8783,7 +8789,13 @@ class IntegrationTest_SingleFacet {
     // Request changelog for attachment of entity A, but scoped under entity B's navigation path
     String raw = api.fetchChangelogRaw(appUrl, entityName, facetName, entityIdB, attachmentIdOfA);
     String[] parts = raw.split("\\|", 2);
-    int statusCode = Integer.parseInt(parts[0]);
+    int statusCode;
+    try {
+      statusCode = Integer.parseInt(parts[0]);
+    } catch (NumberFormatException e) {
+      fail("fetchChangelogRaw returned unexpected format (expected '<code>|<body>'): " + raw);
+      return;
+    }
     String body = parts.length > 1 ? parts[1] : "";
 
     assertTrue(

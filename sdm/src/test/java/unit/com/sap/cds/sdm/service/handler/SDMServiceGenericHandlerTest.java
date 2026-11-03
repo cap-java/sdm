@@ -2655,6 +2655,12 @@ public class SDMServiceGenericHandlerTest {
     when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
     when(nestedRecord.get("ID")).thenReturn("chapter1");
 
+    // Mock nestedDraftEntity key element so nestedEntityKeys gets "ID" populated
+    CdsElement nestedKeyElement = mock(CdsElement.class);
+    when(nestedKeyElement.isKey()).thenReturn(true);
+    when(nestedKeyElement.getName()).thenReturn("ID");
+    when(nestedDraftEntity.elements()).thenReturn(Stream.of(nestedKeyElement));
+
     Map<String, String> attachmentMapping = new HashMap<>();
     attachmentMapping.put("AdminService.Attachments", "path1");
 
@@ -2713,7 +2719,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-book-id");
+              method.invoke(sdmServiceGenericHandler, context, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3482,7 +3490,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3663,7 +3673,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3747,6 +3759,12 @@ public class SDMServiceGenericHandlerTest {
     Row nestedRecord = mock(Row.class);
     when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
     when(nestedRecord.get("ID")).thenReturn("chapter1");
+
+    // Mock nestedDraftEntity key element so nestedEntityKeys gets "ID" populated
+    CdsElement nestedKeyElement = mock(CdsElement.class);
+    when(nestedKeyElement.isKey()).thenReturn(true);
+    when(nestedKeyElement.getName()).thenReturn("ID");
+    when(nestedDraftEntity.elements()).thenReturn(Stream.of(nestedKeyElement));
 
     // Mock multiple attachment paths
     Map<String, String> attachmentMapping = new HashMap<>();
@@ -3866,7 +3884,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();

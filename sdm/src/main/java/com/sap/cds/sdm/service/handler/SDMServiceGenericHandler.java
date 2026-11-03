@@ -302,8 +302,13 @@ public class SDMServiceGenericHandler implements EventHandler {
       }
       String parentKeyName = upIdKey.replaceFirst("^up__", "");
       Object parentId = parentKeys.get(parentKeyName);
-
-      // Get the actual key field names from the entity instead of hardcoding "ID"
+      if (parentId == null) {
+        logger.warn(
+            "parentId is null for upIdKey '{}' in entity '{}', skipping revert",
+            upIdKey,
+            targetEntityName);
+        return;
+      }
       List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
 
       Result nestedRecords =
@@ -355,6 +360,13 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
     String parentKeyName = upIdKey.replaceFirst("^up__", "");
     Object parentId = parentKeys.get(parentKeyName);
+    if (parentId == null) {
+      logger.warn(
+          "parentId is null for upIdKey '{}', skipping link revert for: {}",
+          upIdKey,
+          attachmentCompositionDefinition);
+      return;
+    }
 
     CqnSelect selectDraftLinks =
         Select.from(draftEntity)
