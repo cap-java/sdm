@@ -1355,6 +1355,41 @@ public class Api implements ApiInterface {
   }
 
   @Override
+  public String fetchChangelogRaw(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException {
+    String url =
+        "https://"
+            + appUrl
+            + "/odata/v4/"
+            + serviceName
+            + "/"
+            + entityName
+            + "(ID="
+            + entityID
+            + ",IsActiveEntity=false)/"
+            + facetName
+            + "(up__ID="
+            + entityID
+            + ",ID="
+            + ID
+            + ",IsActiveEntity=false)/"
+            + serviceName
+            + ".changelog";
+
+    RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+    Request request =
+        new Request.Builder().url(url).addHeader("Authorization", token).post(body).build();
+
+    try (Response response = executeWithRetry(request)) {
+      String responseBody = response.body() != null ? response.body().string() : "";
+      return response.code() + "|" + responseBody;
+    } catch (IOException e) {
+      throw new IOException("Error fetching changelog raw: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
   public String createAttachmentInActive(
       String appUrl, String entityName, String facetName, String entityID) throws IOException {
     String url =

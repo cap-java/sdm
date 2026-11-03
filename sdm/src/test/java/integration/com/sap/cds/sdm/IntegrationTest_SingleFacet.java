@@ -8705,4 +8705,109 @@ class IntegrationTest_SingleFacet {
     api.deleteEntity(appUrl, entityName, targetEntity);
     api.deleteEntity(appUrl, entityName, sourceEntity);
   }
+
+  @Test
+  @Order(104)
+  void testChangelogWithoutSDMRole() throws IOException {
+    System.out.println("Test (104): Changelog action denied for user without SDM role");
+
+    // Create entity and upload attachment using the privileged user
+    String entityId = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotNull(entityId, "Failed to create entity for changelog role test");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.txt").getFile());
+    assertTrue(file.exists(), "sample.txt should exist");
+
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityId);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, entityId, srvpath, postData, file);
+    assertEquals(2, createResponse.size());
+    assertEquals("Attachment created", createResponse.get(0), "Attachment should be created");
+    String attachmentId = createResponse.get(1);
+
+    // Attempt changelog fetch using the no-role user
+    String raw =
+        apiNoRoles.fetchChangelogRaw(appUrl, entityName, facetName, entityId, attachmentId);
+    String[] parts = raw.split("\\|", 2);
+    int statusCode;
+    try {
+      statusCode = Integer.parseInt(parts[0]);
+    } catch (NumberFormatException e) {
+      fail("fetchChangelogRaw returned unexpected format (expected '<code>|<body>'): " + raw);
+      return;
+    }
+    String body = parts.length > 1 ? parts[1] : "";
+
+    assertTrue(
+        statusCode == 403 || statusCode == 500,
+        "Expected 403 or 500 for unauthorized changelog, got: " + statusCode);
+    assertTrue(
+        body.contains("view the changelog"),
+        "Error message should mention changelog access, got: " + body);
+
+    // Clean up
+    api.deleteEntityDraft(appUrl, entityName, entityId);
+  }
+
+  @Test
+  @Order(105)
+  void testChangelogForAttachmentOfDifferentEntity() throws IOException {
+    System.out.println(
+        "Test (105): Changelog action returns FILE_NOT_FOUND for attachment belonging to a different entity (IDOR guard)");
+
+    // Create two separate entities
+    String entityIdA = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    String entityIdB = api.createEntityDraft(appUrl, entityName, entityName2, srvpath);
+    assertNotNull(entityIdA, "Failed to create entity A");
+    assertNotNull(entityIdB, "Failed to create entity B");
+
+    ClassLoader classLoader = getClass().getClassLoader();
+    File file = new File(classLoader.getResource("sample.txt").getFile());
+    assertTrue(file.exists(), "sample.txt should exist");
+
+    // Upload attachment to entity A
+    Map<String, Object> postData = new HashMap<>();
+    postData.put("up__ID", entityIdA);
+    postData.put("mimeType", "text/plain");
+    postData.put("createdAt", new Date().toString());
+    postData.put("createdBy", "test@test.com");
+    postData.put("modifiedBy", "test@test.com");
+
+    List<String> createResponse =
+        api.createAttachment(appUrl, entityName, facetName, entityIdA, srvpath, postData, file);
+    assertEquals(2, createResponse.size());
+    assertEquals("Attachment created", createResponse.get(0));
+    String attachmentIdOfA = createResponse.get(1);
+
+    // Request changelog for attachment of entity A, but scoped under entity B's navigation path
+    String raw = api.fetchChangelogRaw(appUrl, entityName, facetName, entityIdB, attachmentIdOfA);
+    String[] parts = raw.split("\\|", 2);
+    int statusCode;
+    try {
+      statusCode = Integer.parseInt(parts[0]);
+    } catch (NumberFormatException e) {
+      fail("fetchChangelogRaw returned unexpected format (expected '<code>|<body>'): " + raw);
+      return;
+    }
+    String body = parts.length > 1 ? parts[1] : "";
+
+    assertTrue(
+        statusCode == 404 || statusCode == 500,
+        "Expected 404 or 500 when attachment does not belong to the requested entity, got: "
+            + statusCode);
+    assertTrue(
+        body.contains("not found") || body.contains("Object not found"),
+        "Error message should indicate the attachment was not found, got: " + body);
+
+    // Clean up
+    api.deleteEntityDraft(appUrl, entityName, entityIdA);
+    api.deleteEntityDraft(appUrl, entityName, entityIdB);
+  }
 }

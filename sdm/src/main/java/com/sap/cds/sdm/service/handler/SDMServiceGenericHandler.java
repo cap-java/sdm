@@ -79,29 +79,70 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     CqnAnalyzer cqnAnalyzer = CqnAnalyzer.create(cdsModel);
 
-    Optional<CdsEntity> attachmentEntity =
+    Optional<CdsEntity> attachmentDraftEntity =
         cdsModel.findEntity(context.getTarget().getQualifiedName() + "_drafts");
 
     Map<String, Object> targetKeys =
         cqnAnalyzer.analyze((CqnSelect) context.get("cqn")).targetKeyValues();
 
-    // get the objectId against the Id
     String id = targetKeys.get("ID").toString();
     logger.debug("Fetching changelog for attachment ID: {}", id);
 
-    CmisDocument cmisDocument =
-        dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    // Derive parent entity name and upIdKey to scope the DB lookup by parent record
+    String targetQualifiedName = context.getTarget().getQualifiedName();
+    int lastDot = targetQualifiedName.lastIndexOf('.');
+    String parentEntityName = lastDot > 0 ? targetQualifiedName.substring(0, lastDot) : null;
+    Optional<CdsEntity> parentEntityOpt =
+        parentEntityName != null ? cdsModel.findEntity(parentEntityName) : Optional.empty();
+    String upIdKey =
+        attachmentDraftEntity.isPresent()
+            ? SDMUtils.getUpIdKey(attachmentDraftEntity.get())
+            : "up__ID";
+
+    // fetchUPIDFromCQN extracts the parent record key from the navigation path in the CQN
+    String upId =
+        parentEntityOpt.isPresent()
+            ? SDMUtils.fetchUPIDFromCQN((CqnSelect) context.get("cqn"), parentEntityOpt.get())
+            : null;
+
+    if (upId == null || upId.isEmpty()) {
+      logger.warn("Cannot determine parent scope for changelog request on attachment ID: {}", id);
+      throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
+    }
+
+    CmisDocument cmisDocument = lookupAttachmentScoped(attachmentDraftEntity, id, upIdKey, upId);
 
     if (cmisDocument.getFileName() == null || cmisDocument.getFileName().isEmpty()) {
-      // open attachment is triggered on non-draft entity
       logger.debug("Draft entity returned empty fileName, fetching from active entity");
-      attachmentEntity = cdsModel.findEntity(context.getTarget().getQualifiedName());
+      Optional<CdsEntity> attachmentActiveEntity =
+          cdsModel.findEntity(context.getTarget().getQualifiedName());
+      cmisDocument = lookupAttachmentScoped(attachmentActiveEntity, id, upIdKey, upId);
+    }
 
-      cmisDocument =
-          dbQuery.getObjectIdForAttachmentID(attachmentEntity.get(), persistenceService, id);
+    if (cmisDocument.getObjectId() == null || cmisDocument.getObjectId().isEmpty()) {
+      logger.warn("Attachment ID {} not found within authorized parent scope (upId: {})", id, upId);
+      throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
     }
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
+
+    try {
+      JSONObject objectResponse =
+          sdmService.getObject(
+              cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+      if (objectResponse == null) {
+        logger.warn("File not found in SDM for objectId: {}", cmisDocument.getObjectId());
+        throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
+      }
+    } catch (ServiceException e) {
+      if (e.getMessage() != null
+          && e.getMessage().equals(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"))) {
+        logger.warn(
+            "User not authorized to view changelog for objectId: {}", cmisDocument.getObjectId());
+        throw new ServiceException(SDMUtils.getErrorMessage("CHANGELOG_NOT_AUTHORISED_ERROR"));
+      }
+      throw e;
+    }
 
     JSONObject jsonObject =
         sdmService.getChangeLog(
@@ -112,6 +153,15 @@ public class SDMServiceGenericHandler implements EventHandler {
 
     context.setResult(jsonObject);
     logger.debug("END: Changelog event");
+  }
+
+  private CmisDocument lookupAttachmentScoped(
+      Optional<CdsEntity> entityOpt, String id, String upIdKey, String upId) {
+    if (entityOpt.isEmpty()) {
+      return new CmisDocument();
+    }
+    return dbQuery.getObjectIdForAttachmentID(
+        entityOpt.get(), persistenceService, id, upIdKey, upId);
   }
 
   @On(event = "copyAttachments")
@@ -195,11 +245,12 @@ public class SDMServiceGenericHandler implements EventHandler {
         revertLinksForComposition(context, parentKeys, entry.getKey());
       }
     }
-    revertNestedEntityLinks(context);
+    revertNestedEntityLinks(context, parentKeys);
     logger.debug("END: Handle draft discard for links");
   }
 
-  private void revertNestedEntityLinks(DraftCancelEventContext context) throws IOException {
+  private void revertNestedEntityLinks(
+      DraftCancelEventContext context, Map<String, Object> parentKeys) throws IOException {
     logger.debug("START: Revert nested entity links");
 
     CdsEntity parentDraftEntity = context.getTarget();
@@ -214,7 +265,7 @@ public class SDMServiceGenericHandler implements EventHandler {
           .forEach(
               composition -> {
                 try {
-                  processNestedEntityComposition(context, composition);
+                  processNestedEntityComposition(context, composition, parentKeys);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
@@ -224,7 +275,8 @@ public class SDMServiceGenericHandler implements EventHandler {
   }
 
   private void processNestedEntityComposition(
-      DraftCancelEventContext context, CdsElement composition) throws IOException {
+      DraftCancelEventContext context, CdsElement composition, Map<String, Object> parentKeys)
+      throws IOException {
     logger.debug("Processing nested entity composition: {}", composition.getName());
 
     CdsAssociationType associationType = (CdsAssociationType) composition.getType();
@@ -243,12 +295,26 @@ public class SDMServiceGenericHandler implements EventHandler {
         return;
       }
 
-      // Get the actual key field names from the entity instead of hardcoding "ID"
+      String upIdKey = SDMUtils.getUpIdKey(nestedDraftEntity.get());
+      if (upIdKey == null || upIdKey.isEmpty()) {
+        logger.debug("No upIdKey found for nested entity: {}, skipping", targetEntityName);
+        return;
+      }
+      String parentKeyName = upIdKey.replaceFirst("^up__", "");
+      Object parentId = parentKeys.get(parentKeyName);
+      if (parentId == null) {
+        logger.warn(
+            "parentId is null for upIdKey '{}' in entity '{}', skipping revert",
+            upIdKey,
+            targetEntityName);
+        return;
+      }
       List<String> keyElementNames = getKeyElementNames(nestedDraftEntity.get());
 
       Result nestedRecords =
           persistenceService.run(
-              Select.from(nestedDraftEntity.get()).where(e -> e.get("IsActiveEntity").eq(false)));
+              Select.from(nestedDraftEntity.get())
+                  .where(e -> e.get(upIdKey).eq(parentId).and(e.get("IsActiveEntity").eq(false))));
       logger.debug("Found {} nested records to process", nestedRecords.rowCount());
 
       for (Row nestedRecord : nestedRecords) {
@@ -294,6 +360,13 @@ public class SDMServiceGenericHandler implements EventHandler {
     }
     String parentKeyName = upIdKey.replaceFirst("^up__", "");
     Object parentId = parentKeys.get(parentKeyName);
+    if (parentId == null) {
+      logger.warn(
+          "parentId is null for upIdKey '{}', skipping link revert for: {}",
+          upIdKey,
+          attachmentCompositionDefinition);
+      return;
+    }
 
     CqnSelect selectDraftLinks =
         Select.from(draftEntity)
