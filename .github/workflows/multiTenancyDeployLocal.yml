@@ -30,7 +30,7 @@ jobs:
     steps:
 
       - name: Checkout this repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.deploy_branch }}
 
