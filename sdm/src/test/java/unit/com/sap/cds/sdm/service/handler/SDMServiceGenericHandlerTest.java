@@ -349,19 +349,14 @@ public class SDMServiceGenericHandlerTest {
     when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "null-object-id"))
         .thenReturn(nullObjectIdDocument);
 
-    // Mock token handler
-    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
-
-    // Mock SDM service
-    when(sdmService.getChangeLog(null, sdmCredentials, false))
-        .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
-
-    // Act & Assert
+    // Act & Assert — handler now throws ServiceException (FILE_NOT_FOUND) before reaching SDM
     assertThrows(
-        IllegalArgumentException.class,
+        ServiceException.class,
         () -> {
           sdmServiceGenericHandler.changelog(mockLogContext);
         });
+
+    verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
   }
 
   @Test

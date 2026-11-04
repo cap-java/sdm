@@ -105,6 +105,49 @@ public class DBQuery {
     return cmisDocument;
   }
 
+  public CmisDocument getObjectIdForAttachmentID(
+      CdsEntity attachmentEntity,
+      PersistenceService persistenceService,
+      String id,
+      String upIdKey,
+      String upId) {
+    logger.debug(
+        "Fetching objectId for attachment ID: {} upId: {} from entity: {}",
+        id,
+        upId,
+        attachmentEntity.getQualifiedName());
+    CqnSelect q =
+        Select.from(attachmentEntity)
+            .columns(
+                "objectId",
+                "folderId",
+                "fileName",
+                "mimeType",
+                "contentId",
+                "linkUrl",
+                "uploadStatus")
+            .where(doc -> doc.get("ID").eq(id).and(doc.get(upIdKey).eq(upId)));
+    Result result = persistenceService.run(q);
+    Optional<Row> res = result.first();
+    CmisDocument cmisDocument = new CmisDocument();
+    if (res.isPresent()) {
+      logger.debug("Attachment found for ID: {} within parent scope", id);
+      Row row = res.get();
+      cmisDocument.setObjectId(row.get("objectId").toString());
+      cmisDocument.setFileName(row.get("fileName").toString());
+      cmisDocument.setFolderId(row.get("folderId").toString());
+      cmisDocument.setMimeType(row.get("mimeType").toString());
+      cmisDocument.setContentId(
+          row.get("contentId") != null ? row.get("contentId").toString() : null);
+      cmisDocument.setUrl(row.get("linkUrl") != null ? row.get("linkUrl").toString() : null);
+      cmisDocument.setUploadStatus(
+          row.get("uploadStatus") != null ? row.get("uploadStatus").toString() : null);
+    } else {
+      logger.debug("No attachment found for ID: {} within parent scope (upId: {})", id, upId);
+    }
+    return cmisDocument;
+  }
+
   public CmisDocument getAttachmentForObjectID(
       PersistenceService persistenceService, String id, AttachmentCopyEventContext context) {
     logger.debug("Fetching attachment for objectId: {}", id);
