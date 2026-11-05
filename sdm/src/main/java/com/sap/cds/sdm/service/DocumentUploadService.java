@@ -70,7 +70,7 @@ public class DocumentUploadService {
 
     try {
       if ("application/internet-shortcut".equalsIgnoreCase(cmisDocument.getMimeType())) {
-        logger.info("LinkType detected, uploading as single chunk");
+        logger.debug("LinkType detected, uploading as single chunk");
         JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
         logger.info(
             "Link file uploaded successfully in {} ms", (System.currentTimeMillis() - startTime));
@@ -78,12 +78,14 @@ public class DocumentUploadService {
       }
       long totalSize = cmisDocument.getContentLength();
       int chunkSize = SDMConstants.CHUNK_SIZE;
+      long thresholdBytes = SDMConstants.SINGLE_CHUNK_THRESHOLD_BYTES;
+      long thresholdMb = thresholdBytes / (1024 * 1024);
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      logger.debug("Total file size: {} bytes, Chunk size: {} bytes", totalSize, chunkSize);
+      logger.debug("Total file size: {} bytes, Chunk size: {} bytes, Threshold: {} MB", totalSize, chunkSize, thresholdMb);
 
-      if (totalSize <= 400 * 1024 * 1024) {
-        // Upload directly if file is ≤ 400MB
-        logger.info("File size is <= 400MB, uploading as single chunk");
+      if (totalSize <= thresholdBytes) {
+        // Upload directly if file is ≤ threshold
+        logger.info("File size is <= {} MB, uploading as single chunk", thresholdMb);
         JSONObject result = uploadSingleChunk(cmisDocument, sdmCredentials, isSystemUser);
         logger.info(
             "File uploaded successfully as single chunk in {} ms",
@@ -92,8 +94,8 @@ public class DocumentUploadService {
       } else {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
-        // Upload in chunks if file is > 400MB
-        logger.info("File size is > 400MB, uploading in chunks of {} bytes", chunkSize);
+        // Upload in chunks if file is > threshold
+        logger.info("File size is > {} MB, uploading in chunks of {} bytes", thresholdMb, chunkSize);
         JSONObject result = uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
         logger.info(
             "File uploaded successfully in chunks in {} ms",
@@ -112,12 +114,20 @@ public class DocumentUploadService {
       CmisDocument cmisDocument,
       Map<String, String> finalResponse)
       throws ServiceException {
-    logger.debug("START: executeHttpPost for file: {}", cmisDocument.getFileName());
+    long sdmRequestStart = System.currentTimeMillis();
+    logger.info("START: executeHttpPost for file: {}", cmisDocument.getFileName());
     try (CloseableHttpResponse response = (CloseableHttpResponse) httpClient.execute(uploadFile)) {
       formResponse(cmisDocument, finalResponse, response);
-      logger.debug(
-          "END: executeHttpPost - response formed for file: {}", cmisDocument.getFileName());
+      logger.info(
+          "END: executeHttpPost for file: {} completed in {} ms",
+          cmisDocument.getFileName(),
+          (System.currentTimeMillis() - sdmRequestStart));
     } catch (IOException e) {
+      logger.error(
+          "executeHttpPost failed for file: {} after {} ms - {}",
+          cmisDocument.getFileName(),
+          (System.currentTimeMillis() - sdmRequestStart),
+          e.getMessage());
       throw new ServiceException(SDMUtils.getErrorMessage("ERROR_IN_SETTING_TIMEOUT"), e);
     }
   }
@@ -169,7 +179,7 @@ public class DocumentUploadService {
       this.executeHttpPost(httpClient, request, cmisDocument, finalResponse);
       cmisDocument.setMimeType(finalResponse.get("mimeType"));
       long duration = System.currentTimeMillis() - startTime;
-      logger.debug("Chunk {} appended successfully in {} ms", chunkIndex, duration);
+      logger.info("Chunk {} appended successfully in {} ms", chunkIndex, duration);
       return new JSONObject(finalResponse);
     } catch (Exception e) {
       logger.error("Error appending chunk {}: {}", chunkIndex, e.getMessage(), e);
@@ -194,7 +204,7 @@ public class DocumentUploadService {
     HttpPost request = new HttpPost(sdmUrl);
     request.setEntity(entity);
     String grantType = isSystemUser ? TECHNICAL_USER_FLOW : NAMED_USER_FLOW;
-    logger.info("This is a :{} flow", grantType);
+    logger.debug("This is a :{} flow", grantType);
     var httpClient = tokenHandler.getHttpClient(binding, connectionPool, null, grantType);
 
     Map<String, String> finalResponse = new HashMap<>();
@@ -275,10 +285,10 @@ public class DocumentUploadService {
       // Step 1: Initial Request (Without Content) and Get `objectId`. It is required to
       // set in every chunk appendContent
       JSONObject responseBody = createEmptyDocument(cmisDocument, sdmUrl, isSystemUser);
-      logger.info("Response Body: {}", responseBody);
+      logger.debug("Response Body: {}", responseBody);
       String objectId = responseBody.getString("objectId");
       cmisDocument.setObjectId(objectId);
-      logger.info("objectId of empty doc is {}", objectId);
+      logger.debug("objectId of empty doc is {}", objectId);
 
       // Step 2: Upload Chunks Sequentially
       int chunkIndex = 0;
@@ -290,10 +300,10 @@ public class DocumentUploadService {
 
         // Step 3: Read next chunk
         bytesRead = chunkedStream.read(chunkBuffer, 0, chunkSize);
-        logger.info("bytesRead is {}", bytesRead);
+        logger.debug("bytesRead is {}", bytesRead);
         // Step 4: Fetch remaining bytes before checking EOF
         long remainingBytes = chunkedStream.getRemainingBytes();
-        logger.info("remainingBytes is {}", remainingBytes);
+        logger.debug("remainingBytes is {}", remainingBytes);
 
         // Step 5: Check if it's the last chunk
         boolean isLastChunk = bytesRead < chunkSize || chunkedStream.isEOFReached();
@@ -308,7 +318,7 @@ public class DocumentUploadService {
         }
 
         // Log every chunk details
-        logger.info(
+        logger.debug(
             "Chunk {} | BytesRead: {} | RemainingBytes: {} | isLastChunk? {}",
             chunkIndex,
             bytesRead,
@@ -342,10 +352,10 @@ public class DocumentUploadService {
 
         long endChunkUploadTime = System.currentTimeMillis();
         logger.info(
-            "Chunk {} having {} bytes is read and it took {} seconds",
+            "Chunk {} | {} bytes | took {} ms",
             chunkIndex,
             bytesRead,
-            ((int) (endChunkUploadTime - startChunkUploadTime) / 1000));
+            (endChunkUploadTime - startChunkUploadTime));
 
         chunkIndex++;
 
@@ -381,7 +391,7 @@ public class DocumentUploadService {
       logger.debug("SDM response code: {} for file: {}", responseCode, name);
 
       if (responseCode == 201 || responseCode == 200) {
-        logger.info("Document created successfully with response code: {}", responseCode);
+        logger.debug("Document created successfully with response code: {}", responseCode);
         JSONObject jsonResponse = new JSONObject(responseString);
         JSONObject succinctProperties = jsonResponse.getJSONObject("succinctProperties");
         status = "success";
