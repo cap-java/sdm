@@ -35,7 +35,8 @@ public class SDMConstants {
   public static final Integer MAX_CONNECTIONS = 100;
   public static final int CONNECTION_TIMEOUT = 1200;
   public static final int CHUNK_SIZE = 20 * 1024 * 1024; // 20MB Chunk Size
-  // Threshold above which chunked upload is used. Override via env var SDM_SINGLE_CHUNK_THRESHOLD_MB.
+  // Threshold above which chunked upload is used. Override via env var
+  // SDM_SINGLE_CHUNK_THRESHOLD_MB.
   public static final long SINGLE_CHUNK_THRESHOLD_BYTES = parseSingleChunkThresholdBytes();
 
   private static long parseSingleChunkThresholdBytes() {
@@ -49,6 +50,7 @@ public class SDMConstants {
     }
     return 50L * 1024L * 1024L; // default 50 MB
   }
+
   public static final String ATTACHMENT_MAXCOUNT = "SDM.Attachments.maxCount";
   public static final String MAX_COUNT_ERROR_MESSAGE =
       "Cannot upload more than %s attachments as set up by the application";

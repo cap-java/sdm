@@ -81,7 +81,11 @@ public class DocumentUploadService {
       long thresholdBytes = SDMConstants.SINGLE_CHUNK_THRESHOLD_BYTES;
       long thresholdMb = thresholdBytes / (1024 * 1024);
       cmisDocument.setUploadStatus(SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
-      logger.debug("Total file size: {} bytes, Chunk size: {} bytes, Threshold: {} MB", totalSize, chunkSize, thresholdMb);
+      logger.debug(
+          "Total file size: {} bytes, Chunk size: {} bytes, Threshold: {} MB",
+          totalSize,
+          chunkSize,
+          thresholdMb);
 
       if (totalSize <= thresholdBytes) {
         // Upload directly if file is ≤ threshold
@@ -95,7 +99,8 @@ public class DocumentUploadService {
         String sdmUrl =
             sdmCredentials.getUrl() + "browser/" + cmisDocument.getRepositoryId() + "/root";
         // Upload in chunks if file is > threshold
-        logger.info("File size is > {} MB, uploading in chunks of {} bytes", thresholdMb, chunkSize);
+        logger.info(
+            "File size is > {} MB, uploading in chunks of {} bytes", thresholdMb, chunkSize);
         JSONObject result = uploadLargeFileInChunks(cmisDocument, sdmUrl, chunkSize, isSystemUser);
         logger.info(
             "File uploaded successfully in chunks in {} ms",
