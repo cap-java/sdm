@@ -2561,7 +2561,8 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
+              method.invoke(
+                  sdmServiceGenericHandler, context, new HashMap<>(Map.of("ID", "parent-id")));
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3330,7 +3331,11 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              method.invoke(
+                  sdmServiceGenericHandler,
+                  context,
+                  composition,
+                  new HashMap<>(Map.of("ID", "parent-id")));
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3511,7 +3516,11 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              method.invoke(
+                  sdmServiceGenericHandler,
+                  context,
+                  composition,
+                  new HashMap<>(Map.of("ID", "parent-id")));
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3714,7 +3723,11 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
+              method.invoke(
+                  sdmServiceGenericHandler,
+                  context,
+                  composition,
+                  new HashMap<>(Map.of("ID", "parent-id")));
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
