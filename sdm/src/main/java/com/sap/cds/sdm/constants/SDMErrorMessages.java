@@ -137,6 +137,8 @@ public class SDMErrorMessages {
       "\nPlease contact your administrator for assistance with any necessary adjustments.";
   public static final String MAX_COUNT_ERROR_MESSAGE = "Cannot upload more than %s attachments.";
   public static final String FETCH_CHANGELOG_ERROR = "Could not fetch the changelog";
+  public static final String CHANGELOG_NOT_AUTHORISED_ERROR =
+      "You do not have the required permissions to view the changelog. Please contact your administrator for access.";
   public static final String FAILED_TO_MOVE_ATTACHMENT = "Failed to move attachment";
   public static final String INVALID_SECONDARY_PROPERTIES_FOR_MOVE_PREFIX =
       "Invalid secondary properties detected: ";

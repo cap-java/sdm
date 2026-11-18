@@ -139,6 +139,10 @@ public interface ApiInterface {
       String appUrl, String entityName, String facetName, String entityID, String ID)
       throws IOException;
 
+  public String fetchChangelogRaw(
+      String appUrl, String entityName, String facetName, String entityID, String ID)
+      throws IOException;
+
   public String downloadSelectedAttachments(
       String appUrl, String entityName, String facetName, String entityID, List<String> ids)
       throws IOException;

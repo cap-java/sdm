@@ -136,20 +136,32 @@ public class SDMServiceGenericHandlerTest {
     when(mockUserInfo.isSystemUser()).thenReturn(false);
 
     // Mock the model and entity
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
     when(cdsModel.findEntity("MyService.MyEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MyService.MyEntity")).thenReturn(Optional.of(mockParentEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
     when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
     when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
 
-    // Mock DB query
-    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123"))
+    // Mock parent scope resolution
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("parent-id-123");
+
+    // Mock DB query (scoped by parent)
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "test-id-123", "up__ID", "parent-id-123"))
         .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM ACL pre-check
+    when(sdmService.getObject("object-123", sdmCredentials, false)).thenReturn(new JSONObject());
 
     // Mock SDM service
     when(sdmService.getObject("object-123", sdmCredentials, false)).thenReturn(new JSONObject());
@@ -171,8 +183,10 @@ public class SDMServiceGenericHandlerTest {
                       && jsonResult.has("version");
                 }));
 
-    verify(dbQuery).getObjectIdForAttachmentID(draftEntity, persistenceService, "test-id-123");
-    verify(tokenHandler).getSDMCredentials();
+    verify(dbQuery)
+        .getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "test-id-123", "up__ID", "parent-id-123");
+    verify(sdmService).getObject("object-123", sdmCredentials, false);
     verify(sdmService).getChangeLog("object-123", sdmCredentials, false);
   }
 
@@ -203,20 +217,34 @@ public class SDMServiceGenericHandlerTest {
     when(mockUserInfo.isSystemUser()).thenReturn(true);
 
     // Mock the model and entity
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
     when(cdsModel.findEntity("SystemService.SystemEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("SystemService.SystemEntity"))
+        .thenReturn(Optional.of(mockParentEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
     when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
     when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
 
-    // Mock DB query
-    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "system-id-456"))
+    // Mock parent scope resolution
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("parent-id-456");
+
+    // Mock DB query (scoped by parent)
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "system-id-456", "up__ID", "parent-id-456"))
         .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM ACL pre-check
+    when(sdmService.getObject("system-object-456", sdmCredentials, true))
+        .thenReturn(new JSONObject());
 
     // Mock SDM service
     when(sdmService.getObject("system-object-456", sdmCredentials, true))
@@ -286,20 +314,33 @@ public class SDMServiceGenericHandlerTest {
     when(mockUserInfo.isSystemUser()).thenReturn(false);
 
     // Mock the model and entity
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
     when(cdsModel.findEntity("ErrorService.ErrorEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("ErrorService.ErrorEntity")).thenReturn(Optional.of(mockParentEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
     when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
     when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
 
-    // Mock DB query
-    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "error-id-789"))
+    // Mock parent scope resolution
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("parent-id-789");
+
+    // Mock DB query (scoped by parent)
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "error-id-789", "up__ID", "parent-id-789"))
         .thenReturn(cmisDocument);
 
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // Mock SDM ACL pre-check
+    when(sdmService.getObject("error-object-789", sdmCredentials, false))
+        .thenReturn(new JSONObject());
 
     // Mock SDM service to throw ServiceException (runtime exception)
     when(sdmService.getObject("error-object-789", sdmCredentials, false))
@@ -315,6 +356,113 @@ public class SDMServiceGenericHandlerTest {
         });
 
     verify(sdmService).getChangeLog("error-object-789", sdmCredentials, false);
+  }
+
+  @Test
+  void testChangelogSDMAccessDenied() throws IOException {
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "denied-id-001");
+
+    cmisDocument.setFileName("denied-doc.pdf");
+    cmisDocument.setObjectId("denied-object-001");
+
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("DeniedService.DeniedEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    when(cdsModel.findEntity("DeniedService.DeniedEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("DeniedService.DeniedEntity"))
+        .thenReturn(Optional.of(mockParentEntity));
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("parent-id-001");
+
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "denied-id-001", "up__ID", "parent-id-001"))
+        .thenReturn(cmisDocument);
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // getObject throws USER_NOT_AUTHORISED_ERROR — same as SDMServiceImpl does on HTTP 403
+    String unauthorisedMsg = SDMErrorMessages.USER_NOT_AUTHORISED_ERROR;
+    when(sdmService.getObject("denied-object-001", sdmCredentials, false))
+        .thenThrow(new ServiceException(unauthorisedMsg));
+
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class, () -> sdmServiceGenericHandler.changelog(mockLogContext));
+
+    assertTrue(ex.getMessage().contains("view the changelog"));
+    verify(sdmService).getObject("denied-object-001", sdmCredentials, false);
+    verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
+  }
+
+  @Test
+  void testChangelogSDMObjectNotFound() throws IOException {
+    AttachmentLogContext mockLogContext = mock(AttachmentLogContext.class);
+    CqnAnalyzer mockCqnAnalyzer = mock(CqnAnalyzer.class);
+    AnalysisResult mockAnalysisResult = mock(AnalysisResult.class);
+    UserInfo mockUserInfo = mock(UserInfo.class);
+    CdsEntity mockTarget = mock(CdsEntity.class);
+
+    Map<String, Object> targetKeys = new HashMap<>();
+    targetKeys.put("ID", "missing-id-002");
+
+    cmisDocument.setFileName("missing-doc.pdf");
+    cmisDocument.setObjectId("missing-object-002");
+
+    when(mockLogContext.getModel()).thenReturn(cdsModel);
+    when(mockLogContext.getTarget()).thenReturn(mockTarget);
+    when(mockTarget.getQualifiedName()).thenReturn("MissingService.MissingEntity.attachments");
+    when(mockLogContext.get("cqn")).thenReturn(cqnSelect);
+    when(mockLogContext.getUserInfo()).thenReturn(mockUserInfo);
+    when(mockUserInfo.isSystemUser()).thenReturn(false);
+
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
+    when(cdsModel.findEntity("MissingService.MissingEntity.attachments_drafts"))
+        .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("MissingService.MissingEntity"))
+        .thenReturn(Optional.of(mockParentEntity));
+
+    cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
+    when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
+    when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
+
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("parent-id-002");
+
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "missing-id-002", "up__ID", "parent-id-002"))
+        .thenReturn(cmisDocument);
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
+
+    // getObject returns null — object does not exist in SDM
+    when(sdmService.getObject("missing-object-002", sdmCredentials, false)).thenReturn(null);
+
+    assertThrows(ServiceException.class, () -> sdmServiceGenericHandler.changelog(mockLogContext));
+
+    verify(sdmService).getObject("missing-object-002", sdmCredentials, false);
+    verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
   }
 
   @Test
@@ -342,27 +490,35 @@ public class SDMServiceGenericHandlerTest {
     when(mockUserInfo.isSystemUser()).thenReturn(false);
 
     // Mock the model and entity
+    CdsEntity mockParentEntity = mock(CdsEntity.class);
     when(cdsModel.findEntity("NullService.NullEntity.attachments_drafts"))
         .thenReturn(Optional.of(draftEntity));
+    when(cdsModel.findEntity("NullService.NullEntity")).thenReturn(Optional.of(mockParentEntity));
 
     // Mock CqnAnalyzer
     cqnAnalyzerMock.when(() -> CqnAnalyzer.create(cdsModel)).thenReturn(mockCqnAnalyzer);
     when(mockCqnAnalyzer.analyze(cqnSelect)).thenReturn(mockAnalysisResult);
     when(mockAnalysisResult.targetKeyValues()).thenReturn(targetKeys);
 
-    // Mock DB query to return document with null objectId
-    when(dbQuery.getObjectIdForAttachmentID(draftEntity, persistenceService, "null-object-id"))
+    // Mock parent scope resolution
+    sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(draftEntity)).thenReturn("up__ID");
+    sdmUtilsMock
+        .when(() -> SDMUtils.fetchUPIDFromCQN(cqnSelect, mockParentEntity))
+        .thenReturn("null-parent-id");
+
+    // Mock DB query (scoped) to return document with null objectId
+    when(dbQuery.getObjectIdForAttachmentID(
+            draftEntity, persistenceService, "null-object-id", "up__ID", "null-parent-id"))
         .thenReturn(nullObjectIdDocument);
 
-    // Mock token handler
-    when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
-
-    // Act & Assert — getObject returns null for null objectId → FILE_NOT_FOUND_ERROR
+    // Act & Assert — handler throws ServiceException (FILE_NOT_FOUND) when objectId is null
     assertThrows(
         ServiceException.class,
         () -> {
           sdmServiceGenericHandler.changelog(mockLogContext);
         });
+
+    verify(sdmService, never()).getChangeLog(any(), any(), anyBoolean());
   }
 
   @Test
@@ -2504,6 +2660,12 @@ public class SDMServiceGenericHandlerTest {
     when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
     when(nestedRecord.get("ID")).thenReturn("chapter1");
 
+    // Mock nestedDraftEntity key element so nestedEntityKeys gets "ID" populated
+    CdsElement nestedKeyElement = mock(CdsElement.class);
+    when(nestedKeyElement.isKey()).thenReturn(true);
+    when(nestedKeyElement.getName()).thenReturn("ID");
+    when(nestedDraftEntity.elements()).thenReturn(Stream.of(nestedKeyElement));
+
     Map<String, String> attachmentMapping = new HashMap<>();
     attachmentMapping.put("AdminService.Attachments", "path1");
 
@@ -2562,8 +2724,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(
-                  sdmServiceGenericHandler, context, new HashMap<>(Map.of("ID", "parent-id")));
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-book-id");
+              method.invoke(sdmServiceGenericHandler, context, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -2614,7 +2777,7 @@ public class SDMServiceGenericHandlerTest {
         RuntimeException.class,
         () -> {
           try {
-            method.invoke(sdmServiceGenericHandler, context);
+            method.invoke(sdmServiceGenericHandler, context, new HashMap<>());
           } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException) {
               throw (RuntimeException) e.getCause();
@@ -3287,7 +3450,7 @@ public class SDMServiceGenericHandlerTest {
     when(context.getUserInfo()).thenReturn(userInfo);
     when(userInfo.isSystemUser()).thenReturn(false);
 
-    // Mock SDMUtils.getUpIdKey for nestedDraftEntity to enable parent-filtered query
+    // Mock upIdKey for nested draft entity
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(eq(nestedDraftEntity))).thenReturn("up__ID");
 
     // Mock the static method call
@@ -3332,11 +3495,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(
-                  sdmServiceGenericHandler,
-                  context,
-                  composition,
-                  new HashMap<>(Map.of("ID", "parent-id")));
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3488,7 +3649,7 @@ public class SDMServiceGenericHandlerTest {
     Map<String, String> attachmentMapping = new HashMap<>();
     attachmentMapping.put("AdminService.Attachments", "path1");
 
-    // Mock SDMUtils.getUpIdKey for nestedDraftEntity to enable parent-filtered query
+    // Mock upIdKey for nested draft entity
     sdmUtilsMock.when(() -> SDMUtils.getUpIdKey(eq(nestedDraftEntity))).thenReturn("up__ID");
 
     // Mock the static method call
@@ -3517,11 +3678,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(
-                  sdmServiceGenericHandler,
-                  context,
-                  composition,
-                  new HashMap<>(Map.of("ID", "parent-id")));
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
@@ -3572,7 +3731,7 @@ public class SDMServiceGenericHandlerTest {
         RuntimeException.class,
         () -> {
           try {
-            method.invoke(sdmServiceGenericHandler, context, composition);
+            method.invoke(sdmServiceGenericHandler, context, composition, new HashMap<>());
           } catch (Exception e) {
             if (e.getCause() instanceof RuntimeException) {
               throw (RuntimeException) e.getCause();
@@ -3605,6 +3764,12 @@ public class SDMServiceGenericHandlerTest {
     Row nestedRecord = mock(Row.class);
     when(nestedRecordsResult.iterator()).thenReturn(Arrays.asList(nestedRecord).iterator());
     when(nestedRecord.get("ID")).thenReturn("chapter1");
+
+    // Mock nestedDraftEntity key element so nestedEntityKeys gets "ID" populated
+    CdsElement nestedKeyElement = mock(CdsElement.class);
+    when(nestedKeyElement.isKey()).thenReturn(true);
+    when(nestedKeyElement.getName()).thenReturn("ID");
+    when(nestedDraftEntity.elements()).thenReturn(Stream.of(nestedKeyElement));
 
     // Mock multiple attachment paths
     Map<String, String> attachmentMapping = new HashMap<>();
@@ -3724,11 +3889,9 @@ public class SDMServiceGenericHandlerTest {
       assertDoesNotThrow(
           () -> {
             try {
-              method.invoke(
-                  sdmServiceGenericHandler,
-                  context,
-                  composition,
-                  new HashMap<>(Map.of("ID", "parent-id")));
+              Map<String, Object> parentKeysArg = new HashMap<>();
+              parentKeysArg.put("ID", "test-entity-id");
+              method.invoke(sdmServiceGenericHandler, context, composition, parentKeysArg);
             } catch (Exception e) {
               if (e.getCause() instanceof RuntimeException) {
                 throw (RuntimeException) e.getCause();
