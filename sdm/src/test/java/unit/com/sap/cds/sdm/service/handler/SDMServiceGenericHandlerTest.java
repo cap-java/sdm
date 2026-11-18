@@ -152,6 +152,7 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service
+    when(sdmService.getObject("object-123", sdmCredentials, false)).thenReturn(new JSONObject());
     when(sdmService.getChangeLog("object-123", sdmCredentials, false))
         .thenReturn(mockChangeLogResult);
 
@@ -218,6 +219,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service
+    when(sdmService.getObject("system-object-456", sdmCredentials, true))
+        .thenReturn(new JSONObject());
     when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
         .thenReturn(mockChangeLogResult);
 
@@ -299,6 +302,8 @@ public class SDMServiceGenericHandlerTest {
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
     // Mock SDM service to throw ServiceException (runtime exception)
+    when(sdmService.getObject("error-object-789", sdmCredentials, false))
+        .thenReturn(new JSONObject());
     when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
         .thenThrow(new ServiceException("Network error"));
 
@@ -352,13 +357,9 @@ public class SDMServiceGenericHandlerTest {
     // Mock token handler
     when(tokenHandler.getSDMCredentials()).thenReturn(sdmCredentials);
 
-    // Mock SDM service
-    when(sdmService.getChangeLog(null, sdmCredentials, false))
-        .thenThrow(new IllegalArgumentException("ObjectId cannot be null"));
-
-    // Act & Assert
+    // Act & Assert — getObject returns null for null objectId → FILE_NOT_FOUND_ERROR
     assertThrows(
-        IllegalArgumentException.class,
+        ServiceException.class,
         () -> {
           sdmServiceGenericHandler.changelog(mockLogContext);
         });
