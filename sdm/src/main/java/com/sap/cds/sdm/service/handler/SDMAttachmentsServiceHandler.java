@@ -151,23 +151,31 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     logger.debug("Reading attachment - objectId: {}, entity: {}", objectId, entity);
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    CmisDocument cmisDocument =
-        dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
+    CmisDocument cmisDocument;
+    if (uploadStatus != null) {
+      cmisDocument = new CmisDocument();
+      cmisDocument.setUploadStatus(uploadStatus);
+    } else {
+      cmisDocument =
+          dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
+    }
     logger.debug("Attachment upload status: {}", cmisDocument.getUploadStatus());
-    String statusToCheck = uploadStatus != null ? uploadStatus : cmisDocument.getUploadStatus();
-    logger.debug("Effective upload status for read check: {}", statusToCheck);
-    if (statusToCheck != null
-        && statusToCheck.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED)) {
       logger.warn("Virus detected in attachment: {}", objectId);
       throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_DETECTED_FILE_ERROR"));
     }
-    if (statusToCheck != null
-        && statusToCheck.equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument.getUploadStatus().equalsIgnoreCase(SDMConstants.VIRUS_SCAN_INPROGRESS)) {
       logger.warn("Virus scan is in progress for attachment: {}", objectId);
       throw new ServiceException(SDMUtils.getErrorMessage("VIRUS_SCAN_IN_PROGRESS_FILE_ERROR"));
     }
-    if (statusToCheck != null
-        && statusToCheck.equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
+    if (cmisDocument.getUploadStatus() != null
+        && cmisDocument
+            .getUploadStatus()
+            .equalsIgnoreCase(SDMConstants.UPLOAD_STATUS_IN_PROGRESS)) {
       logger.warn("Upload is in progress for attachment: {}", objectId);
       throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
     }
