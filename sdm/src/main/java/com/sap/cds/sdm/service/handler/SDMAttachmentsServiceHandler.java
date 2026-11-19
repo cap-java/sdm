@@ -147,13 +147,19 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
     String[] contentIdParts = context.getContentId().split(":");
     String objectId = contentIdParts[0];
     String entity = contentIdParts.length > 2 ? contentIdParts[2] : contentIdParts[0];
+    String uploadStatus = contentIdParts.length > 3 ? contentIdParts[3] : null;
     logger.debug("Reading attachment - objectId: {}, entity: {}", objectId, entity);
 
     SDMCredentials sdmCredentials = tokenHandler.getSDMCredentials();
-    CmisDocument cmisDocument =
-        dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
+    CmisDocument cmisDocument;
+    if (uploadStatus != null) {
+      cmisDocument = new CmisDocument();
+      cmisDocument.setUploadStatus(uploadStatus);
+    } else {
+      cmisDocument =
+          dbQuery.getuploadStatusForAttachment(entity, persistenceService, objectId, context);
+    }
     logger.debug("Attachment upload status: {}", cmisDocument.getUploadStatus());
-
     if (cmisDocument.getUploadStatus() != null
         && cmisDocument
             .getUploadStatus()
@@ -173,6 +179,7 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
       logger.warn("Upload is in progress for attachment: {}", objectId);
       throw new ServiceException(SDMUtils.getErrorMessage("UPLOAD_IN_PROGRESS_FILE_ERROR"));
     }
+
     try {
       logger.info("Initiating document read from repository for objectId: {}", objectId);
       sdmService.readDocument(objectId, sdmCredentials, context);
@@ -628,7 +635,9 @@ public class SDMAttachmentsServiceHandler implements EventHandler {
             + ":"
             + cmisDocument.getFolderId()
             + ":"
-            + eventContext.getAttachmentEntity().getQualifiedName());
+            + eventContext.getAttachmentEntity().getQualifiedName()
+            + ":"
+            + cmisDocument.getUploadStatus());
     eventContext.getData().setStatus("Clean");
     eventContext.getData().setScannedAt(Instant.now());
     eventContext.getData().setContent(null);
