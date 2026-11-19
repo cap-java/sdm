@@ -134,24 +134,23 @@ public class SDMServiceGenericHandler implements EventHandler {
         logger.warn("File not found in SDM for objectId: {}", cmisDocument.getObjectId());
         throw new ServiceException(SDMUtils.getErrorMessage("FILE_NOT_FOUND_ERROR"));
       }
+
+      JSONObject jsonObject =
+          sdmService.getChangeLog(
+              cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
+
+      jsonObject.put("filename", cmisDocument.getFileName());
+      logger.info("Changelog fetched for objectId: {}", cmisDocument.getObjectId());
+      context.setResult(jsonObject);
     } catch (ServiceException e) {
       if (e.getMessage() != null
-          && e.getMessage().equals(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"))) {
+          && e.getMessage().contains(SDMUtils.getErrorMessage("USER_NOT_AUTHORISED_ERROR"))) {
         logger.warn(
             "User not authorized to view changelog for objectId: {}", cmisDocument.getObjectId());
         throw new ServiceException(SDMUtils.getErrorMessage("CHANGELOG_NOT_AUTHORISED_ERROR"));
       }
       throw e;
     }
-
-    JSONObject jsonObject =
-        sdmService.getChangeLog(
-            cmisDocument.getObjectId(), sdmCredentials, context.getUserInfo().isSystemUser());
-
-    jsonObject.put("filename", cmisDocument.getFileName());
-    logger.info("Changelog fetched for objectId: {}", cmisDocument.getObjectId());
-
-    context.setResult(jsonObject);
     logger.debug("END: Changelog event");
   }
 

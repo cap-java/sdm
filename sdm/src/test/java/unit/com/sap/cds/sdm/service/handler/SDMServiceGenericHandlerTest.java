@@ -164,6 +164,7 @@ public class SDMServiceGenericHandlerTest {
     when(sdmService.getObject("object-123", sdmCredentials, false)).thenReturn(new JSONObject());
 
     // Mock SDM service
+    when(sdmService.getObject("object-123", sdmCredentials, false)).thenReturn(new JSONObject());
     when(sdmService.getChangeLog("object-123", sdmCredentials, false))
         .thenReturn(mockChangeLogResult);
 
@@ -246,6 +247,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(new JSONObject());
 
     // Mock SDM service
+    when(sdmService.getObject("system-object-456", sdmCredentials, true))
+        .thenReturn(new JSONObject());
     when(sdmService.getChangeLog("system-object-456", sdmCredentials, true))
         .thenReturn(mockChangeLogResult);
 
@@ -340,6 +343,8 @@ public class SDMServiceGenericHandlerTest {
         .thenReturn(new JSONObject());
 
     // Mock SDM service to throw ServiceException (runtime exception)
+    when(sdmService.getObject("error-object-789", sdmCredentials, false))
+        .thenReturn(new JSONObject());
     when(sdmService.getChangeLog("error-object-789", sdmCredentials, false))
         .thenThrow(new ServiceException("Network error"));
 
