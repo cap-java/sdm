@@ -153,7 +153,8 @@ jobs:
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔄 Installing Cloud Foundry CLI..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -404,7 +405,8 @@ jobs:
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔄 Installing Cloud Foundry CLI..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -619,7 +621,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -703,7 +706,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -891,7 +895,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -975,7 +980,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1177,7 +1183,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1257,7 +1264,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
