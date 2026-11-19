@@ -2396,6 +2396,85 @@ public class SDMAttachmentsServiceHandlerTest {
   }
 
   @Test
+  public void testReadAttachment_VirusDetectedStatusInContentId() throws IOException {
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId())
+        .thenReturn(
+            "objectId:folderId:com.sap.Entity:" + SDMConstants.UPLOAD_STATUS_VIRUS_DETECTED);
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(new SDMCredentials());
+    CmisDocument cmisDocument = new CmisDocument();
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(ServiceException.class, () -> handlerSpy.readAttachment(readContext));
+    assertEquals(
+        "Virus detected. Remove the file and upload a clean version.", thrown.getMessage());
+  }
+
+  @Test
+  public void testReadAttachment_ScanInProgressStatusInContentId() throws IOException {
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId())
+        .thenReturn("objectId:folderId:com.sap.Entity:" + SDMConstants.VIRUS_SCAN_INPROGRESS);
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(new SDMCredentials());
+    CmisDocument cmisDocument = new CmisDocument();
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(ServiceException.class, () -> handlerSpy.readAttachment(readContext));
+    assertEquals(
+        "Scan in progress. Wait until the scan is complete before opening the file.",
+        thrown.getMessage());
+  }
+
+  @Test
+  public void testReadAttachment_UploadInProgressStatusInContentId() throws IOException {
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId())
+        .thenReturn("objectId:folderId:com.sap.Entity:" + SDMConstants.UPLOAD_STATUS_IN_PROGRESS);
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    when(tokenHandler.getSDMCredentials()).thenReturn(new SDMCredentials());
+    CmisDocument cmisDocument = new CmisDocument();
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+
+    ServiceException thrown =
+        assertThrows(ServiceException.class, () -> handlerSpy.readAttachment(readContext));
+    assertEquals("UPLOAD_IN_PROGRESS_FILE_ERROR", thrown.getMessage());
+  }
+
+  @Test
+  public void testReadAttachment_CleanStatusInContentId() throws IOException {
+    AttachmentReadEventContext readContext = mock(AttachmentReadEventContext.class);
+    when(readContext.getContentId()).thenReturn("objectId:folderId:com.sap.Entity:Clean");
+    when(readContext.getAuthenticationInfo()).thenReturn(mockAuthInfo);
+    when(mockAuthInfo.as(JwtTokenAuthenticationInfo.class)).thenReturn(mockJwtTokenInfo);
+    when(mockJwtTokenInfo.getToken()).thenReturn("dummyToken");
+
+    SDMCredentials mockSdmCredentials = new SDMCredentials();
+    when(tokenHandler.getSDMCredentials()).thenReturn(mockSdmCredentials);
+    CmisDocument cmisDocument = new CmisDocument();
+    when(dbQuery.getuploadStatusForAttachment(any(), any(), any(), any())).thenReturn(cmisDocument);
+    doNothing()
+        .when(sdmService)
+        .readDocument(anyString(), any(SDMCredentials.class), eq(readContext));
+
+    handlerSpy.readAttachment(readContext);
+
+    verify(sdmService).readDocument(eq("objectId"), eq(mockSdmCredentials), eq(readContext));
+  }
+
+  @Test
   public void testMarkAttachmentAsDeleted_MultipleObjectsInFolder() throws IOException {
     // Test scenario where multiple attachments exist and target object is among them
     AttachmentMarkAsDeletedEventContext deleteContext =
