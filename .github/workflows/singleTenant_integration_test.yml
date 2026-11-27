@@ -28,12 +28,12 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 21 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 21
           distribution: 'temurin'
@@ -41,7 +41,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -293,12 +293,12 @@ jobs:
       DOWNLOAD_PATH: ${{ 'sdm/eicar.com.txt' }}
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 21 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 21
           distribution: 'temurin'
@@ -306,7 +306,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -535,7 +535,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -621,12 +621,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -634,7 +634,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -834,7 +834,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -920,12 +920,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -933,7 +933,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1147,7 +1147,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1229,12 +1229,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -1242,7 +1242,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
