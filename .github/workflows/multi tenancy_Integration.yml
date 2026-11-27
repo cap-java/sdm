@@ -31,12 +31,12 @@ jobs:
 
     steps:
       - name: Checkout repository ✅
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 21 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 21
           distribution: 'temurin'
@@ -44,7 +44,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -53,7 +53,8 @@ jobs:
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔧 Installing Cloud Foundry CLI..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -341,7 +342,7 @@ jobs:
 
       - name: Upload test results 📊
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-${{ matrix.testClass }}-${{ matrix.tokenFlow }}-${{ matrix.tenant }}
           path: |
@@ -367,10 +368,10 @@ jobs:
 
     steps:
       - name: Checkout repository ✅
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Java 21 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 21
           distribution: 'temurin'
@@ -378,7 +379,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -387,7 +388,8 @@ jobs:
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
           echo "🔧 Installing Cloud Foundry CLI..."
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -652,7 +654,7 @@ jobs:
 
       - name: Upload active-entity test results 📊
         if: "!cancelled()"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: active-entity-test-results-${{ matrix.testClass }}-${{ matrix.tokenFlow }}-${{ matrix.tenant }}
           path: |
@@ -669,7 +671,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -677,7 +679,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -755,12 +758,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_VersionedRepository
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -768,7 +771,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -776,7 +779,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1011,7 +1015,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1019,7 +1023,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1097,12 +1102,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_Virus
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -1110,7 +1115,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1118,7 +1123,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1367,7 +1373,7 @@ jobs:
     steps:
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1375,7 +1381,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1449,12 +1456,12 @@ jobs:
           - IntegrationTest_Chapters_MultipleFacet_RepoSpecific
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -1462,7 +1469,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1470,7 +1477,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
@@ -1709,12 +1717,12 @@ jobs:
         tenant: [TENANT1, TENANT2]
     steps:
       - name: Checkout repository 📁
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.inputs.branch_name }}
 
       - name: Set up Java 17 ☕
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@e9fbacdec3bb3b6036605a3e6f7995d66773a8c6 # v3
         with:
           java-version: 17
           distribution: 'temurin'
@@ -1722,7 +1730,7 @@ jobs:
 
       - name: Cache CF CLI 📦
         id: cache-cf-cli
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /usr/bin/cf8
           key: cf-cli-v8-${{ runner.os }}
@@ -1730,7 +1738,8 @@ jobs:
       - name: Install Cloud Foundry CLI 🔧
         if: steps.cache-cf-cli.outputs.cache-hit != 'true'
         run: |
-          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key \
+          | sudo tee /etc/apt/trusted.gpg.d/cloudfoundry.asc > /dev/null
           echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
           sudo apt-get update
           sudo apt-get install cf8-cli
